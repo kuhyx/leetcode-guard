@@ -1,0 +1,83 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # conftest.py imports tkinter at module scope to keep the real
+      # `tk.TclError` while replacing the rest of the module with a mock, so
+      # even the fully-mocked suite needs tkinter present.
+      - name: Install system tkinter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk-dev
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: python -m pytest -v
+
+  # The suite replaces the whole `tk` module so it can never reach a display,
+  # which means the real widget tree is never exercised there. Every UI bug
+  # this repo has had was invisible to assertions and visible only on screen:
+  # a close button drawn behind the surfaces, an escape form whose first field
+  # had no label, text wrapping wider than its own window. This job builds the
+  # real windows against a throwaway X server so a crash or a missing widget
+  # fails the build.
+  real-tk-render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-tk tk-dev
+          pip install -r requirements.txt
+          # screenshot_states.py imports leetcode_guard directly rather than
+          # through pytest, which would have put the rootdir on sys.path.
+          pip install -e . --no-deps
+
+      - name: Every lock state builds real Tk widgets
+        run: |
+          for state in locked unlocked escape outage production; do
+            echo "--- rendering: $state ---"
+            xvfb-run -a -s "-screen 0 1600x1200x24" \
+              python3 scripts/screenshot_states.py "$state"
+          done
+
+      - name: The status window builds real Tk widgets
+        run: |
+          xvfb-run -a -s "-screen 0 1000x900x24" timeout 30 \
+            python3 -c "
+          import tkinter as tk
+          import leetcode_guard.status_view as sv
+          from leetcode_guard._status_full import gather_full
+          root = tk.Tk()
+          sv.StatusWindow(root, gather_full(), on_refresh=lambda: None,
+                          on_close=root.destroy)
+          root.update_idletasks(); root.update(); root.destroy()
+          print('status window rendered')
+          "

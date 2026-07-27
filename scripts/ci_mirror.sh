@@ -13,7 +13,10 @@
 #      `pip install -r requirements.txt`), rebuilt only when requirements.txt
 #      changes (hash-gated so day-to-day pushes stay fast);
 #   2. `pre-commit run --all-files` (mirrors the pre-commit workflow);
-#   3. `python -m pytest` inside that clean venv (mirrors Tests).
+#   3. `python -m pytest` inside that clean venv (mirrors Tests);
+#   4. the real-Tk render under Xvfb (mirrors the real-tk-render job). The
+#      suite mocks tkinter away, so without this a widget regression is green
+#      locally and red in CI -- exactly the gap this script exists to close.
 #
 # Wired as the pre-push hook, so a red result blocks the push before CI ever
 # sees it. Escape hatch for genuine emergencies: `git push --no-verify`.
@@ -77,6 +80,25 @@ run_precommit_all_files() {
     pre-commit run --all-files || fail "pre-commit --all-files"
 }
 
+run_real_tk_render() {
+    if [[ ! -f scripts/screenshot_states.py ]]; then
+        return
+    fi
+    if ! command -v xvfb-run >/dev/null 2>&1; then
+        log "xvfb-run not installed -- SKIPPING the real-Tk render that CI runs"
+        return
+    fi
+    log "real-Tk render under Xvfb (mirrors the real-tk-render job)"
+    "$VENV_DIR/bin/python" -m pip install --quiet -e . --no-deps \
+        || fail "editable install for the render check"
+    local state
+    for state in locked unlocked escape outage production; do
+        xvfb-run -a -s "-screen 0 1600x1200x24" \
+            "$VENV_DIR/bin/python" scripts/screenshot_states.py "$state" \
+            || fail "real-Tk render failed for state: $state"
+    done
+}
+
 run_pytest_clean_venv() {
     log "pytest in the clean venv (mirrors the Tests workflow)"
     "$VENV_DIR/bin/python" -m pytest "$@" || fail "pytest (clean requirements.txt venv)"
@@ -87,6 +109,7 @@ main() {
     ensure_venv
     run_precommit_all_files
     run_pytest_clean_venv "$@"
+    run_real_tk_render
     log "all CI gates passed locally — safe to push"
 }
 
