@@ -1,0 +1,26 @@
+[Unit]
+Description=Lock the PC until a LeetCode problem is solved
+After=graphical-session.target
+
+[Service]
+Type=simple
+# No WorkingDirectory / PYTHONPATH: leetcode_guard is installed into the user
+# site-packages (pip install --user --break-system-packages -e .), so plain
+# /usr/bin/python3 finds it. A WorkingDirectory would make the checked-out
+# branch the running config, which is how a feature branch becomes a live
+# deployment by accident.
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+ExecStartPre=/bin/sleep 1
+ExecStart=/usr/bin/python3 -m leetcode_guard --production
+Restart=on-failure
+RestartSec=2s
+RestartPreventExitStatus=0
+User=%u
+
+# Deliberately NO [Install] section.
+#
+# The gate must fire on a schedule, not at login. With WantedBy=
+# graphical-session.target it would arm on every single login, including the
+# one right after you cleared it. wake-alarm carries the same comment and the
+# same omission -- do not "fix" this.

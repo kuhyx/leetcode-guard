@@ -1,0 +1,16 @@
+[Unit]
+Description=Fire the LeetCode gate in the morning, with an afternoon retry
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 13:00:00
+Unit=leetcode-guard.service
+# Persistent=false on purpose. A missed run must NOT fire the moment the
+# machine wakes up hours later -- the gate charges on use, so a skipped day
+# simply costs nothing rather than accumulating a debt.
+Persistent=false
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

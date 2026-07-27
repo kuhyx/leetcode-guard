@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "leetcode-guard": {
+      "type": "stdio",
+      "command": "${HOME}/.venvs/leetcode-guard-mcp/bin/python",
+      "args": ["-m", "leetcode_guard._mcp"],
+      "env": {}
+    }
+  }
+}

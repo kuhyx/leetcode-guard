@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtualenvs
+.venv/
+.ci-mirror-venv/
+
+# Test / coverage artefacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.lcov
+htmlcov/
+
+# Runtime state. These live under ~/.local/share/leetcode_guard in production;
+# these patterns only catch stray copies written by an ad-hoc run from the repo
+# root. The credit ledger is user data and must never be committed.
+ledger*.json
+pool_cache.json
+statements_cache.json
+escape_history*.json
+network_incidents*.json

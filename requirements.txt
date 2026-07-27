@@ -1,0 +1,19 @@
+# leetcode-guard — runtime + development dependencies.
+# Runtime: tkinter/json/hmac/socket (stdlib), plus gatelock, crdt-sync and
+# requests below. The clean-venv CI mirror installs from THIS file only, so an
+# undeclared runtime dependency fails here before it can fail in production.
+bandit>=1.7.0
+codespell>=2.2.0
+coverage>=7.4.0
+crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.3.0#subdirectory=crdt-sync
+gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.2.1#subdirectory=gatelock
+mcp>=1.9
+mypy>=1.8.0
+pre-commit>=3.6.0
+pylint>=3.0.0
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-randomly>=3.15.0
+requests>=2.31.0
+ruff>=0.8.0
+types-requests>=2.31.0

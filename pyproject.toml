@@ -1,0 +1,252 @@
+[project]
+name = "leetcode-guard"
+version = "1.0.0"
+description = "Tkinter/systemd gate that locks the PC until a LeetCode problem is solved"
+requires-python = ">=3.10"
+# gatelock: shared lock-window/arbiter/escape-hatch/HMAC backend, also used by
+# screen_locker, diet_guard and wake_alarm.
+# crdt-sync: shared CRDT merge scheme + GitHub-Contents-API sync transport,
+# here for syncing the credit ledger across devices. Pinned to v0.3.0 rather
+# than the v0.1.0 the older siblings still carry -- a new repo has no reason to
+# inherit a stale pin, and the ledger uses read_log/write_log from v0.2.0+.
+# requests: the only network dependency; the LeetCode client is ~40 lines on
+# top of it, deliberately not a third-party LeetCode SDK.
+dependencies = [
+    "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.2.1#subdirectory=gatelock",
+    "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.3.0#subdirectory=crdt-sync",
+    "requests>=2.31.0",
+]
+
+[project.scripts]
+# The GUI window, matching screen-locker's screen-locker-status. Its
+# --summary/--state flags are what the tray icon polls. The plain-text
+# version is still `python -m leetcode_guard --status`.
+leetcode-guard-status = "leetcode_guard.status_view:main"
+
+# Optional extras. The `mcp` group is ONLY needed by the read-only MCP server
+# (leetcode_guard._mcp), which Claude Code spawns via a dedicated venv (see
+# scripts/setup_mcp.sh / .mcp.json). It is deliberately NOT a core dependency
+# so the systemd/CLI system-python path stays dependency-light and never has
+# to import the MCP SDK.
+[project.optional-dependencies]
+mcp = ["mcp>=1.9"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Explicit rather than relying on setuptools' flat-layout autodiscovery: the
+# repo root also holds scripts/, and a future non-Python sibling directory
+# would otherwise make the build fail to guess the installable package. The
+# same omission silently staled an installed console script in wake-alarm.
+include = ["leetcode_guard*"]
+
+[tool.ruff]
+target-version = "py310"
+include = ["*.py", "**/*.py"]
+exclude = [".git", ".venv", ".ci-mirror-venv", "__pycache__", "build", "dist", ".eggs"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",
+    "D213",
+    "COM812",
+    "ISC001",
+    "S603",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = [
+    "ANN", "ARG", "D", "DTZ011", "E501", "FBT",
+    "PLC0415", "PLR0913", "PLR2004", "PTH", "RUF003", "S101", "S104", "S105",
+    "SLF001",
+]
+"**/test_*.py" = [
+    "ANN", "ARG", "D", "DTZ011", "E501", "FBT",
+    "PLC0415", "PLR0913", "PLR2004", "PTH", "RUF003", "S101", "S104", "S105",
+    "SLF001",
+]
+"scripts/check_file_length.py" = ["PTH123"]
+# A state-rendering harness, not shipped code. It exists to force the lock into
+# each state and photograph it -- which necessarily means driving internals,
+# exactly as the test suite does and is exempted for. It caught both UI bugs no
+# assertion could: the close button drawn behind the surfaces, and the escape
+# form's unlabelled first field.
+"scripts/screenshot_states.py" = ["SLF001", "T201"]
+# PyGObject requires `gi.require_version` to run BEFORE `from gi.repository
+# import ...`, so E402 (import not at top of file) is unavoidable and correct
+# here. INP001 likewise: scripts/ is not a package and must not become one.
+"scripts/leetcode_guard_tray.py" = ["E402", "INP001"]
+# A command line's entire job is to write to stdout, so T201 (print found) is
+# wrong here specifically. This is not cosmetic: T201 is an *auto-fixable* rule
+# and the ruff hook runs with --unsafe-fixes, so without this entry the fixer
+# deleted every print in cmd_probe and replaced the loops around them with
+# `pass` -- turning a working diagnostic into one that exits 0 and says
+# nothing. test_cli.py catches it, but only because it asserts on stdout rather
+# than on the exit code; assert on the output, not the return value.
+"leetcode_guard/_cli.py" = ["T201"]
+# Three classification chains, all the same shape: one early return per way the
+# input can be wrong, each with its own distinct user-facing sentence. Merging
+# them into fewer returns would mean either a shared vague message or a nested
+# tree, and both make the failure harder to diagnose from a log line. This is
+# the same exemption (and the same reasoning) screen-locker applies to its
+# lock-decision and evidence-validation chains.
+#
+# fetch_recent_ac's chain is the one that must stay legible: it is the sole
+# place that decides "unknown" versus "not solved", and getting that wrong is a
+# machine that can never unlock.
+"leetcode_guard/_submissions.py" = ["PLR0911"]
+# settle_day and gather_status each take one argument per independently
+# overridable dependency (ledger path, key file, cache path, cookie path,
+# clock). That is what lets the tests drive them without patching module
+# globals, and collapsing them into a config object would trade a real testing
+# property for an arbitrary argument count. Same rationale as screen-locker's
+# gather_status and explain_lock_decision exemptions.
+"leetcode_guard/_gate.py" = ["PLR0913"]
+"leetcode_guard/_harvest.py" = ["PLR0913"]
+"leetcode_guard/_poller.py" = ["PLR0913"]
+"leetcode_guard/_viewmodel.py" = ["PLR0913"]
+"leetcode_guard/_view.py" = ["PLR0913"]
+"leetcode_guard/_status.py" = ["PLR0913", "T201"]
+# Same trap as _cli.py: T201 is auto-fixable and the ruff hook runs with
+# --unsafe-fixes, so without this the fixer deletes the two prints that
+# ARE this module's tray interface, leaving --state and --summary silent.
+"leetcode_guard/status_view.py" = ["T201"]
+"leetcode_guard/_leetcode.py" = ["PLR0911"]
+"leetcode_guard/_pool_cache.py" = ["PLR0911"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+force-single-line = false
+force-sort-within-sections = true
+known-first-party = ["leetcode_guard"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+disallow_any_unimported = true
+disallow_any_explicit = false
+disallow_any_generics = true
+disallow_subclassing_any = true
+strict_equality = true
+extra_checks = true
+ignore_missing_imports = true
+show_error_codes = true
+color_output = true
+exclude = [".venv/", ".ci-mirror-venv/"]
+
+[tool.pylint.main]
+analyse-fallback-blocks = true
+persistent = true
+jobs = 0
+py-version = "3.10"
+ignore = [".venv", ".ci-mirror-venv", "__pycache__"]
+ignore-patterns = [".*\\.pyi$"]
+
+[tool.pylint.messages_control]
+enable = "all"
+disable = []
+
+[tool.pylint.design]
+min-public-methods = 0
+max-module-lines = 1000
+max-attributes = 10
+
+[tool.pylint.typecheck]
+generated-members = [
+    ".*\\.assert_called_once_with",
+    ".*\\.assert_called_once",
+    ".*\\.assert_called",
+    ".*\\.assert_not_called",
+    ".*\\.assert_any_call",
+    ".*\\.call_args",
+    ".*\\.call_args_list",
+    ".*\\.call_count",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", ".ci-mirror-venv"]
+
+[tool.pytest.ini_options]
+testpaths = ["leetcode_guard/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--cov=leetcode_guard",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=lcov",
+    # A fixture-only plugin module rather than more conftest.py, which is
+    # already near the repo's 400-line cap. Registering it as a plugin is what
+    # makes its autouse gatelock hermeticity apply suite-wide.
+    "-p",
+    "leetcode_guard.tests._gatelock_fixtures",
+]
+filterwarnings = [
+    # "error" is the point: a warning in this package is a bug. The
+    # DeprecationWarning exemption is not laziness -- urllib3/requests emit
+    # them from inside the dependency, and without it every test that touches
+    # the network layer would fail for a reason we cannot fix here.
+    "error",
+    "ignore::DeprecationWarning",
+    "default::pytest.PytestUnraisableExceptionWarning",
+]
+
+[tool.coverage.run]
+source = ["leetcode_guard"]
+branch = true
+omit = [
+    "*/__pycache__/*",
+    "*/tests/*",
+    "*/.venv/*",
+    "*/.ci-mirror-venv/*",
+]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "raise AssertionError",
+    "if TYPE_CHECKING:",
+    'if __name__ == "__main__":',
+]
+partial_branches = ["pragma: no branch"]
