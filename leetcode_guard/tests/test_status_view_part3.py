@@ -373,3 +373,19 @@ def test_the_not_in_force_line_suppresses_the_duplicate_reason(
 
     assert "dupe" not in reasons
     assert any("not in force" in line for line in reasons)
+
+
+def test_an_enabled_timer_adds_no_line(data_dir: Path, hmac_key: Path):
+    """The counterpart to the disabled-timer test.
+
+    Without this, the enabled branch was covered only because the developer
+    machine happened to have the timer installed -- ambient state, not a test.
+    CI has no systemd user timer, so it caught the gap on its first run.
+    """
+    full = full_for(data_dir, hmac_key)
+    on = type(full.timer)(enabled=True, next_fire="Tue 09:00", detail="enabled")
+    combined = type(full)(**{**vars(full), "timer": on})
+
+    reasons = explain_not_triggered(combined)
+
+    assert not any("timer is NOT enabled" in line for line in reasons)
