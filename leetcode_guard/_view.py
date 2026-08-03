@@ -24,10 +24,6 @@ if TYPE_CHECKING:
     from leetcode_guard._viewmodel import ViewModel
 
 _PAD = 16
-_TITLE_SIZE = 32
-_SUBTITLE_SIZE = 20
-_BODY_SIZE = 16
-_CAPTION_SIZE = 12
 
 
 @dataclass
@@ -74,7 +70,7 @@ def build_guard_view(
     headline = tk.Label(
         inner,
         text=model.headline,
-        font=(config.font_family, _TITLE_SIZE, "bold"),
+        font=config.font("display", bold=True),
         fg=config.fg,
         bg=config.bg,
     )
@@ -83,7 +79,7 @@ def build_guard_view(
     balance_line = tk.Label(
         inner,
         text=model.balance_line,
-        font=(config.font_family, _SUBTITLE_SIZE),
+        font=config.font("subtitle"),
         fg=config.accent,
         bg=config.bg,
     )
@@ -96,7 +92,7 @@ def build_guard_view(
     status_line = tk.Label(
         inner,
         text=model.status_line,
-        font=(config.font_family, _BODY_SIZE),
+        font=config.font("body"),
         fg=config.muted,
         bg=config.bg,
     )
@@ -105,7 +101,7 @@ def build_guard_view(
     notes_label = tk.Label(
         inner,
         text="\n".join(model.notes),
-        font=(config.font_family, _CAPTION_SIZE),
+        font=config.font("caption"),
         fg=config.muted,
         bg=config.bg,
         justify="center",
@@ -128,7 +124,7 @@ def build_guard_view(
         view.escape_button = tk.Button(
             inner,
             text="I cannot do this right now",
-            font=(config.font_family, _CAPTION_SIZE),
+            font=config.font("caption"),
             # on_fill, not fg: near-white on the danger fill measures about
             # 2.5:1, while the dark ink measures about 5.8:1.
             fg=config.on_fill,
@@ -151,7 +147,7 @@ def _build_problem_labels(
         placeholder = tk.Label(
             parent,
             text="Solve any LeetCode problem -- any accepted submission counts.",
-            font=(config.font_family, _BODY_SIZE),
+            font=config.font("body"),
             fg=config.fg,
             bg=config.field_bg,
             anchor="w",
@@ -164,7 +160,7 @@ def _build_problem_labels(
         label = tk.Label(
             parent,
             text=f"{line.label}\n{line.url}",
-            font=(config.font_family, _BODY_SIZE),
+            font=config.font("body"),
             fg=config.fg,
             bg=config.field_bg,
             anchor="w",

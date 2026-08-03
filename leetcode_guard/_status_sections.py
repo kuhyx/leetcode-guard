@@ -16,13 +16,9 @@ from typing import TYPE_CHECKING
 from leetcode_guard._status_full import explain_not_triggered
 
 if TYPE_CHECKING:
-    from gatelock import LockConfig
+    from gatelock import LockConfig, TypeRole
 
     from leetcode_guard._status_full import FullStatus
-
-_HEADING_SIZE = 15
-_BODY_SIZE = 13
-_SMALL_SIZE = 11
 
 
 def _heading(parent: tk.Misc, config: LockConfig, text: str) -> None:
@@ -30,11 +26,13 @@ def _heading(parent: tk.Misc, config: LockConfig, text: str) -> None:
     tk.Label(
         parent,
         text=text,
-        font=(config.font_family, _HEADING_SIZE, "bold"),
+        font=config.font("body", bold=True),
         fg=config.accent,
         bg=config.bg,
         anchor="w",
-    ).pack(fill="x", padx=24, pady=(14, 2))
+    ).pack(
+        fill="x", padx=config.space("lg"), pady=(config.space("md"), config.space("xs"))
+    )
 
 
 DEFAULT_WRAP = 880
@@ -54,19 +52,19 @@ def _row(
     text: str,
     *,
     color: str | None = None,
-    size: int = _BODY_SIZE,
+    role: TypeRole = "label",
 ) -> None:
     """One line of body text, wrapped to the current window width."""
     tk.Label(
         parent,
         text=text,
-        font=(config.font_family, size),
+        font=config.font(role),
         fg=color if color is not None else config.fg,
         bg=config.bg,
         anchor="w",
         justify="left",
         wraplength=_wrap_state["width"],
-    ).pack(fill="x", padx=36, pady=1)
+    ).pack(fill="x", padx=config.space("xl"), pady=1)
 
 
 def _verdict_color(config: LockConfig, full: FullStatus) -> str:
@@ -93,11 +91,13 @@ def _section_verdict(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     tk.Label(
         parent,
         text=headline,
-        font=(config.font_family, 22, "bold"),
+        font=config.font("subtitle", bold=True),
         fg=_verdict_color(config, full),
         bg=config.bg,
         anchor="w",
-    ).pack(fill="x", padx=24, pady=(2, 6))
+    ).pack(
+        fill="x", padx=config.space("lg"), pady=(config.space("xs"), config.space("xs"))
+    )
     _row(
         parent,
         config,
@@ -120,11 +120,13 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     tk.Label(
         parent,
         text=f"{gate.available} available",
-        font=(config.font_family, 20, "bold"),
+        font=config.font("subtitle", bold=True),
         fg=config.success if gate.available > 0 else config.warning,
         bg=config.bg,
         anchor="w",
-    ).pack(fill="x", padx=24, pady=(2, 4))
+    ).pack(
+        fill="x", padx=config.space("lg"), pady=(config.space("xs"), config.space("xs"))
+    )
     _row(parent, config, f"Earned all-time: {ledger.credits_earned}")
     _row(parent, config, f"Spent all-time:  {ledger.charges_spent}")
     _row(parent, config, f"Needed today:    {gate.needed}")
@@ -134,7 +136,7 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         "A weekday costs 1, Saturday and Sunday cost 2. Credits never expire "
         "and are not capped.",
         color=config.muted,
-        size=_SMALL_SIZE,
+        role="caption",
     )
 
 
@@ -148,12 +150,10 @@ def _section_solves(parent: tk.Misc, config: LockConfig, full: FullStatus) -> No
     if not ledger.recent_solves:
         _row(parent, config, "(none recorded yet)", color=config.muted)
         return
-    _row(parent, config, "Most recent:", color=config.muted, size=_SMALL_SIZE)
+    _row(parent, config, "Most recent:", color=config.muted, role="caption")
     for solve in ledger.recent_solves:
         lang = f" [{solve.lang}]" if solve.lang else ""
-        _row(
-            parent, config, f"  {solve.day}  {solve.title_slug}{lang}", size=_SMALL_SIZE
-        )
+        _row(parent, config, f"  {solve.day}  {solve.title_slug}{lang}", role="caption")
 
 
 def _section_days(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
@@ -163,7 +163,7 @@ def _section_days(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None
     if not ledger.charged_days:
         _row(parent, config, "(none yet)", color=config.muted)
     else:
-        _row(parent, config, ", ".join(ledger.charged_days), size=_SMALL_SIZE)
+        _row(parent, config, ", ".join(ledger.charged_days), role="caption")
     _row(parent, config, f"Gate in force from {full.start_date}: {full.in_force}")
 
 
@@ -179,7 +179,7 @@ def _section_budgets(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
             f"  next use waits {budget.next_wait_seconds // 60} min"
             + ("  -- EXHAUSTED" if budget.exhausted else ""),
             color=config.muted,
-            size=_SMALL_SIZE,
+            role="caption",
         )
 
 
@@ -217,7 +217,7 @@ def _section_integrity(parent: tk.Misc, config: LockConfig, full: FullStatus) ->
         config,
         f"File: {full.ledger_path}",
         color=config.muted,
-        size=_SMALL_SIZE,
+        role="caption",
     )
 
 
@@ -237,7 +237,7 @@ def _section_environment(parent: tk.Misc, config: LockConfig, full: FullStatus) 
     _row(parent, config, f"LeetCode cookies configured: {full.cookies_configured}")
     _row(parent, config, f"Sync token configured: {full.sync_configured}")
     for note in full.gate.pool_notes:
-        _row(parent, config, f"  {note}", color=config.muted, size=_SMALL_SIZE)
+        _row(parent, config, f"  {note}", color=config.muted, role="caption")
 
 
 def _section_suggestions(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
@@ -251,9 +251,9 @@ def _section_suggestions(parent: tk.Misc, config: LockConfig, full: FullStatus) 
             parent,
             config,
             f"{index:2d}. {item.title} -- {item.difficulty}, {item.ac_rate:.1f}%",
-            size=_SMALL_SIZE,
+            role="caption",
         )
-        _row(parent, config, f"     {item.url}", color=config.muted, size=_SMALL_SIZE)
+        _row(parent, config, f"     {item.url}", color=config.muted, role="caption")
 
 
 def render_sections(

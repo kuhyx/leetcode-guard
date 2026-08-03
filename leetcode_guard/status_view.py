@@ -72,11 +72,11 @@ class StatusWindow:
         heading = tk.Label(
             self.container,
             text=_TITLE,
-            font=(_COLORS.font_family, 26, "bold"),
+            font=_COLORS.font("title", bold=True),
             fg=_COLORS.fg,
             bg=_COLORS.bg,
         )
-        heading.pack(pady=(14, 10))
+        heading.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
 
         render_sections(self.container, _COLORS, snapshot, wrap=self._wrap_width())
         self._buttons()
@@ -98,14 +98,14 @@ class StatusWindow:
     def _buttons(self) -> None:
         """Refresh and Close, in that order."""
         row = tk.Frame(self.container, bg=_COLORS.bg)
-        row.pack(pady=16)
+        row.pack(pady=_COLORS.space("md"))
         _button(row, "Refresh", _COLORS.field_bg, self.on_refresh).pack(
-            side="left", padx=8
+            side="left", padx=_COLORS.space("sm")
         )
         # Close is the accent action here, unlike in the lock: this window's
         # whole promise is that it goes away when you want it to.
         _button(row, "Close  (Esc)", _COLORS.accent, self.on_close).pack(
-            side="left", padx=8
+            side="left", padx=_COLORS.space("sm")
         )
 
 
@@ -119,12 +119,12 @@ def _button(
         parent,
         text=text,
         command=command,
-        font=(_COLORS.font_family, 13),
+        font=_COLORS.font("caption"),
         fg=foreground,
         bg=background,
         relief="flat",
-        padx=14,
-        pady=6,
+        padx=_COLORS.space("md"),
+        pady=_COLORS.space("xs"),
     )
 
 

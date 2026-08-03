@@ -102,13 +102,14 @@ repos:
           - --rcfile=pyproject.toml
           - --fail-under=8.0
           - --jobs=4
-        # Kept byte-identical to pyproject.toml/requirements.txt. screen-locker's
-        # equivalent block drifted to gatelock-v0.3.0 while its manifests said
-        # v0.2.1 — do not inherit that.
+        # Kept byte-identical to pyproject.toml/requirements.txt. This block
+        # has drifted from those manifests before, and a pin that lags them
+        # lints the code against a gatelock that no longer has the API it
+        # calls -- so all three move together, always.
         additional_dependencies:
           - pytest
           - requests
-          - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.3.0#subdirectory=gatelock
+          - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.4.0#subdirectory=gatelock
           - crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.3.0#subdirectory=crdt-sync
           - mcp
           - pydantic
@@ -152,6 +153,13 @@ repos:
         entry: bash -c 'printf "%s\0" "$@" | xargs -0 -n 40 shellcheck --severity=warning' --
         language: system
         types: [shell]
+      - id: screens-fit
+        name: Every lock screen fits 1366x768 (no scrolling required)
+        entry: python3 scripts/verify_screen_fits.py
+        language: system
+        files: '^leetcode_guard/.*\.py$'
+        pass_filenames: false
+        require_serial: true
       - id: max-file-length
         name: Max file length (400 lines)
         entry: python3 scripts/check_file_length.py

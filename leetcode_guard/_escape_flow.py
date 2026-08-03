@@ -148,64 +148,64 @@ class EscapeHatch:
                 f"Explain, in at least {JUSTIFICATION_MIN_CHARS} characters, why "
                 "you cannot solve a problem today."
             ),
-            font=(config.font_family, 14),
+            font=config.font("label"),
             fg=config.fg,
             bg=config.field_bg,
             justify="left",
-        ).pack(padx=16, pady=(16, 8))
+        ).pack(padx=config.space("md"), pady=(config.space("md"), config.space("sm")))
 
         tk.Label(
             frame,
             text="What is the problem, in a few words?",
-            font=(config.font_family, 12),
+            font=config.font("caption"),
             fg=config.muted,
             bg=config.field_bg,
-        ).pack(padx=16, pady=(4, 0))
+        ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
         reason = tk.Entry(frame, width=60, bg=config.bg, fg=config.fg)
-        reason.pack(padx=16, pady=4)
+        reason.pack(padx=config.space("md"), pady=config.space("xs"))
 
         tk.Label(
             frame,
             text="When did this start?",
-            font=(config.font_family, 12),
+            font=config.font("caption"),
             fg=config.muted,
             bg=config.field_bg,
-        ).pack(padx=16, pady=(4, 0))
+        ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
         onset = tk.Entry(frame, width=60, bg=config.bg, fg=config.fg)
-        onset.pack(padx=16, pady=4)
+        onset.pack(padx=config.space("md"), pady=config.space("xs"))
 
         tk.Label(
             frame,
             text=(
                 f"The full explanation (at least {JUSTIFICATION_MIN_CHARS} characters):"
             ),
-            font=(config.font_family, 12),
+            font=config.font("caption"),
             fg=config.muted,
             bg=config.field_bg,
-        ).pack(padx=16, pady=(4, 0))
+        ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
         description = tk.Text(frame, width=60, height=6, bg=config.bg, fg=config.fg)
-        description.pack(padx=16, pady=4)
+        description.pack(padx=config.space("md"), pady=config.space("xs"))
 
         recent = self._tracker.format_recent()
         if recent:
             tk.Label(
                 frame,
                 text=recent,
-                font=(config.font_family, 11),
+                font=config.font("caption"),
                 fg=config.muted,
                 bg=config.field_bg,
                 justify="left",
                 wraplength=700,
-            ).pack(padx=16, pady=4)
+            ).pack(padx=config.space("md"), pady=config.space("xs"))
 
         complaint = tk.Label(
             frame,
             text="",
-            font=(config.font_family, 12),
+            font=config.font("caption"),
             fg=config.danger,
             bg=config.field_bg,
         )
-        complaint.pack(padx=16, pady=4)
+        complaint.pack(padx=config.space("md"), pady=config.space("xs"))
 
         submit = tk.Button(
             frame,
@@ -215,7 +215,9 @@ class EscapeHatch:
             command=self.submit,
             relief="flat",
         )
-        submit.pack(padx=16, pady=(4, 16))
+        submit.pack(
+            padx=config.space("md"), pady=(config.space("xs"), config.space("md"))
+        )
 
         self._form = EscapeForm(
             frame=frame,
