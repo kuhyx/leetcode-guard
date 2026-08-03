@@ -26,7 +26,8 @@ import logging
 import sys
 from typing import Any, Final
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
+from mcp.types import ToolAnnotations
 
 from leetcode_guard._constants import SUGGESTION_COUNT
 from leetcode_guard._status import gather_status, snapshot_dict
@@ -35,10 +36,20 @@ logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 
 _logger: Final = logging.getLogger(__name__)
 
-mcp: Final = FastMCP("leetcode-guard")
+mcp: Final = MCPServer("leetcode-guard")
+
+# Every tool here only reads local state: the ledger, the cached problem pool
+# and the clock. Saying so lets a client run them without asking -- and the
+# day one of them stops being read-only, this annotation is the thing that has
+# to change with it.
+_READS_ONLY: Final = ToolAnnotations(
+    read_only_hint=True,
+    idempotent_hint=True,
+    open_world_hint=False,
+)
 
 
-@mcp.tool()
+@mcp.tool(title="LeetCode gate status", annotations=_READS_ONLY)
 def get_status() -> dict[str, Any]:
     """Everything the gate currently knows.
 
@@ -48,7 +59,7 @@ def get_status() -> dict[str, Any]:
     return snapshot_dict(gather_status())
 
 
-@mcp.tool()
+@mcp.tool(title="Solve credits and cost", annotations=_READS_ONLY)
 def get_credits() -> dict[str, Any]:
     """Just the credit position, for a status line or a quick check."""
     snapshot = gather_status()
@@ -63,7 +74,7 @@ def get_credits() -> dict[str, Any]:
     }
 
 
-@mcp.tool()
+@mcp.tool(title="Suggested problems", annotations=_READS_ONLY)
 def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]]:
     """Non-premium problems, easiest first then highest acceptance.
 
@@ -82,7 +93,7 @@ def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]
     ]
 
 
-@mcp.tool()
+@mcp.tool(title="Why the gate is locked", annotations=_READS_ONLY)
 def explain_lock() -> dict[str, Any]:
     """Why the gate would lock or unlock right now, with the evidence."""
     snapshot = gather_status()
