@@ -136,6 +136,10 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         "COOKIES_FILE": config / "cookies.json",
         "SYNC_TOKEN_FILE": config / "sync_token",
         "INSTANCE_LOCK_FILE": data / "instance.lock",
+        # Added with the Firebase cutover. Redirected for the same reason as
+        # everything above: a test must not read or write the developer's own
+        # sync state.
+        "SYNC_STATE_FILE": data / "sync_state.json",
     }
     for name, value in overrides.items():
         monkeypatch.setattr(_constants, name, value, raising=True)

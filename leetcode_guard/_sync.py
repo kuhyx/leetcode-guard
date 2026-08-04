@@ -29,13 +29,20 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 from crdt_sync import (
+    CONFIG_FILE,
+    ConfigError,
+    FileSyncStateStore,
+    FirebaseAuthError,
     GitHubSyncClient,
     GitHubSyncError,
     Hlc,
     Log,
     Record,
+    RemoteStore,
+    RemoteSyncError,
     dump_log,
     load_log,
+    mirror_client_for,
     sync_log,
 )
 
@@ -44,6 +51,7 @@ from leetcode_guard._constants import (
     SYNC_PATH_PREFIX,
     SYNC_REPO_NAME,
     SYNC_REPO_OWNER,
+    SYNC_STATE_FILE,
     SYNC_TIMEOUT_SECONDS,
     SYNC_TOKEN_FILE,
 )
@@ -58,6 +66,34 @@ _logger: Final = logging.getLogger(__name__)
 
 _PAYLOAD_FIELD: Final = "entry"
 _FILENAME: Final = "ledger.json"
+
+
+def _remote_client(github: RemoteStore) -> RemoteStore:
+    """Return the backend to sync against.
+
+    Firebase when ``~/.config/crdt-sync/`` is set up, with GitHub kept as a
+    mirror so a device that has not moved yet still converges; GitHub alone
+    otherwise. An unconfigured Firebase is a normal state during the cutover,
+    not an error.
+
+    The config file is checked *before* constructing anything, so an
+    unconfigured machine never reaches the network -- otherwise a test suite
+    that blocks real sockets fails here rather than in the code under test.
+
+    Rolling back is deleting this function and passing ``github`` straight
+    through: no data moves either way.
+    """
+    if not CONFIG_FILE.is_file():
+        return github
+    try:
+        return mirror_client_for("leetcode_guard", github)
+    except (ConfigError, FirebaseAuthError, RemoteSyncError) as exc:
+        # Warning, not info: this repo's no-silent-failures hook is right to
+        # insist. A Firebase that quietly stops working would leave the app
+        # syncing over the backend being retired, with nothing to say so.
+        # Twice a day, so it cannot become journal spam.
+        _logger.warning("Firebase unavailable, syncing via GitHub only: %s", exc)
+        return github
 
 
 @dataclass(frozen=True)
@@ -179,7 +215,7 @@ def sync_ledger(
 
     try:
         merged = sync_log(
-            client=client,
+            client=_remote_client(client),
             device_id=DEVICE_ID,
             path_prefix=SYNC_PATH_PREFIX,
             local_log=local,
@@ -187,8 +223,12 @@ def sync_ledger(
             decode=_decode,
             filename=_FILENAME,
             commit_message="leetcode-guard: update ledger",
+            # Without this every tick re-downloads every peer's whole ledger
+            # whether or not anything changed -- the traffic the Firebase free
+            # tier's monthly budget depends on not happening.
+            state_store=FileSyncStateStore(SYNC_STATE_FILE),
         )
-    except GitHubSyncError as exc:
+    except (GitHubSyncError, RemoteSyncError) as exc:
         _logger.warning("ledger sync failed: %s", exc)
         return SyncResult(
             pushed=False,

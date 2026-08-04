@@ -8,13 +8,16 @@ must all leave the gate behaving exactly as it would offline.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from crdt_sync import GitHubSyncError, Record
+from crdt_sync import ConfigError, GitHubSyncError, Record
 
+from leetcode_guard import _sync
 from leetcode_guard._ledger import LedgerEntry, to_json
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._sync import (
+    _remote_client,
     entries_from_records,
     records_from_ledger,
     sync_ledger,
@@ -29,7 +32,7 @@ from leetcode_guard.tests._ledger_fixtures import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    import pytest
 
 
 class FakeSyncClient:
@@ -317,3 +320,46 @@ def test_a_present_token_builds_a_real_client(
     result = sync_ledger(path, token_path=token, key_file=hmac_key)
 
     assert result.pushed
+
+
+def test_remote_client_stays_on_github_without_firebase_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unconfigured machine must not reach the network at all."""
+    monkeypatch.setattr(_sync, "CONFIG_FILE", Path("/nonexistent/firebase.json"))
+    github = object()
+
+    assert _remote_client(github) is github
+
+
+def test_remote_client_mirrors_to_github_when_configured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Configured: Firebase is primary, GitHub keeps receiving the writes."""
+    config = tmp_path / "firebase.json"
+    config.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(_sync, "CONFIG_FILE", config)
+    monkeypatch.setattr(
+        _sync, "mirror_client_for", lambda _app, client: ("mirror", client)
+    )
+    github = object()
+
+    assert _remote_client(github) == ("mirror", github)
+
+
+def test_remote_client_falls_back_when_firebase_is_unusable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A broken Firebase must degrade to GitHub, never fail the tick."""
+    config = tmp_path / "firebase.json"
+    config.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(_sync, "CONFIG_FILE", config)
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        message = "no password"
+        raise ConfigError(message)
+
+    monkeypatch.setattr(_sync, "mirror_client_for", _boom)
+    github = object()
+
+    assert _remote_client(github) is github

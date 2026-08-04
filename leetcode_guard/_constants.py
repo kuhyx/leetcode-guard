@@ -61,6 +61,12 @@ CONFIG_DIR: Final = Path.home() / ".config" / APP_NAME
 DATA_DIR: Final = Path.home() / ".local" / "share" / APP_NAME
 
 LEDGER_FILE: Final = DATA_DIR / "ledger.json"
+
+# Revision cache for cross-device sync. Beside the ledger it describes and
+# cleared with it: skipping an unchanged peer is only sound because that
+# peer's records are already merged into the local log, so state that outlived
+# its ledger would skip peers whose data had been lost.
+SYNC_STATE_FILE: Final = DATA_DIR / "sync_state.json"
 DEMO_LEDGER_FILE: Final = DATA_DIR / "ledger_demo.json"
 """Wiped and re-seeded on every demo run. Never the real ledger: a demo must
 not be able to mint a credit, and must not be able to spend one either."""
