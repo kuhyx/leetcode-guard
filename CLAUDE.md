@@ -135,12 +135,41 @@ Tests and lint are necessary but not sufficient. The demo lock must be run and
 
 ```bash
 Xvfb :81 -screen 0 1600x1200x24 &
-DISPLAY=:81 python3 -m leetcode_guard
+DISPLAY=:81 python3 -m leetcode_guard &
 DISPLAY=:81 import -window root /tmp/lock.png
 ```
 
 Never `pkill -f leetcode_guard` — the pattern matches the shell running it.
 Kill by recorded PID.
+
+**One `import -window root` is not a screenshot.** Fired before the surfaces
+paint it returns the `overrideredirect` backdrop: a uniformly charcoal image
+that looks exactly like a lock screen that rendered and happens to be empty,
+which is indistinguishable from a real failure. Two of the three captures on
+2026-08-09 were blank this way, and `-window <id>` does not help — the surface
+reports its full 1600x1200 geometry before it has drawn anything. Sample for the
+whole window and keep the largest file; the sizes are not close, so the check is
+unambiguous:
+
+```bash
+DISPLAY=:81 python3 -m leetcode_guard & SHOT=$!
+BEST=0
+for _ in $(seq 1 30); do
+  DISPLAY=:81 import -window root /tmp/try.png 2>/dev/null
+  SZ=$(stat -c%s /tmp/try.png 2>/dev/null || echo 0)
+  if [ "$SZ" -gt "$BEST" ]; then BEST=$SZ; cp /tmp/try.png /tmp/lock.png; fi
+  kill -0 "$SHOT" 2>/dev/null || break
+done
+```
+
+`if`, not `[ ... ] && { ...; }` — as the last command in the body the `&&` form
+returns non-zero on every iteration that is not a new maximum, which under
+`set -euo pipefail` kills the enclosing script. The `kill -0` break matters too:
+without it the loop keeps shooting blanks for the full 30 iterations after the
+render has already exited.
+
+A blank frame is ~400 bytes; a painted one is ~90 KB. Anything in the hundreds
+of bytes means you photographed the backdrop, whatever the window id said.
 
 **The grab needs its own check.** A screenshot proves pixels, not input. Over a
 mocked Tk root a released grab and a held one are indistinguishable — which is

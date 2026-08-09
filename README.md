@@ -41,10 +41,36 @@ is cached for seven days so it still renders with the network down.
 
 ## Optional sign-in
 
-Drop your browser cookies into `~/.config/leetcode_guard/cookies.json`:
+Run the setup script and paste the two values when prompted:
+
+```bash
+python3 ~/leetcode-guard/scripts/setup_cookies.py
+```
+
+It reads them from stdin rather than the command line, so the session token
+never lands in shell history or in `ps` output, and it writes the file `0600`.
+Get the values from a browser logged into leetcode.com: DevTools → Application →
+Cookies → `https://leetcode.com`, rows `LEETCODE_SESSION` and `csrftoken`.
+
+It writes `~/.config/leetcode_guard/cookies.json`, which is just:
 
 ```json
 {"LEETCODE_SESSION": "...", "csrftoken": "..."}
+```
+
+Confirm it worked with `python3 -m leetcode_guard --probe` — the `auth:` line
+should no longer say "Not signed in".
+
+**Signing in does not retroactively filter a cache fetched while signed out.**
+Solved status is per-row data recorded at fetch time (`status: "ac"`), so a pool
+cached anonymously has `status: null` for every problem and nothing to filter
+on — the list still offers solved problems while the note claims they are
+hidden. The cache lives seven days, so it will not fix itself. After a first
+sign-in, force one authenticated refetch:
+
+```bash
+rm ~/.local/share/leetcode_guard/pool_cache.json
+python3 -m leetcode_guard --probe   # refetches ~4000 problems, then filters
 ```
 
 That does exactly one thing: hides problems you have already solved from the

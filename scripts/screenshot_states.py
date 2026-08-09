@@ -1,15 +1,29 @@
 #!/usr/bin/env python3
-"""Render each lock state and save a screenshot of it.
+"""Render one lock state and hold it on screen long enough to be photographed.
 
 Exists because the two worst UI bugs in this repo were both invisible to the
 test suite: the demo close button drawn *behind* the surfaces, and the escape
 form that could never be submitted. Neither could have been caught by an
 assertion -- only by looking.
 
+**This script writes no image.** It takes one argument, the state name, and
+ignores any second argument; capturing is the caller's job, and it must happen
+inside the ~2.5s window this script stays up (see ``QUIT_AFTER_MS``). An earlier
+version of this docstring showed an output path that ``main`` never read, which
+produced a rendered window and no PNG.
+
 Run under Xvfb so nothing touches the real display::
 
     Xvfb :90 -screen 0 1600x1200x24 &
-    DISPLAY=:90 python3 scripts/screenshot_states.py locked /tmp/locked.png
+    DISPLAY=:90 python3 -m scripts.screenshot_states locked &
+    DISPLAY=:90 import -window root /tmp/locked.png
+
+One caveat that will waste a run otherwise: with ``overrideredirect=True`` the
+root is a *backdrop* behind the surfaces, so a single ``import -window root``
+fired too early captures a uniformly charcoal image that looks like a
+successfully photographed lock. Sample repeatedly for the duration and keep the
+largest file -- a blank frame is a few hundred bytes, a painted one is tens of
+kilobytes.
 
 States: ``locked``, ``unlocked``, ``escape``, ``outage``, ``production``.
 """
@@ -38,6 +52,11 @@ from leetcode_guard._view_update import apply_viewmodel
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# How long the rendered state stays up before the script quits. The external
+# screenshot must land inside this window; long enough to catch by polling,
+# short enough that a forgotten run does not sit on a display forever.
+QUIT_AFTER_MS = 2500
 
 NOW = datetime.now(tz=timezone.utc).astimezone()
 SIGNED_OUT = AuthState(
@@ -150,7 +169,7 @@ def main(argv: list[str]) -> int:
         # placement settle before the external screenshot fires.
         guard.root.update_idletasks()
         guard.root.update()
-        guard.root.after(2500, guard.root.quit)
+        guard.root.after(QUIT_AFTER_MS, guard.root.quit)
         guard.root.mainloop()
     return 0
 

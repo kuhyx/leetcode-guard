@@ -97,6 +97,13 @@ unfixable = []
 # import ...`, so E402 (import not at top of file) is unavoidable and correct
 # here. INP001 likewise: scripts/ is not a package and must not become one.
 "scripts/leetcode_guard_tray.py" = ["E402", "INP001"]
+# An interactive setup prompt: its printed instructions and the "now run
+# --probe" hint ARE its interface, so T201 is wrong here for the same reason it
+# is wrong for _cli.py -- and it is auto-fixable under --unsafe-fixes, so
+# without this entry the fixer silently deletes the prompts and leaves a script
+# that reads two secrets and explains nothing. S105 because the module names
+# the cookie constants it imports; they are key *names*, not values.
+"scripts/setup_cookies.py" = ["S105", "T201"]
 # A command line's entire job is to write to stdout, so T201 (print found) is
 # wrong here specifically. This is not cosmetic: T201 is an *auto-fixable* rule
 # and the ruff hook runs with --unsafe-fixes, so without this entry the fixer
