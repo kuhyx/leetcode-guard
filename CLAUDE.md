@@ -84,6 +84,14 @@ goes on the surface. Only a screenshot caught this — screenshot the demo.
 can never be submitted; the hatch was present, clickable and permanently
 refused.
 
+**A `from scripts.x import y` breaks mypy, and only in CI.** `scripts/` is not
+a package and must not become one, so importing one script from another makes
+mypy see that file under two module names ("Source file found twice") and exit
+2. Locally a warm `.mypy_cache` hides it, so this passes every pre-commit run
+on the machine that wrote it and fails the first clean checkout. Scripts share
+code by duplicating the few lines they need, or by importing from
+`leetcode_guard/`. Reproduce a CI mypy failure with `rm -rf .mypy_cache` first.
+
 **`# noqa` and `# type: ignore` are banned by a pygrep hook** — including
 inside docstrings. Mentioning the literal string trips it.
 
