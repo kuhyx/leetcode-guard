@@ -8,9 +8,12 @@ history and HMAC key all live in ``tmp_path``.
 from __future__ import annotations
 
 from concurrent.futures import Future
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from leetcode_guard._auth import AuthState
+from leetcode_guard._harvest import seed_ledger
+from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._lock import GuardDeps, LeetcodeGuard
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import parse_problem
@@ -73,6 +76,7 @@ def create_guard(
     write_ledger: bool = True,
     wait_turn: bool = True,
     now: datetime = NOW,
+    seeded: bool = False,
 ) -> tuple[LeetcodeGuard, dict[str, Any]]:
     """Build a guard plus a record of what its fake network was asked.
 
@@ -85,11 +89,28 @@ def create_guard(
         key_file: HMAC key. ``None`` means integrity checking is off.
         write_ledger: Whether the guard may persist anything.
         now: Fixed clock.
+        seeded: Pre-seed the ledger on an earlier day, so the guard starts on
+            an ordinary gating day. Seeding settles the day it runs on, so a
+            guard that seeds itself is by definition unlocked -- any test about
+            locked behaviour wants this. The seed lands on the preceding
+            *Friday* rather than the day before, because ``NOW`` is a Monday and
+            a Sunday seed would settle a weekend day at double cost, making
+            every balance in every test two off for no reason anyone reading it
+            would guess.
 
     Returns:
         The guard and a dict recording every network call.
     """
     startup = probe if probe is not None else probe_of()
+    if seeded:
+        seed_ledger(
+            Ledger(),
+            startup,
+            day=now.date() - timedelta(days=3),
+            now=now,
+            path=tmp_path / "ledger.json",
+            key_file=key_file,
+        )
     polled = poll_probe if poll_probe is not None else startup
     calls: dict[str, Any] = {"posts": 0}
 

@@ -173,7 +173,13 @@ def local_offline() -> NetworkDiagnosis:
 
 def blind_guard(tmp_path: Path, hmac_key: Path, diagnose):
     guard, _ = create_guard(
-        tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, key_file=hmac_key
+        tmp_path,
+        probe=probe_of(),
+        poll_probe=UNVERIFIABLE,
+        key_file=hmac_key,
+        # An ordinary gating day: seeding settles the day it runs on, so a
+        # self-seeding guard is unlocked and none of these outage paths apply.
+        seeded=True,
     )
     guard._deps = replace(guard._deps, diagnose=diagnose)
     # Enough consecutive failures that the classifier is due to run.

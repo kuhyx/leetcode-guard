@@ -167,7 +167,13 @@ def local_offline() -> NetworkDiagnosis:
 
 def blind_guard(tmp_path: Path, hmac_key: Path, diagnose):
     guard, _ = create_guard(
-        tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, key_file=hmac_key
+        tmp_path,
+        probe=probe_of(),
+        poll_probe=UNVERIFIABLE,
+        key_file=hmac_key,
+        # An ordinary gating day: seeding settles the day it runs on, so a
+        # self-seeding guard is unlocked and none of these outage paths apply.
+        seeded=True,
     )
     guard._deps = replace(guard._deps, diagnose=diagnose)
     # Enough consecutive failures that the classifier is due to run.
@@ -217,7 +223,11 @@ def test_our_own_dead_network_keeps_the_lock_shut(tmp_path: Path, hmac_key: Path
     guard._on_poll_result(UNVERIFIABLE)
 
     assert guard._decision().locked
-    assert not (tmp_path / "ledger.json").read_text(encoding="utf-8").count("charge:")
+    # No charge for *today*. The seeding run settled its own day (an earlier
+    # one), and that entry is not what this test is about.
+    assert f"charge:{MONDAY.isoformat()}" not in (
+        (tmp_path / "ledger.json").read_text(encoding="utf-8")
+    )
 
 
 def test_the_outage_reason_is_shown_on_the_lock(tmp_path: Path, hmac_key: Path):

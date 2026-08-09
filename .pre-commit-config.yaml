@@ -137,6 +137,20 @@ repos:
         always_run: true
         require_serial: true
         stages: [pre-push]
+      # Pre-push rather than pre-commit: it needs a real X server and a few
+      # seconds. No unit test can replace it -- over a mocked root a released
+      # grab and a held one look identical, which is the exact state the
+      # 2026-08-05 lockout was in.
+      - id: study-grab
+        name: Study mode really releases the X grab (Xvfb)
+        entry: >-
+          xvfb-run -a -s "-screen 0 1600x1200x24"
+          python3 -m scripts.verify_study_grab
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [pre-push]
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0

@@ -53,8 +53,10 @@ def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
 _TK_MODULES = (
     "leetcode_guard._view",
     "leetcode_guard._escape_flow",
-    "leetcode_guard._lock",
     "leetcode_guard._status_sections",
+    "leetcode_guard._study",
+    "leetcode_guard._study_resume",
+    "leetcode_guard._study_strip",
     "leetcode_guard.status_view",
 )
 """Every module that does ``import tkinter as tk``.
@@ -62,6 +64,12 @@ _TK_MODULES = (
 Any new one must be added here **in the same commit**. Miss one and the suite
 does not fail -- it opens a real fullscreen window, or worse, hangs holding a
 grab.
+
+The list runs both ways: ``_lock`` was removed when its last widget call moved
+to ``_view.install_demo_close_button``, because patching a ``tk`` attribute a
+module no longer has raises at fixture time and fails every test in the suite.
+Verify with ``grep -l '^import tkinter as tk' leetcode_guard/*.py`` after any
+move.
 """
 
 

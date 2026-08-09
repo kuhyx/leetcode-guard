@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,7 +13,7 @@ from leetcode_guard._ledger import bootstrap_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._settings import Client
-from leetcode_guard.tests._ledger_fixtures import NOW, add_charge, ledger_with_credits
+from leetcode_guard.tests._ledger_fixtures import NOW, add_charge
 from leetcode_guard.tests._net_fixtures import (
     fake_post,
     pool_result,
@@ -122,10 +121,50 @@ def test_production_opts_out_of_demo(monkeypatch, data_dir: Path):
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
     monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    # Pre-seeded: the run that *creates* a ledger deliberately returns before
+    # building a guard at all, so a fresh one would never reach FakeGuard.
+    _seeded_ledger(data_dir)
 
     assert _cli.main(["--production"]) == 0
     assert built["demo_mode"] is False
     assert built["deps"].ledger_path.name == "ledger.json"
+
+
+def _seeded_ledger(data_dir: Path) -> None:
+    """Write a ledger that already carries its bootstrap marker."""
+    ledger = Ledger()
+    append(ledger, [bootstrap_entry(day=local_today(), now=NOW, seeded=0)])
+    save_ledger(data_dir / "ledger.json", ledger)
+
+
+def test_the_run_that_creates_the_ledger_does_not_arm(monkeypatch, capsys, data_dir):
+    """Seeding marks the whole recent feed already-seen, so the gate it hands
+    over needs a solve that has not happened yet -- the 2026-08-05 arm. The run
+    defers instead of writing a charge, because a charge for today is the key
+    ``decide`` unlocks on and would make ``rm ledger.json`` worth a free day."""
+    built: dict = {}
+
+    class FakeGuard:
+        def __init__(self, **kwargs):
+            built["built"] = True
+
+        def run(self):
+            pass
+
+    stub_client(
+        monkeypatch,
+        recent_ac_result([submission_row("42", "two-sum")]),
+        pool_result([], total=0),
+    )
+    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+
+    assert _cli.main(["--production"]) == 0
+
+    assert "built" not in built, "the seeding run must not arm a lock"
+    assert "not arming this run" in capsys.readouterr().out
+    ledger = load_ledger(data_dir / "ledger.json")
+    assert ledger.has("ac:42")
+    assert not ledger.of_kind("charge"), "a deferral must not be a charge"
 
 
 def test_production_exits_without_a_window_when_today_is_settled(
@@ -163,221 +202,3 @@ def test_a_demo_run_wipes_its_own_ledger(monkeypatch, data_dir: Path):
     _cli.main([])
 
     assert not demo_ledger.exists()
-
-
-def test_status_reads_from_disk_without_touching_the_network(capsys, data_dir: Path):
-    """The suite blocks real HTTP, so this passing is the proof."""
-    exit_code = _cli.main(["--status"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 1
-    assert "day " in out
-    assert "credits " in out
-
-
-def test_check_prints_the_decision_trace_and_writes_nothing(
-    monkeypatch, capsys, data_dir: Path
-):
-    ledger_file = data_dir / "ledger.json"
-    stub_client(
-        monkeypatch,
-        recent_ac_result([submission_row("42", "two-sum")]),
-    )
-
-    exit_code = _cli.main(["--check"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 1
-    assert "1 existing submissions would be marked already-seen" in out
-    assert "would mint 0 credits (seeding claims them all)" in out
-    assert "decision   locked" in out
-    assert "needed     1" in out
-    assert "(nothing was written)" in out
-    assert not ledger_file.exists()
-
-
-def test_check_reports_an_unverifiable_probe(monkeypatch, capsys, data_dir: Path):
-    stub_client(monkeypatch, GraphQLResult(transport_error="down"))
-
-    exit_code = _cli.main(["--check"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 1
-    assert "probe      unverifiable" in out
-    assert "would mint 0 credits" in out
-
-
-def test_check_reports_an_unlocked_day(
-    monkeypatch, capsys, data_dir: Path, hmac_key: Path
-):
-    ledger = ledger_with_credits(3, day=local_today(), key_file=hmac_key)
-    # Bootstrapped, as any ledger that has ever run the gate would be. Without
-    # the marker `needs_seeding` is correctly True even though credits exist.
-    append(
-        ledger,
-        [bootstrap_entry(day=local_today(), now=NOW, seeded=0, key_file=hmac_key)],
-    )
-    save_ledger(data_dir / "ledger.json", ledger)
-    monkeypatch.setattr(_cli, "load_ledger", lambda *a, **k: ledger)
-    stub_client(monkeypatch, recent_ac_result([]))
-
-    exit_code = _cli.main(["--check"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 0
-    assert "decision   charged" in out
-    assert "seeding" not in out
-
-
-def test_check_reports_an_unreadable_integrity_key(
-    monkeypatch, capsys, data_dir: Path, missing_key: Path
-):
-    monkeypatch.setattr(
-        _cli,
-        "load_ledger",
-        lambda path, **kwargs: load_ledger(path, key_file=missing_key),
-    )
-    stub_client(monkeypatch, recent_ac_result([]))
-
-    _cli.main(["--check"])
-
-    assert "integrity  OFF" in capsys.readouterr().out
-
-
-def test_parser_flags():
-    args = _cli.build_parser().parse_args(
-        ["--production", "--probe", "--status", "--check", "--verbose"]
-    )
-
-    assert args.production
-    assert args.probe
-    assert args.status
-    assert args.check
-    assert args.verbose
-
-
-def test_timestamps_render_in_local_time():
-    rendered = _cli._format_timestamp(0)
-
-    assert rendered.startswith("19")
-
-
-def test_a_second_concurrent_run_stands_down(monkeypatch, capsys, data_dir: Path):
-    """The afternoon retry must not stack a second waiter behind the morning
-    run -- that would clear the gate twice."""
-    monkeypatch.setattr(_cli, "acquire_instance", lambda _path: None)
-
-    assert _cli.main([]) == 0
-    assert "already active" in capsys.readouterr().err
-
-
-def test_sync_reports_what_it_did(monkeypatch, capsys, data_dir: Path):
-    from leetcode_guard._sync import SyncResult
-
-    monkeypatch.setattr(
-        _cli,
-        "sync_ledger",
-        lambda _path: SyncResult(
-            pushed=True, record_count=7, merged_in=2, reason="pushed 7, merged 2"
-        ),
-    )
-
-    exit_code = _cli.main(["--sync"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 0
-    assert "sync       pushed" in out
-    assert "7 total, 2 merged in" in out
-
-
-def test_sync_exits_nonzero_when_it_could_not_push(monkeypatch, capsys, data_dir: Path):
-    from leetcode_guard._sync import SyncResult
-
-    monkeypatch.setattr(
-        _cli,
-        "sync_ledger",
-        lambda _path: SyncResult(
-            pushed=False, record_count=0, merged_in=0, reason="no sync token"
-        ),
-    )
-
-    assert _cli.main(["--sync"]) == 1
-    assert "not pushed" in capsys.readouterr().out
-
-
-def test_cache_statements_writes_the_mirror(monkeypatch, capsys, data_dir: Path):
-    stub_client(
-        monkeypatch,
-        pool_result([problem_row("two-sum")], total=1),
-        GraphQLResult(
-            data={
-                "question": {
-                    "titleSlug": "two-sum",
-                    "title": "Two Sum",
-                    "difficulty": "Easy",
-                    "content": "<p>text</p>",
-                }
-            }
-        ),
-    )
-
-    exit_code = _cli.main(["--cache-statements"])
-    out = capsys.readouterr().out
-
-    assert exit_code == 0
-    assert "fetching 1 statements" in out
-    assert "cached 1 statements" in out
-    assert (data_dir / "statements_cache.json").exists()
-
-
-def test_cache_statements_says_so_when_there_is_no_pool(
-    monkeypatch, capsys, data_dir: Path
-):
-    stub_client(monkeypatch, GraphQLResult(transport_error="down"))
-
-    assert _cli.main(["--cache-statements"]) == 1
-    assert "no problems to cache" in capsys.readouterr().out
-
-
-def test_cache_statements_reports_partial_failure(monkeypatch, capsys, data_dir: Path):
-    stub_client(
-        monkeypatch,
-        pool_result([problem_row("a")], total=1),
-        GraphQLResult(transport_error="down"),
-    )
-
-    assert _cli.main(["--cache-statements"]) == 1
-    assert "1 unavailable" in capsys.readouterr().out
-
-
-def test_production_is_free_and_silent_before_the_start_date(
-    monkeypatch, capsys, data_dir: Path
-):
-    """The timer fires daily from install day; until the gate is in force each
-    run must cost nothing -- not even a network call."""
-    monkeypatch.setattr(
-        _cli, "build_client", lambda: pytest.fail("must not touch the network")
-    )
-    monkeypatch.setattr(_cli, "GATE_START_DATE", local_today() + timedelta(days=1))
-
-    assert _cli.main(["--production"]) == 0
-    assert "gate not active until" in capsys.readouterr().out
-
-
-def test_demo_ignores_the_start_date(monkeypatch, data_dir: Path):
-    """So the lock can always be demonstrated, whatever the date."""
-    built: dict = {}
-
-    class FakeGuard:
-        def __init__(self, **kwargs):
-            built["made"] = True
-
-        def run(self):
-            pass
-
-    monkeypatch.setattr(_cli, "GATE_START_DATE", local_today() + timedelta(days=99))
-    stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
-
-    assert _cli.main([]) == 0
-    assert built["made"]

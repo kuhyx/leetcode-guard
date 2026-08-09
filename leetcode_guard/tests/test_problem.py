@@ -174,3 +174,32 @@ def test_solved_problems_are_dropped_only_when_requested():
         "solved",
         "unsolved",
     ]
+
+
+def test_a_title_with_newlines_is_flattened():
+    """The lock renders titles in a non-wrapping label, so an embedded newline
+    becomes an extra rendered row -- and enough of them push the surface past
+    768px, where a place-centred frame clips at both edges and takes the
+    headline and escape button with it. Well-formed JSON can carry one."""
+    problem = parse_problem(problem_row("two-sum") | {"title": "Two\nSum\r\nAgain"})
+
+    assert problem is not None
+    assert problem.title == "Two Sum Again"
+
+
+def test_an_absurdly_long_title_is_truncated():
+    """A multi-thousand-character title asks X for a pixmap it cannot allocate,
+    and Xlib's default handler exits the process in C -- killing a lock that is
+    holding the global grab. Longest real title is 79 characters."""
+    problem = parse_problem(problem_row("two-sum") | {"title": "X" * 5000})
+
+    assert problem is not None
+    assert len(problem.title) == 120
+    assert problem.title.endswith("…")
+
+
+def test_an_ordinary_title_is_untouched():
+    problem = parse_problem(problem_row("two-sum") | {"title": "Longest Substring"})
+
+    assert problem is not None
+    assert problem.title == "Longest Substring"

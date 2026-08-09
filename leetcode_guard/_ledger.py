@@ -42,7 +42,6 @@ SOURCE_SEED: Final = "seed"
 SOURCE_ESCAPE: Final = "escape"
 SOURCE_OUTAGE: Final = "leetcode-outage"
 SOURCE_NETWORK_INCIDENT: Final = "network-incident"
-
 _PROBE_PAYLOAD: Final[dict[str, object]] = {"probe": "1"}
 
 

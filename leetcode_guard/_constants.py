@@ -145,8 +145,38 @@ POOL_TTL_SECONDS: Final = 7 * 24 * 60 * 60
 must still render when the gate fires with no network."""
 
 SUGGESTION_COUNT: Final = 10
-"""How many problems the lock surface offers. The list is advisory -- any
+"""How many problems to resolve, report and cache. The list is advisory -- any
 accepted submission on any problem counts, including premium ones."""
+
+STUDY_STRIP_WIDTH_PX: Final = 320
+STUDY_STRIP_HEIGHT_PX: Final = 130
+STUDY_STRIP_TICK_MS: Final = 1_000
+"""The strip shown while the lock is stood down for study.
+
+It re-lifts itself on every tick, because gatelock's recovery loop -- which
+would normally keep a lock window on top -- is stopped for the duration. One
+second is fast enough that a browser raising over it is corrected before it is
+annoying, and slow enough to cost nothing."""
+
+REGRAB_MAX_ATTEMPTS: Final = 8
+"""How many immediate attempts at re-taking the global grab when study mode
+ends.
+
+Immediate, not spaced: this runs from a button callback, and sleeping between
+tries would freeze the surface the user just asked to have back. So these only
+catch a grab that is already free -- which is fine, because they were never the
+guarantee. gatelock's recovery loop is restarted whether or not they worked and
+re-takes the grab within a tick of it becoming available."""
+
+PROBLEM_DISPLAY_LIMIT: Final = 8
+"""How many of those the *lock surface* shows.
+
+Lower than :data:`SUGGESTION_COUNT` because the surface has a hard pixel budget
+and nothing else does. Ten problems, the escape button and the break-glass
+block measure 785px against a 768px panel, and a ``place``-centred frame clips
+at both edges -- losing the headline and the hatch together. Eight fits in
+627px with room for the note list to grow. The CLI, the MCP server and the
+status view are not so constrained and still offer all ten."""
 
 STATEMENT_CACHE_COUNT: Final = 50
 """How many problem statements to mirror for offline reading. This is the one

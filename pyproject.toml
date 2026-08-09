@@ -71,12 +71,28 @@ unfixable = []
     "SLF001",
 ]
 "scripts/check_file_length.py" = ["PTH123"]
+# The single place *shipped code* may touch gatelock's privates. Study mode must
+# stop gatelock's RecoveryLoop before releasing the X grab -- leave it running
+# and it re-takes the grab within a tick, handing the user a browser that looks
+# focused and swallows every keystroke. gatelock exposes no public stop for the
+# loop and no public accessor for the per-output Toplevels (infos() yields
+# dataclasses, names() yields strings), so there is no way to write this without
+# them. Pinned to gatelock v0.4.0 and asserted by
+# test_study.py::test_the_private_gatelock_attributes_still_exist, which fails on
+# a rename rather than letting it surface inside a live lock. The proper fix is
+# upstream LockWindow.suspend()/resume(); this module is the seam until then.
+"leetcode_guard/_gatelock_internals.py" = ["ANN401", "SLF001"]
 # A state-rendering harness, not shipped code. It exists to force the lock into
 # each state and photograph it -- which necessarily means driving internals,
 # exactly as the test suite does and is exempted for. It caught both UI bugs no
 # assertion could: the close button drawn behind the surfaces, and the escape
 # form's unlabelled first field.
 "scripts/screenshot_states.py" = ["SLF001", "T201"]
+# The grab harness, and deliberately NOT routed through _gatelock_internals: it
+# exists to check that the adapter's own assumptions hold on a real X server, so
+# asking the adapter would be marking its own homework. Its printed PASS/FAIL
+# lines are its output, hence T201.
+"scripts/verify_study_grab.py" = ["SLF001", "T201"]
 # PyGObject requires `gi.require_version` to run BEFORE `from gi.repository
 # import ...`, so E402 (import not at top of file) is unavoidable and correct
 # here. INP001 likewise: scripts/ is not a package and must not become one.

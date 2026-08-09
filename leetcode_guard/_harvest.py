@@ -14,11 +14,25 @@ LeetCode's submission id:
 **Seed.** On the very first run the recent-accepted feed is full of work done
 before this tool existed. Harvesting it would mint ~20 credits and buy three
 weeks of unlocks, so the gate would never once gate. Seeding records those same
-ids as zero-value ``seen`` markers instead, which makes the first run require
-one *fresh* solve.
+ids as zero-value ``seen`` markers instead.
+
+Seeding writes **no charge and no credit** -- only the markers and the
+bootstrap entry. Marking the whole feed already-seen does leave a gate that can
+only be satisfied by a solve which has not happened yet, and on 2026-08-05 that
+gate armed at the same moment the lock removed the browser needed to produce
+one. The fix for that lives in the *caller*: :func:`leetcode_guard._cli.cmd_lock`
+skips arming on the run that created the ledger.
+
+Settling the day here instead was tried and reverted. It wrote ``charge:<today>``
+-- the exact key :func:`leetcode_guard._gate.decide` unlocks on -- so deleting
+the ledger produced an unlocked day, repeatably, which is precisely the bypass
+the credit/charge asymmetry exists to prevent. A gate deferral must never be
+expressible as ledger state that satisfies the gate.
 
 Seeding keys off the presence of a ``bootstrap:`` entry, not off the ledger
-file being absent -- an empty-but-present file must still seed.
+file being absent -- an empty-but-present file must still seed. An
+already-seeded ledger is never rewritten, so the deferral applies to new
+ledgers only.
 """
 
 from __future__ import annotations
@@ -104,8 +118,8 @@ def seed_ledger(
     save_ledger(path, ledger)
     _logger.warning(
         "seeded a new ledger with %d pre-existing submissions -- they are "
-        "recorded as already-seen and grant no credit, so the first unlock "
-        "requires a fresh solve",
+        "recorded as already-seen and grant no credit. This run does not arm "
+        "(see cmd_lock); the next one gates normally.",
         len(probe.submissions),
     )
     return len(probe.submissions)

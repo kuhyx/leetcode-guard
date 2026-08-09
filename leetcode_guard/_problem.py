@@ -68,6 +68,33 @@ def sort_key(problem: Problem) -> tuple[int, float]:
     )
 
 
+_TITLE_MAX_CHARS: Final = 120
+"""Longest title in the live 4013-problem pool is 79 characters."""
+
+
+def _one_line(title: str) -> str:
+    """Flatten a title to a single bounded line.
+
+    The lock renders titles in a non-wrapping label, so whatever the API sends
+    is laid out verbatim. Two shapes of malformed title are load-bearing there,
+    and both arrive in perfectly well-formed JSON:
+
+    * an embedded newline becomes an extra rendered *row*, and eight of them
+      push the surface past its 768px budget -- where a ``place``-centred frame
+      clips at both edges and takes the headline and escape button with it;
+    * a multi-thousand-character title asks X for a pixmap it cannot allocate,
+      and Xlib's default error handler exits the process in C, killing a lock
+      that is holding the global grab.
+
+    Neither is reachable from LeetCode as it behaves today. Both are one bad
+    deploy away, and the cost of collapsing whitespace here is nothing.
+    """
+    flattened = " ".join(title.split())
+    if len(flattened) > _TITLE_MAX_CHARS:
+        return flattened[: _TITLE_MAX_CHARS - 1] + "\u2026"
+    return flattened
+
+
 def parse_problem(row: object) -> Problem | None:
     """Convert one ``questions`` row, or ``None`` if it is unusable.
 
@@ -91,7 +118,7 @@ def parse_problem(row: object) -> Problem | None:
         return None
     return Problem(
         frontend_id=str(row.get("frontendQuestionId", "")),
-        title=str(row.get("title", slug)),
+        title=_one_line(str(row.get("title", slug))),
         title_slug=slug,
         difficulty=difficulty,
         ac_rate=float(ac_rate),

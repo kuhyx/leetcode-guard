@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 
 from gatelock import LockConfig, measure_fit, report_fit
 
+from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._view import build_guard_view
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
@@ -51,6 +52,14 @@ HEIGHT = 768
 
 # The worst realistic case: the maximum problems the lock offers at once, with
 # long titles, plus every optional note line.
+#
+# It has to be the real maximum, and it was not. This built five problems while
+# the lock displayed ten, and ``_build_lock`` passed no ``on_escape``, so the
+# escape button was never measured at all -- the harness reported 429px for a
+# screen that actually rendered 723px of a 768px budget. Nothing was 45px from
+# clipping by design; it was 45px from clipping unobserved. A ``place``-centred
+# surface shears equal amounts off the top *and* the bottom, so overflow costs
+# the headline and the escape button together.
 _MODEL = ViewModel(
     headline="Solve 1 LeetCode problem to unlock",
     balance_line="Credits 0  |  Monday costs 1  |  Debt 2",
@@ -64,7 +73,7 @@ _MODEL = ViewModel(
             label=f"{n}. Longest Substring Without Repeating Characters (Medium)",
             url=f"https://leetcode.com/problems/problem-{n}/",
         )
-        for n in range(1, 6)
+        for n in range(1, PROBLEM_DISPLAY_LIMIT + 1)
     ),
     unlocked=False,
     show_escape=True,
@@ -116,8 +125,21 @@ def _placed_child(parent: tk.Misc) -> tk.Misc:
 
 
 def _build_lock(surface: ScrollableSurface) -> tk.Misc:
-    """Paint the main lock screen and return the frame to measure."""
-    build_guard_view(surface.content, LockConfig(), _MODEL, output_name="fit-check")
+    """Paint the main lock screen and return the frame to measure.
+
+    Both callbacks are passed because both add height that the user sees: without
+    ``on_escape`` the hatch button is built and immediately unpacked, and without
+    ``on_open`` the problem rows render as bare labels. Measuring either lighter
+    variant measures a screen that is never shown.
+    """
+    build_guard_view(
+        surface.content,
+        LockConfig(),
+        _MODEL,
+        output_name="fit-check",
+        on_escape=lambda: None,
+        on_open=lambda _url: None,
+    )
     return _placed_child(surface.content)
 
 

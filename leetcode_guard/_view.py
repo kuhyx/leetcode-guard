@@ -8,6 +8,12 @@ Colours come from ``LockConfig``'s own defaults, which *are* the unified design
 system -- no overrides. The one rule that needs care is ``on_fill``: text on an
 accent/danger fill must be the dark ink, not the near-white ``fg``, or it lands
 at ~2.5:1 contrast.
+
+:func:`~leetcode_guard._breakglass.breakglass_lines` is called from the paint
+path, which is not the exception to "pure painting" it looks like: it takes a
+config and returns strings, touching no I/O and reaching no decision. The
+invariant that matters -- a surface can always be drawn, whatever else is
+broken -- still holds.
 """
 
 from __future__ import annotations
@@ -15,6 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import tkinter as tk
 from typing import TYPE_CHECKING, Any
+
+from leetcode_guard._breakglass import breakglass_lines
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,6 +47,8 @@ class GuardView:
     problem_labels: list[Any] = field(default_factory=list)
     problems_frame: Any = None
     escape_button: Any = None
+    open_buttons: list[Any] = field(default_factory=list)
+    breakglass_label: Any = None
 
 
 def build_guard_view(
@@ -48,6 +58,7 @@ def build_guard_view(
     *,
     output_name: str,
     on_escape: Callable[[], None] | None = None,
+    on_open: Callable[[str], None] | None = None,
 ) -> GuardView:
     """Create the widget tree for one surface.
 
@@ -57,6 +68,11 @@ def build_guard_view(
         model: What to display right now.
         output_name: Which output this is, for bookkeeping.
         on_escape: Invoked when the escape hatch is pressed, if offered.
+        on_open: Invoked with a problem's URL when its Open button is pressed.
+            ``None`` renders the list as inert text, which is what the fit
+            harness and any read-only render want -- and what the lock itself
+            did on 2026-08-05, when naming ten problems it would accept and
+            offering no way to reach one made it unsatisfiable.
 
     Returns:
         Handles to every widget that later updates need to touch.
@@ -87,7 +103,9 @@ def build_guard_view(
 
     problems_frame = tk.Frame(inner, bg=config.field_bg)
     problems_frame.pack(pady=(0, _PAD), padx=_PAD, fill="x")
-    problem_labels = _build_problem_labels(problems_frame, config, model)
+    problem_labels, open_buttons = _build_problem_rows(
+        problems_frame, config, model, on_open
+    )
 
     status_line = tk.Label(
         inner,
@@ -109,6 +127,22 @@ def build_guard_view(
     )
     notes_label.pack()
 
+    # Permanent, and never unpacked. This is the only instruction on the screen
+    # that keeps working when everything else in this package is wrong, and its
+    # absence is why the 2026-08-05 lockout needed a terminal that happened to
+    # already be open. `apply_viewmodel` does not touch it, so no repaint can
+    # quietly hide it.
+    breakglass_label = tk.Label(
+        inner,
+        text="\n".join(breakglass_lines(config)),
+        font=config.font("caption"),
+        fg=config.muted,
+        bg=config.bg,
+        justify="center",
+        wraplength=900,
+    )
+    breakglass_label.pack(pady=(_PAD, 0))
+
     view = GuardView(
         output_name=output_name,
         container=container,
@@ -118,6 +152,8 @@ def build_guard_view(
         notes_label=notes_label,
         problem_labels=problem_labels,
         problems_frame=problems_frame,
+        open_buttons=open_buttons,
+        breakglass_label=breakglass_label,
     )
 
     if on_escape is not None:
@@ -139,10 +175,46 @@ def build_guard_view(
     return view
 
 
-def _build_problem_labels(
-    parent: tk.Misc, config: LockConfig, model: ViewModel
-) -> list[Any]:
-    """Render the suggestion list, or a stand-in when there isn't one."""
+def install_demo_close_button(
+    parent: tk.Misc, config: LockConfig, on_close: Callable[[], None]
+) -> tk.Button:
+    """The escape that makes a demo safe to run.
+
+    Installed on the **surface**, not on the root. With
+    ``overrideredirect=True`` the root is a full-screen backdrop and gatelock's
+    per-output Toplevels sit on top of it, so a button placed on the root is
+    drawn behind them and is invisible and unclickable. Caught by screenshotting
+    the demo rather than by any test -- which is exactly why the demo gets
+    screenshotted.
+    """
+    button = tk.Button(
+        parent,
+        text="X Close Demo",
+        fg=config.on_fill,
+        bg=config.danger,
+        command=on_close,
+        relief="flat",
+    )
+    button.place(x=10, y=10)
+    return button
+
+
+def _build_problem_rows(
+    parent: tk.Misc,
+    config: LockConfig,
+    model: ViewModel,
+    on_open: Callable[[str], None] | None,
+) -> tuple[list[Any], list[Any]]:
+    """Render the suggestion list, or a stand-in when there isn't one.
+
+    Each problem is one row: its title on the left, a button that opens it on
+    the right. The raw URL is deliberately *not* printed any more -- it was only
+    ever there because there was nothing to click, and dropping that second line
+    is what buys the vertical room the break-glass block needs.
+
+    Returns:
+        The label widgets and the Open buttons, in list order.
+    """
     if not model.problems:
         placeholder = tk.Label(
             parent,
@@ -153,19 +225,38 @@ def _build_problem_labels(
             anchor="w",
         )
         placeholder.pack(fill="x", padx=_PAD, pady=_PAD // 2)
-        return [placeholder]
+        return [placeholder], []
 
-    labels = []
+    labels: list[Any] = []
+    buttons: list[Any] = []
     for line in model.problems:
+        row = tk.Frame(parent, bg=config.field_bg)
+        row.pack(fill="x", padx=_PAD, pady=_PAD // 4)
         label = tk.Label(
-            parent,
-            text=f"{line.label}\n{line.url}",
+            row,
+            text=line.label,
             font=config.font("body"),
             fg=config.fg,
             bg=config.field_bg,
             anchor="w",
             justify="left",
         )
-        label.pack(fill="x", padx=_PAD, pady=_PAD // 4)
+        label.pack(side="left", fill="x", expand=True)
         labels.append(label)
-    return labels
+        if on_open is not None:
+            button = tk.Button(
+                row,
+                text="Open",
+                font=config.font("body"),
+                # on_fill on an accent fill, per the module note.
+                fg=config.on_fill,
+                bg=config.accent,
+                # The default argument is load-bearing: a bare closure over
+                # `line` would capture the loop variable, so every button would
+                # open whichever problem happened to be last.
+                command=lambda url=line.url: on_open(url),
+                relief="flat",
+            )
+            button.pack(side="right", padx=_PAD // 2)
+            buttons.append(button)
+    return labels, buttons

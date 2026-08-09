@@ -26,7 +26,7 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._daycost import local_today, weekday_name
 from leetcode_guard._gate import decide
-from leetcode_guard._harvest import harvest, needs_seeding
+from leetcode_guard._harvest import harvest, needs_seeding, seed_ledger
 from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._lock import GuardDeps, LeetcodeGuard
@@ -265,6 +265,23 @@ def _run_lock(*, demo_mode: bool) -> int:
         return _EXIT_OK
 
     probe = fetch_recent_ac(client.post, client.username)
+
+    # The run that *creates* the ledger does not arm. Seeding marks the whole
+    # recent feed already-seen, so the gate it hands over can only be satisfied
+    # by a solve that has not happened yet -- and on 2026-08-05 that gate armed
+    # at the same moment the lock removed the browser needed to produce one.
+    #
+    # Deferring here rather than by writing a charge is deliberate. An earlier
+    # fix settled the day in the ledger instead, which meant `rm ledger.json`
+    # produced an unlocked day, repeatably: the deferral was expressible as
+    # exactly the state `decide` unlocks on. Skipping the run leaves no such
+    # state behind -- delete the ledger and you skip one run, you do not earn a
+    # day.
+    if not demo_mode and needs_seeding(ledger) and probe.status is ProbeStatus.OK:
+        seed_ledger(ledger, probe, day=day, now=now, path=ledger_path, key_file=None)
+        print("seeded a new ledger; not arming this run -- the next one gates")
+        return _EXIT_OK
+
     pool = resolve_pool(
         client.post, POOL_CACHE_FILE, now=now.timestamp(), auth=client.auth
     )

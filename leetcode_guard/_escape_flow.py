@@ -48,14 +48,23 @@ GUARD_ESCAPE_POLICY: Final = EscapePolicy(
 """Budgets left at the shared defaults, so this is exactly as hard to abuse as
 the sibling lockers' hatches."""
 
-ESCAPE_OFFER_AFTER_SECONDS: Final = 600
-"""Ten minutes of an ordinary lock before the hatch is even visible.
+ESCAPE_OFFER_AFTER_SECONDS: Final = 0
+"""No delay: the hatch is on screen from the first second.
 
-Overridden entirely when the network is the problem: see
-:func:`is_offerable`, which reveals it after
-:data:`~leetcode_guard._constants.UNVERIFIABLE_HATCH_SECONDS` of consecutive
-failed checks. Making someone wait out a full offer delay while the gate
-cannot see LeetCode at all would be punishing them for an outage.
+This was ten minutes, on the theory that a hatch you have to wait for is one
+you will not reach for lightly. What that actually bought was a lock with no
+exit at all for its first ten minutes. On 2026-08-05 the gate armed demanding a
+solve the user could not perform, and the hatch -- the one control that would
+have ended it -- was still four minutes away at the point the services had to
+be killed from an already-open terminal. A safety valve that opens ten minutes
+into the fire is not a safety valve.
+
+What makes the hatch hard to abuse is the **budget**, not the clock: one use
+per 7 days, three per 30, ten per 90, plus 120 characters of written
+justification and a read-back of the last ten. Those are intact, and they are
+the parts that survive contact with a user who is genuinely stuck. The
+comparison below is kept rather than deleted so restoring a delay stays a
+one-line change.
 """
 
 

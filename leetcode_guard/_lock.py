@@ -9,6 +9,16 @@ addition of our own: the network work that produces the suggestion list and the
 first probe happens *before* the window is built, off the Tk thread. Fetching
 inside a surface builder would mean no window at all when the network is down,
 and no window is itself the bypass.
+
+That last invariant now has a stated exception, and it is worth reading before
+changing anything here. **No window is the bypass while the lock is asserted**
+-- but :mod:`leetcode_guard._lock_study` can stand the assertion down on
+request, releasing the grab so the user can actually reach a problem. Until
+2026-08-05 the rule was absolute, and the result was a lock demanding a solve it
+had itself made impossible: the browser needed to produce one could not receive
+a keystroke. Study mode is an explicit, user-initiated, logged release of
+assertion, with no timeout, and both transitions log at warning with elapsed
+time so the journal always says how long the machine was open.
 """
 
 from __future__ import annotations
@@ -17,7 +27,6 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 import logging
 import time
-import tkinter as tk
 from typing import TYPE_CHECKING, Any, Final
 
 from gatelock import (
@@ -31,8 +40,8 @@ from gatelock import (
 from leetcode_guard._constants import (
     POLL_INTERVAL_MS_DEMO,
     POLL_INTERVAL_MS_PRODUCTION,
+    PROBLEM_DISPLAY_LIMIT,
     RANK_LEETCODE_GUARD,
-    SUGGESTION_COUNT,
 )
 from leetcode_guard._daycost import local_today
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker, is_offerable
@@ -40,14 +49,15 @@ from leetcode_guard._gate import GateDecision, apply_decision, decide
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._lock_release import ReleaseMixin
+from leetcode_guard._lock_study import StudyMixin
 from leetcode_guard._network_incident import (
     build_tracker as build_incident_tracker,
 )
 from leetcode_guard._poller import SolvePoller
 from leetcode_guard._queue import wait_for_turn
-from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
+from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._sync import sync_quietly
-from leetcode_guard._view import build_guard_view
+from leetcode_guard._view import build_guard_view, install_demo_close_button
 from leetcode_guard._view_group import FrameGroup
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ViewModel, build_viewmodel
@@ -56,6 +66,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from concurrent.futures import Executor
     from pathlib import Path
+    import tkinter as tk
 
     from gatelock import SurfaceInfo
 
@@ -64,7 +75,6 @@ if TYPE_CHECKING:
     from leetcode_guard._netcheck import NetworkDiagnosis
     from leetcode_guard._network_incident import IncidentPolicy
     from leetcode_guard._pool_resolve import PoolResolution
-    from leetcode_guard._submissions import SolveProbe
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -108,7 +118,7 @@ class GuardDeps:
         return self.now() if self.now is not None else datetime.now().astimezone()
 
 
-class LeetcodeGuard(ReleaseMixin):
+class LeetcodeGuard(ReleaseMixin, StudyMixin):
     """A gatelock consumer that releases when a LeetCode problem is solved."""
 
     def __init__(self, *, demo_mode: bool = True, deps: GuardDeps) -> None:
@@ -165,6 +175,10 @@ class LeetcodeGuard(ReleaseMixin):
 
         self._model = self._build_model(deps.probe)
         self._closed = False
+        # Built lazily by StudyMixin: the session needs the LockWindow, which
+        # does not exist until further down this method.
+        self._study = None
+        self._strip = None
 
         arbiter = Arbiter(
             "leetcode_guard",
@@ -203,11 +217,12 @@ class LeetcodeGuard(ReleaseMixin):
             self._model,
             output_name=surface.output_name,
             on_escape=self._open_escape,
+            on_open=self._open_problem,
         )
         self._views[surface.output_name] = view
         self._frames.add(surface.output_name, parent)
         if self._demo:
-            self._install_demo_close_button(parent)
+            install_demo_close_button(parent, self._config, self.close)
 
     def teardown_surface(self, surface: SurfaceInfo) -> None:
         """Drop a monitor that has gone away."""
@@ -229,6 +244,11 @@ class LeetcodeGuard(ReleaseMixin):
 
     def on_close(self) -> None:
         """Runs on every exit path, including SIGTERM."""
+        # First: study mode restored VT switching directly and cleared
+        # gatelock's own ``_vt_disabled`` flag to match. Resuming here puts both
+        # back, so ``LockWindow.close``'s restore is not skipped and the
+        # machine does not exit with VT switching still disabled.
+        self._end_study()
         self._poller.stop()
         if self._deps.write_ledger and self._deps.sync_on_close:
             # Best-effort and last: a sync failure must never abort teardown
@@ -270,7 +290,7 @@ class LeetcodeGuard(ReleaseMixin):
             self._deps.auth,
             probe,
             checked_at=self._deps.moment(),
-            limit=SUGGESTION_COUNT,
+            limit=PROBLEM_DISPLAY_LIMIT,
             show_escape=self._should_offer_escape(),
         )
         if self._outage_note is None:
@@ -298,9 +318,27 @@ class LeetcodeGuard(ReleaseMixin):
         return fetch_recent_ac(self._deps.post, self._deps.username)
 
     def _on_poll_result(self, probe: SolveProbe | None) -> None:
-        """Fold one probe into the ledger and repaint."""
+        """Fold one probe into the ledger and repaint.
+
+        ``None`` means :meth:`_check` *raised*, and it used to return here. That
+        skipped both ``state.record`` and the repaint, so a probe that raised
+        every tick -- a bad cookie jar, an SSL failure, a resolver exception --
+        left ``consecutive_unverifiable`` at zero for ever. The blind-time route
+        to the hatch could then never fire and the status line froze at whatever
+        it said on startup: a lock with no exit that looked exactly like a
+        healthy one. Treating the crash as the unverifiable probe it is costs
+        nothing, and a crash is the case that most needs a way out.
+        """
         if probe is None:
-            return
+            _logger.warning(
+                "the solve check crashed; counting it as an unverifiable probe "
+                "so blind time still accrues and the hatch can still appear"
+            )
+            probe = SolveProbe(
+                status=ProbeStatus.UNVERIFIABLE,
+                submissions=(),
+                reason="the solve check crashed -- see the log",
+            )
         self._poller.state.record(usable=probe.status is ProbeStatus.OK)
         if probe.status is ProbeStatus.OK:
             self.clear_outage()
@@ -331,30 +369,17 @@ class LeetcodeGuard(ReleaseMixin):
         apply_viewmodel(self._views.values(), self._model)
 
     def _release(self, probe: SolveProbe) -> None:
-        """Show the unlocked screen briefly, then let go."""
+        """Show the unlocked screen briefly, then let go.
+
+        A solve landing mid-study is the *primary* way study mode ends, so the
+        lock is put back first: the unlocked screen has to be on a surface that
+        is actually mapped, or the good news flashes onto a hidden window and
+        the user never sees why the machine came back.
+        """
+        self._end_study()
         self._model = self._build_model(probe)
         apply_viewmodel(self._views.values(), self._model)
         self.root.after(_UNLOCK_LINGER_MS, self.close)
-
-    def _install_demo_close_button(self, parent: tk.Misc) -> None:
-        """The escape that makes a demo safe to run.
-
-        Installed on the **surface**, not on the root. With
-        ``overrideredirect=True`` the root is a full-screen backdrop and
-        gatelock's per-output Toplevels sit on top of it, so a button placed on
-        the root is drawn behind them and is invisible and unclickable. Caught
-        by screenshotting the demo rather than by any test -- which is exactly
-        why the demo gets screenshotted.
-        """
-        button = tk.Button(
-            parent,
-            text="X Close Demo",
-            fg=self._config.on_fill,
-            bg=self._config.danger,
-            command=self.close,
-            relief="flat",
-        )
-        button.place(x=10, y=10)
 
     def close(self) -> None:
         """Release the lock. Idempotent."""
