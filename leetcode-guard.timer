@@ -5,10 +5,12 @@ Description=Fire the LeetCode gate in the morning, with an afternoon retry
 OnCalendar=*-*-* 09:00:00
 OnCalendar=*-*-* 13:00:00
 Unit=leetcode-guard.service
-# Persistent=false on purpose. A missed run must NOT fire the moment the
-# machine wakes up hours later -- the gate charges on use, so a skipped day
-# simply costs nothing rather than accumulating a debt.
-Persistent=false
+# Persistent=true on purpose (flipped 2026-08-12). Persistent=false meant a
+# missed 09:00/13:00 slot -- e.g. the PC was off or asleep -- was silently
+# dropped for the whole day: no lock, no browser, no sign anything was
+# supposed to happen. A late fire on next boot/wake is preferable to a gate
+# that silently never engages.
+Persistent=true
 AccuracySec=1s
 RandomizedDelaySec=0
 
