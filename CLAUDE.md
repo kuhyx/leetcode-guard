@@ -72,6 +72,33 @@ no error, no indication. `fetch_pool` advances `skip` by rows *actually
 returned*. An earlier version advanced by the requested size and collected 657
 of 4003 problems while reporting success.
 
+**`status` is per-session, and a dead session is silent.** The pool query is
+public, so expired cookies return HTTP 200 with a complete, healthy-looking
+problem list whose every `status` is `null` — not an error, not an empty
+payload. Nothing upstream can tell that from "nothing is solved". A `null` is
+therefore **never** evidence of unsolved, only of not-signed-in; `_live_solved`
+returns positive evidence only and falls back to the ledger. Filtering on
+`status == "ac"` needs no auth flag guarding it — an unauthenticated null
+simply does not match. An `exclude_solved` flag wired to "cookies loaded" once
+did guard it, and in the signed-out branch it *discarded* the genuine `"ac"`
+rows a partly-authenticated fetch had returned.
+
+**Solved-state is checked live, but only for what is displayed.** Re-paging the
+whole authenticated pool is 41 requests before the window exists, and LeetCode
+answers a rate limit with the same null payload as an expired session — so an
+exhaustive check manufactures the failure it is looking for. Rank first, verify
+the top N, backfill from the next candidates. `recentAcSubmissionList` is hard
+capped at **20 rows** regardless of `limit` (verified against an account with
+thousands of solves), so it can never enumerate a full solved set; do not raise
+`RECENT_AC_LIMIT` to try — it feeds the harvest path, where every unseen
+submission id mints a credit.
+
+**The demo deletes its ledger every run**, so anything derived from ledger state
+is empty there. That put two already-solved problems back at the top of the demo
+surface after the filter was fixed everywhere else, and **only the screenshot
+caught it** — the unit tests all passed. Screenshot the demo after any change to
+the suggestion list.
+
 **Ruff runs with `--unsafe-fixes` and `T201` is auto-fixable.** Without the
 per-file ignore, the fixer deleted every `print` in `cmd_probe` and replaced the
 loops with `pass`. It still exited 0. Assert on stdout, not on exit codes.
@@ -126,7 +153,11 @@ it.
 
 **The status view is the fourth thing ruff's `--unsafe-fixes` has silently
 gutted.** `status_view.py` and `_cli.py` both need the `T201` per-file ignore
-or the fixer deletes the prints that *are* their interface.
+or the fixer deletes the prints that *are* their interface. `_login.py` is the
+fifth, and the worst: it lost every print on the first pre-commit run after
+being written, leaving a credential command that stores or refuses a cookie
+without saying which. Its tests assert on behaviour, not stdout, so they stayed
+green — add the `T201` entry in the same commit as any new print-driven module.
 
 ## Verifying
 

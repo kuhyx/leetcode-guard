@@ -41,42 +41,42 @@ is cached for seven days so it still renders with the network down.
 
 ## Optional sign-in
 
-Run the setup script and paste the two values when prompted:
-
 ```bash
-python3 ~/leetcode-guard/scripts/setup_cookies.py
+python3 -m leetcode_guard --login
 ```
 
-It reads them from stdin rather than the command line, so the session token
-never lands in shell history or in `ps` output, and it writes the file `0600`.
-Get the values from a browser logged into leetcode.com: DevTools → Application →
-Cookies → `https://leetcode.com`, rows `LEETCODE_SESSION` and `csrftoken`.
+Paste the two values when prompted. Get them from a browser logged into
+leetcode.com: DevTools → Application → Cookies → `https://leetcode.com`, rows
+`LEETCODE_SESSION` and `csrftoken`. They are read from stdin rather than the
+command line, so the session token never lands in shell history or in `ps`
+output, and the file is written `0600`.
 
-It writes `~/.config/leetcode_guard/cookies.json`, which is just:
+**Nothing is stored until LeetCode confirms the cookies work.** A refused pair
+never reaches the disk, so a typo cannot destroy a session that was still
+working. It writes `~/.config/leetcode_guard/cookies.json`, which is just:
 
 ```json
 {"LEETCODE_SESSION": "...", "csrftoken": "..."}
 ```
 
-Confirm it worked with `python3 -m leetcode_guard --probe` — the `auth:` line
-should no longer say "Not signed in".
+Sessions expire roughly every two weeks with no refresh flow, so expect to
+re-run this. You do not have to notice: the lock says on screen when it could
+not check, rather than claiming a filter ran.
 
-**Signing in does not retroactively filter a cache fetched while signed out.**
-Solved status is per-row data recorded at fetch time (`status: "ac"`), so a pool
-cached anonymously has `status: null` for every problem and nothing to filter
-on — the list still offers solved problems while the note claims they are
-hidden. The cache lives seven days, so it will not fix itself. After a first
-sign-in, force one authenticated refetch:
+Signing in does exactly one thing — it improves how completely already-solved
+problems are hidden from the suggestion list. It is never consulted for solve
+detection, so an expired session can only make suggestions worse; it can never
+stop the gate unlocking.
 
-```bash
-rm ~/.local/share/leetcode_guard/pool_cache.json
-python3 -m leetcode_guard --probe   # refetches ~4000 problems, then filters
-```
+The lock does not depend on it. Before every run it asks LeetCode directly
+about the problems it is about to show and drops any that come back solved,
+backfilling from the next candidates. When that check cannot be made — expired
+session, rate limit, no network — it falls back to the local ledger of solves
+recorded on this device and says so, rather than treating "cannot check" as
+"not solved".
 
-That does exactly one thing: hides problems you have already solved from the
-suggestion list. It is never consulted for solve detection, so an expired
-session (they last about two weeks) can only make the suggestions worse — it
-can never stop the gate unlocking. Without it the lock says so on screen.
+`scripts/setup_cookies.py` still works and does the same stdin/`0600` handling,
+but it writes first and asks you to verify afterwards. Prefer `--login`.
 
 ## When LeetCode cannot be reached
 
@@ -167,6 +167,7 @@ python3 -m leetcode_guard --production # the real thing
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
 python3 -m leetcode_guard --probe      # live API data
+python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync
 ```
 
