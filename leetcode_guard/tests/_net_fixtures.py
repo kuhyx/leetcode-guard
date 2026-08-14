@@ -77,9 +77,20 @@ def pool_result(
 def status_result(slug: str, status: str | None) -> GraphQLResult:
     """Wrap one problem's solved-state in a ``question`` envelope.
 
-    A ``None`` status is what a signed-out or expired session receives -- the
-    request succeeds and the payload is well formed, which is exactly why it
-    has to be distinguishable from "not solved".
+    Run against the live endpoint on 2026-08-14 with a working session, and
+    these are the three values it actually returned, not what was inferred
+    from a broken one:
+
+    * ``"ac"`` -- solved.
+    * ``"notac"`` -- attempted, with a failed submission on record.
+    * ``None`` -- **never attempted**. Also what an expired session returns for
+      every problem, which is why a null alone cannot tell the two apart.
+
+    This docstring previously claimed a null meant "signed out or expired",
+    inferred from a dead cookie where everything is null. Tests written from
+    that premise passed while the code shipped the same error -- see
+    ``scripts/verify_solved_semantics.py``, which checks it against the real
+    endpoint because a fixture can only ever repeat what its author believed.
     """
     return GraphQLResult(data={"question": {"titleSlug": slug, "status": status}})
 
