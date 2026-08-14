@@ -184,3 +184,18 @@ repos:
         entry: python3 scripts/check_silent_failures.py
         language: system
         types: [python]
+      # The fixtures assert what LeetCode's `status` field means, and on
+      # 2026-08-14 they asserted it wrongly -- a null was documented as "signed
+      # out" when it actually means "never attempted". Every solved-state test
+      # passed against that fixture while the code shipped the same error, so
+      # this asks the live endpoint instead. Skips loudly (exit 0) when the
+      # cookie has expired, because that is a precondition failure and the
+      # cookie dies every two weeks; it fails only if the semantics move.
+      - id: solved-semantics
+        name: LeetCode status still means what the fixtures claim (network)
+        entry: python3 -m scripts.verify_solved_semantics
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [pre-push]

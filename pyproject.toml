@@ -93,6 +93,13 @@ unfixable = []
 # asking the adapter would be marking its own homework. Its printed PASS/FAIL
 # lines are its output, hence T201.
 "scripts/verify_study_grab.py" = ["SLF001", "T201"]
+# The solved-semantics harness. Same reasoning as the grab check: its printed
+# PASS/FAIL lines and its SKIP instructions ARE its output, so T201 is wrong
+# here. The fixer proved the point by deleting all thirteen prints on the first
+# run after the file was written, leaving a harness that checked everything and
+# reported nothing while still exiting 0 -- the exact fail-open shape it exists
+# to catch. Fifth file to hit this trap.
+"scripts/verify_solved_semantics.py" = ["T201"]
 # PyGObject requires `gi.require_version` to run BEFORE `from gi.repository
 # import ...`, so E402 (import not at top of file) is unavoidable and correct
 # here. INP001 likewise: scripts/ is not a package and must not become one.

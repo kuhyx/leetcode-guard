@@ -212,6 +212,18 @@ render has already exited.
 A blank frame is ~400 bytes; a painted one is ~90 KB. Anything in the hundreds
 of bytes means you photographed the backdrop, whatever the window id said.
 
+**Fixtures asserting LeetCode's behaviour need a live check.** A mock can only
+repeat what its author believed, so a wrong belief produces a green suite and a
+broken product — `status_result`'s docstring claimed a null status meant
+"signed out", every solved-state test asserted against it, and the code shipped
+the same error. `scripts/verify_solved_semantics.py` asks the real endpoint
+whether `ac`/`notac`/`null` still mean what the fixtures say, and it fails
+against the pre-fix code. It runs as a `pre-push` hook and **skips loudly at
+exit 0 when the cookie is dead** — that is a precondition failure, not a
+semantic one, and the cookie expires every two weeks, so failing there would
+block unrelated pushes. Any fixture encoding external-system semantics should
+cite the date it was measured, the way `_queries.py` does.
+
 **The grab needs its own check.** A screenshot proves pixels, not input. Over a
 mocked Tk root a released grab and a held one are indistinguishable — which is
 what let the 2026-08-05 trap look healthy — so the suspend/resume cycle is
