@@ -72,16 +72,26 @@ no error, no indication. `fetch_pool` advances `skip` by rows *actually
 returned*. An earlier version advanced by the requested size and collected 657
 of 4003 problems while reporting success.
 
-**`status` is per-session, and a dead session is silent.** The pool query is
-public, so expired cookies return HTTP 200 with a complete, healthy-looking
-problem list whose every `status` is `null` — not an error, not an empty
-payload. Nothing upstream can tell that from "nothing is solved". A `null` is
-therefore **never** evidence of unsolved, only of not-signed-in; `_live_solved`
-returns positive evidence only and falls back to the ledger. Filtering on
-`status == "ac"` needs no auth flag guarding it — an unauthenticated null
-simply does not match. An `exclude_solved` flag wired to "cookies loaded" once
-did guard it, and in the signed-out branch it *discarded* the genuine `"ac"`
-rows a partly-authenticated fetch had returned.
+**`status` has three values and `null` means two different things.** Measured
+against a live session on 2026-08-14: `"ac"` = solved, `"notac"` = attempted and
+failed, **`null` = never attempted**. A dead session also returns `null`, for
+everything. So a null is *not* a reliable signal of being signed out — a
+signed-in user browsing ten problems they have never opened produces an
+all-null sweep too. Inferring "expired session" from it made the lock announce
+"could not check solved-state" while holding a freshly verified cookie, **and**
+trip the early exit that abandons the rest of the sweep, so a solved problem
+further down would have survived. `_live_solved` therefore splits `checked`
+(the request returned a readable `question` envelope) from `recognised` (the
+status was non-null): a null inside a valid envelope is an *answer*, a missing
+envelope is silence. Only silence means "could not check". Detecting a dead
+cookie is `--login`'s job, and it probes a slug chosen to be non-null.
+
+The pool query is public, so expired cookies return HTTP 200 with a complete,
+healthy-looking problem list of nulls — not an error, not an empty payload.
+Filtering on `status == "ac"` needs no auth flag guarding it: an
+unauthenticated null simply does not match. An `exclude_solved` flag wired to
+"cookies loaded" once did guard it, and in the signed-out branch it *discarded*
+the genuine `"ac"` rows a partly-authenticated fetch had returned.
 
 **Solved-state is checked live, but only for what is displayed.** Re-paging the
 whole authenticated pool is 41 requests before the window exists, and LeetCode
