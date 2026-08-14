@@ -235,8 +235,8 @@ def _live_note(evidence: LiveSolved) -> str | None:
         return None
     if not evidence.signed_in:
         return (
-            "Could not check solved-state with LeetCode just now (the session "
-            "is expired or rate-limited) -- showing what the local ledger knows."
+            "Could not reach LeetCode to check solved-state just now -- showing "
+            "what the local ledger knows."
         )
     if evidence.solved:
         count = len(evidence.solved)

@@ -35,20 +35,48 @@ def test_an_unsolved_status_is_checked_but_not_solved():
     assert evidence.signed_in
 
 
-def test_a_null_status_is_not_evidence_of_anything():
-    """The failure this whole module exists for.
+def test_a_null_status_is_never_treated_as_solved():
+    """A null is what a signed-in user gets for a problem never attempted.
 
-    An expired session returns HTTP 200 with a well-formed payload whose status
-    is null. Counting that as "checked, not solved" is how a solved problem
-    ends up back at the top of the suggestion list.
+    Verified against the live API on 2026-08-14: with a working session,
+    solved problems return "ac", problems with a failed submission return
+    "notac", and problems never opened return null. So a null must not count
+    as solved -- but it is a real answer, not silence.
     """
     post = fake_post(status_result("two-sum", None))
 
     evidence = check_solved(post, ["two-sum"])
 
     assert evidence.solved == frozenset()
+    assert evidence.checked == 1
+    assert evidence.recognised == 0
+    assert evidence.complete
+
+
+def test_an_all_null_sweep_is_not_mistaken_for_a_dead_session():
+    """The bug a live session exposed.
+
+    `signed_in` first keyed on "some status came back non-null", which is
+    exactly what a signed-in user browsing ten never-opened problems does NOT
+    produce. The lock then announced it could not check solved-state while
+    holding a freshly verified cookie, and abandoned the rest of the sweep.
+    """
+    post = fake_post(status_result("a", None))
+
+    evidence = check_solved(post, ["a", "b", "c"])
+
+    assert evidence.signed_in
+    assert evidence.checked == 3
+    assert evidence.recognised == 0
+
+
+def test_a_missing_envelope_is_silence_not_an_answer():
+    """Distinct from a null status: nothing came back to read at all."""
+    post = fake_post(GraphQLResult(data={}))
+
+    evidence = check_solved(post, ["two-sum"])
+
     assert evidence.checked == 0
-    assert evidence.attempted == 1
     assert not evidence.signed_in
     assert not evidence.complete
 

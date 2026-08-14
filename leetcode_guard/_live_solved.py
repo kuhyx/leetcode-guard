@@ -53,7 +53,17 @@ class LiveSolved:
     """Slugs LeetCode confirmed as accepted. Positive evidence only."""
 
     checked: int = 0
-    """Problems that produced a usable answer, solved or not."""
+    """Problems whose request completed and whose payload parsed."""
+
+    recognised: int = 0
+    """Problems that came back with a non-null status.
+
+    Strictly fewer than ``checked``, and the gap is not an error: measured
+    against a live session, LeetCode returns ``null`` for a problem the user has
+    never *attempted*, and ``"notac"`` only once there is a failed submission on
+    record. So a null is a real answer here, not silence -- it just happens to
+    be the same token an expired session returns for everything.
+    """
 
     attempted: int = 0
     """Problems the sweep tried to check."""
@@ -65,14 +75,31 @@ class LiveSolved:
 
     @property
     def signed_in(self) -> bool:
-        """Whether LeetCode answered as a recognised session at all.
+        """Whether the sweep learned anything at all.
 
-        A sweep in which nothing came back non-null is what a dead cookie looks
-        like: the requests succeed, the payloads parse, and every ``status`` is
-        ``null``. Distinguishing that from "checked, none solved" is the whole
-        point -- one means the filter is blind, the other means it worked.
+        Deliberately keyed on requests completing rather than on statuses being
+        non-null. The tempting version -- "no non-null status means a dead
+        cookie" -- is wrong against real data: a signed-in user browsing
+        suggestions they have never opened gets an all-null sweep too, and
+        treating that as a dead session made the lock announce "could not check
+        solved-state" while holding a perfectly good cookie.
+
+        A genuinely dead session is caught one layer up instead, by
+        ``--login`` refusing to store cookies that cannot produce a non-null
+        status for a problem chosen because it is not null.
         """
         return self.checked > 0
+
+
+def usable_payload(data: object) -> bool:
+    """Whether LeetCode returned a ``question`` envelope we could read.
+
+    Separate from :func:`parse_status` because a ``null`` status inside a valid
+    envelope is an *answer* ("never attempted"), while a missing envelope is
+    silence. Collapsing the two made every sweep of never-opened problems look
+    like an expired session.
+    """
+    return isinstance(data, dict) and isinstance(data.get(_FIELD), dict)
 
 
 def parse_status(data: object) -> str | None:
@@ -110,6 +137,7 @@ def check_solved(post: PostFn, slugs: Iterable[str]) -> LiveSolved:
     wanted = list(slugs)
     solved: set[str] = set()
     checked = 0
+    recognised = 0
     for slug in wanted:
         result = post(STATUS_QUERY, status_variables(slug))
         if result.transport_error is not None:
@@ -122,18 +150,24 @@ def check_solved(post: PostFn, slugs: Iterable[str]) -> LiveSolved:
                 "live solved-check for %s rejected: %s", slug, "; ".join(result.errors)
             )
             continue
-        status = parse_status(result.data)
-        if status is None:
-            # Signed out, or a payload we cannot read. Either way this says
-            # nothing about the problem, so it is not counted as checked.
+        if not usable_payload(result.data):
+            # Malformed beyond recognition -- not even the envelope was there.
             continue
         checked += 1
+        status = parse_status(result.data)
+        if status is not None:
+            recognised += 1
         if status == SOLVED_STATUS:
             solved.add(slug)
     if wanted and checked == 0:
         _logger.warning(
-            "live solved-check learned nothing about %d problems -- the session "
-            "is expired or LeetCode is rate-limiting; falling back to the ledger",
+            "live solved-check learned nothing about %d problems -- LeetCode is "
+            "unreachable or rate-limiting; falling back to the ledger",
             len(wanted),
         )
-    return LiveSolved(solved=frozenset(solved), checked=checked, attempted=len(wanted))
+    return LiveSolved(
+        solved=frozenset(solved),
+        checked=checked,
+        recognised=recognised,
+        attempted=len(wanted),
+    )

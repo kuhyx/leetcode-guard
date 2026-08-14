@@ -268,13 +268,13 @@ def test_a_dropped_problem_is_backfilled_from_further_down(tmp_path: Path):
     assert [p.title_slug for p in resolution.problems] == ["b", "c"]
 
 
-def test_an_expired_session_stops_the_sweep_instead_of_paying_for_it(
+def test_an_unreachable_endpoint_stops_the_sweep_instead_of_paying_for_it(
     tmp_path: Path,
 ):
-    """Every null means the session is dead, so the remaining requests would be
-    equally blind. Sending them anyway is how a rate-limit gets provoked."""
+    """Nothing answered, so the remaining requests would be equally blind.
+    Sending them anyway is how a rate-limit gets provoked."""
     write_cache(path_of(tmp_path), cached("a", "b", "c"))
-    post = fake_post(status_result("a", None))
+    post = fake_post(GraphQLResult(transport_error="down"))
 
     resolution = resolve_pool(
         post,
@@ -286,7 +286,30 @@ def test_an_expired_session_stops_the_sweep_instead_of_paying_for_it(
 
     assert [p.title_slug for p in resolution.problems] == ["a", "b", "c"]
     assert len(post.calls) == 2
-    assert any("Could not check solved-state" in n for n in resolution.notes)
+    assert any("Could not reach LeetCode" in n for n in resolution.notes)
+
+
+def test_never_attempted_problems_do_not_look_like_a_dead_session(tmp_path: Path):
+    """A signed-in user's unopened problems all return null.
+
+    Treating that as an outage made the lock claim it could not check while
+    holding a verified cookie -- and abandon the rest of the sweep, so a solved
+    problem further down would have survived.
+    """
+    write_cache(path_of(tmp_path), cached("a", "b"))
+    post = fake_post(status_result("a", None))
+
+    resolution = resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN),
+        ttl=1_000.0,
+    )
+
+    assert [p.title_slug for p in resolution.problems] == ["a", "b"]
+    assert any("none of these are solved yet" in n for n in resolution.notes)
+    assert not any("Could not reach" in n for n in resolution.notes)
 
 
 def test_the_live_check_only_pays_for_what_is_displayed(tmp_path: Path):
