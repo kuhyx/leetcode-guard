@@ -13,14 +13,15 @@ enforced by a gate that fails the commit, not by a note anyone can ignore.
 Why: a file that cannot be read in one piece forces re-reads and partial edits,
 which is the single largest avoidable cost in an LLM-assisted workflow. Aim by
 churn, not size alone — refactoring pays where code is read and changed often
-(Fowler, *refactoring economic benefit*).
+(Fowler, _refactoring economic benefit_).
 
 ## Scope in this repo
 
-- **23 files** currently exceed 250 lines (of 124 eligible files).
+- **23 files** currently exceed 250 lines (of 122 eligible files).
 - **7,247 lines** sit in violation; longest file is **400 lines**.
 
 Exempt (do NOT split these):
+
 - generated files — `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `**/l10n/generated/**`,
   anything with a `GENERATED` header
 - markup — `.html`, `.css`, `.scss`
@@ -32,23 +33,23 @@ Exempt (do NOT split these):
 ROI = lines x commits in the last year. Work top-down; a long file nobody edits
 has near-zero payoff and should not be first.
 
-| lines | commits/yr | kind | file |
-|------:|-----------:|:-----|:-----|
-| 386 | 4 | code | `leetcode_guard/tests/test_pool_resolve.py` |
-| 376 | 4 | code | `leetcode_guard/_cli.py` |
-| 293 | 4 | code | `leetcode_guard/tests/test_cli.py` |
-| 268 | 4 | code | `leetcode_guard/_pool_resolve.py` |
-| 274 | 3 | code | `leetcode_guard/_escape_flow.py` |
-| 393 | 2 | code | `leetcode_guard/_lock.py` |
-| 262 | 3 | code | `leetcode_guard/_view.py` |
-| 391 | 2 | code | `leetcode_guard/tests/test_status_view_part3.py` |
-| 365 | 2 | code | `leetcode_guard/tests/test_sync.py` |
-| 342 | 2 | code | `leetcode_guard/tests/test_lock_part3.py` |
-| 333 | 2 | code | `leetcode_guard/tests/test_scenarios.py` |
-| 306 | 2 | code | `leetcode_guard/tests/test_lock_part2.py` |
-| 280 | 2 | code | `leetcode_guard/_ledger.py` |
-| 275 | 2 | code | `leetcode_guard/_sync.py` |
-| 273 | 2 | code | `leetcode_guard/tests/test_lock.py` |
+| lines | commits/yr | kind | file                                             |
+| ----: | ---------: | :--- | :----------------------------------------------- |
+|   386 |          4 | code | `leetcode_guard/tests/test_pool_resolve.py`      |
+|   376 |          4 | code | `leetcode_guard/_cli.py`                         |
+|   293 |          4 | code | `leetcode_guard/tests/test_cli.py`               |
+|   268 |          4 | code | `leetcode_guard/_pool_resolve.py`                |
+|   274 |          3 | code | `leetcode_guard/_escape_flow.py`                 |
+|   393 |          2 | code | `leetcode_guard/_lock.py`                        |
+|   262 |          3 | code | `leetcode_guard/_view.py`                        |
+|   391 |          2 | code | `leetcode_guard/tests/test_status_view_part3.py` |
+|   365 |          2 | code | `leetcode_guard/tests/test_sync.py`              |
+|   342 |          2 | code | `leetcode_guard/tests/test_lock_part3.py`        |
+|   333 |          2 | code | `leetcode_guard/tests/test_scenarios.py`         |
+|   306 |          2 | code | `leetcode_guard/tests/test_lock_part2.py`        |
+|   280 |          2 | code | `leetcode_guard/_ledger.py`                      |
+|   275 |          2 | code | `leetcode_guard/_sync.py`                        |
+|   273 |          2 | code | `leetcode_guard/tests/test_lock.py`              |
 
 _(8 further files over 250 lines not listed — re-run the survey for the full set.)_
 
