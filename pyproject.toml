@@ -111,7 +111,20 @@ unfixable = []
 # `pass` -- turning a working diagnostic into one that exits 0 and says
 # nothing. test_cli.py catches it, but only because it asserts on stdout rather
 # than on the exit code; assert on the output, not the return value.
-"leetcode_guard/_cli.py" = ["T201"]
+# PLR0911: `main` is a flag dispatcher, so it has exactly one return per flag
+# and grows by one every time a flag is added. Collapsing the chain into a
+# lookup table would move the same branching somewhere less obvious and put a
+# layer between argparse and the command it runs.
+"leetcode_guard/_cli.py" = ["T201", "PLR0911"]
+# --login IS a prompt: the "paste this" lines, the REFUSED verdict and the
+# reason LeetCode gave are the entire interface, and a silent credential
+# command is worse than none -- the user cannot tell a stored cookie from a
+# rejected one, which is the exact confusion this command was written to end.
+# The same auto-fix that gutted cmd_probe removed every print here too, on the
+# first pre-commit run after the file was written. test_login.py asserts on
+# behaviour rather than stdout, so keep this entry: the tests would NOT have
+# caught it.
+"leetcode_guard/_login.py" = ["T201"]
 # Three classification chains, all the same shape: one early return per way the
 # input can be wrong, each with its own distinct user-facing sentence. Merging
 # them into fewer returns would mean either a shared vague message or a nested

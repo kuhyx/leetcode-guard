@@ -103,6 +103,31 @@ problems; premium ones return ``content: null``, which is why they are excluded
 from the suggestion list in the first place."""
 
 
+STATUS_QUERY: Final = """
+query questionStatus($titleSlug: String!) {
+  question(titleSlug: $titleSlug) {
+    titleSlug
+    status
+  }
+}
+"""
+"""One problem's solved-state for the *current session*.
+
+The cheapest authenticated question there is: two fields, one problem. It
+exists because the alternatives are both unusable for a per-run check. The
+recent-AC feed is hard-capped at 20 rows -- verified against an account with
+thousands of solves, which returns exactly 20 at ``limit`` 20, 100 and 500 --
+so it can never answer "has this specific problem been solved". And re-paging
+the whole authenticated pool is 41 requests before the window opens, on an
+endpoint that answers a rate-limit with HTTP 200 and a null payload, i.e. with
+the *same* signature as the expired session this check exists to detect.
+
+``status`` here behaves exactly as it does on :data:`POOL_QUERY`: ``null``
+anonymously, ``"ac"`` / ``"notac"`` with a live session. A ``null`` is
+therefore never evidence of "not solved" -- only of "not signed in".
+"""
+
+
 IDENTITY_QUERY: Final = """
 query identityProbe {
   allQuestionsCount {
@@ -137,4 +162,9 @@ def recent_ac_variables(username: str) -> dict[str, object]:
 
 def statement_variables(title_slug: str) -> dict[str, object]:
     """Build variables for :data:`STATEMENT_QUERY`."""
+    return {"titleSlug": title_slug}
+
+
+def status_variables(title_slug: str) -> dict[str, object]:
+    """Build variables for :data:`STATUS_QUERY`."""
     return {"titleSlug": title_slug}

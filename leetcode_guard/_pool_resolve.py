@@ -16,7 +16,8 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Final, Literal
 
-from leetcode_guard._constants import POOL_TTL_SECONDS
+from leetcode_guard._constants import POOL_TTL_SECONDS, SUGGESTION_COUNT
+from leetcode_guard._live_solved import LiveSolved, check_solved
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_fetch import fetch_pool
 from leetcode_guard._problem import Problem, rank_pool
@@ -55,6 +56,14 @@ class SolvedKnowledge:
     auth: AuthState
     slugs: frozenset[str] = frozenset()
     """Locally recorded solves. A lower bound, never the full solved set."""
+
+    verify_limit: int = SUGGESTION_COUNT
+    """How many of the ranked problems to confirm live, one request each.
+
+    Bounded because this runs before the lock window exists. Re-checking all
+    4019 would be 4019 requests on that path, against an endpoint that answers
+    a rate limit with the same null payload as an expired session -- so being
+    exhaustive is a way to manufacture the failure being checked for."""
 
 
 @dataclass(frozen=True)
@@ -97,13 +106,16 @@ def resolve_pool(
         The resolution. Never raises.
     """
     slugs = solved.slugs
+    limit = solved.verify_limit
     notes = [solved.auth.note]
     if slugs:
         notes.append(_ledger_note(len(slugs)))
 
     cached = read_cache(cache_path)
     if cached is not None and cached.is_fresh(now=now, ttl=ttl):
-        return _resolved(cached.problems, "cache", notes, solved_slugs=slugs)
+        return _resolved(
+            cached.problems, "cache", notes, solved_slugs=slugs, live=(post, limit)
+        )
 
     if post is not None:
         fetched = fetch_pool(post)
@@ -118,12 +130,24 @@ def resolve_pool(
                     complete=fetched.complete,
                 ),
             )
-            return _resolved(fetched.problems, "live", notes, solved_slugs=slugs)
+            return _resolved(
+                fetched.problems,
+                "live",
+                notes,
+                solved_slugs=slugs,
+                live=(post, limit),
+            )
         notes.append(f"Could not refresh the problem list: {fetched.reason}.")
 
     if cached is not None:
         notes.append(_stale_note(cached, now=now))
-        return _resolved(cached.problems, "stale-cache", notes, solved_slugs=slugs)
+        return _resolved(
+            cached.problems,
+            "stale-cache",
+            notes,
+            solved_slugs=slugs,
+            live=(post, limit),
+        )
 
     _logger.warning("no problem pool available: no live fetch and no cache")
     notes.append(NO_SUGGESTIONS_NOTE)
@@ -154,15 +178,91 @@ def _ledger_note(count: int) -> str:
     )
 
 
+def verify_live(
+    ranked: list[Problem],
+    *,
+    post: PostFn | None,
+    limit: int,
+) -> tuple[list[Problem], LiveSolved]:
+    """Drop the displayed problems LeetCode says are already solved.
+
+    Rank first, verify second, backfill from the next candidates: the ranking
+    is what decides which handful is worth a request, so it has to come first.
+    Any confirmed solve is removed and the gap is refilled from further down
+    the list, repeating until ``limit`` problems have survived a live check or
+    the candidates run out.
+
+    Args:
+        ranked: Candidates, best first, already filtered by stored knowledge.
+        post: The network seam, or ``None`` to skip the live check entirely
+            (``--status`` and the MCP server must never fetch).
+        limit: How many verified problems are wanted.
+
+    Returns:
+        The surviving problems and the accumulated live evidence.
+    """
+    if post is None or not ranked:
+        return ranked, LiveSolved()
+
+    kept: list[Problem] = []
+    solved: set[str] = set()
+    checked = 0
+    attempted = 0
+    remaining = list(ranked)
+    while remaining and len(kept) < limit:
+        batch = remaining[: limit - len(kept)]
+        remaining = remaining[len(batch) :]
+        evidence = check_solved(post, [problem.title_slug for problem in batch])
+        solved |= evidence.solved
+        checked += evidence.checked
+        attempted += evidence.attempted
+        kept.extend(p for p in batch if p.title_slug not in evidence.solved)
+        if not evidence.signed_in:
+            # Nothing came back non-null, so every further request would be
+            # just as blind. Stop paying for them and keep the rest as ranked.
+            kept.extend(remaining)
+            remaining = []
+            break
+    return (
+        kept + remaining,
+        LiveSolved(solved=frozenset(solved), checked=checked, attempted=attempted),
+    )
+
+
+def _live_note(evidence: LiveSolved) -> str | None:
+    """Say what the live check actually established, or nothing."""
+    if evidence.attempted == 0:
+        return None
+    if not evidence.signed_in:
+        return (
+            "Could not check solved-state with LeetCode just now (the session "
+            "is expired or rate-limited) -- showing what the local ledger knows."
+        )
+    if evidence.solved:
+        count = len(evidence.solved)
+        plural = "" if count == 1 else "s"
+        return (
+            f"Checked with LeetCode just now: dropped {count} problem{plural} "
+            "already solved."
+        )
+    return "Checked with LeetCode just now: none of these are solved yet."
+
+
 def _resolved(
     problems: tuple[Problem, ...],
     source: PoolSource,
     notes: list[str],
     *,
     solved_slugs: frozenset[str],
+    live: tuple[PostFn | None, int] = (None, SUGGESTION_COUNT),
 ) -> PoolResolution:
-    """Rank and package a non-empty pool."""
+    """Rank and package a non-empty pool, verifying the top of it live."""
+    post, limit = live
     ranked = rank_pool(problems, solved_slugs=solved_slugs)
+    ranked, evidence = verify_live(ranked, post=post, limit=limit)
+    live_note = _live_note(evidence)
+    if live_note is not None:
+        notes.append(live_note)
     if not ranked:
         notes.append(NO_SUGGESTIONS_NOTE)
     return PoolResolution(problems=tuple(ranked), source=source, notes=tuple(notes))

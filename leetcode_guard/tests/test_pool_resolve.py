@@ -9,13 +9,24 @@ from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._problem import parse_problem
-from leetcode_guard.tests._net_fixtures import fake_post, pool_result, problem_row
+from leetcode_guard._queries import STATUS_QUERY
+from leetcode_guard.tests._net_fixtures import (
+    fake_post,
+    pool_result,
+    problem_row,
+    status_result,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 SIGNED_OUT = AuthState(cookies=None, note="signed out note")
 SIGNED_IN = AuthState(cookies=Cookies(session="s", csrf="c"), note="signed in note")
+
+
+def path_of(tmp_path: Path) -> Path:
+    """The cache file every test in this module writes to."""
+    return tmp_path / "pool.json"
 
 
 def cached(*slugs: str, fetched_at: float = 0.0) -> CachedPool:
@@ -25,10 +36,16 @@ def cached(*slugs: str, fetched_at: float = 0.0) -> CachedPool:
     return CachedPool(problems=problems, fetched_at=fetched_at, complete=True)
 
 
-def test_a_fresh_cache_wins_and_makes_no_request(tmp_path: Path):
+def test_a_fresh_cache_wins_and_refetches_no_problem_list(tmp_path: Path):
+    """The cache still spares the 41-page pool fetch.
+
+    It no longer spares the solved-check, and must not: the cache's `status`
+    column is up to a week old, so trusting it is what let a problem solved two
+    days earlier stay at the top of the list. Only the metadata is reused.
+    """
     path = tmp_path / "pool.json"
     write_cache(path, cached("from-cache", fetched_at=100.0))
-    post = fake_post(pool_result([problem_row("from-network")]))
+    post = fake_post(status_result("from-cache", "notac"))
 
     resolution = resolve_pool(
         post, path, now=150.0, solved=SolvedKnowledge(auth=SIGNED_OUT), ttl=1000.0
@@ -36,7 +53,7 @@ def test_a_fresh_cache_wins_and_makes_no_request(tmp_path: Path):
 
     assert resolution.source == "cache"
     assert [p.title_slug for p in resolution.problems] == ["from-cache"]
-    assert post.calls == []
+    assert [call[0] for call in post.calls] == [STATUS_QUERY]
 
 
 def test_a_stale_cache_triggers_a_live_fetch_and_is_replaced(tmp_path: Path):
@@ -207,6 +224,116 @@ def test_a_solved_status_is_dropped_even_with_no_cookies(tmp_path: Path):
     )
 
     assert [p.title_slug for p in resolution.problems] == ["todo"]
+
+
+def test_a_live_check_drops_a_solve_the_stored_data_missed(tmp_path: Path):
+    """The stored pool is written at most once a week. A problem solved since
+    then still looks unsolved in it, which is how a solve from two days ago
+    reached the top of the list."""
+    write_cache(path_of(tmp_path), cached("solved-today", "still-open"))
+    post = fake_post(
+        status_result("solved-today", "ac"), status_result("still-open", "notac")
+    )
+
+    resolution = resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN),
+        ttl=1_000.0,
+    )
+
+    assert [p.title_slug for p in resolution.problems] == ["still-open"]
+    assert any("Checked with LeetCode just now" in n for n in resolution.notes)
+
+
+def test_a_dropped_problem_is_backfilled_from_further_down(tmp_path: Path):
+    """Dropping without backfilling would shrink the list every time a solve
+    landed, so the surface would slowly empty out."""
+    write_cache(path_of(tmp_path), cached("a", "b", "c"))
+    post = fake_post(
+        status_result("a", "ac"),
+        status_result("b", "notac"),
+        status_result("c", "notac"),
+    )
+
+    resolution = resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN, verify_limit=2),
+        ttl=1_000.0,
+    )
+
+    assert [p.title_slug for p in resolution.problems] == ["b", "c"]
+
+
+def test_an_expired_session_stops_the_sweep_instead_of_paying_for_it(
+    tmp_path: Path,
+):
+    """Every null means the session is dead, so the remaining requests would be
+    equally blind. Sending them anyway is how a rate-limit gets provoked."""
+    write_cache(path_of(tmp_path), cached("a", "b", "c"))
+    post = fake_post(status_result("a", None))
+
+    resolution = resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN, verify_limit=2),
+        ttl=1_000.0,
+    )
+
+    assert [p.title_slug for p in resolution.problems] == ["a", "b", "c"]
+    assert len(post.calls) == 2
+    assert any("Could not check solved-state" in n for n in resolution.notes)
+
+
+def test_the_live_check_only_pays_for_what_is_displayed(tmp_path: Path):
+    """4019 problems must not mean 4019 requests on the pre-window path."""
+    write_cache(path_of(tmp_path), cached(*[f"p{i}" for i in range(50)]))
+    post = fake_post(status_result("p0", "notac"))
+
+    resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN, verify_limit=3),
+        ttl=1_000.0,
+    )
+
+    assert len(post.calls) == 3
+
+
+def test_status_never_triggers_a_live_check(tmp_path: Path):
+    """`post=None` is the read-only contract `--status` and MCP rely on."""
+    write_cache(path_of(tmp_path), cached("a"))
+
+    resolution = resolve_pool(
+        None,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN),
+        ttl=1_000.0,
+    )
+
+    assert [p.title_slug for p in resolution.problems] == ["a"]
+    assert not any("Checked with LeetCode" in n for n in resolution.notes)
+
+
+def test_a_clean_live_check_says_so(tmp_path: Path):
+    write_cache(path_of(tmp_path), cached("a"))
+    post = fake_post(status_result("a", "notac"))
+
+    resolution = resolve_pool(
+        post,
+        path_of(tmp_path),
+        now=0.0,
+        solved=SolvedKnowledge(auth=SIGNED_IN),
+        ttl=1_000.0,
+    )
+
+    assert any("none of these are solved yet" in n for n in resolution.notes)
 
 
 def test_signed_in_hides_solved_problems(tmp_path: Path):

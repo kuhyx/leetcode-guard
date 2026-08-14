@@ -74,6 +74,16 @@ def pool_result(
     return GraphQLResult(data={"problemsetQuestionList": page})
 
 
+def status_result(slug: str, status: str | None) -> GraphQLResult:
+    """Wrap one problem's solved-state in a ``question`` envelope.
+
+    A ``None`` status is what a signed-out or expired session receives -- the
+    request succeeds and the payload is well formed, which is exactly why it
+    has to be distinguishable from "not solved".
+    """
+    return GraphQLResult(data={"question": {"titleSlug": slug, "status": status}})
+
+
 def submission_row(
     submission_id: str,
     slug: str,

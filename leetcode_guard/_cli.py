@@ -2,7 +2,12 @@
 
 Subcommand-free by design, matching the sibling lockers: bare invocation opens
 a demo lock, ``--production`` opens the real one, and the remaining flags are
-diagnostics that never open a window and never write state.
+diagnostics that never open a window.
+
+Those diagnostics write nothing, with two deliberate exceptions:
+``--cache-statements`` mirrors problem text, and ``--login`` stores a verified
+cookie pair. Both write only their own file and neither touches the ledger --
+no flag here can move the balance or settle a day.
 """
 
 from __future__ import annotations
@@ -13,12 +18,14 @@ import sys
 from typing import Final
 
 from leetcode_guard._constants import (
+    COOKIES_FILE,
     DEMO_ESCAPE_HISTORY_FILE,
     DEMO_LEDGER_FILE,
     ESCAPE_HISTORY_FILE,
     GATE_START_DATE,
     INSTANCE_LOCK_FILE,
     LEDGER_FILE,
+    NETWORK_TIMEOUT_SECONDS,
     POOL_CACHE_FILE,
     STATEMENT_CACHE_COUNT,
     STATEMENTS_CACHE_FILE,
@@ -31,6 +38,7 @@ from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._lock import GuardDeps, LeetcodeGuard
 from leetcode_guard._logging_setup import configure_logging
+from leetcode_guard._login import login
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
@@ -78,6 +86,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Mirror the top suggestions' problem text for offline reading. "
             "One request per problem, so run it rarely."
+        ),
+    )
+    parser.add_argument(
+        "--login",
+        action="store_true",
+        help=(
+            "Store LeetCode cookies, read from stdin and saved only if a live "
+            "query proves they work. Re-run when the session expires."
         ),
     )
     parser.add_argument(
@@ -221,6 +237,12 @@ def cmd_cache_statements() -> int:
     return _EXIT_OK if fetched.complete else _EXIT_LOCKED
 
 
+def cmd_login() -> int:
+    """Store a verified cookie pair. The only flag that writes credentials."""
+    ok = login(COOKIES_FILE, timeout=NETWORK_TIMEOUT_SECONDS)
+    return _EXIT_OK if ok else _EXIT_LOCKED
+
+
 def cmd_sync() -> int:
     """Sync the ledger. Opens no window."""
     result = sync_ledger(LEDGER_FILE)
@@ -300,7 +322,18 @@ def _run_lock(*, demo_mode: bool) -> int:
         client.post,
         POOL_CACHE_FILE,
         now=now.timestamp(),
-        solved=SolvedKnowledge(auth=client.auth, slugs=solved_slugs(ledger)),
+        solved=SolvedKnowledge(
+            auth=client.auth,
+            # The probe is unioned in rather than relying on the ledger alone.
+            # It is the same recent-AC feed the ledger is built from, but it
+            # was fetched seconds ago and needs no cookies, so it covers the
+            # window between the last harvest and now. It also carries the demo
+            # on its own: the demo deletes its ledger every run to force a
+            # fresh solve, which left `solved_slugs` empty and put two
+            # already-solved problems back at the top of the demo surface.
+            slugs=solved_slugs(ledger)
+            | frozenset(item.title_slug for item in probe.submissions),
+        ),
     )
 
     guard = LeetcodeGuard(
@@ -334,6 +367,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_status()
     if args.check:
         return cmd_check()
+    if args.login:
+        return cmd_login()
     if args.sync:
         return cmd_sync()
     if args.cache_statements:

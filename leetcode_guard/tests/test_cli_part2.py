@@ -171,6 +171,20 @@ def test_sync_exits_nonzero_when_it_could_not_push(monkeypatch, capsys, data_dir
     assert "not pushed" in capsys.readouterr().out
 
 
+def test_login_exits_zero_once_the_cookies_verify(monkeypatch, data_dir: Path):
+    monkeypatch.setattr(_cli, "login", lambda _path, *, timeout: bool(timeout))
+
+    assert _cli.main(["--login"]) == 0
+
+
+def test_login_exits_nonzero_when_leetcode_refuses(monkeypatch, data_dir: Path):
+    """A refusal has to be visible to a shell: the whole command exists because
+    a dead session used to look exactly like a live one."""
+    monkeypatch.setattr(_cli, "login", lambda _path, *, timeout: False)
+
+    assert _cli.main(["--login"]) == 1
+
+
 def test_cache_statements_writes_the_mirror(monkeypatch, capsys, data_dir: Path):
     stub_client(
         monkeypatch,

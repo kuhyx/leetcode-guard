@@ -183,6 +183,42 @@ def test_production_exits_without_a_window_when_today_is_settled(
     assert "already unlocked" in capsys.readouterr().out
 
 
+def test_the_recent_feed_hides_solved_problems_even_with_no_ledger(
+    monkeypatch, data_dir: Path
+):
+    """A screenshot of the demo surface caught this one.
+
+    The demo deletes its ledger on every run to force a genuinely fresh solve,
+    which left `solved_slugs` empty and put two problems solved days earlier
+    back at the top of the list -- the exact defect being fixed, reappearing on
+    the one surface a human actually looks at. The recent-AC probe is unioned
+    in because it is the same feed the ledger is built from, needs no cookies,
+    and was fetched seconds earlier.
+    """
+    captured: dict[str, object] = {}
+
+    class FakeGuard:
+        def __init__(self, **kwargs):
+            captured["pool"] = kwargs["deps"].pool
+
+        def run(self):
+            pass
+
+    stub_client(
+        monkeypatch,
+        recent_ac_result([submission_row("1", "already-solved")]),
+        pool_result(
+            [problem_row("already-solved"), problem_row("still-open")], total=2
+        ),
+    )
+    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+
+    _cli.main([])
+
+    pool = captured["pool"]
+    assert [p.title_slug for p in pool.problems] == ["still-open"]
+
+
 def test_a_demo_run_wipes_its_own_ledger(monkeypatch, data_dir: Path):
     """So a demo always starts from the same place and cannot spend real
     credits or leave stale ones behind."""
