@@ -32,7 +32,12 @@ def test_valid_cookies_load(tmp_path: Path):
     assert state.cookies is not None
     assert state.cookies.session == "sess"
     assert state.cookies.csrf == "tok"
-    assert "hidden" in state.note
+    # Loading cookies is not the same as LeetCode accepting them, so the note
+    # must not promise that solved problems are being filtered. It said
+    # "already-solved problems are hidden from this list" for a fortnight while
+    # the session was dead and every `status` came back null.
+    assert "accepts them" in state.note
+    assert "hidden" not in state.note
 
 
 def test_missing_file_is_normal_not_an_error(tmp_path: Path):

@@ -178,7 +178,11 @@ def page_total(page: object) -> int | None:
     return total
 
 
-def rank_pool(problems: Iterable[Problem], *, exclude_solved: bool) -> list[Problem]:
+def rank_pool(
+    problems: Iterable[Problem],
+    *,
+    solved_slugs: frozenset[str] = frozenset(),
+) -> list[Problem]:
     """Filter and order the suggestion list.
 
     Premium problems are always dropped -- they cannot be opened without a
@@ -187,11 +191,19 @@ def rank_pool(problems: Iterable[Problem], *, exclude_solved: bool) -> list[Prob
     credit, because credit comes from the accepted-submission feed, which does
     not care what the suggestion list said.
 
+    Solved problems are dropped from two independent sources, and both apply
+    unconditionally. There used to be an ``exclude_solved`` flag wired to
+    "cookies loaded", which was wrong twice over: LeetCode's ``status`` never
+    reports a false positive (``None`` simply does not match ``"ac"``), so
+    gating it gained nothing, and turning it off in the signed-out case threw
+    away the genuine ``"ac"`` rows a partly-authenticated fetch had returned.
+
     Args:
         problems: Candidates.
-        exclude_solved: Drop problems the authenticated session has already
-            solved. Meaningless without cookies (``status`` is ``None`` for
-            everything), which is why the caller announces that on screen.
+        solved_slugs: Locally recorded solves, from the ledger. This is what
+            keeps the filter working when the session has expired -- the pool
+            query is public, so dead cookies yield a full list whose ``status``
+            is uniformly ``None``. A lower bound, never the full solved set.
 
     Returns:
         A new list, easiest first then highest acceptance first.
@@ -199,6 +211,8 @@ def rank_pool(problems: Iterable[Problem], *, exclude_solved: bool) -> list[Prob
     kept = [
         problem
         for problem in problems
-        if not problem.paid_only and not (exclude_solved and problem.solved)
+        if not problem.paid_only
+        and not problem.solved
+        and problem.title_slug not in solved_slugs
     ]
     return sorted(kept, key=sort_key)

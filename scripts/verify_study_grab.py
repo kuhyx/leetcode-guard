@@ -85,7 +85,7 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
     """
     _gate.GATE_START_DATE = date(2000, 1, 1)
     cached = read_cache(POOL_CACHE_FILE)
-    problems = tuple(rank_pool(cached.problems, exclude_solved=False)) if cached else ()
+    problems = tuple(rank_pool(cached.problems)) if cached else ()
     signed_out = AuthState(cookies=None, note="Not signed in.")
     probe = SolveProbe(status=ProbeStatus.OK, submissions=(), reason="none recent")
 

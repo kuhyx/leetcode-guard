@@ -21,6 +21,8 @@ import tempfile
 from typing import Final
 
 from leetcode_guard._ledger import (
+    CREDIT,
+    SEEN,
     LedgerEntry,
     from_json,
     key_available,
@@ -57,6 +59,38 @@ class Ledger:
     def of_kind(self, kind: str) -> list[LedgerEntry]:
         """Every entry of one kind."""
         return [entry for entry in self.entries.values() if entry.kind == kind]
+
+
+def solved_slugs(ledger: Ledger) -> frozenset[str]:
+    """Every problem this device has recorded as solved, from the ledger alone.
+
+    Independent of the LeetCode session, which is the whole point: cookies
+    expire about every two weeks with no refresh flow, and the pool query is
+    public, so an expired session yields a full problem list whose ``status``
+    is uniformly ``null``. That silently disables LeetCode's own solved-filter
+    while the surface still claims to be filtering. The ledger needs no
+    cookies and no network, so it keeps working across that failure.
+
+    Both ``CREDIT`` and ``SEEN`` carry a ``title_slug`` and both mean solved:
+    ``SEEN`` is a submission that predates the gate, not one that failed. Keyed
+    on ``kind`` rather than an ``ac:`` id prefix so the id format stays free to
+    change. This is a filtering judgement only -- ``SEEN`` is still worth zero
+    credits, and nothing here touches the balance.
+
+    Returns:
+        The slugs, as a **lower bound**: the ledger only ever saw the handful
+        of submissions the recent-AC feed returns, so this means "solved and
+        recorded here", never "everything you have ever solved".
+    """
+    slugs = set()
+    for entry in ledger.entries.values():
+        if entry.kind not in {CREDIT, SEEN}:
+            # charge/bootstrap entries carry no title_slug at all.
+            continue
+        slug = entry.detail.get("title_slug")
+        if slug:
+            slugs.add(slug)
+    return frozenset(slugs)
 
 
 def load_ledger(path: Path, *, key_file: Path | None = None) -> Ledger:

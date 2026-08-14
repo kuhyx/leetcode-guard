@@ -40,6 +40,24 @@ NO_SUGGESTIONS_NOTE: Final = (
 
 
 @dataclass(frozen=True)
+class SolvedKnowledge:
+    """Everything known about which problems are already solved.
+
+    The two sources are deliberately packaged together because neither is
+    sufficient alone. LeetCode's own ``status`` is authoritative but goes dark
+    the moment the session expires -- which is the normal state, since the JWT
+    lasts about two weeks with no refresh flow, and the pool query is public,
+    so a dead session yields a full list whose every ``status`` is ``null``
+    rather than an error. The ledger keeps working through that, but only ever
+    saw the last few submissions the recent-AC feed returns.
+    """
+
+    auth: AuthState
+    slugs: frozenset[str] = frozenset()
+    """Locally recorded solves. A lower bound, never the full solved set."""
+
+
+@dataclass(frozen=True)
 class PoolResolution:
     """The suggestion list plus an honest account of where it came from."""
 
@@ -58,7 +76,7 @@ def resolve_pool(
     cache_path: Path,
     *,
     now: float,
-    auth: AuthState,
+    solved: SolvedKnowledge,
     ttl: float = POOL_TTL_SECONDS,
 ) -> PoolResolution:
     """Produce the ranked suggestion list for this run.
@@ -69,19 +87,23 @@ def resolve_pool(
             trigger a live fetch).
         cache_path: Where the on-disk pool mirror lives.
         now: Unix seconds, injected so freshness is testable.
-        auth: Whether already-solved problems can be filtered out. Its note is
-            always included, so an unfiltered list always says it is one.
+        solved: What is known about already-solved problems, from both
+            sources. Its auth note is always included. Nothing here decides
+            *whether* to filter -- solved problems always are, from whichever
+            source has the answer.
         ttl: Cache lifetime in seconds.
 
     Returns:
         The resolution. Never raises.
     """
-    exclude_solved = auth.present
-    notes = [auth.note]
+    slugs = solved.slugs
+    notes = [solved.auth.note]
+    if slugs:
+        notes.append(_ledger_note(len(slugs)))
 
     cached = read_cache(cache_path)
     if cached is not None and cached.is_fresh(now=now, ttl=ttl):
-        return _resolved(cached.problems, "cache", notes, exclude_solved=exclude_solved)
+        return _resolved(cached.problems, "cache", notes, solved_slugs=slugs)
 
     if post is not None:
         fetched = fetch_pool(post)
@@ -96,16 +118,12 @@ def resolve_pool(
                     complete=fetched.complete,
                 ),
             )
-            return _resolved(
-                fetched.problems, "live", notes, exclude_solved=exclude_solved
-            )
+            return _resolved(fetched.problems, "live", notes, solved_slugs=slugs)
         notes.append(f"Could not refresh the problem list: {fetched.reason}.")
 
     if cached is not None:
         notes.append(_stale_note(cached, now=now))
-        return _resolved(
-            cached.problems, "stale-cache", notes, exclude_solved=exclude_solved
-        )
+        return _resolved(cached.problems, "stale-cache", notes, solved_slugs=slugs)
 
     _logger.warning("no problem pool available: no live fetch and no cache")
     notes.append(NO_SUGGESTIONS_NOTE)
@@ -122,15 +140,29 @@ def _stale_note(cached: CachedPool, *, now: float) -> str:
     )
 
 
+def _ledger_note(count: int) -> str:
+    """Report the local filter without overstating what it knows.
+
+    Deliberately "at least": the ledger only ever saw the handful of
+    submissions the recent-AC feed returns, so it is a lower bound on what has
+    been solved. Claiming more is the exact bug this filter exists to fix.
+    """
+    plural = "" if count == 1 else "s"
+    return (
+        f"Hiding at least {count} problem{plural} already solved on this "
+        "device, from the local ledger."
+    )
+
+
 def _resolved(
     problems: tuple[Problem, ...],
     source: PoolSource,
     notes: list[str],
     *,
-    exclude_solved: bool,
+    solved_slugs: frozenset[str],
 ) -> PoolResolution:
     """Rank and package a non-empty pool."""
-    ranked = rank_pool(problems, exclude_solved=exclude_solved)
+    ranked = rank_pool(problems, solved_slugs=solved_slugs)
     if not ranked:
         notes.append(NO_SUGGESTIONS_NOTE)
     return PoolResolution(problems=tuple(ranked), source=source, notes=tuple(notes))

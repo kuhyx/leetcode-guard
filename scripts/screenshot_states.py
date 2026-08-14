@@ -84,7 +84,7 @@ class Inline:
 def real_pool() -> PoolResolution:
     """The cached pool, so screenshots show genuine problems."""
     cached = read_cache(POOL_CACHE_FILE)
-    problems = tuple(rank_pool(cached.problems, exclude_solved=False)) if cached else ()
+    problems = tuple(rank_pool(cached.problems)) if cached else ()
     return PoolResolution(problems=problems, source="cache", notes=(SIGNED_OUT.note,))
 
 

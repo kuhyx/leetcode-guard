@@ -108,7 +108,10 @@ def load_cookies(path: Path) -> AuthState:
         )
     return AuthState(
         cookies=Cookies(session=session, csrf=csrf),
-        note="Signed in -- already-solved problems are hidden from this list.",
+        note=(
+            "Cookies loaded -- LeetCode's own solved-filter applies only while "
+            "it still accepts them."
+        ),
     )
 
 

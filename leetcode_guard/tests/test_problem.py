@@ -132,7 +132,7 @@ def test_ordering_is_easiest_first_then_highest_acceptance():
         make("easy-high", difficulty="Easy", ac_rate=90.0),
     ]
 
-    ranked = rank_pool(problems, exclude_solved=False)
+    ranked = rank_pool(problems)
 
     assert [item.title_slug for item in ranked] == [
         "easy-high",
@@ -146,7 +146,7 @@ def test_unknown_difficulty_sorts_last_rather_than_first():
     unknown = make("mystery", difficulty="Impossible", ac_rate=100.0)
     easy = make("easy", difficulty="Easy", ac_rate=1.0)
 
-    ranked = rank_pool([unknown, easy], exclude_solved=False)
+    ranked = rank_pool([unknown, easy])
 
     assert [item.title_slug for item in ranked] == ["easy", "mystery"]
     assert sort_key(unknown)[0] == 3
@@ -156,24 +156,45 @@ def test_premium_problems_are_always_dropped_from_suggestions():
     premium = make("premium", paid_only=True, ac_rate=99.0)
     free = make("free", ac_rate=1.0)
 
-    ranked = rank_pool([premium, free], exclude_solved=False)
+    ranked = rank_pool([premium, free])
 
     assert [item.title_slug for item in ranked] == ["free"]
 
 
-def test_solved_problems_are_dropped_only_when_requested():
+def test_a_solved_status_is_always_dropped_with_no_flag_to_disable_it():
+    """There used to be an `exclude_solved` flag wired to "cookies loaded".
+
+    It was wrong in both directions. `status == "ac"` never yields a false
+    positive -- an unauthenticated `None` simply does not match -- so gating it
+    bought nothing; and switching it off in the signed-out case threw away the
+    genuine "ac" rows a partly-authenticated fetch had already returned.
+    """
     solved = make("solved", status="ac", ac_rate=99.0)
     unsolved = make("unsolved", status="notac", ac_rate=1.0)
 
-    assert [
-        p.title_slug for p in rank_pool([solved, unsolved], exclude_solved=True)
-    ] == ["unsolved"]
-    assert [
-        p.title_slug for p in rank_pool([solved, unsolved], exclude_solved=False)
-    ] == [
-        "solved",
-        "unsolved",
-    ]
+    assert [p.title_slug for p in rank_pool([solved, unsolved])] == ["unsolved"]
+
+
+def test_the_ledger_hides_a_solve_leetcode_is_not_reporting():
+    """The regression test for the reported bug.
+
+    An expired session makes every `status` come back `None`, so LeetCode's own
+    filter goes dark while the pool still looks perfectly healthy. The ledger
+    is the cookie-independent floor that keeps the solve hidden anyway.
+    """
+    stale = make("digit-frequency-score", status=None, ac_rate=91.7)
+    fresh = make("some-other-problem", status=None, ac_rate=90.0)
+
+    ranked = rank_pool([stale, fresh], solved_slugs=frozenset({stale.title_slug}))
+
+    assert [p.title_slug for p in ranked] == ["some-other-problem"]
+
+
+def test_no_slugs_supplied_filters_nothing_extra():
+    """Protects the default, which the `scripts/` harnesses rely on."""
+    problem = make("unsolved", status="notac")
+
+    assert [p.title_slug for p in rank_pool([problem])] == ["unsolved"]
 
 
 def test_a_title_with_newlines_is_flattened():

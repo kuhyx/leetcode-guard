@@ -22,9 +22,9 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._daycost import day_cost, local_today, weekday_name
 from leetcode_guard._gate import decide
-from leetcode_guard._ledger_io import load_ledger
+from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._logging_setup import configure_logging
-from leetcode_guard._pool_resolve import resolve_pool
+from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -93,7 +93,12 @@ def gather_status(
 
     auth = load_cookies(cookie_file)
     # `post=None` is what makes this read-only: resolve_pool cannot fetch.
-    pool = resolve_pool(None, pool_file, now=moment.timestamp(), auth=auth)
+    pool = resolve_pool(
+        None,
+        pool_file,
+        now=moment.timestamp(),
+        solved=SolvedKnowledge(auth=auth, slugs=solved_slugs(ledger)),
+    )
 
     return StatusSnapshot(
         day=day.isoformat(),
