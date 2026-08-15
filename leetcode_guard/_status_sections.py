@@ -13,6 +13,8 @@ from __future__ import annotations
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from gatelock import DEFAULT_WRAP, RowStyle, heading, row
+
 from leetcode_guard._status_full import explain_not_triggered
 
 if TYPE_CHECKING:
@@ -21,29 +23,14 @@ if TYPE_CHECKING:
     from leetcode_guard._status_full import FullStatus
 
 
-def _heading(parent: tk.Misc, config: LockConfig, text: str) -> None:
-    """A section title."""
-    tk.Label(
-        parent,
-        text=text,
-        font=config.font("body", bold=True),
-        fg=config.accent,
-        bg=config.bg,
-        anchor="w",
-    ).pack(
-        fill="x", padx=config.space("lg"), pady=(config.space("md"), config.space("xs"))
-    )
-
-
-DEFAULT_WRAP = 880
-"""Fallback wrap width, matching the window's default geometry.
-
-Passed in rather than hardcoded because the first version wrapped at a fixed
-900px inside a 720px window, so every long explanation ran off the right edge
--- in the one panel whose entire job is explaining things.
-"""
+__all__ = ["DEFAULT_WRAP", "render_sections"]
 
 _wrap_state = {"width": DEFAULT_WRAP}
+
+
+def _heading(parent: tk.Misc, config: LockConfig, text: str) -> None:
+    """A section title, from gatelock's shared widget set."""
+    heading(parent, config, text)
 
 
 def _row(
@@ -55,16 +42,12 @@ def _row(
     role: TypeRole = "label",
 ) -> None:
     """One line of body text, wrapped to the current window width."""
-    tk.Label(
+    row(
         parent,
-        text=text,
-        font=config.font(role),
-        fg=color if color is not None else config.fg,
-        bg=config.bg,
-        anchor="w",
-        justify="left",
-        wraplength=_wrap_state["width"],
-    ).pack(fill="x", padx=config.space("xl"), pady=1)
+        config,
+        text,
+        RowStyle(color=color, role=role, wrap=_wrap_state["width"]),
+    )
 
 
 def _verdict_color(config: LockConfig, full: FullStatus) -> str:

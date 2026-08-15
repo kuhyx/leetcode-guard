@@ -14,7 +14,7 @@ from gatelock import LockConfig
 
 from leetcode_guard._breakglass import STOP_COMMAND
 from leetcode_guard._view import GuardView, build_guard_view
-from leetcode_guard._view_group import FrameGroup, WidgetGroup
+from leetcode_guard._view_group import FrameGroup
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
@@ -35,41 +35,7 @@ def model(**kwargs) -> ViewModel:
     return ViewModel(**base)
 
 
-# -- WidgetGroup / FrameGroup ---------------------------------------------
-
-
-def test_widget_group_mirrors_every_operation():
-    widgets = [MagicMock(), MagicMock()]
-    group = WidgetGroup(widgets)
-
-    group.configure(text="x")
-    group.pack(pady=1)
-    group.pack_forget()
-
-    for widget in widgets:
-        widget.configure.assert_called_once_with(text="x")
-        widget.pack.assert_called_once_with(pady=1)
-        widget.pack_forget.assert_called_once()
-
-
-def test_widget_group_destroy_clears_the_group():
-    widgets = [MagicMock()]
-    group = WidgetGroup(widgets)
-
-    group.destroy()
-
-    widgets[0].destroy.assert_called_once()
-    assert len(group) == 0
-    assert group.first is None
-
-
-def test_widget_group_first_and_iteration():
-    first, second = MagicMock(), MagicMock()
-    group = WidgetGroup([first, second])
-
-    assert group.first is first
-    assert list(group) == [first, second]
-    assert len(group) == 2
+# -- FrameGroup -----------------------------------------------------------
 
 
 def test_frame_group_add_get_discard_clear():

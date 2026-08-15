@@ -1,18 +1,11 @@
-"""Fan one logical widget out across every monitor.
+"""Track the per-output containers the lock currently has on screen.
 
-The lock draws one surface per live output, but the *content* is one thing.
-Building it per surface would mean running the paint code N times, and paint
-code here is not a pure function -- it reads a decision and formats it.
-
-So the flow body runs **once** and the widget factory fans out: each requested
-widget is created N times behind a proxy that mirrors ``configure``, ``pack``
-and ``destroy`` onto every copy. Trimmed from
-``screen_locker/_surface_group.py``, which solved the same problem first.
-
-Widgets are typed ``tk.Widget`` -- the real type, which genuinely carries
-``configure``, ``pack``, ``pack_forget`` and ``destroy``. An earlier draft used
-``Any`` to dodge a lint rule; that silenced the checker instead of telling it
-the truth, and suppression comments are banned repo-wide for the same reason.
+This file once also held a ``WidgetGroup`` -- a fan-one-widget-out-across-
+every-monitor proxy, itself trimmed from ``screen_locker/_surface_group.py``,
+which solved the same problem first. Four repos ended up with a copy, so it
+moved to ``gatelock.WidgetGroup``; this one had no production call site at all
+and was deleted rather than re-pointed. Reach for the shared class if the lock
+ever needs to drive one logical widget across surfaces again.
 """
 
 from __future__ import annotations
@@ -22,49 +15,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
     import tkinter as tk
-
-
-class WidgetGroup:
-    """One logical widget, realised once per surface."""
-
-    def __init__(self, widgets: list[tk.Widget]) -> None:
-        self._widgets = widgets
-
-    def __iter__(self) -> Iterator[tk.Widget]:
-        return iter(self._widgets)
-
-    def __len__(self) -> int:
-        return len(self._widgets)
-
-    @property
-    def first(self) -> tk.Widget | None:
-        """The primary surface's copy, if there is one.
-
-        ``None`` is a legitimate answer: with zero live outputs the lock still
-        holds the grab and simply shows nothing.
-        """
-        return self._widgets[0] if self._widgets else None
-
-    def configure(self, **kwargs: object) -> None:
-        """Apply the same configuration to every copy."""
-        for widget in self._widgets:
-            widget.configure(**kwargs)
-
-    def pack(self, **kwargs: object) -> None:
-        """Pack every copy."""
-        for widget in self._widgets:
-            widget.pack(**kwargs)
-
-    def pack_forget(self) -> None:
-        """Hide every copy."""
-        for widget in self._widgets:
-            widget.pack_forget()
-
-    def destroy(self) -> None:
-        """Destroy every copy and forget them."""
-        for widget in self._widgets:
-            widget.destroy()
-        self._widgets = []
 
 
 class FrameGroup:

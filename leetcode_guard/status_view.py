@@ -20,7 +20,7 @@ import sys
 import tkinter as tk
 from typing import TYPE_CHECKING, Final
 
-from gatelock import LockConfig
+from gatelock import ButtonStyle, LockConfig, ScrollableSurface, make_button
 
 from leetcode_guard._status_full import gather_full
 from leetcode_guard._status_sections import DEFAULT_WRAP, render_sections
@@ -61,7 +61,12 @@ class StatusWindow:
         self.root = root
         self.on_refresh = on_refresh
         self.on_close = on_close
-        self._canvas, self.container = _scrollable(root)
+        self._surface = ScrollableSurface(root, _COLORS)
+        # ScrollableSurface builds its container but deliberately does not
+        # place it -- a lock surface and a plain window want different
+        # geometry. This is a normal window, so it fills it.
+        self._surface.container.pack(fill="both", expand=True)
+        self.container = self._surface.content
         self.render(snapshot)
 
     def render(self, snapshot: FullStatus) -> None:
@@ -69,19 +74,20 @@ class StatusWindow:
         for child in list(self.container.winfo_children()):
             child.destroy()
 
-        heading = tk.Label(
+        title = tk.Label(
             self.container,
             text=_TITLE,
             font=_COLORS.font("title", bold=True),
             fg=_COLORS.fg,
             bg=_COLORS.bg,
         )
-        heading.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
+        title.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
 
         render_sections(self.container, _COLORS, snapshot, wrap=self._wrap_width())
         self._buttons()
-        self._canvas.update_idletasks()
-        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        # Idempotent, and it re-derives the scroll region, the fit state and
+        # the focus bindings for the widgets this repaint just created.
+        self._surface.finalize()
 
     def _wrap_width(self) -> int:
         """How wide text may run, from the window's real width.
@@ -99,62 +105,18 @@ class StatusWindow:
         """Refresh and Close, in that order."""
         row = tk.Frame(self.container, bg=_COLORS.bg)
         row.pack(pady=_COLORS.space("md"))
-        _button(row, "Refresh", _COLORS.field_bg, self.on_refresh).pack(
-            side="left", padx=_COLORS.space("sm")
-        )
+        make_button(
+            row,
+            _COLORS,
+            "Refresh",
+            self.on_refresh,
+            ButtonStyle(variant="secondary"),
+        ).pack(side="left", padx=_COLORS.space("sm"))
         # Close is the accent action here, unlike in the lock: this window's
         # whole promise is that it goes away when you want it to.
-        _button(row, "Close  (Esc)", _COLORS.accent, self.on_close).pack(
+        make_button(row, _COLORS, "Close  (Esc)", self.on_close).pack(
             side="left", padx=_COLORS.space("sm")
         )
-
-
-def _button(
-    parent: tk.Misc, text: str, background: str, command: Callable[[], None]
-) -> tk.Button:
-    """A button whose foreground is picked from its fill, never hardcoded."""
-    # on_fill (dark ink) on accent/danger; near-white only on the dark greys.
-    foreground = _COLORS.on_fill if background == _COLORS.accent else _COLORS.fg
-    return tk.Button(
-        parent,
-        text=text,
-        command=command,
-        font=_COLORS.font("caption"),
-        fg=foreground,
-        bg=background,
-        relief="flat",
-        padx=_COLORS.space("md"),
-        pady=_COLORS.space("xs"),
-    )
-
-
-def _scrollable(root: tk.Misc) -> tuple[tk.Canvas, tk.Frame]:
-    """A vertically scrollable frame.
-
-    The panel shows everything the project knows, which is more than fits on a
-    laptop screen -- without this the buttons fall off the bottom and the
-    window becomes the un-closable thing it is meant not to be.
-    """
-    canvas = tk.Canvas(root, bg=_COLORS.bg, highlightthickness=0)
-    scrollbar = tk.Scrollbar(root, orient="vertical", command=canvas.yview)
-    inner = tk.Frame(canvas, bg=_COLORS.bg)
-
-    canvas.configure(yscrollcommand=scrollbar.set)
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-    window_id = canvas.create_window((0, 0), window=inner, anchor="nw")
-
-    def _fit(event: tk.Event) -> None:
-        canvas.itemconfigure(window_id, width=event.width)
-
-    canvas.bind("<Configure>", _fit)
-    inner.bind(
-        "<Configure>",
-        lambda _event: canvas.configure(scrollregion=canvas.bbox("all")),
-    )
-    canvas.bind_all("<Button-4>", lambda _e: canvas.yview_scroll(-2, "units"))
-    canvas.bind_all("<Button-5>", lambda _e: canvas.yview_scroll(2, "units"))
-    return canvas, inner
 
 
 def state_word(full: FullStatus) -> str:
