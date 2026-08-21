@@ -47,9 +47,11 @@ def fake_sync_log(monkeypatch, merged: dict | None = None, error=None) -> dict:
     """Replace crdt_sync.sync_log with a recorder."""
     seen: dict = {}
 
-    def stub(*, local_log, **kwargs):
+    def stub(target, local_log, codec, revisions=None):
         seen["local"] = local_log
-        seen["kwargs"] = kwargs
+        seen["target"] = target
+        seen["codec"] = codec
+        seen["revisions"] = revisions
         if error is not None:
             raise error
         return merged if merged is not None else local_log
@@ -188,8 +190,8 @@ def test_a_successful_sync_reports_what_it_did(
 
     assert result.pushed
     assert result.record_count == 2
-    assert seen["kwargs"]["device_id"] == "pc"
-    assert seen["kwargs"]["filename"] == "ledger.json"
+    assert seen["target"].device_id == "pc"
+    assert seen["codec"].filename == "ledger.json"
 
 
 def test_a_github_failure_is_reported_not_raised(

@@ -37,9 +37,12 @@ from crdt_sync import (
     GitHubSyncError,
     Hlc,
     Log,
+    LogCodec,
     Record,
     RemoteStore,
     RemoteSyncError,
+    RevisionTracking,
+    SyncTarget,
     dump_log,
     load_log,
     mirror_client_for,
@@ -215,18 +218,24 @@ def sync_ledger(
 
     try:
         merged = sync_log(
-            client=_remote_client(client),
-            device_id=DEVICE_ID,
-            path_prefix=SYNC_PATH_PREFIX,
-            local_log=local,
-            encode=_encode,
-            decode=_decode,
-            filename=_FILENAME,
-            commit_message="leetcode-guard: update ledger",
-            # Without this every tick re-downloads every peer's whole ledger
-            # whether or not anything changed -- the traffic the Firebase free
-            # tier's monthly budget depends on not happening.
-            state_store=FileSyncStateStore(SYNC_STATE_FILE),
+            SyncTarget(
+                client=_remote_client(client),
+                device_id=DEVICE_ID,
+                path_prefix=SYNC_PATH_PREFIX,
+            ),
+            local,
+            LogCodec(
+                commit_message="leetcode-guard: update ledger",
+                decode=_decode,
+                encode=_encode,
+                filename=_FILENAME,
+            ),
+            # Without this every tick re-downloads every peer's whole
+            # ledger whether or not anything changed -- the traffic the
+            # Firebase free tier's monthly budget depends on not happening.
+            RevisionTracking(
+                state_store=FileSyncStateStore(SYNC_STATE_FILE),
+            ),
         )
     except (GitHubSyncError, RemoteSyncError) as exc:
         _logger.warning("ledger sync failed: %s", exc)
