@@ -205,11 +205,6 @@ UNVERIFIABLE_HATCH_SECONDS: Final = 180
 immediately instead of waiting out the usual offer delay. The user must always
 have a visible way forward while the lock cannot see LeetCode."""
 
-QUEUE_POLL_SECONDS: Final = 2.0
-QUEUE_DEADLINE_SECONDS: Final = 6 * 60 * 60
-"""Runaway backstop for the layered wait, not a policy. Reaching it arms anyway
-and logs at ERROR -- it must never mean "give up and leave the PC unlocked"."""
-
 NETWORK_INCIDENT_LOCKOUT_SECONDS: Final = 300
 NETWORK_INCIDENT_LOCKOUT_CAP_SECONDS: Final = 1800
 """The incident lockout doubles per recent incident, which reaches ~2.7 hours

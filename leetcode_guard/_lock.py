@@ -35,6 +35,7 @@ from gatelock import (
     LockConfig,
     LockWindow,
     assert_not_under_pytest,
+    wait_for_turn,
 )
 
 from leetcode_guard._constants import (
@@ -54,7 +55,6 @@ from leetcode_guard._network_incident import (
     build_tracker as build_incident_tracker,
 )
 from leetcode_guard._poller import SolvePoller
-from leetcode_guard._queue import wait_for_turn
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._sync import sync_quietly
 from leetcode_guard._view import build_guard_view, install_demo_close_button
