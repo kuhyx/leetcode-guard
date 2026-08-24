@@ -95,3 +95,19 @@ A refactor without a gate silently regrows. Before this task is done:
 
 Run the repo's own suite, then run the program itself and confirm the
 behaviour is unchanged. Testing is the last step, never the first.
+
+## Why this sat untouched (added 2026-08-24)
+
+This repo ran a LOCAL `scripts/check_file_length.py` with `MAX_LINES = 400`,
+under a hook named "Max file length (400 lines)". It reported "gated" while
+permitting files every other repo rejects -- so the cap looked enforced and
+nothing ever failed. The hook now delegates to the shared 250-line gate in
+`~/utils`, which reports 24 real violations.
+
+Done condition is now an exit code, not a count:
+
+```
+bash scripts/check_file_length.sh --all   # must exit 0
+```
+
+REMOVE ME AFTER FINISH
