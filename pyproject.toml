@@ -2,7 +2,7 @@
 name = "leetcode-guard"
 version = "1.0.0"
 description = "Tkinter/systemd gate that locks the PC until a LeetCode problem is solved"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 # gatelock: shared lock-window/arbiter/escape-hatch/HMAC backend, also used by
 # screen_locker, diet_guard and wake_alarm.
 # crdt-sync: shared CRDT merge scheme + GitHub-Contents-API sync transport,

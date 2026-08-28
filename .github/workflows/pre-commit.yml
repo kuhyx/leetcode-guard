@@ -24,7 +24,7 @@ jobs:
         run: echo "UTILS_ROOT=$GITHUB_WORKSPACE/.utils" >> "$GITHUB_ENV"
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.x"
       # The `ci-mirror` hook is pre-push only, so it does not run here --
       # which is deliberate. It builds its own venv and runs the whole suite;
       # letting it fire inside CI would nest a second install of everything.
