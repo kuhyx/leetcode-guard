@@ -1,7 +1,9 @@
 """Turn a :class:`FullStatus` into rows of labels.
 
-Split from ``status_view.py`` for the 400-line cap, and because it keeps the
-window file about *windowing* and this file about *content*.
+Split from ``status_view.py`` for the file-length cap, and because it keeps the
+window file about *windowing* and this file about *content*. The diagnostic
+sections live in ``_status_health.py``; the two row primitives both files draw
+with live in ``_status_rows.py``.
 
 Colour discipline: status colours are load-bearing here, not decoration.
 Red means the gate is holding you, amber means something needs attention,
@@ -13,41 +15,23 @@ from __future__ import annotations
 import tkinter as tk
 from typing import TYPE_CHECKING
 
-from gatelock import DEFAULT_WRAP, RowStyle, heading, row
-
 from leetcode_guard._status_full import explain_not_triggered
+from leetcode_guard._status_health import (
+    section_environment,
+    section_integrity,
+    section_suggestions,
+)
+from leetcode_guard._status_rows import DEFAULT_WRAP, set_wrap
+from leetcode_guard._status_rows import section_heading as _heading
+from leetcode_guard._status_rows import section_row as _row
 
 if TYPE_CHECKING:
-    from gatelock import LockConfig, TypeRole
+    from gatelock import LockConfig
 
     from leetcode_guard._status_full import FullStatus
 
 
 __all__ = ["DEFAULT_WRAP", "render_sections"]
-
-_wrap_state = {"width": DEFAULT_WRAP}
-
-
-def _heading(parent: tk.Misc, config: LockConfig, text: str) -> None:
-    """A section title, from gatelock's shared widget set."""
-    heading(parent, config, text)
-
-
-def _row(
-    parent: tk.Misc,
-    config: LockConfig,
-    text: str,
-    *,
-    color: str | None = None,
-    role: TypeRole = "label",
-) -> None:
-    """One line of body text, wrapped to the current window width."""
-    row(
-        parent,
-        config,
-        text,
-        RowStyle(color=color, role=role, wrap=_wrap_state["width"]),
-    )
 
 
 def _verdict_color(config: LockConfig, full: FullStatus) -> str:
@@ -166,89 +150,16 @@ def _section_budgets(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         )
 
 
-def _section_integrity(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
-    """Signature, clock and parse health."""
-    gate = full.gate
-    _heading(parent, config, "Ledger integrity")
-    _row(
-        parent,
-        config,
-        f"HMAC checking: {'on' if gate.integrity_ok else 'OFF (key unreadable)'}",
-        color=config.fg if gate.integrity_ok else config.danger,
-    )
-    for label, count in (
-        ("Entries failing their signature", gate.tampered),
-        ("Credits refused", gate.discounted),
-        ("Unreadable rows", gate.unparsable),
-    ):
-        _row(
-            parent,
-            config,
-            f"{label}: {count}",
-            color=config.danger if count else config.fg,
-        )
-    _row(
-        parent,
-        config,
-        f"Clock trusted: {gate.clock_trusted}",
-        color=config.fg if gate.clock_trusted else config.danger,
-    )
-    _row(parent, config, f"Ledger entries: {full.ledger.total_entries}")
-    _row(parent, config, f"Seeded: {full.ledger.bootstrapped}")
-    _row(
-        parent,
-        config,
-        f"File: {full.ledger_path}",
-        color=config.muted,
-        role="caption",
-    )
-
-
-def _section_environment(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
-    """Timer, caches, auth and sync."""
-    _heading(parent, config, "Scheduling and caches")
-    _row(
-        parent,
-        config,
-        f"Timer enabled: {full.timer.enabled} ({full.timer.detail})",
-        color=config.fg if full.timer.enabled else config.warning,
-    )
-    _row(parent, config, f"Next fire: {full.timer.next_fire}")
-    _row(parent, config, full.pool_cache.summary)
-    _row(parent, config, full.statement_cache.summary)
-    _row(parent, config, f"Suggestions from: {full.gate.pool_source}")
-    _row(parent, config, f"LeetCode cookies configured: {full.cookies_configured}")
-    _row(parent, config, f"Sync token configured: {full.sync_configured}")
-    for note in full.gate.pool_notes:
-        _row(parent, config, f"  {note}", color=config.muted, role="caption")
-
-
-def _section_suggestions(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
-    """What the lock would offer."""
-    _heading(parent, config, "Suggested problems")
-    if not full.gate.suggestions:
-        _row(parent, config, "(no cached pool)", color=config.muted)
-        return
-    for index, item in enumerate(full.gate.suggestions, start=1):
-        _row(
-            parent,
-            config,
-            f"{index:2d}. {item.title} -- {item.difficulty}, {item.ac_rate:.1f}%",
-            role="caption",
-        )
-        _row(parent, config, f"     {item.url}", color=config.muted, role="caption")
-
-
 def render_sections(
     parent: tk.Misc, config: LockConfig, full: FullStatus, *, wrap: int = DEFAULT_WRAP
 ) -> None:
     """Render every section, in the order a person reads them."""
-    _wrap_state["width"] = max(320, wrap)
+    set_wrap(wrap)
     _section_verdict(parent, config, full)
     _section_credits(parent, config, full)
     _section_solves(parent, config, full)
     _section_days(parent, config, full)
     _section_budgets(parent, config, full)
-    _section_integrity(parent, config, full)
-    _section_environment(parent, config, full)
-    _section_suggestions(parent, config, full)
+    section_integrity(parent, config, full)
+    section_environment(parent, config, full)
+    section_suggestions(parent, config, full)
