@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from leetcode_guard import _cli
+from leetcode_guard import _cli, _cli_commands
 from leetcode_guard._daycost import day_cost, local_today
 from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
@@ -17,7 +17,7 @@ from leetcode_guard.tests._net_fixtures import (
     recent_ac_result,
     submission_row,
 )
-from leetcode_guard.tests.test_cli import stub_client
+from leetcode_guard.tests.test_cli import patch_cli, stub_client
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -79,7 +79,7 @@ def test_check_reports_an_unlocked_day(
         [bootstrap_entry(day=local_today(), now=NOW, seeded=0, key_file=hmac_key)],
     )
     save_ledger(data_dir / "ledger.json", ledger)
-    monkeypatch.setattr(_cli, "load_ledger", lambda *a, **k: ledger)
+    patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
     stub_client(monkeypatch, recent_ac_result([]))
 
     exit_code = _cli.main(["--check"])
@@ -93,8 +93,8 @@ def test_check_reports_an_unlocked_day(
 def test_check_reports_an_unreadable_integrity_key(
     monkeypatch, capsys, data_dir: Path, missing_key: Path
 ):
-    monkeypatch.setattr(
-        _cli,
+    patch_cli(
+        monkeypatch,
         "load_ledger",
         lambda path, **kwargs: load_ledger(path, key_file=missing_key),
     )
@@ -118,7 +118,7 @@ def test_parser_flags():
 
 
 def test_timestamps_render_in_local_time():
-    rendered = _cli._format_timestamp(0)
+    rendered = _cli_commands._format_timestamp(0)
 
     assert rendered.startswith("19")
 
@@ -126,7 +126,7 @@ def test_timestamps_render_in_local_time():
 def test_a_second_concurrent_run_stands_down(monkeypatch, capsys, data_dir: Path):
     """The afternoon retry must not stack a second waiter behind the morning
     run -- that would clear the gate twice."""
-    monkeypatch.setattr(_cli, "acquire_instance", lambda _path: None)
+    patch_cli(monkeypatch, "acquire_instance", lambda _path: None)
 
     assert _cli.main([]) == 0
     assert "already active" in capsys.readouterr().err
@@ -135,8 +135,8 @@ def test_a_second_concurrent_run_stands_down(monkeypatch, capsys, data_dir: Path
 def test_sync_reports_what_it_did(monkeypatch, capsys, data_dir: Path):
     from leetcode_guard._sync import SyncResult
 
-    monkeypatch.setattr(
-        _cli,
+    patch_cli(
+        monkeypatch,
         "sync_ledger",
         lambda _path: SyncResult(
             pushed=True, record_count=7, merged_in=2, reason="pushed 7, merged 2"

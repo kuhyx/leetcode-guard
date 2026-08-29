@@ -123,6 +123,10 @@ unfixable = []
 # lookup table would move the same branching somewhere less obvious and put a
 # layer between argparse and the command it runs.
 "leetcode_guard/_cli.py" = ["T201", "PLR0911"]
+# The subcommands that carry most of those prints. Same entry, same reason:
+# an auto-fixable T201 under --unsafe-fixes deletes a diagnostic's entire
+# output and still exits 0, so this moves with the code, in the same commit.
+"leetcode_guard/_cli_commands.py" = ["T201"]
 # --login IS a prompt: the "paste this" lines, the REFUSED verdict and the
 # reason LeetCode gave are the entire interface, and a silent credential
 # command is worse than none -- the user cannot tell a stored cookie from a

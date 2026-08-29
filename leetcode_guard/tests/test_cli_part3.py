@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 from leetcode_guard.tests.test_cli import (
     _seeded_ledger,
+    patch_cli,
     stub_client,
 )
 
@@ -52,7 +53,7 @@ def test_the_recent_feed_hides_solved_problems_even_with_no_ledger(
             [problem_row("already-solved"), problem_row("still-open")], total=2
         ),
     )
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
 
     _cli.main([])
 
@@ -88,7 +89,7 @@ def test_the_lock_is_wired_to_the_right_paths_for_its_mode(
         recent_ac_result([submission_row("1", "solved-already")]),
         pool_result([problem_row("still-open")], total=1),
     )
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
     if production:
         # The run that creates a ledger defers before building a guard at all.
         _seeded_ledger(data_dir)
@@ -127,7 +128,7 @@ def test_a_demo_run_wipes_its_own_ledger(monkeypatch, data_dir: Path):
             pass
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
 
     _cli.main([])
 

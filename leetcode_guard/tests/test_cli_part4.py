@@ -15,7 +15,7 @@ from leetcode_guard.tests._net_fixtures import (
     problem_row,
     recent_ac_result,
 )
-from leetcode_guard.tests.test_cli import stub_client
+from leetcode_guard.tests.test_cli import patch_cli, stub_client
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 def test_sync_exits_nonzero_when_it_could_not_push(monkeypatch, capsys, data_dir: Path):
     from leetcode_guard._sync import SyncResult
 
-    monkeypatch.setattr(
-        _cli,
+    patch_cli(
+        monkeypatch,
         "sync_ledger",
         lambda _path: SyncResult(
             pushed=False, record_count=0, merged_in=0, reason="no sync token"
@@ -37,7 +37,7 @@ def test_sync_exits_nonzero_when_it_could_not_push(monkeypatch, capsys, data_dir
 
 
 def test_login_exits_zero_once_the_cookies_verify(monkeypatch, data_dir: Path):
-    monkeypatch.setattr(_cli, "login", lambda _path, *, timeout: bool(timeout))
+    patch_cli(monkeypatch, "login", lambda _path, *, timeout: bool(timeout))
 
     assert _cli.main(["--login"]) == 0
 
@@ -45,7 +45,7 @@ def test_login_exits_zero_once_the_cookies_verify(monkeypatch, data_dir: Path):
 def test_login_exits_nonzero_when_leetcode_refuses(monkeypatch, data_dir: Path):
     """A refusal has to be visible to a shell: the whole command exists because
     a dead session used to look exactly like a live one."""
-    monkeypatch.setattr(_cli, "login", lambda _path, *, timeout: False)
+    patch_cli(monkeypatch, "login", lambda _path, *, timeout: False)
 
     assert _cli.main(["--login"]) == 1
 
@@ -103,7 +103,7 @@ def test_production_is_free_and_silent_before_the_start_date(
     monkeypatch.setattr(
         _cli, "build_client", lambda: pytest.fail("must not touch the network")
     )
-    monkeypatch.setattr(_cli, "GATE_START_DATE", local_today() + timedelta(days=1))
+    patch_cli(monkeypatch, "GATE_START_DATE", local_today() + timedelta(days=1))
 
     assert _cli.main(["--production"]) == 0
     assert "gate not active until" in capsys.readouterr().out
@@ -120,9 +120,9 @@ def test_demo_ignores_the_start_date(monkeypatch, data_dir: Path):
         def run(self):
             pass
 
-    monkeypatch.setattr(_cli, "GATE_START_DATE", local_today() + timedelta(days=99))
+    patch_cli(monkeypatch, "GATE_START_DATE", local_today() + timedelta(days=99))
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
 
     assert _cli.main([]) == 0
     assert built["made"]

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard import _cli
+from leetcode_guard import _cli, _cli_commands
 from leetcode_guard._auth import AuthState
 from leetcode_guard._daycost import local_today
 from leetcode_guard._ledger_entries import bootstrap_entry
@@ -26,11 +26,30 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def patch_cli(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> None:
+    """Rebind ``name`` on whichever CLI module actually reads it.
+
+    The command line is two modules since the 250-line split -- the parser and
+    the lock command in ``_cli``, everything that prints and exits in
+    ``_cli_commands`` -- and several names are imported by both. Patching only
+    one leaves the other pointed at the real thing, which for `build_client`
+    means a test that looks stubbed and reaches the network.
+    """
+    patched = False
+    for module in (_cli, _cli_commands):
+        if hasattr(module, name):
+            monkeypatch.setattr(module, name, value)
+            patched = True
+    if not patched:
+        message = f"neither CLI module defines {name!r}"
+        raise AssertionError(message)
+
+
 def stub_client(monkeypatch: pytest.MonkeyPatch, *results: GraphQLResult) -> None:
     """Replace ``build_client`` with one wired to a scripted fake."""
     post = fake_post(*results)
-    monkeypatch.setattr(
-        _cli,
+    patch_cli(
+        monkeypatch,
         "build_client",
         lambda: Client(
             post=post,
@@ -100,7 +119,7 @@ def test_bare_invocation_opens_a_demo_lock(monkeypatch, data_dir: Path):
             built["ran"] = True
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
 
     assert _cli.main([]) == 0
     assert built["demo_mode"] is True
@@ -120,7 +139,7 @@ def test_production_opts_out_of_demo(monkeypatch, data_dir: Path):
             pass
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
     # Pre-seeded: the run that *creates* a ledger deliberately returns before
     # building a guard at all, so a fresh one would never reach FakeGuard.
     _seeded_ledger(data_dir)
@@ -156,7 +175,7 @@ def test_the_run_that_creates_the_ledger_does_not_arm(monkeypatch, capsys, data_
         recent_ac_result([submission_row("42", "two-sum")]),
         pool_result([], total=0),
     )
-    monkeypatch.setattr(_cli, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
 
     assert _cli.main(["--production"]) == 0
 
@@ -174,7 +193,7 @@ def test_production_exits_without_a_window_when_today_is_settled(
     and draws nothing."""
     ledger = Ledger()
     add_charge(ledger, local_today(), key_file=hmac_key)
-    monkeypatch.setattr(_cli, "load_ledger", lambda *a, **k: ledger)
+    patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
     monkeypatch.setattr(
         _cli, "LeetcodeGuard", lambda **kwargs: pytest.fail("should not have armed")
     )

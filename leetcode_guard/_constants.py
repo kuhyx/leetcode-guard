@@ -228,3 +228,10 @@ SYNC_REPO_OWNER: Final = "kuhyx"
 SYNC_REPO_NAME: Final = "syncs"
 SYNC_PATH_PREFIX: Final = "leetcode-guard-sync/devices"
 SYNC_TIMEOUT_SECONDS: Final = 15.0
+
+# Process exit codes. Here rather than in _cli.py because they are the
+# program's contract with whatever ran it -- a systemd unit reads them, and the
+# CLI is now more than one module.
+EXIT_OK: Final = 0
+EXIT_LOCKED: Final = 1
+EXIT_UNVERIFIABLE: Final = 2
