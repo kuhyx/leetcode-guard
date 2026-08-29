@@ -189,6 +189,27 @@ def gate_starts(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture
+def no_spawn(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """A browser that always resolves and never actually runs.
+
+    Here rather than in a test module because two split halves of the study
+    suite request it by name, and a fixture imported across modules reads as
+    an unused import to the linter, which removes it.
+    """
+    launched: list[str] = []
+    monkeypatch.setattr(
+        "leetcode_guard._lock_study.find_opener", lambda: "/usr/bin/xdg-open"
+    )
+
+    def fake_launch(url: str) -> MagicMock:
+        launched.append(url)
+        return MagicMock(ok=True, reason="opened", command=())
+
+    monkeypatch.setattr("leetcode_guard._lock_study.launch", fake_launch)
+    return launched
+
+
+@pytest.fixture
 def tk_mock(_block_real_tk: MagicMock) -> MagicMock:
     """Public alias for the Tk stand-in.
 

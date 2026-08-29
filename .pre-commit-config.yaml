@@ -98,10 +98,21 @@ repos:
     rev: v3.3.2
     hooks:
       - id: pylint
+        # Whole tree, never the staged subset. `--fail-under` grades a *score*,
+        # and a score over an arbitrary handful of files is an arbitrary
+        # number: the same tests that sit at 8.55 alongside the package score
+        # 7.06 on their own, because duplicate-code between sibling test
+        # modules is most of what tests are. CI runs `pre-commit --all-files`,
+        # so this is also the only way commit-time and CI agree -- the same
+        # "passing or failing by what else was staged" trap the init-hook
+        # comment in pyproject.toml describes for import resolution.
+        pass_filenames: false
         args:
           - --rcfile=pyproject.toml
           - --fail-under=8.0
           - --jobs=4
+          - leetcode_guard
+          - scripts
         # Kept byte-identical to pyproject.toml/requirements.txt. This block
         # has drifted from those manifests before, and a pin that lags them
         # lints the code against a gatelock that no longer has the API it
