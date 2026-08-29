@@ -42,7 +42,8 @@ from leetcode_guard import _gate
 from leetcode_guard import _lock_study as lock_study
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
-from leetcode_guard._lock import GuardDeps, LeetcodeGuard
+from leetcode_guard._lock import LeetcodeGuard
+from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import rank_pool
