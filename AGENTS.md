@@ -132,13 +132,13 @@ code by duplicating the few lines they need, or by importing from
 **`# noqa` and `# type: ignore` are banned by a pygrep hook** — including
 inside docstrings. Mentioning the literal string trips it.
 
-**Any module that does `import tkinter as tk` must be added to `_TK_MODULES` in
-`conftest.py` in the same commit.** Miss one and the suite does not fail — it
-opens a real fullscreen window, or hangs holding a grab. The list runs both
-ways: a module that *stops* importing tkinter must come **out**, or patching an
-attribute it no longer has raises at fixture time and fails the entire suite at
-once. `_lock.py` left the list when its last widget call moved to
-`_view.install_demo_close_button`. Verify with
+**Any module that does `import tkinter as tk` must be added to `TK_MODULES` in
+`leetcode_guard/tests/_tk_stub.py` in the same commit.** Miss one and the suite
+does not fail — it opens a real fullscreen window, or hangs holding a grab. The
+list runs both ways: a module that *stops* importing tkinter must come
+**out**, or patching an attribute it no longer has raises at fixture time and
+fails the entire suite at once. `_lock.py` left the list when its last widget
+call moved to `_view.install_demo_close_button`. Verify with
 `grep -l '^import tkinter as tk' leetcode_guard/*.py`.
 
 **Shipped code reaches gatelock's privates from exactly one file.** `_recovery`,
@@ -244,7 +244,7 @@ strip belongs on the primary output, because that is where the user is looking.
 
 ## Conventions
 
-400-line file cap, 100% branch coverage, `ruff select = ["ALL"]`, `mypy
+250-line file cap, 100% branch coverage, `ruff select = ["ALL"]`, `mypy
 strict`, `pylint enable = "all"`. Every `except` must re-raise or log at
 warning or above. Commit to `main`; never create a feature branch — these repos
 deploy from the working tree.
