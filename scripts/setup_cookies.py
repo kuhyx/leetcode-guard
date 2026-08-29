@@ -158,7 +158,7 @@ def main(argv: list[str]) -> int:
         _logger.warning("cookie input rejected: %s", exc)
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    except (EOFError, KeyboardInterrupt):
+    except EOFError, KeyboardInterrupt:
         _logger.warning("cookie setup aborted at the prompt; nothing written")
         print("\naborted -- nothing written.", file=sys.stderr)
         return 1

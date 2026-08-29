@@ -8,7 +8,7 @@ against the real production key.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 import secrets
 from typing import TYPE_CHECKING
 
@@ -31,7 +31,7 @@ FRIDAY = date(2026, 8, 14)
 SATURDAY = date(2026, 8, 15)
 SUNDAY = date(2026, 8, 16)
 
-NOW = datetime(2026, 8, 10, 9, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 10, 9, 0, tzinfo=UTC)
 
 
 def make_hmac_key(directory: Path) -> Path:

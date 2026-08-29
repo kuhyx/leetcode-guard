@@ -43,7 +43,7 @@ build-backend = "setuptools.build_meta"
 include = ["leetcode_guard*"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py314"
 include = ["*.py", "**/*.py"]
 exclude = [".git", ".venv", ".ci-mirror-venv", "__pycache__", "build", "dist", ".eggs"]
 
@@ -189,7 +189,7 @@ line-ending = "auto"
 docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -223,7 +223,7 @@ init-hook = "import sys; sys.path.insert(0, '.')"
 analyse-fallback-blocks = true
 persistent = true
 jobs = 0
-py-version = "3.10"
+py-version = "3.14"
 ignore = [".venv", ".ci-mirror-venv", "__pycache__"]
 ignore-patterns = [".*\\.pyi$"]
 

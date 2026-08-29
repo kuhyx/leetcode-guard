@@ -8,7 +8,7 @@ than its own window.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import json
 from typing import TYPE_CHECKING
 
@@ -33,7 +33,7 @@ from leetcode_guard.tests._ledger_fixtures import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-MONDAY_NOON = datetime(2026, 8, 10, 12, 0, tzinfo=timezone.utc)
+MONDAY_NOON = datetime(2026, 8, 10, 12, 0, tzinfo=UTC)
 
 
 def a_root(tk_mock, width: int = 980):

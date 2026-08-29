@@ -16,7 +16,7 @@ from __future__ import annotations
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Final, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Final, Protocol, TypeVar
 
 from leetcode_guard._constants import POLL_DRAIN_MS
 
@@ -75,7 +75,7 @@ class PollState:
             self.consecutive_unverifiable += 1
 
 
-class SolvePoller(Generic[_R]):
+class SolvePoller[R]:
     """Drive a periodic background check from the Tk event loop."""
 
     def __init__(

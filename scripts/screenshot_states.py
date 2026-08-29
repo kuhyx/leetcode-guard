@@ -31,7 +31,7 @@ States: ``locked``, ``unlocked``, ``escape``, ``outage``, ``production``.
 from __future__ import annotations
 
 from concurrent.futures import Future
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 import sys
 import tempfile
@@ -59,7 +59,7 @@ if TYPE_CHECKING:
 # short enough that a forgotten run does not sit on a display forever.
 QUIT_AFTER_MS = 2500
 
-NOW = datetime.now(tz=timezone.utc).astimezone()
+NOW = datetime.now(tz=UTC).astimezone()
 SIGNED_OUT = AuthState(
     cookies=None, note="Not signed in -- already-solved problems are NOT filtered out."
 )

@@ -6,7 +6,7 @@ and the lock command -- the one that opens a window.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from leetcode_guard._constants import (
     COOKIES_FILE,
@@ -35,7 +35,7 @@ from leetcode_guard._sync import sync_ledger
 
 def _format_timestamp(seconds: int) -> str:
     """Render a submission timestamp in local time."""
-    moment = datetime.fromtimestamp(seconds, tz=timezone.utc).astimezone()
+    moment = datetime.fromtimestamp(seconds, tz=UTC).astimezone()
     return moment.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -59,7 +59,7 @@ def cmd_probe() -> int:
             f"id={submission.submission_id}"
         )
 
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     pool = resolve_pool(
         client.post,
         POOL_CACHE_FILE,
@@ -139,7 +139,7 @@ def cmd_check() -> int:
 def cmd_cache_statements() -> int:
     """Mirror problem statements so the lock is usable with no network."""
     client = build_client()
-    now = datetime.now(tz=timezone.utc).timestamp()
+    now = datetime.now(tz=UTC).timestamp()
     pool = resolve_pool(
         client.post,
         POOL_CACHE_FILE,

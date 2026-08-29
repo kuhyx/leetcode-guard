@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import json
 from typing import TYPE_CHECKING
 
@@ -27,7 +27,7 @@ from leetcode_guard.tests._net_fixtures import problem_row
 if TYPE_CHECKING:
     from pathlib import Path
 
-MONDAY_NOON = datetime(2026, 8, 10, 12, 0, tzinfo=timezone.utc)
+MONDAY_NOON = datetime(2026, 8, 10, 12, 0, tzinfo=UTC)
 
 
 def seed_pool(path: Path, *slugs: str) -> None:

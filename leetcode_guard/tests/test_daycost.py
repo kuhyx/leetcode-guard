@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 
 import pytest
 
@@ -42,7 +42,7 @@ def test_the_weekend_boundary_follows_local_time_not_utc():
 
     assert local_today(now=friday_late) == date(2026, 7, 31)
     assert day_cost(local_today(now=friday_late)) == WEEKDAY_COST
-    assert friday_late.astimezone(timezone.utc).date() == date(2026, 7, 31)
+    assert friday_late.astimezone(UTC).date() == date(2026, 7, 31)
 
 
 def test_early_saturday_local_is_already_the_weekend():
@@ -51,11 +51,11 @@ def test_early_saturday_local_is_already_the_weekend():
 
     assert day_cost(local_today(now=saturday_early)) == WEEKEND_COST
     # The same instant is still Friday in UTC -- which is exactly the bug.
-    assert saturday_early.astimezone(timezone.utc).date() == date(2026, 7, 31)
+    assert saturday_early.astimezone(UTC).date() == date(2026, 7, 31)
 
 
 def test_injected_now_is_returned_verbatim():
-    moment = datetime(2026, 7, 27, 9, 0, tzinfo=timezone.utc)
+    moment = datetime(2026, 7, 27, 9, 0, tzinfo=UTC)
 
     assert local_now(now=moment) is moment
 

@@ -114,7 +114,7 @@ def load_ledger(path: Path, *, key_file: Path | None = None) -> Ledger:
 
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         # .exception() already attaches the traceback, so the exception object
         # must not also be interpolated into the message.
         _logger.exception("ledger at %s is unreadable -- treating it as empty", path)

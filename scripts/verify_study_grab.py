@@ -30,7 +30,7 @@ single most likely thing to regress when gatelock is bumped.
 from __future__ import annotations
 
 from concurrent.futures import Future
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 import logging
 from pathlib import Path
 import sys
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
-NOW: Final = datetime.now(tz=timezone.utc).astimezone()
+NOW: Final = datetime.now(tz=UTC).astimezone()
 PROBLEM_URL: Final = "https://example.invalid/problems/two-sum/"
 SETTLE_TICKS: Final = 20
 """``update()`` pumps between assertions. Twenty at ~100ms of real work each is

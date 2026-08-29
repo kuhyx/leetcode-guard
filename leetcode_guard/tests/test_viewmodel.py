@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from leetcode_guard._auth import AuthState, Cookies
@@ -26,7 +26,7 @@ from leetcode_guard.tests._net_fixtures import problem_row
 if TYPE_CHECKING:
     from pathlib import Path
 
-CHECKED_AT = datetime(2026, 7, 27, 12, 4, 31, tzinfo=timezone.utc)
+CHECKED_AT = datetime(2026, 7, 27, 12, 4, 31, tzinfo=UTC)
 SIGNED_OUT = AuthState(cookies=None, note="signed out note")
 OK_PROBE = SolveProbe(status=ProbeStatus.OK, submissions=(), reason="none recently")
 BLIND_PROBE = SolveProbe(

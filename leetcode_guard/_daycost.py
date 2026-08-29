@@ -14,7 +14,7 @@ Wednesday can be spent on Saturday, it just goes half as far.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 import logging
 from typing import Final
 
@@ -35,7 +35,7 @@ def local_now(*, now: datetime | None = None) -> datetime:
     which the lint profile rejects and which silently compares wrong against
     anything timezone-aware.
     """
-    return now if now is not None else datetime.now(tz=timezone.utc).astimezone()
+    return now if now is not None else datetime.now(tz=UTC).astimezone()
 
 
 def local_today(*, now: datetime | None = None) -> date:
