@@ -75,6 +75,7 @@ TK_MODULES = (
     "leetcode_guard._status_sections",
     "leetcode_guard._study",
     "leetcode_guard._study_resume",
+    "leetcode_guard._study_steps",
     "leetcode_guard._study_strip",
     "leetcode_guard.status_view",
 )

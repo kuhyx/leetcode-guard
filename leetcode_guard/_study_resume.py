@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from gatelock import LockConfig
 
-    from leetcode_guard._study import _Withdrawn as _WithdrawnSurface
+    from leetcode_guard._study_types import Withdrawn as _WithdrawnSurface
 
 _logger: Final = logging.getLogger(__name__)
 

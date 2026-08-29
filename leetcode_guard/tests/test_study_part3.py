@@ -133,8 +133,11 @@ def test_the_emergency_restore_re_disables_vt():
 
     with pytest.MonkeyPatch.context() as patch:
         calls: list[str] = []
+        # The emergency path re-disables VT from _study_steps, not _study --
+        # the name is bound in both, and patching one leaves the other real.
         patch.setattr(
-            "leetcode_guard._study.disable_vt_switching", lambda: calls.append("vt")
+            "leetcode_guard._study_steps.disable_vt_switching",
+            lambda: calls.append("vt"),
         )
         session(lock, PRODUCTION).suspend()
 
