@@ -33,10 +33,12 @@ from leetcode_guard._status_extra import (
     BudgetStatus,
     CacheStatus,
     LedgerStats,
-    TimerStatus,
     gather_budget,
     gather_cache,
     gather_ledger_stats,
+)
+from leetcode_guard._status_timer import (
+    TimerStatus,
     gather_timer,
 )
 

@@ -13,14 +13,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import logging
-import subprocess
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._daycost import parse_day
 from leetcode_guard._ledger import BOOTSTRAP, CHARGE, CREDIT, SEEN
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from datetime import date
     from pathlib import Path
 
@@ -31,9 +29,6 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 _SECONDS_PER_DAY: Final = 86_400
-_TIMER_UNIT: Final = "leetcode-guard.timer"
-_NEXT_ELAPSE: Final = "NextElapseUSecRealtime"
-_SYSTEMCTL_TIMEOUT: Final = 5.0
 
 
 @dataclass(frozen=True)
@@ -199,56 +194,3 @@ def gather_cache(path: Path, name: str, key: str, *, now: float) -> CacheStatus:
         entries=len(rows) if isinstance(rows, list) else 0,
         age_days=_cache_age_days(raw.get("fetched_at"), now=now),
     )
-
-
-@dataclass(frozen=True)
-class TimerStatus:
-    """Whether systemd will actually fire the gate."""
-
-    enabled: bool
-    next_fire: str
-    detail: str
-
-
-def gather_timer(
-    *, run: Callable[[list[str]], str | None] | None = None
-) -> TimerStatus:
-    """Ask systemd whether the timer is armed and when it next fires.
-
-    Shelling out rather than importing anything: the timer is a *user* unit and
-    ``systemctl --user`` is the only honest source. Any failure degrades to
-    "unknown" -- a status panel must never be the thing that breaks.
-    """
-    runner = run if run is not None else _run_systemctl
-    enabled = runner(["is-enabled", _TIMER_UNIT])
-    shown = runner(["show", _TIMER_UNIT, "-p", _NEXT_ELAPSE])
-    if shown is None or enabled is None:
-        return TimerStatus(
-            enabled=False, next_fire="unknown", detail="systemctl unavailable"
-        )
-    # `show -p` returns "NextElapseUSecRealtime=Tue 2026-07-28 09:00:00 CEST",
-    # already formatted. Parsing `list-timers` instead means splitting a
-    # column-aligned table, which is how the first version ended up printing
-    # the whole row -- unit names and all -- as the next fire time.
-    _, _, value = shown.strip().partition("=")
-    return TimerStatus(
-        enabled=enabled.strip() == "enabled",
-        next_fire=value.strip() or "not scheduled",
-        detail=enabled.strip() or "unknown",
-    )
-
-
-def _run_systemctl(args: list[str]) -> str | None:
-    """Run ``systemctl --user`` and return stdout, or ``None`` on any failure."""
-    try:
-        result = subprocess.run(
-            ["/usr/bin/systemctl", "--user", *args],
-            capture_output=True,
-            text=True,
-            timeout=_SYSTEMCTL_TIMEOUT,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        _logger.warning("could not query systemd: %s", exc)
-        return None
-    return result.stdout

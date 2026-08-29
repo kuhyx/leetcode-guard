@@ -16,12 +16,14 @@ from leetcode_guard._balance import Balance, compute_balance
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import GATE_START_DATE
 from leetcode_guard._daycost import day_cost, day_key, weekday_name
-from leetcode_guard._ledger import LedgerEntry, charge_entry
+from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
 
 if TYPE_CHECKING:
     from datetime import date, datetime
     from pathlib import Path
+
+    from leetcode_guard._ledger import LedgerEntry
 
 
 class GateState(enum.Enum):

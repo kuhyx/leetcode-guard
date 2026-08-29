@@ -99,11 +99,11 @@ def test_sync_quietly_passes_a_success_through(tmp_path: Path, hmac_key: Path):
 def test_the_encode_decode_pair_round_trips(hmac_key: Path):
     """These are handed to crdt_sync as callbacks, so nothing else exercises
     them -- but a mismatch would corrupt every device file."""
-    from leetcode_guard._sync import _decode, _encode
+    from leetcode_guard._sync_records import decode_log, encode_log
 
     log = records_from_ledger(ledger_with_credits(2, day=MONDAY, key_file=hmac_key))
 
-    restored = _decode(_encode(log))
+    restored = decode_log(encode_log(log))
 
     assert set(restored) == set(log)
 

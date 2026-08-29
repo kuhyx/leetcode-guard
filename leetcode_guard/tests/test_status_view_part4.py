@@ -63,16 +63,16 @@ def test_main_opens_a_window_and_wires_every_exit(monkeypatch, data_dir: Path, t
 def test_run_systemctl_reports_failure_as_none(monkeypatch, caplog):
     import logging
 
-    from leetcode_guard import _status_extra
+    from leetcode_guard import _status_timer
 
     def explode(*_args, **_kwargs):
         message = "no systemctl"
         raise OSError(message)
 
-    monkeypatch.setattr(_status_extra.subprocess, "run", explode)
+    monkeypatch.setattr(_status_timer.subprocess, "run", explode)
 
     with caplog.at_level(logging.WARNING):
-        assert _status_extra._run_systemctl(["is-enabled", "x.timer"]) is None
+        assert _status_timer._run_systemctl(["is-enabled", "x.timer"]) is None
 
     assert any("could not query systemd" in r.message for r in caplog.records)
 
@@ -80,15 +80,15 @@ def test_run_systemctl_reports_failure_as_none(monkeypatch, caplog):
 def test_run_systemctl_returns_stdout(monkeypatch):
     from types import SimpleNamespace
 
-    from leetcode_guard import _status_extra
+    from leetcode_guard import _status_timer
 
     monkeypatch.setattr(
-        _status_extra.subprocess,
+        _status_timer.subprocess,
         "run",
         lambda *a, **k: SimpleNamespace(stdout="enabled\n"),
     )
 
-    assert _status_extra._run_systemctl(["is-enabled", "x.timer"]) == "enabled\n"
+    assert _status_timer._run_systemctl(["is-enabled", "x.timer"]) == "enabled\n"
 
 
 def test_the_refresh_callback_rerenders(monkeypatch, data_dir: Path, tk_mock):

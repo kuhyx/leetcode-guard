@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from leetcode_guard import status_view
-from leetcode_guard._status_extra import (
+from leetcode_guard._status_full import explain_not_triggered, gather_full
+from leetcode_guard._status_timer import (
     gather_timer,
 )
-from leetcode_guard._status_full import explain_not_triggered, gather_full
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     add_charge,
@@ -38,16 +38,16 @@ def test_a_disabled_timer_is_the_first_thing_explained(
 ):
     """ "Unlocked" with the timer off means the gate never even ran, which looks
     identical from outside to having banked credit."""
-    from leetcode_guard import _status_extra, _status_full
+    from leetcode_guard import _status_full, _status_timer
 
     monkeypatch.setattr(
-        _status_extra,
+        _status_timer,
         "gather_timer",
-        lambda **_k: _status_extra.TimerStatus(
+        lambda **_k: _status_timer.TimerStatus(
             enabled=False, next_fire="never", detail="disabled"
         ),
     )
-    monkeypatch.setattr(_status_full, "gather_timer", _status_extra.gather_timer)
+    monkeypatch.setattr(_status_full, "gather_timer", _status_timer.gather_timer)
 
     reasons = explain_not_triggered(full_for(data_dir, hmac_key))
 

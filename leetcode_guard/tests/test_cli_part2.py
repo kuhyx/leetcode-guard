@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard import _cli
 from leetcode_guard._daycost import day_cost, local_today
-from leetcode_guard._ledger import bootstrap_entry
+from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard.tests._ledger_fixtures import NOW, ledger_with_credits

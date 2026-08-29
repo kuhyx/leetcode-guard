@@ -9,7 +9,7 @@ import pytest
 from leetcode_guard import _cli
 from leetcode_guard._auth import AuthState
 from leetcode_guard._daycost import local_today
-from leetcode_guard._ledger import bootstrap_entry
+from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._settings import Client

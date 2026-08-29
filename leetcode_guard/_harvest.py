@@ -44,6 +44,8 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._ledger import (
     BOOTSTRAP,
     LedgerEntry,
+)
+from leetcode_guard._ledger_entries import (
     bootstrap_entry,
     credit_entry,
     seen_entry,

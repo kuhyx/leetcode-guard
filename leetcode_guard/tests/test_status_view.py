@@ -19,9 +19,11 @@ from leetcode_guard._status_extra import (
     gather_budget,
     gather_cache,
     gather_ledger_stats,
-    gather_timer,
 )
 from leetcode_guard._status_full import gather_full
+from leetcode_guard._status_timer import (
+    gather_timer,
+)
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     add_charge,
