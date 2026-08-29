@@ -39,7 +39,8 @@ from leetcode_guard._gate import decide
 from leetcode_guard._harvest import needs_seeding, seed_ledger
 from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
-from leetcode_guard._lock import GuardDeps, LeetcodeGuard
+from leetcode_guard._lock import LeetcodeGuard
+from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client

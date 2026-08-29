@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from leetcode_guard._escape_flow import EscapeHatch
     from leetcode_guard._ledger_io import Ledger
-    from leetcode_guard._lock import GuardDeps
+    from leetcode_guard._lock_deps import GuardDeps
     from leetcode_guard._netcheck import NetworkDiagnosis
     from leetcode_guard._network_incident import IncidentPolicy
     from leetcode_guard._poller import SolvePoller

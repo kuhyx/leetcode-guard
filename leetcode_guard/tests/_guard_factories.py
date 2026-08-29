@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Any
 from leetcode_guard._auth import AuthState
 from leetcode_guard._harvest import seed_ledger
 from leetcode_guard._ledger_io import Ledger
-from leetcode_guard._lock import GuardDeps, LeetcodeGuard
+from leetcode_guard._lock import LeetcodeGuard
+from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
