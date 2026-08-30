@@ -37,6 +37,15 @@ class _BlockedSession:
         self.headers: dict[str, str] = {}
         self.cookies = requests.cookies.RequestsCookieJar()
 
+    def mount(self, *args: object, **kwargs: object) -> None:
+        """Accept adapter registration without doing anything.
+
+        ``crdt_sync._http`` mounts a retry adapter while *building* a session,
+        long before any request is made. Refusing here would fail at import
+        time, which is not what this stub is for -- the refusal belongs in
+        :meth:`post`, where a test actually tries to reach the network.
+        """
+
     def post(self, *args: object, **kwargs: object) -> object:
         message = (
             "a test tried to reach the network; inject a fake PostFn "
