@@ -1,0 +1,22 @@
+[Unit]
+Description=Read-only LeetCode solved-today status API (loopback)
+Documentation=https://github.com/kuhyx/leetcode-guard
+
+[Service]
+Type=simple
+# No WorkingDirectory / PYTHONPATH, for the same reason as leetcode-guard.service:
+# leetcode_guard is installed into the user site-packages, so plain
+# /usr/bin/python3 finds it, and a WorkingDirectory would make whatever branch
+# happens to be checked out into the live deployment.
+ExecStart=/usr/bin/python3 -m leetcode_guard._web_server
+Restart=always
+RestartSec=2s
+User=%u
+
+[Install]
+# Unlike leetcode-guard.service, this one DOES want to run at login and stay up.
+# steam-backlog-enforcer asks it whether today has a solve before deciding the
+# gaming budget, and falls back to reading the ledger directly; the enforcer
+# fails closed to the smaller budget when neither answers, so a dead server
+# costs gaming time rather than silently handing it back.
+WantedBy=default.target

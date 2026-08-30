@@ -115,10 +115,36 @@ If the workout lock is up, this one **waits with no window at all** and arms
 when that one finishes. It never exits because another lock is running —
 starting the workout lock is not a way to skip the grind.
 
+## Solving buys gaming time
+
+`steam-backlog-enforcer` adds **+1h** to the daily gaming budget on a day with
+an accepted submission (5h floor, +2h for a workout, +1h for a solve, so a day
+is worth 5–8h). It reads `ledger.json` directly and falls back to a read-only
+loopback endpoint served by `leetcode-guard-web.service`:
+
+```bash
+curl -s http://127.0.0.1:8771/api/status | jq .leetcode
+# {"solved_today": true, "solves_today": 2, "checked": true, "reason": "..."}
+```
+
+Read-only, loopback-only, and it publishes a *fact* — never a number of hours.
+The enforcer owns the hour values, the same split `screen-locker` uses for the
+workout flag, so the two repos cannot disagree about what an earned day is.
+
+`checked: false` means the ledger could not be read, which is **not**
+`solved_today: false`. The enforcer fails closed on it (no bonus) *and* raises a
+desktop notification, because a silently missing hour looks exactly like an
+unearned one.
+
+Note the staleness this inherits: credits are only ever written by the lock
+window's poll loop, so a *voluntary extra* solve made after the day is settled
+never reaches the ledger and earns nothing.
+
 ## Install
 
 ```bash
-./install.sh                 # system python + systemd user timer
+./install.sh                 # system python, the systemd user timer, and the
+                             # loopback status API (leetcode-guard-web.service)
 bash scripts/setup_mcp.sh    # optional: the read-only MCP server
 ```
 
