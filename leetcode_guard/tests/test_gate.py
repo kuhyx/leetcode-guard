@@ -166,3 +166,40 @@ def test_settle_day_forgives_a_day_and_leaves_the_debt(tmp_path: Path, hmac_key:
     assert tuesday.state is GateState.LOCKED_INSUFFICIENT
     assert tuesday.needed == 2
     assert ledger.entries["charge:2026-08-10"].detail["source"] == SOURCE_ESCAPE
+
+
+def test_a_free_day_unlocks_without_spending_credit(hmac_key: Path):
+    """A day off is not paid for out of the balance."""
+    ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
+
+    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+
+    assert decision.state is GateState.UNLOCKED_FREE_DAY
+    assert not decision.locked
+    assert decision.charge is None
+    assert decision.needed == 0
+
+
+def test_a_free_day_unlocks_even_with_no_credit_at_all(hmac_key: Path):
+    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+
+    assert decision.state is GateState.UNLOCKED_FREE_DAY
+    assert not decision.locked
+
+
+def test_a_free_day_does_not_override_an_untrusted_clock(hmac_key: Path):
+    """A rolled-back clock makes the claimed date untrustworthy too."""
+    ledger = Ledger()
+    add_charge(ledger, TUESDAY, key_file=hmac_key)
+
+    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+
+    assert decision.state is GateState.LOCKED_CLOCK_UNTRUSTED
+    assert decision.locked
+
+
+def test_without_a_free_day_the_normal_rules_still_apply(hmac_key: Path):
+    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=False)
+
+    assert decision.state is GateState.LOCKED_INSUFFICIENT
+    assert decision.locked

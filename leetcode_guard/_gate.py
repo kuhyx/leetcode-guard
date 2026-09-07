@@ -46,6 +46,10 @@ class GateState(enum.Enum):
     LOCKED_CLOCK_UNTRUSTED = "locked-clock"
     """The system date moved backwards past a settled day."""
 
+    UNLOCKED_FREE_DAY = "free-day"
+    """Today is in the shared free-day pool. No lock, and no charge either --
+    a day off is not paid for out of the credit balance."""
+
 
 @dataclass(frozen=True)
 class GateDecision:
@@ -82,17 +86,24 @@ def decide(
     day: date,
     now: datetime,
     key_file: Path | None = None,
+    free_day: bool = False,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
     Order matters. The clock check comes first because it invalidates the
-    "already charged" shortcut that would otherwise fire beneath it.
+    "already charged" shortcut that would otherwise fire beneath it -- and
+    the free-day check sits *after* it deliberately: if the system date has
+    moved backwards, the date a free day is claimed for is exactly as
+    untrustworthy as everything else, so a tampered clock still locks.
 
     Args:
         ledger: The loaded ledger.
         day: Today's local date.
         now: Current time, for stamping a new charge.
         key_file: HMAC key override, for tests.
+        free_day: Whether ``day`` is in the shared free-day pool. Passed in
+            rather than looked up, so this function stays pure: ledger in,
+            verdict out, no clock and no filesystem.
 
     Returns:
         The decision. Nothing is written.
@@ -110,6 +121,17 @@ def decide(
             needed=cost,
             charge=None,
             reason=verdict.reason,
+        )
+
+    if free_day:
+        return GateDecision(
+            state=GateState.UNLOCKED_FREE_DAY,
+            day=day,
+            cost=cost,
+            balance=balance,
+            needed=0,
+            charge=None,
+            reason="today is a free day",
         )
 
     if day < GATE_START_DATE:

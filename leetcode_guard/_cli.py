@@ -16,6 +16,8 @@ import argparse
 from datetime import datetime
 import sys
 
+import freedays
+
 from leetcode_guard._cli_commands import (
     cmd_cache_statements,
     cmd_check,
@@ -147,7 +149,7 @@ def _run_lock(*, demo_mode: bool) -> int:
         ledger_path.unlink(missing_ok=True)
 
     ledger = load_ledger(ledger_path)
-    decision = decide(ledger, day=day, now=now)
+    decision = decide(ledger, day=day, now=now, free_day=freedays.is_free_day(day))
     if not decision.locked and not demo_mode:
         print(f"already unlocked: {decision.reason}")
         return EXIT_OK

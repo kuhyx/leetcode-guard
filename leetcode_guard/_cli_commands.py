@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import freedays
+
 from leetcode_guard._constants import (
     COOKIES_FILE,
     EXIT_LOCKED,
@@ -123,7 +125,7 @@ def cmd_check() -> int:
             f"({result.already_known} known)"
         )
 
-    decision = decide(ledger, day=day, now=now)
+    decision = decide(ledger, day=day, now=now, free_day=freedays.is_free_day(day))
     print(
         f"balance    {decision.balance.credits} earned "
         f"- {decision.balance.charged} spent = {decision.balance.available}"

@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 
+import freedays
+
 from leetcode_guard._auth import load_cookies
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import (
@@ -88,7 +90,13 @@ def gather_status(
     day = local_today(now=moment)
 
     ledger = load_ledger(ledger_file, key_file=key_file)
-    decision = decide(ledger, day=day, now=moment, key_file=key_file)
+    decision = decide(
+        ledger,
+        day=day,
+        now=moment,
+        key_file=key_file,
+        free_day=freedays.is_free_day(day),
+    )
     clock = check_clock(ledger, day=day)
 
     auth = load_cookies(cookie_file)

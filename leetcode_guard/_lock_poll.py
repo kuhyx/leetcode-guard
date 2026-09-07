@@ -12,6 +12,8 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Final
 
+import freedays
+
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._daycost import local_today
 from leetcode_guard._escape_flow import is_offerable
@@ -86,11 +88,13 @@ class PollMixin:
     def _decision(self) -> GateDecision:
         """Today's verdict against the current ledger."""
         moment = self._deps.moment()
+        day = local_today(now=moment)
         return decide(
             self._ledger,
-            day=local_today(now=moment),
+            day=day,
             now=moment,
             key_file=self._deps.key_file,
+            free_day=freedays.is_free_day(day),
         )
 
     def _build_model(self, probe: SolveProbe) -> ViewModel:

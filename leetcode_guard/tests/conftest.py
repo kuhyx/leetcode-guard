@@ -103,6 +103,24 @@ def _gate_in_force(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Never let the gate read the developer's real free-day pool.
+
+    Same reason as ``_isolate_paths``: the pool lives under ``~/.local/share``
+    and a real free day would silently unlock every gate scenario in this
+    suite. Tests that are *about* free days mark one into this redirected
+    pool.
+    """
+    import freedays._api
+
+    monkeypatch.setattr(
+        freedays._api,
+        "resolve_paths",
+        lambda paths: paths or freedays.Paths.under(tmp_path / "freedays"),
+    )
+
+
+@pytest.fixture(autouse=True)
 def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Point every configured path at a per-test directory.
 
