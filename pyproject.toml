@@ -5,10 +5,11 @@ description = "Tkinter/systemd gate that locks the PC until a LeetCode problem i
 requires-python = ">=3.14"
 # gatelock: shared lock-window/arbiter/escape-hatch/HMAC backend, also used by
 # screen_locker, diet_guard and wake_alarm.
-# crdt-sync: shared CRDT merge scheme + GitHub-Contents-API sync transport,
-# here for syncing the credit ledger across devices. Pinned to v0.3.0 rather
-# than the v0.1.0 the older siblings still carry -- a new repo has no reason to
-# inherit a stale pin, and the ledger uses read_log/write_log from v0.2.0+.
+# crdt-sync: shared CRDT merge scheme + sync transport, here for syncing the
+# credit ledger across devices. The whole fleet is on one pin now, so the
+# note that used to live here about this repo carrying a newer one than its
+# siblings no longer describes anything.
+# freedays: the shared free-day pool every gate app consults.
 # requests: the only network dependency; the LeetCode client is ~40 lines on
 # top of it, deliberately not a third-party LeetCode SDK.
 dependencies = [
