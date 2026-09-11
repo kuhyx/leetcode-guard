@@ -20,8 +20,8 @@ Get the values from a browser logged into leetcode.com: DevTools -> Application
 
 Usage -- by path, so it works from any directory::
 
-    python3 ~/leetcode-guard/scripts/setup_cookies.py
-    python3 ~/leetcode-guard/scripts/setup_cookies.py --print-path
+    python3 ~/src/leetcode-guard/scripts/setup_cookies.py
+    python3 ~/src/leetcode-guard/scripts/setup_cookies.py --print-path
 
 ``python3 -m scripts.setup_cookies`` also works, but *only* from the repo root:
 ``scripts/`` is not a package (and must not become one), so ``-m`` finds it via

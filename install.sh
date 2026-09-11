@@ -18,7 +18,7 @@ readonly REPO_DIR
 readonly SYSTEM_PYTHON="/usr/bin/python3"
 readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly HMAC_KEY="/etc/workout-locker/hmac.key"
-readonly GATELOCK_SRC="${HOME}/utils/gatelock"
+readonly GATELOCK_SRC="${HOME}/src/utils/gatelock"
 
 log() { printf 'install: %s\n' "$1" >&2; }
 fail() { printf 'install: FAILED -- %s\n' "$1" >&2; exit 1; }
@@ -32,7 +32,7 @@ install_package() {
 preserve_editable_gatelock() {
     # `pip install -e .` resolves our pinned `gatelock @ git+...` dependency
     # and installs it NON-editably, silently replacing an editable install
-    # pointing at ~/utils/gatelock. That breaks live editing across all four
+    # pointing at ~/src/utils/gatelock. That breaks live editing across all four
     # lockers, and it is invisible until someone edits gatelock and wonders
     # why nothing changed. Caught twice by hand; now handled here.
     if [[ ! -d "$GATELOCK_SRC" ]]; then

@@ -1,7 +1,7 @@
 # Session prompt: take pylint from 8.53 to 10.00
 
 Paste everything below the line into a fresh Claude Code session started in
-`~/leetcode-guard`.
+`~/src/leetcode-guard`.
 
 ---
 
@@ -15,7 +15,7 @@ passes its gate while carrying ~1100 findings — and it is close enough to the
 floor that a single ordinary change can push it under. (It measured 8.64 on
 2026-08-21 and dropped to 8.53 the same day purely from the import lines
 added by the crdt-sync v0.9.0 migration.) The same job was done in
-`~/utils/crdt-sync` on 2026-08-21 (8.58 -> 10.00).
+`~/src/utils/crdt-sync` on 2026-08-21 (8.58 -> 10.00).
 
 Measured on this machine, 2026-08-21, with
 `~/.cache/pre-commit/repo01lfw04p/py_env-python3/bin/pylint --rcfile=pyproject.toml leetcode_guard scripts`:

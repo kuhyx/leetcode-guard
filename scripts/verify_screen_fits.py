@@ -12,7 +12,7 @@ Runs the real builders against a real (throwaway) X display, because widget
 heights come from the font engine and nothing short of rendering can answer
 this honestly:
 
-    cd ~/leetcode-guard && python3 -m scripts.verify_screen_fits
+    cd ~/src/leetcode-guard && python3 -m scripts.verify_screen_fits
 
 Run as a *module*, not a path: ``-m`` puts the repo root on
 ``sys.path`` so ``leetcode_guard`` resolves from the checkout. Running it as a
