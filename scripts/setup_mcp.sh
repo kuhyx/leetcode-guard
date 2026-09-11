@@ -32,9 +32,12 @@ main() {
     "${VENV_DIR}/bin/python" -m pip install --quiet --upgrade pip
     "${VENV_DIR}/bin/python" -m pip install --quiet -e "${REPO_DIR}[mcp]"
 
-    log "verifying both imports resolve in the same interpreter"
+    # The server module, not the package root: importing `leetcode_guard`
+    # alone passed for a week while `_mcp` could not import `freedays`, and
+    # the only symptom was the client reporting "Connection closed".
+    log "verifying the server module imports in this interpreter"
     "${VENV_DIR}/bin/python" -c \
-        "import mcp, leetcode_guard; print('mcp + leetcode_guard import OK')"
+        "import mcp, leetcode_guard._mcp; print('mcp + leetcode_guard._mcp import OK')"
 
     log "done -- .mcp.json already points at ${VENV_DIR}/bin/python"
 }

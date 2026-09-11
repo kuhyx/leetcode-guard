@@ -31,7 +31,7 @@ leetcode-guard-status = "leetcode_guard.status_view:main"
 # so the systemd/CLI system-python path stays dependency-light and never has
 # to import the MCP SDK.
 [project.optional-dependencies]
-mcp = ["mcp==2.1.1"]
+mcp = ["mcp==2.2.0"]
 
 [build-system]
 requires = ["setuptools>=61"]
