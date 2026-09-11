@@ -15,6 +15,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from leetcode_guard._debt import debt_summary
 from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._status_health import (
     section_environment,
@@ -100,8 +101,15 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     _row(
         parent,
         config,
-        "A weekday costs 1, Saturday and Sunday cost 2. Credits never expire "
-        "and are not capped.",
+        f"Debt: {debt_summary(gate.debt)}",
+        color=config.warning if gate.debt_outstanding else config.muted,
+    )
+    _row(
+        parent,
+        config,
+        "A weekday costs 1, Saturday and Sunday cost 2, plus 1 while any debt "
+        "is outstanding. A missed day is owed at its price. Credits never "
+        "expire and are not capped.",
         color=config.muted,
         role="caption",
     )

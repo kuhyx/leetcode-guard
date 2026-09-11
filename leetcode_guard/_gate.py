@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._balance import Balance, compute_balance
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import GATE_START_DATE
-from leetcode_guard._daycost import day_cost, day_key, weekday_name
+from leetcode_guard._daycost import day_cost, day_key
+from leetcode_guard._debt import NO_DEBT, Debt, cost_phrase
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
 
@@ -58,7 +59,10 @@ class GateDecision:
     state: GateState
     day: date
     cost: int
+    """What today costs in full: the day's price plus the debt surcharge."""
+
     balance: Balance
+    debt: Debt
     needed: int
     """How many more credits today requires. Zero when unlocked."""
 
@@ -87,6 +91,7 @@ def decide(
     now: datetime,
     key_file: Path | None = None,
     free_day: bool = False,
+    debt: Debt = NO_DEBT,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
@@ -104,12 +109,16 @@ def decide(
         free_day: Whether ``day`` is in the shared free-day pool. Passed in
             rather than looked up, so this function stays pure: ledger in,
             verdict out, no clock and no filesystem.
+        debt: The missed-day position, computed by the caller for the same
+            reason. While anything is outstanding today costs one credit more,
+            and that credit is the repayment.
 
     Returns:
         The decision. Nothing is written.
     """
     balance = compute_balance(ledger)
-    cost = day_cost(day)
+    cost = day_cost(day) + debt.surcharge
+    costs = cost_phrase(day, cost, debt)
 
     verdict = check_clock(ledger, day=day)
     if not verdict.trusted:
@@ -118,6 +127,7 @@ def decide(
             day=day,
             cost=cost,
             balance=balance,
+            debt=debt,
             needed=cost,
             charge=None,
             reason=verdict.reason,
@@ -129,6 +139,7 @@ def decide(
             day=day,
             cost=cost,
             balance=balance,
+            debt=debt,
             needed=0,
             charge=None,
             reason="today is a free day",
@@ -140,6 +151,7 @@ def decide(
             day=day,
             cost=cost,
             balance=balance,
+            debt=debt,
             needed=0,
             charge=None,
             reason=f"the gate does not start until {GATE_START_DATE}",
@@ -151,6 +163,7 @@ def decide(
             day=day,
             cost=cost,
             balance=balance,
+            debt=debt,
             needed=0,
             charge=None,
             reason=_ALREADY,
@@ -162,12 +175,12 @@ def decide(
             day=day,
             cost=cost,
             balance=balance,
+            debt=debt,
             needed=0,
-            charge=charge_entry(day, now=now, key_file=key_file),
-            reason=(
-                f"{balance.available} credits available, "
-                f"{weekday_name(day)} costs {cost}"
+            charge=charge_entry(
+                day, now=now, key_file=key_file, surcharge=debt.surcharge
             ),
+            reason=f"{balance.available} credits available, {costs}",
         )
 
     return GateDecision(
@@ -175,12 +188,10 @@ def decide(
         day=day,
         cost=cost,
         balance=balance,
+        debt=debt,
         needed=cost - balance.available,
         charge=None,
-        reason=(
-            f"{balance.available} credits available but {weekday_name(day)} "
-            f"costs {cost}"
-        ),
+        reason=f"{balance.available} credits available but {costs}",
     )
 
 
@@ -210,7 +221,8 @@ def settle_day(
 
     Used by the escape hatch and by the classified-outage path. The charge is
     still recorded at full cost, so :attr:`Balance.available` goes negative and
-    the debt carries -- an escaped day is forgiven, not free.
+    the overdraft carries -- an escaped day is forgiven, not free. No surcharge:
+    a forgiven day repays nothing, so the missed-day debt stands as it was.
 
     Returns:
         Whether the ledger was written.

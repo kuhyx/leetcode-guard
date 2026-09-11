@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from leetcode_guard._daycost import weekday_name
+from leetcode_guard._debt import cost_phrase, debt_line
 from leetcode_guard._gate import GateDecision, GateState
 from leetcode_guard._submissions import ProbeStatus
 
@@ -89,8 +89,8 @@ def _remaining_after_today(decision: GateDecision) -> int:
 
 def _balance_line(decision: GateDecision) -> str:
     """Where the credits stand, and what today costs."""
-    day = weekday_name(decision.day)
-    base = f"Credits {_remaining_after_today(decision)}  |  {day} costs {decision.cost}"
+    costs = cost_phrase(decision.day, decision.cost, decision.debt)
+    base = f"Credits {_remaining_after_today(decision)}  |  {costs}"
     if decision.needed:
         return f"{base}  |  need {decision.needed} more"
     return base
@@ -151,6 +151,8 @@ def build_viewmodel(
             f"{decision.balance.discounted} ledger credits were refused "
             "(bad signature, or written by another device)."
         )
+    if decision.debt.outstanding:
+        notes.append(debt_line(decision.debt))
 
     return ViewModel(
         headline=_headline(decision),

@@ -136,17 +136,15 @@ def state_word(full: FullStatus) -> str:
 def summary_line(full: FullStatus) -> str:
     """One line for the tray tooltip."""
     gate = full.gate
+    costs = f"{gate.weekday} costs {gate.cost}"
+    if gate.debt_outstanding:
+        costs += f", debt {gate.debt_outstanding}"
     if gate.locked:
         plural = "" if gate.needed == 1 else "s"
-        return (
-            f"LOCKED - solve {gate.needed} problem{plural} "
-            f"({gate.weekday} costs {gate.cost})"
-        )
+        return f"LOCKED - solve {gate.needed} problem{plural} ({costs})"
     if gate.state == "not-started":
         return f"leetcode-guard: {gate.reason}"
-    return (
-        f"Unlocked - {gate.available} credit(s) left ({gate.weekday} costs {gate.cost})"
-    )
+    return f"Unlocked - {gate.available} credit(s) left ({costs})"
 
 
 def main(argv: list[str] | None = None) -> int:

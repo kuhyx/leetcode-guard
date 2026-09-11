@@ -14,6 +14,8 @@ A **derived-balance ledger**, never a stored counter.
 | One accepted LeetCode submission | **+1 credit** |
 | A weekday | **costs 1 credit** |
 | Saturday or Sunday | **costs 2 credits** |
+| A day the gate never charged | **owed** at that price -- debt |
+| Any day while debt is outstanding | **costs 1 more**, and that credit repays 1 |
 | Balance | `sum(credits) - sum(charges)`, recomputed every time |
 
 Credits are uncapped and fungible: solve three on Monday and Monday, Tuesday
@@ -26,8 +28,16 @@ rather than a time window:
 * a problem solved *before* the lock appeared still counts;
 * polling every 30 seconds is idempotent.
 
-**Charge on use, never retroactively.** Only days the gate actually ran are
-charged, so coming back from two weeks away costs nothing.
+**Charge on use, owe the rest.** A charge is only ever written for a day the
+gate actually settled -- nothing is back-filled for days the PC was off. But
+from 2026-08-04 every past day with no charge that was not a declared free day
+is *owed* at its price, and each day costs one extra credit until the debt is
+gone: a weekday needs 2 solves instead of 1, a weekend day 3 instead of 2.
+Eight days away (Thu-Wed, with a weekend) is 10 credits, so ten surcharged
+days. Debt is derived from the calendar and the ledger every time and never
+stored; deleting the ledger makes every day since the epoch uncharged, so it
+grows the debt. Free days (`freedays mark`) must be declared in advance and
+are the only way to be away for free.
 
 ## What counts
 
@@ -104,7 +114,9 @@ to you, and the wait doubles with recent use. It appears after ten minutes of
 an ordinary lock, or after three minutes if the gate has gone blind.
 
 Using it still writes a full-cost charge, so the balance goes negative and the
-debt carries. A forgiven day is not a free one.
+overdraft carries. A forgiven day is not a free one -- but it is a *settled*
+one, so it is not owed as debt either, and it repays none of the debt already
+outstanding.
 
 ## Layered with the other lockers
 

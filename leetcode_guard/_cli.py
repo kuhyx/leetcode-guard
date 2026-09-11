@@ -16,8 +16,6 @@ import argparse
 from datetime import datetime
 import sys
 
-import freedays
-
 from leetcode_guard._cli_commands import (
     cmd_cache_statements,
     cmd_check,
@@ -37,7 +35,8 @@ from leetcode_guard._constants import (
     POOL_CACHE_FILE,
 )
 from leetcode_guard._daycost import local_today
-from leetcode_guard._gate import decide
+from leetcode_guard._gate import apply_decision
+from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import needs_seeding, seed_ledger
 from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
@@ -149,8 +148,12 @@ def _run_lock(*, demo_mode: bool) -> int:
         ledger_path.unlink(missing_ok=True)
 
     ledger = load_ledger(ledger_path)
-    decision = decide(ledger, day=day, now=now, free_day=freedays.is_free_day(day))
+    decision = decide_today(ledger, day=day, now=now, demo=demo_mode)
     if not decision.locked and not demo_mode:
+        # A day paid from banked credit is only settled once the charge is on
+        # disk. Returning without it leaves the bank undebited and the day
+        # looking, in hindsight, like one the gate never ran on.
+        apply_decision(ledger, decision, ledger_path)
         print(f"already unlocked: {decision.reason}")
         return EXIT_OK
 

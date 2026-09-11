@@ -12,8 +12,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 
-import freedays
-
 from leetcode_guard._auth import load_cookies
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import (
@@ -22,8 +20,9 @@ from leetcode_guard._constants import (
     POOL_CACHE_FILE,
     SUGGESTION_COUNT,
 )
-from leetcode_guard._daycost import day_cost, local_today, weekday_name
-from leetcode_guard._gate import decide
+from leetcode_guard._daycost import local_today, weekday_name
+from leetcode_guard._debt import Debt, debt_summary
+from leetcode_guard._gate_today import decide_today
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
@@ -52,6 +51,17 @@ class StatusSnapshot:
     day: str
     weekday: str
     cost: int
+    """Today's full price: the day plus any debt surcharge."""
+
+    debt: Debt
+    """The full position; the flat fields below are it, spread for
+    :func:`snapshot_dict` and the tray."""
+
+    surcharge: int
+    debt_owed: int
+    debt_repaid: int
+    debt_outstanding: int
+    missed_days: int
     credits: int
     charged: int
     available: int
@@ -90,13 +100,7 @@ def gather_status(
     day = local_today(now=moment)
 
     ledger = load_ledger(ledger_file, key_file=key_file)
-    decision = decide(
-        ledger,
-        day=day,
-        now=moment,
-        key_file=key_file,
-        free_day=freedays.is_free_day(day),
-    )
+    decision = decide_today(ledger, day=day, now=moment, key_file=key_file)
     clock = check_clock(ledger, day=day)
 
     auth = load_cookies(cookie_file)
@@ -111,7 +115,13 @@ def gather_status(
     return StatusSnapshot(
         day=day.isoformat(),
         weekday=weekday_name(day),
-        cost=day_cost(day),
+        cost=decision.cost,
+        debt=decision.debt,
+        surcharge=decision.debt.surcharge,
+        debt_owed=decision.debt.owed,
+        debt_repaid=decision.debt.repaid,
+        debt_outstanding=decision.debt.outstanding,
+        missed_days=decision.debt.missed_days,
         credits=decision.balance.credits,
         charged=decision.balance.charged,
         available=decision.balance.available,
@@ -148,10 +158,14 @@ def snapshot_dict(snapshot: StatusSnapshot) -> dict[str, Any]:
 
 def format_status(snapshot: StatusSnapshot) -> str:
     """Render the snapshot for a terminal."""
+    costs = f"costs {snapshot.cost}"
+    if snapshot.surcharge:
+        costs += f" ({snapshot.cost - snapshot.surcharge} +{snapshot.surcharge} debt)"
     lines = [
-        f"day        {snapshot.day} ({snapshot.weekday}), costs {snapshot.cost}",
+        f"day        {snapshot.day} ({snapshot.weekday}), {costs}",
         f"credits    {snapshot.credits} earned - {snapshot.charged} spent "
         f"= {snapshot.available} available",
+        f"debt       {debt_summary(snapshot.debt)}",
         f"state      {snapshot.state} -- {snapshot.reason}",
     ]
     if snapshot.needed:

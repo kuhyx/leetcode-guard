@@ -13,7 +13,7 @@ from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._settings import Client
-from leetcode_guard.tests._ledger_fixtures import NOW, add_charge
+from leetcode_guard.tests._ledger_fixtures import NOW, add_charge, ledger_with_credits
 from leetcode_guard.tests._net_fixtures import (
     fake_post,
     pool_result,
@@ -200,3 +200,23 @@ def test_production_exits_without_a_window_when_today_is_settled(
 
     assert _cli.main(["--production"]) == 0
     assert "already unlocked" in capsys.readouterr().out
+
+
+def test_production_persists_the_charge_when_banked_credit_pays_for_today(
+    monkeypatch, capsys, data_dir: Path, hmac_key: Path
+):
+    """The timer path must debit the bank, not just report it. Without the
+    write, a day paid from credit leaves no charge behind and reads, later,
+    as a day that was never settled."""
+    ledger = ledger_with_credits(3, day=local_today(), key_file=hmac_key)
+    ledger_path = data_dir / "ledger.json"
+    patch_cli(monkeypatch, "LEDGER_FILE", ledger_path)
+    patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
+    monkeypatch.setattr(
+        _cli, "LeetcodeGuard", lambda **kwargs: pytest.fail("should not have armed")
+    )
+
+    assert _cli.main(["--production"]) == 0
+    assert "already unlocked" in capsys.readouterr().out
+    on_disk = load_ledger(ledger_path)
+    assert on_disk.has(f"charge:{local_today().isoformat()}")

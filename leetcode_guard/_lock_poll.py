@@ -12,12 +12,11 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Final
 
-import freedays
-
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._daycost import local_today
 from leetcode_guard._escape_flow import is_offerable
-from leetcode_guard._gate import apply_decision, decide
+from leetcode_guard._gate import apply_decision
+from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
@@ -45,7 +44,8 @@ class PollMixin:
     """The tick half of :class:`~leetcode_guard._lock.LeetcodeGuard`.
 
     Reads ``_deps``, ``_ledger``, ``_tracker``, ``_started``, ``_outage_note``,
-    ``_poller``, ``_views``, ``_model``, ``_closed`` and ``root`` from the
+    ``_poller``, ``_views``, ``_model``, ``_closed``, ``_demo`` and ``root``
+    from the
     class it is mixed into, and calls back into the release and study halves.
     Declared rather than assumed, as the other two mixins do: a mixin that
     silently expects attributes is one that breaks on a refactor and says
@@ -61,6 +61,7 @@ class PollMixin:
     _views: dict[str, Any]
     _model: ViewModel
     _closed: bool
+    _demo: bool
     root: Any
     _blind_seconds: Callable[[], float]
     _blind_for_long_enough: Callable[[], bool]
@@ -89,12 +90,12 @@ class PollMixin:
         """Today's verdict against the current ledger."""
         moment = self._deps.moment()
         day = local_today(now=moment)
-        return decide(
+        return decide_today(
             self._ledger,
             day=day,
             now=moment,
             key_file=self._deps.key_file,
-            free_day=freedays.is_free_day(day),
+            demo=self._demo,
         )
 
     def _build_model(self, probe: SolveProbe) -> ViewModel:

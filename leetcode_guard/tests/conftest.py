@@ -54,6 +54,9 @@ class _BlockedSession:
         raise AssertionError(message)
 
 
+pytest_plugins = ["leetcode_guard.tests._debt_fixtures"]
+
+
 @pytest.fixture(autouse=True)
 def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make real HTTP impossible for the whole suite."""

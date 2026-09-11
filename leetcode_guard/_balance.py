@@ -15,6 +15,7 @@ yes              any            charge    yes
 no               n/a            credit    yes, if this device wrote it
 no               n/a            credit    no, if another device did
 no               n/a            charge    yes
+any              any            charge    surcharge repays debt only if trusted
 ===============  =============  ========  ========
 
 **Why credits invert gatelock's rule.** ``EscapeTracker.load()`` keeps entries
@@ -24,6 +25,14 @@ keeping it is the conservative direction. Here a credit is the resource that
 exists to prevent: appending ``{"kind": "credit", "amount": 1}`` with no
 signature would buy a day. Charges keep the literal rule, for the same
 underlying reason -- discarding one would refund a day.
+
+**Why a charge's surcharge is the exception to the charge rule.** A charge
+written while debt was outstanding is one credit dearer than the day itself,
+and that extra credit is what repays the debt (see ``_debt``). Repayment
+*relieves* the user the way a credit does, so it follows the credit rule: the
+whole ``amount`` still counts as spent whatever the signature says -- never a
+refund -- but only a trusted entry's surcharge counts as repaid. Inflating the
+amount of a forged charge therefore costs balance and buys nothing.
 
 **Why the key-readable column exists.** ``verify_entry_hmac`` returns ``False``
 both for a forgery and for a key file that merely cannot be read. Without the
@@ -68,15 +77,23 @@ class Balance:
     unparsable: int
 
 
+def is_trusted(entry: LedgerEntry, *, integrity_ok: bool) -> bool:
+    """The credit rule, applied to credits and to the surcharge on charges.
+
+    A valid signature, or this device's own entry when the key cannot be read.
+    """
+    if integrity_ok:
+        return entry.verified
+    return entry.device == DEVICE_ID
+
+
 def counts_toward_balance(entry: LedgerEntry, *, integrity_ok: bool) -> bool:
     """Whether one entry contributes, per the table in the module docstring."""
     if entry.kind == CHARGE:
         return True
     if entry.kind != CREDIT:
         return False
-    if integrity_ok:
-        return entry.verified
-    return entry.device == DEVICE_ID
+    return is_trusted(entry, integrity_ok=integrity_ok)
 
 
 def compute_balance(ledger: Ledger) -> Balance:

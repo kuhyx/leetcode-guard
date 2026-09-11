@@ -140,3 +140,11 @@ def test_the_flags_print_one_line_each(capsys, data_dir: Path):
 
     assert status_view.main(["--summary"]) == 0
     assert capsys.readouterr().out.strip()
+
+
+def test_summary_line_names_the_debt(data_dir: Path, hmac_key: Path):
+    full = full_for(data_dir, hmac_key)
+    owing = type(full.gate)(**{**vars(full.gate), "debt_outstanding": 9})
+    combined = type(full)(**{**vars(full), "gate": owing})
+
+    assert "debt 9" in status_view.summary_line(combined)

@@ -62,11 +62,13 @@ HEIGHT = 768
 # the headline and the escape button together.
 _MODEL = ViewModel(
     headline="Solve 1 LeetCode problem to unlock",
-    balance_line="Credits 0  |  Monday costs 1  |  Debt 2",
+    balance_line="Credits 0  |  Saturday costs 3 (2 +1 debt)  |  need 3 more",
     status_line="Watching for a solve... last checked 14:32",
     notes=(
         "Yesterday's solve landed after the daily cutoff and counted for today.",
         "The escape hatch becomes available again in 12 minutes.",
+        "Debt: 22 credits outstanding (18 missed days owed 22, 0 repaid) "
+        "-- +1 per day until repaid",
     ),
     problems=tuple(
         ProblemLine(

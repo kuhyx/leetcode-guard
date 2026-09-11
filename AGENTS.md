@@ -31,6 +31,14 @@ it.
 `unlock`, ever. A credit exists only because LeetCode confirmed an accepted
 submission. `test_mcp.py` asserts the absence.
 
+**Debt is derived, never stored.** A past day with no charge that was not a
+free day is owed at its price, and every day costs one more until it is repaid
+(`_debt.py`, `DOCS-debt.md`). No ledger form on purpose: `rm ledger.json`
+*grows* the debt, and back-filling `charge:<past-date>` would unlock those
+dates. Repayment follows the *credit* rule -- an unsigned charge counts as spent
+in full but repays nothing. Tests run with the epoch at `date.max`
+(`tests/_debt_fixtures.py`); `debt_starts(MONDAY)` switches it on.
+
 **Seeding is not optional.** Without it the first run harvests ~20 recent
 submissions as credits — three weeks of free unlocks — and the gate never once
 gates. Marking the whole feed already-seen does leave a gate satisfiable only by
@@ -171,17 +179,9 @@ green — add the `T201` entry in the same commit as any new print-driven module
 
 ## Verifying
 
-Tests and lint are necessary but not sufficient. The demo lock must be run and
-**screenshotted**:
-
-```bash
-Xvfb :81 -screen 0 1600x1200x24 &
-DISPLAY=:81 python3 -m leetcode_guard &
-DISPLAY=:81 import -window root /tmp/lock.png
-```
-
-Never `pkill -f leetcode_guard` — the pattern matches the shell running it.
-Kill by recorded PID.
+Tests and lint are necessary but not sufficient. The demo lock must be run on
+`Xvfb :81 -screen 0 1600x1200x24` and **screenshotted** with the loop below.
+Never `pkill -f leetcode_guard` (it matches the shell running it); kill by PID.
 
 **One `import -window root` is not a screenshot.** Fired before the surfaces
 paint it returns the `overrideredirect` backdrop: a uniformly charcoal image

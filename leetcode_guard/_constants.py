@@ -48,6 +48,17 @@ the system date back to before this day would re-enter the not-started state
 and disable the gate permanently.
 """
 
+DEBT_START_DATE: Final = GATE_START_DATE
+"""The first day an uncharged day is *owed*.
+
+From here on, every past day with no charge that was not a free day is debt,
+priced at what it would have cost; each day costs one extra credit until it is
+repaid. Equal to the gate start by decision (2026-09-11, after an eight-day
+vacation gap); a separate name so tests can switch the rule off on its own.
+Derived from calendar and ledger, never stored: deleting the ledger makes
+every day since this date uncharged, so it *grows* the debt.
+"""
+
 DEFAULT_USERNAME: Final = "kuchy"
 """Verified to exist against the live API. A wrong username is indistinguishable
 from an outage at the HTTP layer but *is* distinguishable at the GraphQL layer

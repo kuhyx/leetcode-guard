@@ -113,22 +113,31 @@ def charge_entry(
     now: datetime,
     source: str = SOURCE_LEETCODE,
     key_file: Path | None = None,
+    surcharge: int = 0,
 ) -> LedgerEntry:
     """A signed debit for one gated day.
 
     ``source`` records *why* the day was satisfied: normally credits, but also
     an escape hatch or a classified LeetCode outage. Those still write a charge
     -- the day is settled -- and can push the balance negative, which is
-    intended: the debt carries and the next day still costs full price.
+    intended: the overdraft carries and the next day still costs full price.
+
+    ``surcharge`` is the extra credit a day costs while missed days are still
+    owed. It is folded into ``amount`` -- the signed number the balance is
+    built from -- and echoed in ``detail`` only so a human reading the file
+    can see why this charge is dearer than its neighbours.
     """
+    detail = {"source": source}
+    if surcharge:
+        detail["surcharge"] = str(surcharge)
     return sign(
         LedgerEntry(
             entry_id=f"charge:{day_key(day)}",
             kind=CHARGE,
             day=day_key(day),
             created_at=_iso(now),
-            amount=day_cost(day),
-            detail={"source": source},
+            amount=day_cost(day) + surcharge,
+            detail=detail,
         ),
         key_file=key_file,
     )

@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import freedays
-
 from leetcode_guard._constants import (
     COOKIES_FILE,
     EXIT_LOCKED,
@@ -22,8 +20,9 @@ from leetcode_guard._constants import (
     STATEMENTS_CACHE_FILE,
     SUGGESTION_COUNT,
 )
-from leetcode_guard._daycost import local_today, weekday_name
-from leetcode_guard._gate import decide
+from leetcode_guard._daycost import local_today
+from leetcode_guard._debt import cost_phrase, debt_summary
+from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import harvest, needs_seeding
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._login import login
@@ -125,12 +124,13 @@ def cmd_check() -> int:
             f"({result.already_known} known)"
         )
 
-    decision = decide(ledger, day=day, now=now, free_day=freedays.is_free_day(day))
+    decision = decide_today(ledger, day=day, now=now)
     print(
         f"balance    {decision.balance.credits} earned "
         f"- {decision.balance.charged} spent = {decision.balance.available}"
     )
-    print(f"today      {day} ({weekday_name(day)}) costs {decision.cost}")
+    print(f"today      {day}, {cost_phrase(day, decision.cost, decision.debt)}")
+    print(f"debt       {debt_summary(decision.debt)}")
     print(f"decision   {decision.state.value} -- {decision.reason}")
     if decision.needed:
         print(f"needed     {decision.needed} more")

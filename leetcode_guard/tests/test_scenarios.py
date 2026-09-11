@@ -11,7 +11,9 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
+from leetcode_guard._debt import NO_DEBT, Debt
 from leetcode_guard._gate import GateState, apply_decision, decide
+from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -32,9 +34,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def run_day(ledger: Ledger, day: date, path: Path, key_file: Path) -> GateState:
+def run_day(
+    ledger: Ledger, day: date, path: Path, key_file: Path, *, debt: Debt = NO_DEBT
+) -> GateState:
     """Fire the gate for one day, persisting whatever it decides."""
-    decision = decide(ledger, day=day, now=NOW, key_file=key_file)
+    decision = decide(ledger, day=day, now=NOW, key_file=key_file, debt=debt)
     apply_decision(ledger, decision, path)
     return decision.state
 
@@ -93,19 +97,26 @@ def test_there_is_no_cap_on_banked_credits(tmp_path: Path, hmac_key: Path):
     )
 
 
-def test_days_the_pc_was_off_are_never_charged(tmp_path: Path, hmac_key: Path):
-    """Charge on use, never retroactively. Coming back from a fortnight away
-    must not present a bill for fourteen days."""
+def test_days_the_pc_was_off_are_owed_but_never_charged(
+    tmp_path: Path, hmac_key: Path, debt_starts
+):
+    """Coming back from nine days away does not present a bill for nine days
+    -- no charge is ever written for a day the gate did not run -- but those
+    days are owed, and the first day back costs one more until they are."""
+    debt_starts(MONDAY)
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
     run_day(ledger, MONDAY, path, hmac_key)
 
     far_later = date(2026, 8, 20)
-    decision = decide(ledger, day=far_later, now=NOW, key_file=hmac_key)
+    decision = decide_today(ledger, day=far_later, now=NOW, key_file=hmac_key)
 
     assert decision.balance.charged == 1
+    assert not any(e.day != MONDAY.isoformat() for e in ledger.of_kind("charge"))
+    assert decision.debt.missed_days == 9
+    assert decision.debt.outstanding == 7 + 2 + 2
     assert decision.state is GateState.LOCKED_INSUFFICIENT
-    assert decision.needed == 1
+    assert decision.needed == 2
 
 
 def test_rerunning_the_same_day_is_a_no_op(tmp_path: Path, hmac_key: Path):
