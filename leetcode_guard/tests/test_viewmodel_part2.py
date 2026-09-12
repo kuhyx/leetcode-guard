@@ -8,7 +8,11 @@ from leetcode_guard._debt import Debt
 from leetcode_guard._gate import decide
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._viewmodel import build_viewmodel
-from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW
+from leetcode_guard.tests._ledger_fixtures import (
+    MONDAY,
+    NOW,
+    ledger_with_credits,
+)
 from leetcode_guard.tests.test_viewmodel import (
     CHECKED_AT,
     OK_PROBE,
@@ -47,3 +51,67 @@ def test_no_debt_note_when_on_track(hmac_key):
 
     assert "Tuesday costs 1" in model.balance_line
     assert not any("Debt" in note for note in model.notes)
+
+
+def test_the_status_line_credits_a_solve_that_freed_a_slot(hmac_key):
+    """A row that vanishes silently takes the only confirmation with it.
+
+    The acknowledgement moves to the status line rather than holding the row,
+    because the slot is the scarce thing -- that is the whole point of the
+    fix. It still has to name the problem, or a debt-day lock looks like it
+    ignored the first solve.
+    """
+    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, debt=OWING)
+
+    model = build_viewmodel(
+        decision,
+        pool_of("two-sum", "add-two-numbers"),
+        SIGNED_OUT,
+        OK_PROBE,
+        checked_at=CHECKED_AT,
+        limit=10,
+        solved_slugs=frozenset({"two-sum"}),
+    )
+
+    assert model.status_line.startswith("Accepted: Two Sum -- need 2 more solves")
+    assert "Watching for an accepted submission" in model.status_line
+    assert [line.label for line in model.problems] == [
+        "1. Add Two Numbers  --  Easy, 50.0% acceptance"
+    ]
+
+
+def test_the_last_owed_solve_is_counted_in_the_singular(hmac_key):
+    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key)
+
+    model = build_viewmodel(
+        decision,
+        pool_of("two-sum"),
+        SIGNED_OUT,
+        OK_PROBE,
+        checked_at=CHECKED_AT,
+        limit=10,
+        solved_slugs=frozenset({"two-sum"}),
+    )
+
+    assert model.status_line.startswith("Accepted: Two Sum -- need 1 more solve  |  ")
+
+
+def test_an_unlocked_surface_credits_the_solve_without_demanding_another(hmac_key):
+    """``needed`` is zero the moment the solve lands, and the lingering
+    unlocked screen must not still be asking for one."""
+    ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
+    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key)
+
+    model = build_viewmodel(
+        decision,
+        pool_of("two-sum"),
+        SIGNED_OUT,
+        OK_PROBE,
+        checked_at=CHECKED_AT,
+        limit=10,
+        solved_slugs=frozenset({"two-sum"}),
+    )
+
+    assert not decision.locked
+    assert model.status_line.startswith("Accepted: Two Sum  |  ")
+    assert "need" not in model.status_line

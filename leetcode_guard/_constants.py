@@ -155,9 +155,11 @@ POOL_TTL_SECONDS: Final = 7 * 24 * 60 * 60
 """Seven days, matching the offline-access requirement: the suggestion list
 must still render when the gate fires with no network."""
 
-SUGGESTION_COUNT: Final = 10
+SUGGESTION_COUNT: Final = 14
 """How many problems to resolve, report and cache. The list is advisory -- any
-accepted submission on any problem counts, including premium ones."""
+accepted submission on any problem counts, including premium ones. Larger than
+:data:`PROBLEM_DISPLAY_LIMIT` because the gap is a *bench* of live-verified
+spares -- what a row freed mid-lock refills from (``build_problem_lines``)."""
 
 STUDY_STRIP_WIDTH_PX: Final = 320
 STUDY_STRIP_HEIGHT_PX: Final = 130
@@ -187,7 +189,7 @@ and nothing else does. Ten problems, the escape button and the break-glass
 block measure 785px against a 768px panel, and a ``place``-centred frame clips
 at both edges -- losing the headline and the hatch together. Eight fits in
 627px with room for the note list to grow. The CLI, the MCP server and the
-status view are not so constrained and still offer all ten."""
+status view are not so constrained and still offer all fourteen."""
 
 STATEMENT_CACHE_COUNT: Final = 50
 """How many problem statements to mirror for offline reading. This is the one

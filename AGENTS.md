@@ -24,8 +24,7 @@ can never be satisfied and which does not know it.
 **Credits must verify; charges must not have to.** The table in `_balance.py`
 is deliberately asymmetric and inverts gatelock's own rule for credits. An
 unverified credit is a bypass (append JSON, get a day). An unverified charge
-being discarded would be a refund. Read the module docstring before touching
-it.
+being discarded would be a refund. Read the module docstring before touching it.
 
 **The MCP server is read-only.** No `grant_credit`, no `mark_solved`, no
 `unlock`, ever. A credit exists only because LeetCode confirmed an accepted
@@ -33,16 +32,14 @@ submission. `test_mcp.py` asserts the absence.
 
 **Debt is derived, never stored.** A past day with no charge that was not a
 free day is owed at its price, and every day costs one more until it is repaid
-(`_debt.py`, `DOCS-debt.md`). No ledger form on purpose: `rm ledger.json`
-*grows* the debt, and back-filling `charge:<past-date>` would unlock those
-dates. Repayment follows the *credit* rule -- an unsigned charge counts as spent
-in full but repays nothing. Tests run with the epoch at `date.max`
-(`tests/_debt_fixtures.py`); `debt_starts(MONDAY)` switches it on.
+(`_debt.py`). No ledger form on purpose: `rm ledger.json` *grows* the debt, and
+back-filling `charge:<past-date>` would unlock those dates. `DOCS-debt.md` has
+the rest: why repayment follows the credit rule, and the test plumbing.
 
 **Seeding is not optional.** Without it the first run harvests ~20 recent
 submissions as credits — three weeks of free unlocks — and the gate never once
-gates. Marking the whole feed already-seen does leave a gate satisfiable only by
-a solve that has not happened yet — the state that armed on 2026-08-05 — so the
+gates. Marking the whole feed already-seen leaves a gate satisfiable only by a
+solve that has not happened yet — the state that armed on 2026-08-05 — so the
 run that *creates* the ledger returns without arming (`cmd_lock`).
 
 **A gate deferral must never be ledger state.** Settling the day was tried and
@@ -62,11 +59,14 @@ is the executable form; it failed against the code that shipped that morning.
 the X global grab so a browser can receive keystrokes — hiding surfaces is not
 enough, the grab is on the root and blocks every other client. There is no
 timeout: press Open and walk away and the machine stays open until a solve lands
-or "Back to lock" is pressed. That trade was made deliberately (a lock that
-cannot be satisfied is worse than one that can be walked away from) and it is
-logged at warning on both transitions. `verify_study_grab.py` is what proves the
-grab actually drops; no unit test can, because a mocked root reports success
-either way.
+or "Back to lock" is pressed (why, and the warning logged on both transitions:
+`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; no
+unit test can, because a mocked root reports success either way.
+
+**The suggestion list repaints live.** A solve mid-lock frees its slot and the
+next *pre-verified* candidate moves up — hence `SUGGESTION_COUNT` (14) over
+`PROBLEM_DISPLAY_LIMIT` (8). Rows are reconfigured, never rebuilt, and every
+promoted Open button is re-bound: `_view_update.py` says what both cost.
 
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
 with no window. Standing down permanently would make "start the workout lock" a

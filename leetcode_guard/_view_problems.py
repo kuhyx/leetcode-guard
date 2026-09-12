@@ -22,6 +22,14 @@ if TYPE_CHECKING:
 
 _PAD = 16
 
+NO_PROBLEMS_TEXT = "Solve any LeetCode problem -- any accepted submission counts."
+"""Shown when there is nothing to suggest.
+
+Shared with ``_view_update`` because the list can also empty out *while* the
+lock is up, once enough of it has been solved: the row widgets stay, so the
+repaint has to be able to put this sentence back into one of them.
+"""
+
 
 def build_problem_rows(
     parent: tk.Misc,
@@ -42,7 +50,7 @@ def build_problem_rows(
     if not model.problems:
         placeholder = tk.Label(
             parent,
-            text="Solve any LeetCode problem -- any accepted submission counts.",
+            text=NO_PROBLEMS_TEXT,
             font=config.font("body"),
             fg=config.fg,
             bg=config.field_bg,

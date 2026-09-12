@@ -127,7 +127,13 @@ def create_guard(
             post=post,
             username="kuchy",
             auth=SIGNED_OUT,
-            pool=pool if pool is not None else pool_of("two-sum"),
+            # Deliberately *not* ``two-sum``, which is what ``submission``
+            # defaults to: the lock now filters the displayed list against the
+            # probe, so a pool whose only problem is the one the startup probe
+            # reports as solved renders empty -- which is correct behaviour and
+            # an unrealistic fixture. The real pool is resolved after that
+            # probe and already excludes it (see ``cmd_lock``).
+            pool=pool if pool is not None else pool_of("add-two-numbers"),
             probe=startup,
             key_file=key_file,
             write_ledger=write_ledger,

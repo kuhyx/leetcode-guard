@@ -25,7 +25,8 @@ successfully photographed lock. Sample repeatedly for the duration and keep the
 largest file -- a blank frame is a few hundred bytes, a painted one is tens of
 kilobytes.
 
-States: ``locked``, ``unlocked``, ``escape``, ``outage``, ``production``.
+States: ``locked``, ``solved-one``, ``unlocked``, ``escape``, ``outage``,
+``production``.
 """
 
 from __future__ import annotations
@@ -100,6 +101,32 @@ def probe(*ids: str) -> SolveProbe:
     )
 
 
+def solved_top_of(pool: PoolResolution) -> SolveProbe:
+    """A probe saying the problem at the top of the list was just accepted.
+
+    This is the state the ``solved-one`` shot exists for, and it is the one
+    nothing else can show: the list is only wrong *after* a solve lands, so a
+    screenshot of the freshly built window -- the only one this harness used
+    to take -- could not have caught the row that stayed.
+    """
+    if not pool.problems:
+        return probe()
+    top = pool.problems[0]
+    return SolveProbe(
+        status=ProbeStatus.OK,
+        submissions=(
+            AcSubmission(
+                "fresh-solve",
+                top.title,
+                top.title_slug,
+                int(NOW.timestamp()),
+                "python3",
+            ),
+        ),
+        reason="1 recent accepted submission",
+    )
+
+
 def build(state: str, workdir: Path) -> LeetcodeGuard:
     """Construct a guard already in the requested state.
 
@@ -125,6 +152,7 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
         )
         save_ledger(ledger_path, ledger)
 
+    pool = real_pool()
     guard = LeetcodeGuard(
         demo_mode=state != "production",
         deps=GuardDeps(
@@ -134,7 +162,7 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             post=lambda _q, _v: None,
             username="kuchy",
             auth=SIGNED_OUT,
-            pool=real_pool(),
+            pool=pool,
             probe=probe(),
             write_ledger=False,
             wait_turn=False,
@@ -146,6 +174,18 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
 
     if state == "unlocked":
         guard._on_poll_result(probe("fresh-solve"))
+    elif state == "solved-one":
+        # ``write_ledger`` is off, so the solve earns no credit and the gate
+        # stays shut -- which is exactly the shape of a debt day: one accepted
+        # submission in, still locked, and the list has to have moved on.
+        guard._on_poll_result(solved_top_of(pool))
+        # Then freeze. The poller is still running against this harness's stub
+        # network and every tick repaints; with no ledger to remember the solve
+        # (``write_ledger`` is off) the next empty probe puts the row straight
+        # back. The first run of this state photographed exactly that and
+        # looked like the bug was unfixed. Reassigning ``_check`` does not help
+        # -- the poller bound the method at construction.
+        guard._poller.stop()
     elif state == "escape":
         guard._open_escape()
     elif state == "outage":

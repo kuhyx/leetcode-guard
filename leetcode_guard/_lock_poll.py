@@ -18,6 +18,7 @@ from leetcode_guard._escape_flow import is_offerable
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
+from leetcode_guard._ledger_io import solved_slugs
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel
@@ -108,10 +109,25 @@ class PollMixin:
             checked_at=self._deps.moment(),
             limit=PROBLEM_DISPLAY_LIMIT,
             show_escape=self._should_offer_escape(),
+            solved_slugs=self._solved_slugs(probe),
         )
         if self._outage_note is None:
             return model
         return replace(model, notes=(*model.notes, self._outage_note))
+
+    def _solved_slugs(self, probe: SolveProbe) -> frozenset[str]:
+        """Everything known to be solved right now, from both sources.
+
+        The union, for the reason ``_cli`` already unions them when the pool is
+        first resolved: the ledger survives an expired session but only ever
+        saw what the recent-AC feed returned, and the demo deletes its ledger
+        on every run. Probing alone would lose the seeded history; the ledger
+        alone lags a solve by one harvest, and an unverifiable probe harvests
+        nothing at all.
+        """
+        return solved_slugs(self._ledger) | frozenset(
+            item.title_slug for item in probe.submissions
+        )
 
     def _should_offer_escape(self) -> bool:
         """Whether the hatch is currently visible."""

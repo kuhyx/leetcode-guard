@@ -50,6 +50,13 @@ class GuardView:
     escape_button: Any = None
     open_buttons: list[Any] = field(default_factory=list)
     breakglass_label: Any = None
+    on_open: Callable[[str], None] | None = None
+    """Retained so a repaint can re-bind a row to a different problem.
+
+    Each button's command closes over the URL it was built with, so promoting a
+    problem into a freed slot without rebinding would leave an Open button
+    pointing at the problem that was just solved.
+    """
 
 
 def build_guard_view(
@@ -155,6 +162,7 @@ def build_guard_view(
         problems_frame=problems_frame,
         open_buttons=open_buttons,
         breakglass_label=breakglass_label,
+        on_open=on_open,
     )
 
     if on_escape is not None:

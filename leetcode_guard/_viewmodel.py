@@ -43,18 +43,52 @@ class ViewModel:
     show_escape: bool
 
 
-def build_problem_lines(pool: PoolResolution, *, limit: int) -> tuple[ProblemLine, ...]:
-    """Format the suggestion list."""
-    return tuple(
-        ProblemLine(
-            label=(
-                f"{index}. {problem.title}  --  {problem.difficulty}, "
-                f"{problem.ac_rate:.1f}% acceptance"
-            ),
-            url=problem.url,
+def build_problem_lines(
+    pool: PoolResolution,
+    *,
+    limit: int,
+    solved_slugs: frozenset[str] = frozenset(),
+) -> tuple[tuple[ProblemLine, ...], tuple[str, ...]]:
+    """Format the suggestion list, minus anything solved since it was resolved.
+
+    The pool is resolved once, before the window opens, and a lock that demands
+    two solves therefore used to keep showing the first one after it had been
+    accepted -- occupying a slot with a problem that could no longer help. The
+    filter is applied here, on every repaint, rather than by re-resolving: the
+    pool is ranked and live-verified deeper than it is displayed (see
+    :data:`~leetcode_guard._constants.SUGGESTION_COUNT`), so the row that moves
+    up into a freed slot was checked against LeetCode before the window opened.
+
+    Args:
+        pool: The resolved suggestion list, best first.
+        limit: How many rows the surface has room for.
+        solved_slugs: Everything now known to be solved, from the ledger and
+            the latest probe together.
+
+    Returns:
+        The lines to show, and the titles of the problems a solve removed from
+        the window. The second element is what the surface acknowledges: a row
+        that simply vanishes takes with it the only per-problem confirmation
+        that the submission registered.
+    """
+    lines: list[ProblemLine] = []
+    dropped: list[str] = []
+    for problem in pool.problems:
+        if len(lines) == limit:
+            break
+        if problem.title_slug in solved_slugs:
+            dropped.append(problem.title)
+            continue
+        lines.append(
+            ProblemLine(
+                label=(
+                    f"{len(lines) + 1}. {problem.title}  --  {problem.difficulty}, "
+                    f"{problem.ac_rate:.1f}% acceptance"
+                ),
+                url=problem.url,
+            )
         )
-        for index, problem in enumerate(pool.problems[:limit], start=1)
-    )
+    return tuple(lines), tuple(dropped)
 
 
 def _headline(decision: GateDecision) -> str:
@@ -109,6 +143,24 @@ def _status_line(probe: SolveProbe, *, checked_at: datetime) -> str:
     return f"Watching for an accepted submission... last checked {stamp}"
 
 
+def _accepted_prefix(dropped: tuple[str, ...], *, needed: int) -> str:
+    """Credit the solves that just emptied a row, or say nothing.
+
+    The row itself vanishes immediately -- the slot is the scarce thing -- so
+    the confirmation moves here, where it costs no space. It keeps saying so
+    for the rest of the lock, because the solved set only grows and an
+    acknowledgement that expires after one tick is one the user can miss
+    entirely while looking at the browser.
+    """
+    if not dropped:
+        return ""
+    accepted = f"Accepted: {', '.join(dropped)}"
+    if needed:
+        plural = "" if needed == 1 else "s"
+        return f"{accepted} -- need {needed} more solve{plural}  |  "
+    return f"{accepted}  |  "
+
+
 def build_viewmodel(
     decision: GateDecision,
     pool: PoolResolution,
@@ -118,6 +170,7 @@ def build_viewmodel(
     checked_at: datetime,
     limit: int,
     show_escape: bool = False,
+    solved_slugs: frozenset[str] = frozenset(),
 ) -> ViewModel:
     """Assemble the whole surface.
 
@@ -129,6 +182,9 @@ def build_viewmodel(
         checked_at: When that check happened, for the status line.
         limit: How many problems to list.
         show_escape: Whether the escape hatch button is currently offered.
+        solved_slugs: Everything now known to be solved. Unlike ``pool``, which
+            is resolved once before the window opens, this is recomputed every
+            tick, so a problem solved *during* the lock stops being suggested.
 
     Returns:
         The rendered text.
@@ -154,12 +210,17 @@ def build_viewmodel(
     if decision.debt.outstanding:
         notes.append(debt_line(decision.debt))
 
+    problems, dropped = build_problem_lines(
+        pool, limit=limit, solved_slugs=solved_slugs
+    )
+    prefix = _accepted_prefix(dropped, needed=decision.needed)
+
     return ViewModel(
         headline=_headline(decision),
         balance_line=_balance_line(decision),
-        status_line=_status_line(probe, checked_at=checked_at),
+        status_line=prefix + _status_line(probe, checked_at=checked_at),
         notes=tuple(notes),
-        problems=build_problem_lines(pool, limit=limit),
+        problems=problems,
         unlocked=not decision.locked,
         show_escape=show_escape,
     )

@@ -156,22 +156,23 @@ def test_refused_credits_are_announced(tmp_path: Path, hmac_key: Path):
 
 
 def test_problem_lines_carry_difficulty_acceptance_and_url():
-    lines = build_problem_lines(pool_of("two-sum"), limit=10)
+    lines, dropped = build_problem_lines(pool_of("two-sum"), limit=10)
 
     assert lines[0].label.startswith("1. Two Sum")
     assert "Easy" in lines[0].label
     assert "50.0% acceptance" in lines[0].label
     assert lines[0].url == "https://leetcode.com/problems/two-sum/"
+    assert dropped == ()
 
 
 def test_the_problem_limit_is_honoured():
-    lines = build_problem_lines(pool_of("a", "b", "c"), limit=2)
+    lines, _ = build_problem_lines(pool_of("a", "b", "c"), limit=2)
 
     assert len(lines) == 2
 
 
 def test_an_empty_pool_yields_no_lines():
-    assert build_problem_lines(pool_of(), limit=10) == ()
+    assert build_problem_lines(pool_of(), limit=10) == ((), ())
 
 
 def test_the_escape_flag_is_passed_through(hmac_key: Path):
