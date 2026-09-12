@@ -16,12 +16,12 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from gatelock import LockConfig
+from gatelock import GrabPolicy, LockConfig
 
 from leetcode_guard._study import StudySession
 
 PRODUCTION = LockConfig(mode="hard")
-DEMO = LockConfig(mode="hard", grab="local", disable_vt=False)
+DEMO = LockConfig(mode="hard", grab=GrabPolicy(kind="local", disable_vt=False))
 
 
 class _Rect:

@@ -2,18 +2,13 @@
 
 Study mode has to stop gatelock's ``RecoveryLoop`` before releasing the X grab
 -- leave it running and it re-takes the grab within a tick, which would give the
-user a browser that looks focused and swallows every keystroke. gatelock has no
-public way to do that:
+user a browser that looks focused and swallows every keystroke. Since gatelock
+0.8.1 the loop and the output-change detector are public handles
+(``LockWindow.recovery`` / ``.detector``); two privates remain:
 
 ===========================  =========================================
 What is needed               Why the public API cannot supply it
 ===========================  =========================================
-``LockWindow._recovery``     No public stop. ``RecoveryLoop.stop()`` is
-                             public and documented state-free, but the
-                             *loop itself* is reachable only here.
-``LockWindow._detector``     Same. ``_drain`` schedules a full tick
-                             independently of ``_verify``, so stopping
-                             one without the other undoes the suspend.
 ``SurfaceSet._surfaces``     ``infos()`` returns dataclasses and
                              ``names()`` returns strings; neither hands
                              back the ``Toplevel`` that must be hidden.
@@ -23,7 +18,7 @@ What is needed               Why the public API cannot supply it
                              so it has to be kept truthful.
 ===========================  =========================================
 
-Concentrating all four here means shipped code has exactly one file to audit,
+Concentrating all of it here means shipped code has exactly one file to audit,
 rather than a suppression scattered across the study modules. The ``scripts/``
 harnesses keep their own access on purpose -- ``verify_study_grab.py`` tests
 whether the assumptions below actually hold on a real X server, and asking this
@@ -62,25 +57,33 @@ class SuspendableLock(Protocol):
     def surfaces(self) -> Any:
         """The per-output surface set gatelock owns."""
 
+    @property
+    def recovery(self) -> Any:
+        """The re-assertion loop; stopped before the grab is released."""
+
+    @property
+    def detector(self) -> Any:
+        """The output-change watcher, stopped alongside the loop."""
+
 
 def stop_recovery(lock: SuspendableLock) -> None:
     """Stop the loop that would otherwise re-take the grab within a tick."""
-    lock._recovery.stop()
+    lock.recovery.stop()
 
 
 def start_recovery(lock: SuspendableLock) -> None:
     """Restart it. The loop is what eventually heals a grab we could not take."""
-    lock._recovery.start()
+    lock.recovery.start()
 
 
 def stop_detector(lock: SuspendableLock) -> None:
     """Stop the output-change detector, which can push a tick through alone."""
-    lock._detector.stop()
+    lock.detector.stop()
 
 
 def start_detector(lock: SuspendableLock) -> None:
     """Restart the detector so hotplug is noticed again."""
-    lock._detector.start()
+    lock.detector.start()
 
 
 def holds_grab(lock: SuspendableLock) -> bool:
@@ -90,7 +93,7 @@ def holds_grab(lock: SuspendableLock) -> bool:
     public and documented for embedders, so this is the one member here that is
     reached through a private *handle* but a public *method*.
     """
-    return bool(lock._recovery.holds_grab())
+    return bool(lock.recovery.holds_grab())
 
 
 def mark_vt(lock: SuspendableLock, *, disabled: bool) -> None:

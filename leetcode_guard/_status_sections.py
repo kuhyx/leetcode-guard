@@ -38,10 +38,10 @@ __all__ = ["DEFAULT_WRAP", "render_sections"]
 def _verdict_color(config: LockConfig, full: FullStatus) -> str:
     """Red when held, amber when nothing is banked, green when clear."""
     if full.gate.locked:
-        return config.danger
+        return config.palette.danger
     if full.gate.available <= 0:
-        return config.warning
-    return config.success
+        return config.palette.warning
+    return config.palette.success
 
 
 def _section_verdict(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
@@ -61,7 +61,7 @@ def _section_verdict(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         text=headline,
         font=config.font("subtitle", bold=True),
         fg=_verdict_color(config, full),
-        bg=config.bg,
+        bg=config.palette.bg,
         anchor="w",
     ).pack(
         fill="x", padx=config.space("lg"), pady=(config.space("xs"), config.space("xs"))
@@ -76,7 +76,12 @@ def _section_verdict(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     _heading(parent, config, "Why the lock did not trigger")
     reasons = explain_not_triggered(full)
     if not reasons:
-        _row(parent, config, "No blocking condition recorded.", color=config.muted)
+        _row(
+            parent,
+            config,
+            "No blocking condition recorded.",
+            color=config.palette.muted,
+        )
     for index, line in enumerate(reasons, start=1):
         _row(parent, config, f"{index}. {line}")
 
@@ -89,8 +94,8 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         parent,
         text=f"{gate.available} available",
         font=config.font("subtitle", bold=True),
-        fg=config.success if gate.available > 0 else config.warning,
-        bg=config.bg,
+        fg=config.palette.success if gate.available > 0 else config.palette.warning,
+        bg=config.palette.bg,
         anchor="w",
     ).pack(
         fill="x", padx=config.space("lg"), pady=(config.space("xs"), config.space("xs"))
@@ -102,7 +107,7 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         parent,
         config,
         f"Debt: {debt_summary(gate.debt)}",
-        color=config.warning if gate.debt_outstanding else config.muted,
+        color=config.palette.warning if gate.debt_outstanding else config.palette.muted,
     )
     _row(
         parent,
@@ -110,7 +115,7 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
         "A weekday costs 1, Saturday and Sunday cost 2, plus 1 while any debt "
         "is outstanding. A missed day is owed at its price. Credits never "
         "expire and are not capped.",
-        color=config.muted,
+        color=config.palette.muted,
         role="caption",
     )
 
@@ -123,9 +128,9 @@ def _section_solves(parent: tk.Misc, config: LockConfig, full: FullStatus) -> No
     _row(parent, config, f"Last 7 days: {ledger.solves_last_7_days}")
     _row(parent, config, f"Total credited submissions: {ledger.credits_earned}")
     if not ledger.recent_solves:
-        _row(parent, config, "(none recorded yet)", color=config.muted)
+        _row(parent, config, "(none recorded yet)", color=config.palette.muted)
         return
-    _row(parent, config, "Most recent:", color=config.muted, role="caption")
+    _row(parent, config, "Most recent:", color=config.palette.muted, role="caption")
     for solve in ledger.recent_solves:
         lang = f" [{solve.lang}]" if solve.lang else ""
         _row(parent, config, f"  {solve.day}  {solve.title_slug}{lang}", role="caption")
@@ -136,7 +141,7 @@ def _section_days(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None
     ledger = full.ledger
     _heading(parent, config, "Days settled")
     if not ledger.charged_days:
-        _row(parent, config, "(none yet)", color=config.muted)
+        _row(parent, config, "(none yet)", color=config.palette.muted)
     else:
         _row(parent, config, ", ".join(ledger.charged_days), role="caption")
     _row(parent, config, f"Gate in force from {full.start_date}: {full.in_force}")
@@ -146,14 +151,14 @@ def _section_budgets(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     """Escape hatch and network-incident allowances."""
     _heading(parent, config, "Escape budgets")
     for budget in (full.escape, full.incidents):
-        color = config.danger if budget.exhausted else config.fg
+        color = config.palette.danger if budget.exhausted else config.palette.fg
         _row(parent, config, budget.summary, color=color)
         _row(
             parent,
             config,
             f"  next use waits {budget.next_wait_seconds // 60} min"
             + ("  -- EXHAUSTED" if budget.exhausted else ""),
-            color=config.muted,
+            color=config.palette.muted,
             role="caption",
         )
 

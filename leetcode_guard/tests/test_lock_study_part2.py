@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -31,8 +32,11 @@ def test_a_real_solve_while_studying_puts_the_lock_back_first(
         seeded=True,
         demo_mode=False,
     )
-    guard._lock._recovery = MagicMock()
-    guard._lock._detector = MagicMock()
+    # Both are read-only handles onto the frozen arming bundle, so the bundle
+    # is swapped for one carrying mocks.
+    guard._lock._arming = replace(
+        guard._lock._arming, recovery=MagicMock(), detector=MagicMock()
+    )
     guard._open_problem(URL)
     strip = guard._strip
     assert guard._session().active
@@ -94,8 +98,9 @@ def test_the_strip_falls_back_to_the_first_output_when_none_is_primary(
     plain = SimpleNamespace(
         output_name=only.output_name, rect=only.rect, index=0, is_primary=False
     )
-    guard._lock._surfaces = MagicMock()
-    guard._lock._surfaces.infos.return_value = (plain,)
+    only_plain = MagicMock()
+    only_plain.infos.return_value = (plain,)
+    guard._lock._arming = replace(guard._lock._arming, surfaces=only_plain)
 
     assert guard._primary_rect() is plain.rect
 

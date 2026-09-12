@@ -136,7 +136,7 @@ def _pump(guard: LeetcodeGuard, ticks: int = 2) -> None:
 
 def _holds_grab(guard: LeetcodeGuard) -> bool:
     """Gatelock's own answer, rather than a reimplementation that could drift."""
-    return bool(guard._lock._recovery.holds_grab())
+    return bool(guard._lock.recovery.holds_grab())
 
 
 def _check(results: list[bool], label: str, *, actual: bool, expected: bool) -> None:

@@ -116,8 +116,8 @@ def test_the_back_button_is_wired_and_is_not_styled_as_destructive(tk_mock):
     back.kwargs["command"]()
 
     assert pressed == ["back"]
-    assert back.kwargs["bg"] == CONFIG.accent
-    assert back.kwargs["bg"] != CONFIG.danger
+    assert back.kwargs["bg"] == CONFIG.palette.accent
+    assert back.kwargs["bg"] != CONFIG.palette.danger
 
 
 def test_it_says_what_it_is_and_what_is_owed(tk_mock):

@@ -52,8 +52,8 @@ def build_problem_rows(
             parent,
             text=NO_PROBLEMS_TEXT,
             font=config.font("body"),
-            fg=config.fg,
-            bg=config.field_bg,
+            fg=config.palette.fg,
+            bg=config.palette.field_bg,
             anchor="w",
         )
         placeholder.pack(fill="x", padx=_PAD, pady=_PAD // 2)
@@ -62,14 +62,14 @@ def build_problem_rows(
     labels: list[Any] = []
     buttons: list[Any] = []
     for line in model.problems:
-        row = tk.Frame(parent, bg=config.field_bg)
+        row = tk.Frame(parent, bg=config.palette.field_bg)
         row.pack(fill="x", padx=_PAD, pady=_PAD // 4)
         label = tk.Label(
             row,
             text=line.label,
             font=config.font("body"),
-            fg=config.fg,
-            bg=config.field_bg,
+            fg=config.palette.fg,
+            bg=config.palette.field_bg,
             anchor="w",
             justify="left",
         )
@@ -81,8 +81,8 @@ def build_problem_rows(
                 text="Open",
                 font=config.font("body"),
                 # on_fill on an accent fill, per the module note.
-                fg=config.on_fill,
-                bg=config.accent,
+                fg=config.palette.on_fill,
+                bg=config.palette.accent,
                 # The default argument is load-bearing: a bare closure over
                 # `line` would capture the loop variable, so every button would
                 # open whichever problem happened to be last.

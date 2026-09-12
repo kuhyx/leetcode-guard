@@ -155,8 +155,8 @@ def test_the_verdict_is_green_amber_or_red(data_dir: Path, hmac_key: Path):
         data_dir, hmac_key, ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
     )
 
-    assert _verdict_color(colors, locked) == colors.danger
-    assert _verdict_color(colors, banked) == colors.success
+    assert _verdict_color(colors, locked) == colors.palette.danger
+    assert _verdict_color(colors, banked) == colors.palette.success
 
 
 def test_the_window_can_be_refreshed(data_dir: Path, hmac_key: Path, tk_mock):

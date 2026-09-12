@@ -41,11 +41,11 @@ mis-placed. Restoring in creation order leaves nothing for it to correct.
 
 Private gatelock attributes
 ---------------------------
-``LockWindow._recovery``, ``LockWindow._detector`` and ``SurfaceSet._surfaces``
-are private and there is no public equivalent: no public stop for the loop, and
-no public accessor for the Toplevels (``infos()`` yields dataclasses,
-``names()`` strings). Verified against **gatelock v0.4.0**;
-``test_study.py`` asserts all three still exist so a version bump fails at test
+``LockWindow.recovery`` and ``.detector`` are public handles since gatelock
+0.8.1; ``SurfaceSet._surfaces`` is still private with no public equivalent
+(no accessor for the Toplevels -- ``infos()`` yields dataclasses, ``names()``
+strings). ``test_study.py`` asserts the handles and the private still exist so
+a version bump fails at test
 time rather than inside a live lock. The clean fix is upstream
 ``LockWindow.suspend()``/``resume()``, which would serve all four lockers.
 

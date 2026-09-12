@@ -146,7 +146,7 @@ def build_strip(
     # while the window is withdrawn or the geometry below is ignored.
     window.withdraw()
     window.overrideredirect(boolean=True)
-    window.configure(bg=config.field_bg)
+    window.configure(bg=config.palette.field_bg)
     window.geometry(_geometry(config, rect))
     window.deiconify()
     window.lift()
@@ -158,8 +158,8 @@ def build_strip(
         window,
         text="Study mode -- the lock is waiting",
         font=config.font("label", bold=True),
-        fg=config.fg,
-        bg=config.field_bg,
+        fg=config.palette.fg,
+        bg=config.palette.field_bg,
     )
     title.pack(pady=(config.space("sm"), 0))
 
@@ -167,8 +167,8 @@ def build_strip(
         window,
         text=text.elapsed,
         font=config.font("body"),
-        fg=config.accent,
-        bg=config.field_bg,
+        fg=config.palette.accent,
+        bg=config.palette.field_bg,
     )
     elapsed_label.pack()
 
@@ -176,8 +176,8 @@ def build_strip(
         window,
         text=text.owed,
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.field_bg,
+        fg=config.palette.muted,
+        bg=config.palette.field_bg,
     )
     needed_label.pack()
 
@@ -187,8 +187,8 @@ def build_strip(
         font=config.font("caption"),
         # accent, not danger: returning to the lock is the ordinary path, not a
         # destructive one. danger belongs to the escape hatch.
-        fg=config.on_fill,
-        bg=config.accent,
+        fg=config.palette.on_fill,
+        bg=config.palette.accent,
         command=on_back,
         relief="flat",
     )

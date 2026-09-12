@@ -7,9 +7,10 @@ unguarded for nothing.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import tkinter as tk
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from leetcode_guard.tests._guard_factories import create_guard, probe_of
 
@@ -30,8 +31,11 @@ def locked_guard(tmp_path: Path, hmac_key: Path, **kwargs):
     guard, _ = create_guard(
         tmp_path, probe=probe_of("old-1"), key_file=hmac_key, seeded=True, **kwargs
     )
-    guard._lock._recovery = MagicMock()
-    guard._lock._detector = MagicMock()
+    # Both are read-only handles onto the frozen arming bundle, so the bundle
+    # is swapped for one carrying mocks.
+    guard._lock._arming = replace(
+        guard._lock._arming, recovery=MagicMock(), detector=MagicMock()
+    )
     return guard
 
 
@@ -57,7 +61,7 @@ def test_no_browser_means_the_lock_is_never_weakened(
 
     guard._open_problem(URL)
 
-    guard._lock._recovery.stop.assert_not_called()
+    guard._lock.recovery.stop.assert_not_called()
     guard._lock.root.grab_release.assert_not_called()
     assert not guard._session().active
     for view in guard._views.values():
@@ -108,7 +112,7 @@ def test_a_second_problem_while_studying_does_not_re_suspend(
     guard._open_problem(other)
 
     guard._lock.root.grab_release.assert_called_once()
-    guard._lock._recovery.stop.assert_called_once()
+    guard._lock.recovery.stop.assert_called_once()
     assert no_spawn == [URL, other]
 
 
@@ -130,11 +134,12 @@ def test_no_output_means_no_strip_but_study_still_runs(
     guard = locked_guard(tmp_path, hmac_key)
     # `surfaces` is a real read-only property on LockWindow, so the whole
     # surface set is swapped rather than one return value.
-    guard._lock._surfaces = MagicMock()
-    guard._lock._surfaces.infos.return_value = ()
-    guard._lock._surfaces._surfaces = {}
-
-    guard._open_problem(URL)
+    empty = MagicMock()
+    empty.infos.return_value = ()
+    empty._surfaces = {}
+    with patch.object(type(guard._lock), "surfaces", new_callable=PropertyMock) as prop:
+        prop.return_value = empty
+        guard._open_problem(URL)
 
     assert guard._strip is None
     assert guard._session().active

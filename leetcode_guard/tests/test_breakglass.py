@@ -6,12 +6,12 @@ they were on 2026-08-05, so it is worth an ugly literal.
 
 from __future__ import annotations
 
-from gatelock import LockConfig
+from gatelock import GrabPolicy, LockConfig
 
 from leetcode_guard._breakglass import STOP_COMMAND, breakglass_lines
 
 _PRODUCTION = LockConfig(mode="hard")
-_DEMO = LockConfig(mode="hard", disable_vt=False, grab="local")
+_DEMO = LockConfig(mode="hard", grab=GrabPolicy(kind="local", disable_vt=False))
 
 
 def test_the_stop_command_is_exactly_right():

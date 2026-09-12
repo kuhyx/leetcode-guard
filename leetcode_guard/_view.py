@@ -85,18 +85,18 @@ def build_guard_view(
     Returns:
         Handles to every widget that later updates need to touch.
     """
-    container = tk.Frame(parent, bg=config.bg)
+    container = tk.Frame(parent, bg=config.palette.bg)
     container.pack(expand=True, fill="both")
 
-    inner = tk.Frame(container, bg=config.bg)
+    inner = tk.Frame(container, bg=config.palette.bg)
     inner.place(relx=0.5, rely=0.5, anchor="center")
 
     headline = tk.Label(
         inner,
         text=model.headline,
         font=config.font("display", bold=True),
-        fg=config.fg,
-        bg=config.bg,
+        fg=config.palette.fg,
+        bg=config.palette.bg,
     )
     headline.pack(pady=(0, _PAD))
 
@@ -104,12 +104,12 @@ def build_guard_view(
         inner,
         text=model.balance_line,
         font=config.font("subtitle"),
-        fg=config.accent,
-        bg=config.bg,
+        fg=config.palette.accent,
+        bg=config.palette.bg,
     )
     balance_line.pack(pady=(0, _PAD))
 
-    problems_frame = tk.Frame(inner, bg=config.field_bg)
+    problems_frame = tk.Frame(inner, bg=config.palette.field_bg)
     problems_frame.pack(pady=(0, _PAD), padx=_PAD, fill="x")
     problem_labels, open_buttons = build_problem_rows(
         problems_frame, config, model, on_open
@@ -119,8 +119,8 @@ def build_guard_view(
         inner,
         text=model.status_line,
         font=config.font("body"),
-        fg=config.muted,
-        bg=config.bg,
+        fg=config.palette.muted,
+        bg=config.palette.bg,
         # Wrapped like its siblings. This line carries two variable-length
         # things -- an unverifiable probe's reason, and the names of solves
         # that freed a row -- and an over-wide label on a place-centred frame
@@ -134,8 +134,8 @@ def build_guard_view(
         inner,
         text="\n".join(model.notes),
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.bg,
+        fg=config.palette.muted,
+        bg=config.palette.bg,
         justify="center",
         wraplength=900,
     )
@@ -150,8 +150,8 @@ def build_guard_view(
         inner,
         text="\n".join(breakglass_lines(config)),
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.bg,
+        fg=config.palette.muted,
+        bg=config.palette.bg,
         justify="center",
         wraplength=900,
     )
@@ -178,8 +178,8 @@ def build_guard_view(
             font=config.font("caption"),
             # on_fill, not fg: near-white on the danger fill measures about
             # 2.5:1, while the dark ink measures about 5.8:1.
-            fg=config.on_fill,
-            bg=config.danger,
+            fg=config.palette.on_fill,
+            bg=config.palette.danger,
             command=on_escape,
             relief="flat",
         )
@@ -205,8 +205,8 @@ def install_demo_close_button(
     button = tk.Button(
         parent,
         text="X Close Demo",
-        fg=config.on_fill,
-        bg=config.danger,
+        fg=config.palette.on_fill,
+        bg=config.palette.danger,
         command=on_close,
         relief="flat",
     )

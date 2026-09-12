@@ -103,8 +103,8 @@ def test_a_failed_regrab_still_restarts_recovery_and_reports(caplog):
         outcome = study.resume()
 
     assert outcome.ok is False
-    lock._recovery.start.assert_called_once()
-    lock._detector.start.assert_called_once()
+    lock.recovery.start.assert_called_once()
+    lock.detector.start.assert_called_once()
     assert told == ["the input grab could not be re-taken"]
     assert study.active is False
 

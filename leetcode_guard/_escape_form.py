@@ -44,7 +44,7 @@ def build_escape_form(
     on_submit: Callable[[], bool],
 ) -> EscapeForm:
     """Build the form over ``parent`` and return its widgets."""
-    frame = tk.Frame(parent, bg=config.field_bg)
+    frame = tk.Frame(parent, bg=config.palette.field_bg)
     frame.place(relx=0.5, rely=0.5, anchor="center")
 
     tk.Label(
@@ -55,8 +55,8 @@ def build_escape_form(
             "you cannot solve a problem today."
         ),
         font=config.font("label"),
-        fg=config.fg,
-        bg=config.field_bg,
+        fg=config.palette.fg,
+        bg=config.palette.field_bg,
         justify="left",
     ).pack(padx=config.space("md"), pady=(config.space("md"), config.space("sm")))
 
@@ -64,30 +64,32 @@ def build_escape_form(
         frame,
         text="What is the problem, in a few words?",
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.field_bg,
+        fg=config.palette.muted,
+        bg=config.palette.field_bg,
     ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
-    reason = tk.Entry(frame, width=60, bg=config.bg, fg=config.fg)
+    reason = tk.Entry(frame, width=60, bg=config.palette.bg, fg=config.palette.fg)
     reason.pack(padx=config.space("md"), pady=config.space("xs"))
 
     tk.Label(
         frame,
         text="When did this start?",
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.field_bg,
+        fg=config.palette.muted,
+        bg=config.palette.field_bg,
     ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
-    onset = tk.Entry(frame, width=60, bg=config.bg, fg=config.fg)
+    onset = tk.Entry(frame, width=60, bg=config.palette.bg, fg=config.palette.fg)
     onset.pack(padx=config.space("md"), pady=config.space("xs"))
 
     tk.Label(
         frame,
         text=(f"The full explanation (at least {JUSTIFICATION_MIN_CHARS} characters):"),
         font=config.font("caption"),
-        fg=config.muted,
-        bg=config.field_bg,
+        fg=config.palette.muted,
+        bg=config.palette.field_bg,
     ).pack(padx=config.space("md"), pady=(config.space("xs"), 0))
-    description = tk.Text(frame, width=60, height=6, bg=config.bg, fg=config.fg)
+    description = tk.Text(
+        frame, width=60, height=6, bg=config.palette.bg, fg=config.palette.fg
+    )
     description.pack(padx=config.space("md"), pady=config.space("xs"))
 
     recent = tracker.format_recent()
@@ -96,8 +98,8 @@ def build_escape_form(
             frame,
             text=recent,
             font=config.font("caption"),
-            fg=config.muted,
-            bg=config.field_bg,
+            fg=config.palette.muted,
+            bg=config.palette.field_bg,
             justify="left",
             wraplength=700,
         ).pack(padx=config.space("md"), pady=config.space("xs"))
@@ -106,16 +108,16 @@ def build_escape_form(
         frame,
         text="",
         font=config.font("caption"),
-        fg=config.danger,
-        bg=config.field_bg,
+        fg=config.palette.danger,
+        bg=config.palette.field_bg,
     )
     complaint.pack(padx=config.space("md"), pady=config.space("xs"))
 
     submit = tk.Button(
         frame,
         text="Submit",
-        fg=config.on_fill,
-        bg=config.warning,
+        fg=config.palette.on_fill,
+        bg=config.palette.warning,
         command=on_submit,
         relief="flat",
     )

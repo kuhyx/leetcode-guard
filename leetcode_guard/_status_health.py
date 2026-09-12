@@ -34,7 +34,7 @@ def section_integrity(parent: tk.Misc, config: LockConfig, full: FullStatus) -> 
         parent,
         config,
         f"HMAC checking: {'on' if gate.integrity_ok else 'OFF (key unreadable)'}",
-        color=config.fg if gate.integrity_ok else config.danger,
+        color=config.palette.fg if gate.integrity_ok else config.palette.danger,
     )
     for label, count in (
         ("Entries failing their signature", gate.tampered),
@@ -45,13 +45,13 @@ def section_integrity(parent: tk.Misc, config: LockConfig, full: FullStatus) -> 
             parent,
             config,
             f"{label}: {count}",
-            color=config.danger if count else config.fg,
+            color=config.palette.danger if count else config.palette.fg,
         )
     _row(
         parent,
         config,
         f"Clock trusted: {gate.clock_trusted}",
-        color=config.fg if gate.clock_trusted else config.danger,
+        color=config.palette.fg if gate.clock_trusted else config.palette.danger,
     )
     _row(parent, config, f"Ledger entries: {full.ledger.total_entries}")
     _row(parent, config, f"Seeded: {full.ledger.bootstrapped}")
@@ -59,7 +59,7 @@ def section_integrity(parent: tk.Misc, config: LockConfig, full: FullStatus) -> 
         parent,
         config,
         f"File: {full.ledger_path}",
-        color=config.muted,
+        color=config.palette.muted,
         role="caption",
     )
 
@@ -71,7 +71,7 @@ def section_environment(parent: tk.Misc, config: LockConfig, full: FullStatus) -
         parent,
         config,
         f"Timer enabled: {full.timer.enabled} ({full.timer.detail})",
-        color=config.fg if full.timer.enabled else config.warning,
+        color=config.palette.fg if full.timer.enabled else config.palette.warning,
     )
     _row(parent, config, f"Next fire: {full.timer.next_fire}")
     _row(parent, config, full.pool_cache.summary)
@@ -80,14 +80,14 @@ def section_environment(parent: tk.Misc, config: LockConfig, full: FullStatus) -
     _row(parent, config, f"LeetCode cookies configured: {full.cookies_configured}")
     _row(parent, config, f"Sync token configured: {full.sync_configured}")
     for note in full.gate.pool_notes:
-        _row(parent, config, f"  {note}", color=config.muted, role="caption")
+        _row(parent, config, f"  {note}", color=config.palette.muted, role="caption")
 
 
 def section_suggestions(parent: tk.Misc, config: LockConfig, full: FullStatus) -> None:
     """What the lock would offer."""
     _heading(parent, config, "Suggested problems")
     if not full.gate.suggestions:
-        _row(parent, config, "(no cached pool)", color=config.muted)
+        _row(parent, config, "(no cached pool)", color=config.palette.muted)
         return
     for index, item in enumerate(full.gate.suggestions, start=1):
         _row(
@@ -96,4 +96,10 @@ def section_suggestions(parent: tk.Misc, config: LockConfig, full: FullStatus) -
             f"{index:2d}. {item.title} -- {item.difficulty}, {item.ac_rate:.1f}%",
             role="caption",
         )
-        _row(parent, config, f"     {item.url}", color=config.muted, role="caption")
+        _row(
+            parent,
+            config,
+            f"     {item.url}",
+            color=config.palette.muted,
+            role="caption",
+        )

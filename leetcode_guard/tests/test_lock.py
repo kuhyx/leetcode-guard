@@ -58,9 +58,9 @@ def test_colours_are_gatelocks_defaults_not_overrides(tmp_path: Path):
     """LockConfig's own defaults *are* the unified design system."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._config.bg == "#211D1B"
-    assert guard._config.accent == "#B8862E"
-    assert guard._config.on_fill == "#211D1B"
+    assert guard._config.palette.bg == "#211D1B"
+    assert guard._config.palette.accent == "#B8862E"
+    assert guard._config.palette.on_fill == "#211D1B"
 
 
 def test_a_first_run_seeds_without_writing_a_charge(tmp_path: Path, hmac_key: Path):

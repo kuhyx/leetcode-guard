@@ -78,8 +78,8 @@ class StatusWindow:
             self.container,
             text=_TITLE,
             font=_COLORS.font("title", bold=True),
-            fg=_COLORS.fg,
-            bg=_COLORS.bg,
+            fg=_COLORS.palette.fg,
+            bg=_COLORS.palette.bg,
         )
         title.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
 
@@ -103,7 +103,7 @@ class StatusWindow:
 
     def _buttons(self) -> None:
         """Refresh and Close, in that order."""
-        row = tk.Frame(self.container, bg=_COLORS.bg)
+        row = tk.Frame(self.container, bg=_COLORS.palette.bg)
         row.pack(pady=_COLORS.space("md"))
         make_button(
             row,
@@ -159,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
 
     root = tk.Tk()
     root.title(_TITLE)
-    root.configure(bg=_COLORS.bg)
+    root.configure(bg=_COLORS.palette.bg)
     root.minsize(_MIN_WIDTH, _MIN_HEIGHT)
     root.geometry(_DEFAULT_GEOMETRY)
 

@@ -124,7 +124,7 @@ def test_the_verdict_is_amber_with_nothing_banked(data_dir: Path, hmac_key: Path
     gate = type(full.gate)(**{**vars(full.gate), "locked": False, "available": 0})
     combined = type(full)(**{**vars(full), "gate": gate})
 
-    assert _verdict_color(colors, combined) == colors.warning
+    assert _verdict_color(colors, combined) == colors.palette.warning
 
 
 def test_an_empty_explanation_still_renders_a_line(

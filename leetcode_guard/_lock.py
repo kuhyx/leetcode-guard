@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, Final
 from gatelock import (
     Arbiter,
     GateRoot,
+    GrabPolicy,
     LockConfig,
     LockWindow,
     assert_not_under_pytest,
@@ -102,8 +103,10 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
             mode="hard",
             # Per-output placement is impossible without it, in demo too.
             overrideredirect=True,
-            grab="local" if demo_mode else "global",
-            disable_vt=not demo_mode,
+            grab=GrabPolicy(
+                kind="local" if demo_mode else "global",
+                disable_vt=not demo_mode,
+            ),
             app_name="leetcode_guard",
             rank=RANK_LEETCODE_GUARD,
         )

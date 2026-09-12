@@ -20,7 +20,7 @@ def test_a_watcher_that_will_not_restart_is_logged_not_raised(caplog):
     _parent, lock = wired()
     study = session(lock)
     study.suspend()
-    lock._recovery.start.side_effect = tk.TclError("wedged")
+    lock.recovery.start.side_effect = tk.TclError("wedged")
 
     with caplog.at_level(logging.ERROR):
         outcome = study.resume()
@@ -97,7 +97,7 @@ def test_a_non_tk_failure_mid_suspend_puts_the_lock_back(caplog):
     assert outcome.ok is False
     assert "unexpectedly" in outcome.reason
     lock.root.grab_set_global.assert_called()
-    lock._recovery.start.assert_called()
+    lock.recovery.start.assert_called()
     assert caplog.records
 
 
@@ -123,7 +123,7 @@ def test_an_emergency_restore_step_that_also_fails_does_not_stop_the_rest(caplog
 
     assert outcome.ok is False
     # The later step still ran despite the earlier one throwing.
-    lock._recovery.start.assert_called()
+    lock.recovery.start.assert_called()
 
 
 def test_the_emergency_restore_re_disables_vt():

@@ -20,20 +20,20 @@ from leetcode_guard.tests._study_fixtures import (
 
 
 def test_the_private_gatelock_attributes_still_exist():
-    """``_recovery``, ``_detector`` and ``SurfaceSet._surfaces`` have no public
-    equivalent. Pinned to gatelock v0.4.0; if a bump renames one, this fails
-    here rather than inside a live lock with the screen grabbed."""
+    """``_vt_disabled`` and ``SurfaceSet._surfaces`` have no public equivalent
+    (``recovery`` / ``detector`` became public in gatelock 0.8.1). If a bump
+    renames one, this fails here rather than inside a live lock with the
+    screen grabbed."""
     from gatelock import LockWindow
     from gatelock._surfaces import SurfaceSet
 
-    assert "_recovery" in LockWindow.__init__.__code__.co_names
-    assert "_detector" in LockWindow.__init__.__code__.co_names
+    assert isinstance(LockWindow.recovery, property)
+    assert isinstance(LockWindow.detector, property)
     assert "_vt_disabled" in LockWindow.__init__.__code__.co_names
     assert "_surfaces" in SurfaceSet.__init__.__code__.co_names
     assert hasattr(SurfaceSet, "focus_surface")
     assert hasattr(SurfaceSet, "preferred_focus_index")
-    # RecoveryLoop.holds_grab is the one *public* member reached through a
-    # private handle, and the grab harness depends on it.
+    # RecoveryLoop's members the study adapter and the grab harness call.
     from gatelock._recovery import RecoveryLoop
 
     assert hasattr(RecoveryLoop, "holds_grab")
@@ -74,7 +74,7 @@ def test_suspend_stops_recovery_before_releasing_the_grab():
     session(lock).suspend()
 
     calls = parent.mock_calls
-    assert index_of(calls, "lock._recovery.stop") < index_of(
+    assert index_of(calls, "lock.recovery.stop") < index_of(
         calls, "lock.root.grab_release"
     )
 
@@ -87,7 +87,7 @@ def test_suspend_stops_the_detector_too():
     session(lock).suspend()
 
     calls = parent.mock_calls
-    assert index_of(calls, "lock._detector.stop") < index_of(
+    assert index_of(calls, "lock.detector.stop") < index_of(
         calls, "lock.root.grab_release"
     )
 
@@ -135,15 +135,15 @@ def test_a_grab_that_will_not_release_aborts_the_whole_suspend(caplog):
         outcome = session(lock).suspend()
 
     assert outcome.ok is False
-    lock._recovery.start.assert_called_once()
-    lock._detector.start.assert_called_once()
+    lock.recovery.start.assert_called_once()
+    lock.detector.start.assert_called_once()
     lock.surfaces._surfaces["DP-0"].window.withdraw.assert_not_called()
     assert caplog.records
 
 
 def test_a_recovery_loop_that_will_not_stop_aborts_before_the_grab(caplog):
     _parent, lock = wired()
-    lock._recovery.stop.side_effect = tk.TclError("timer is wedged")
+    lock.recovery.stop.side_effect = tk.TclError("timer is wedged")
 
     with caplog.at_level(logging.ERROR):
         outcome = session(lock).suspend()
@@ -220,10 +220,10 @@ def test_the_adapter_answers_whether_the_grab_is_held():
     from leetcode_guard._gatelock_internals import holds_grab
 
     _parent, lock = wired()
-    lock._recovery.holds_grab.return_value = True
+    lock.recovery.holds_grab.return_value = True
     assert holds_grab(lock) is True
 
-    lock._recovery.holds_grab.return_value = False
+    lock.recovery.holds_grab.return_value = False
     assert holds_grab(lock) is False
 
 
