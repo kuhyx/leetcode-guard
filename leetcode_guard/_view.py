@@ -121,6 +121,12 @@ def build_guard_view(
         font=config.font("body"),
         fg=config.muted,
         bg=config.bg,
+        # Wrapped like its siblings. This line carries two variable-length
+        # things -- an unverifiable probe's reason, and the names of solves
+        # that freed a row -- and an over-wide label on a place-centred frame
+        # shears off both edges rather than clipping one.
+        justify="center",
+        wraplength=900,
     )
     status_line.pack(pady=(0, _PAD // 2))
 

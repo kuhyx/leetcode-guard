@@ -8,7 +8,7 @@ opening a window.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._debt import cost_phrase, debt_line
 from leetcode_guard._gate import GateDecision, GateState
@@ -143,6 +143,17 @@ def _status_line(probe: SolveProbe, *, checked_at: datetime) -> str:
     return f"Watching for an accepted submission... last checked {stamp}"
 
 
+ACCEPTED_NAMES: Final = 2
+"""How many solved problems the status line names before it starts counting.
+
+Bounded because the acknowledgement persists for the rest of the lock and
+problem titles run to fifty characters ("Minimum Operations to Make Array Sum
+Divisible by K"). A day eight credits deep into debt would otherwise grow a
+status line wider than the screen -- and the lock surface is a ``place``-centred
+frame, which shears off *both* edges when it overflows rather than clipping one.
+"""
+
+
 def _accepted_prefix(dropped: tuple[str, ...], *, needed: int) -> str:
     """Credit the solves that just emptied a row, or say nothing.
 
@@ -154,7 +165,10 @@ def _accepted_prefix(dropped: tuple[str, ...], *, needed: int) -> str:
     """
     if not dropped:
         return ""
-    accepted = f"Accepted: {', '.join(dropped)}"
+    named = ", ".join(dropped[:ACCEPTED_NAMES])
+    if len(dropped) > ACCEPTED_NAMES:
+        named = f"{named} and {len(dropped) - ACCEPTED_NAMES} more"
+    accepted = f"Accepted: {named}"
     if needed:
         plural = "" if needed == 1 else "s"
         return f"{accepted} -- need {needed} more solve{plural}  |  "

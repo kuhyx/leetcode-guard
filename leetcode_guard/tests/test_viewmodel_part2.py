@@ -115,3 +115,28 @@ def test_an_unlocked_surface_credits_the_solve_without_demanding_another(hmac_ke
     assert not decision.locked
     assert model.status_line.startswith("Accepted: Two Sum  |  ")
     assert "need" not in model.status_line
+
+
+def test_the_status_line_names_two_solves_and_counts_the_rest(hmac_key):
+    """A week of debt means several solves per lock, and the line persists.
+
+    Naming all of them measured 2109px wide against a 1366px panel -- on a
+    place-centred surface, which shears off both edges rather than clipping
+    one. Two names and a count stays inside the wrap.
+    """
+    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, debt=OWING)
+    slugs = ("two-sum", "add-two-numbers", "longest-substring", "median-of-arrays")
+
+    model = build_viewmodel(
+        decision,
+        pool_of(*slugs, "valid-parentheses"),
+        SIGNED_OUT,
+        OK_PROBE,
+        checked_at=CHECKED_AT,
+        limit=10,
+        solved_slugs=frozenset(slugs),
+    )
+
+    assert model.status_line.startswith(
+        "Accepted: Two Sum, Add Two Numbers and 2 more -- need 2 more solves"
+    )

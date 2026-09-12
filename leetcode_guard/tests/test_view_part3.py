@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from leetcode_guard._view import GuardView
+from gatelock import LockConfig
+
+from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_problems import NO_PROBLEMS_TEXT
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
@@ -139,3 +141,25 @@ def test_an_empty_list_with_no_buttons_still_gets_the_stand_in():
     apply_viewmodel([view], model())
 
     view.problem_labels[0].configure.assert_called_once_with(text=NO_PROBLEMS_TEXT)
+
+
+def test_the_status_line_is_wrapped(tk_mock):
+    """Measured, not guessed: the worst-case text is 1519px on a 1366px panel.
+
+    This line carries two variable-length things -- an unverifiable probe's
+    reason, and the names of solves that freed a row -- and the surface is a
+    ``place``-centred frame, so an over-wide label shears off *both* edges.
+    ``verify_screen_fits`` cannot catch it: it measures height only.
+    """
+    build_guard_view(
+        MagicMock(),
+        LockConfig(),
+        model(ProblemLine(label="1. B", url="https://x/b/")),
+        output_name="DP-0",
+    )
+
+    wraps = {
+        str(call.kwargs.get("text", ""))[:20]: call.kwargs.get("wraplength")
+        for call in tk_mock.Label.call_args_list
+    }
+    assert wraps["Watching..."] == 900

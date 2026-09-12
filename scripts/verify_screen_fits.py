@@ -63,7 +63,15 @@ HEIGHT = 768
 _MODEL = ViewModel(
     headline="Solve 1 LeetCode problem to unlock",
     balance_line="Credits 0  |  Saturday costs 3 (2 +1 debt)  |  need 3 more",
-    status_line="Watching for a solve... last checked 14:32",
+    # The worst the status line gets: two solves named, the rest counted, the
+    # shortfall spelled out, and the watching sentence behind it. Measured
+    # because this line is now variable-length -- see ``ACCEPTED_NAMES``.
+    status_line=(
+        "Accepted: Minimum Operations to Make Array Sum Divisible by K, "
+        "Longest Substring Without Repeating Characters and 6 more -- need 3 "
+        "more solves  |  Watching for an accepted submission... last checked "
+        "14:32:07"
+    ),
     notes=(
         "Yesterday's solve landed after the daily cutoff and counted for today.",
         "The escape hatch becomes available again in 12 minutes.",
