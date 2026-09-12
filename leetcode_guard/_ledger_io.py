@@ -12,14 +12,12 @@ designs diverge. See :mod:`leetcode_guard._balance`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import json
 import logging
-import os
-from pathlib import Path
-import tempfile
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
+from leetcode_guard._atomic_json import write_json
 from leetcode_guard._ledger import (
     CREDIT,
     SEEN,
@@ -29,6 +27,9 @@ from leetcode_guard._ledger import (
     to_json,
     verify,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -152,17 +153,7 @@ def _with_verification(
     verified = verify(entry, key_file=key_file)
     if not verified:
         ledger.tampered += 1
-    return LedgerEntry(
-        entry_id=entry.entry_id,
-        kind=entry.kind,
-        day=entry.day,
-        created_at=entry.created_at,
-        amount=entry.amount,
-        device=entry.device,
-        detail=dict(entry.detail),
-        signature=entry.signature,
-        verified=verified,
-    )
+    return replace(entry, detail=dict(entry.detail), verified=verified)
 
 
 def save_ledger(path: Path, ledger: Ledger) -> bool:
@@ -177,20 +168,7 @@ def save_ledger(path: Path, ledger: Ledger) -> bool:
         "entries": [to_json(entry) for entry in ledger.entries.values()],
     }
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=str(path.parent),
-            prefix=path.name,
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            json.dump(payload, handle, indent=2)
-            handle.flush()
-            os.fsync(handle.fileno())
-            temp_name = handle.name
-        Path(temp_name).replace(path)
+        write_json(path, payload, indent=2)
     except OSError:
         _logger.exception("could not write the ledger to %s", path)
         return False

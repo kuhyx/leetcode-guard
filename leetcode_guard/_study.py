@@ -151,7 +151,7 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
         steps: list[str] = []
         try:
             return self._suspend(steps)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             # The steps below catch ``tk.TclError``, which is what window calls
             # actually raise. This is the net under that: anything else -- a
             # wedged timer, a gatelock bug -- must not escape and leave the

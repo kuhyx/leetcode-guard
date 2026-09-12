@@ -19,15 +19,12 @@ The values are read from **stdin**, never from argv: a session token in
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-from pathlib import Path
 import stat
 import sys
-import tempfile
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard._atomic_json import write_json
 from leetcode_guard._auth import CSRF_KEY, SESSION_KEY, Cookies
 from leetcode_guard._leetcode import build_session, post_graphql
 from leetcode_guard._live_solved import parse_status
@@ -35,6 +32,7 @@ from leetcode_guard._queries import STATUS_QUERY, status_variables
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -85,21 +83,7 @@ def write_cookies(path: Path, cookies: Cookies) -> bool:
     """
     payload = {SESSION_KEY: cookies.session, CSRF_KEY: cookies.csrf}
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=str(path.parent),
-            prefix=path.name,
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            Path(handle.name).chmod(_OWNER_ONLY)
-            json.dump(payload, handle)
-            handle.flush()
-            os.fsync(handle.fileno())
-            temp_name = handle.name
-        Path(temp_name).replace(path)
+        write_json(path, payload, before_write=lambda tmp: tmp.chmod(_OWNER_ONLY))
     except OSError as exc:
         _logger.warning("could not write cookies to %s: %s", path, exc)
         return False

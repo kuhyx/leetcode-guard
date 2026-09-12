@@ -10,13 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from leetcode_guard._daycost import day_cost, day_key
-
-if TYPE_CHECKING:
-    from datetime import date, datetime
-    from pathlib import Path
-
-    from leetcode_guard._submissions import AcSubmission
-
 from leetcode_guard._ledger import (
     BOOTSTRAP,
     CHARGE,
@@ -27,6 +20,12 @@ from leetcode_guard._ledger import (
     LedgerEntry,
     sign,
 )
+
+if TYPE_CHECKING:
+    from datetime import date, datetime
+    from pathlib import Path
+
+    from leetcode_guard._submissions import AcSubmission
 
 
 def _iso(now: datetime) -> str:

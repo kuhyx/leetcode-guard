@@ -40,7 +40,6 @@ class AfterScheduler(Protocol):
 
     def after(self, ms: int, func: Callable[[], None]) -> str:
         """Schedule ``func`` to run on the Tk thread after ``ms``."""
-        ...  # pragma: no cover
 
 
 class SubmitsWork(Protocol):
@@ -48,11 +47,9 @@ class SubmitsWork(Protocol):
 
     def submit(self, fn: Callable[[], _R]) -> Future[_R]:
         """Run ``fn`` off the calling thread."""
-        ...  # pragma: no cover
 
     def shutdown(self, *, wait: bool = ...) -> None:
         """Release the executor's resources."""
-        ...  # pragma: no cover
 
 
 @dataclass
@@ -142,7 +139,7 @@ class SolvePoller[R]:
         """
         try:
             return self._work()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the solve check raised; treating it as unverifiable")
             return None
 
@@ -162,10 +159,10 @@ class SolvePoller[R]:
         """Hand one result to the callback, never letting it kill the loop."""
         try:
             result = future.result()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the solve check future failed")
             return
         try:
             self._on_result(result)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the poll result handler raised")

@@ -168,3 +168,20 @@ def statement_variables(title_slug: str) -> dict[str, object]:
 def status_variables(title_slug: str) -> dict[str, object]:
     """Build variables for :data:`STATUS_QUERY`."""
     return {"titleSlug": title_slug}
+
+
+QUESTION_FIELD: Final = "question"
+"""The envelope both the status and the statement queries answer under."""
+
+
+def question_of(data: object) -> dict[str, object] | None:
+    """Return the ``question`` object of a GraphQL response, or ``None``.
+
+    ``None`` covers a non-dict payload and a missing or non-dict ``question``
+    alike -- an expired session answers with ``question: null``, and no caller
+    is meant to tell that apart from a malformed reply.
+    """
+    if not isinstance(data, dict):
+        return None
+    question = data.get(QUESTION_FIELD)
+    return question if isinstance(question, dict) else None

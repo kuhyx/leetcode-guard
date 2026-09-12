@@ -209,7 +209,7 @@ def sync_quietly(
         return sync_ledger(
             ledger_path, token_path=token_path, key_file=key_file, client=client
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         _logger.exception("ledger sync raised")
         return SyncResult(
             pushed=False, record_count=0, merged_in=0, reason="sync raised"

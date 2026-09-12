@@ -99,7 +99,7 @@ class StudyMixin:
         """
         try:
             result = launch(url)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the browser launcher raised; treating as a failure")
             self._say(f"Could not open a browser. Solve it at {url}")
             return False

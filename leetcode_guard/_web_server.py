@@ -72,7 +72,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     server_version = "leetcode-guard-web"
 
-    def log_message(self, fmt: str, *args: object) -> None:
+    def log_message(self, fmt: str, /, *args: object) -> None:
         """Send request logging to the journal at debug, not to stderr.
 
         Args:

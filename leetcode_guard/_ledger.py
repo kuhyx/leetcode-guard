@@ -18,7 +18,7 @@ when someone tries; it does not stop someone who reads the key.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Final
 
 from gatelock.log_integrity import compute_entry_hmac, verify_entry_hmac
@@ -99,13 +99,8 @@ def sign(entry: LedgerEntry, *, key_file: Path | None = None) -> LedgerEntry:
     fraudulent. The distinction is what :func:`key_available` exists for.
     """
     signature = compute_entry_hmac(entry_payload(entry), key_file=key_file)
-    return LedgerEntry(
-        entry_id=entry.entry_id,
-        kind=entry.kind,
-        day=entry.day,
-        created_at=entry.created_at,
-        amount=entry.amount,
-        device=entry.device,
+    return replace(
+        entry,
         detail=dict(entry.detail),
         signature=signature,
         verified=signature is not None,

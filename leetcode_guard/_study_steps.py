@@ -73,7 +73,7 @@ class SuspendStepsMixin:
         """
         try:
             step()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("emergency restore step failed")
 
     def _restore_surfaces_quietly(self) -> None:

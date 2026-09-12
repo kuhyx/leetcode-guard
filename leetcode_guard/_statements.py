@@ -19,15 +19,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import logging
-import os
-from pathlib import Path
-import tempfile
 from typing import TYPE_CHECKING, Any, Final
 
-from leetcode_guard._queries import STATEMENT_QUERY, statement_variables
+from leetcode_guard._atomic_json import write_json
+from leetcode_guard._queries import (
+    QUESTION_FIELD,
+    STATEMENT_QUERY,
+    question_of,
+    statement_variables,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from pathlib import Path
 
     from leetcode_guard._leetcode import PostFn
     from leetcode_guard._problem import Problem
@@ -35,7 +39,6 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 _VERSION: Final = 1
-_FIELD: Final = "question"
 
 
 @dataclass(frozen=True)
@@ -72,10 +75,8 @@ def parse_statement(data: object) -> Statement | None:
     problems are excluded from the suggestion list in the first place, so
     seeing one here means the filter upstream has drifted.
     """
-    if not isinstance(data, dict):
-        return None
-    question = data.get(_FIELD)
-    if not isinstance(question, dict):
+    question = question_of(data)
+    if question is None:
         return None
     slug = question.get("titleSlug")
     content = question.get("content")
@@ -154,20 +155,7 @@ def write_statements(
         ],
     }
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=str(path.parent),
-            prefix=path.name,
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            json.dump(payload, handle)
-            handle.flush()
-            os.fsync(handle.fileno())
-            temp_name = handle.name
-        Path(temp_name).replace(path)
+        write_json(path, payload)
     except OSError as exc:
         _logger.warning("could not write the statement cache to %s: %s", path, exc)
         return False
@@ -197,7 +185,7 @@ def read_statements(path: Path) -> dict[str, Statement]:
 
     cached: dict[str, Statement] = {}
     for row in rows:
-        statement = parse_statement({_FIELD: row})
+        statement = parse_statement({QUESTION_FIELD: row})
         if statement is None:
             _logger.warning("skipping an unreadable cached statement in %s", path)
             continue

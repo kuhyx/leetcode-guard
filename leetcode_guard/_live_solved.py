@@ -32,7 +32,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Final
 
-from leetcode_guard._queries import STATUS_QUERY, status_variables
+from leetcode_guard._queries import STATUS_QUERY, question_of, status_variables
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -41,7 +41,6 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
-_FIELD: Final = "question"
 SOLVED_STATUS: Final = "ac"
 
 
@@ -99,7 +98,7 @@ def usable_payload(data: object) -> bool:
     silence. Collapsing the two made every sweep of never-opened problems look
     like an expired session.
     """
-    return isinstance(data, dict) and isinstance(data.get(_FIELD), dict)
+    return question_of(data) is not None
 
 
 def parse_status(data: object) -> str | None:
@@ -109,10 +108,8 @@ def parse_status(data: object) -> str | None:
     evidence about whether the problem is solved, so callers must not be able
     to tell them apart and act on it.
     """
-    if not isinstance(data, dict):
-        return None
-    question = data.get(_FIELD)
-    if not isinstance(question, dict):
+    question = question_of(data)
+    if question is None:
         return None
     status = question.get("status")
     if not isinstance(status, str) or not status:

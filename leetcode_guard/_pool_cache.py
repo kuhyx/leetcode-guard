@@ -13,12 +13,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import logging
-import os
-from pathlib import Path
-import tempfile
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
+from leetcode_guard._atomic_json import write_json
 from leetcode_guard._problem import Problem, parse_problem
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -80,20 +81,7 @@ def write_cache(path: Path, pool: CachedPool) -> bool:
         "problems": [_to_row(problem) for problem in pool.problems],
     }
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=str(path.parent),
-            prefix=path.name,
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            json.dump(payload, handle)
-            handle.flush()
-            os.fsync(handle.fileno())
-            temp_name = handle.name
-        Path(temp_name).replace(path)
+        write_json(path, payload)
     except OSError as exc:
         _logger.warning("could not write pool cache to %s: %s", path, exc)
         return False
