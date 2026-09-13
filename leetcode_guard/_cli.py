@@ -16,6 +16,8 @@ import argparse
 from datetime import datetime
 import sys
 
+from gatelock import wait_for_x_server
+
 from leetcode_guard._cli_commands import (
     cmd_cache_statements,
     cmd_check,
@@ -134,6 +136,15 @@ def _run_lock(*, demo_mode: bool) -> int:
         # lock can always be shown.
         print(f"gate not active until {GATE_START_DATE}; nothing to do")
         return EXIT_OK
+
+    if not demo_mode:
+        # The unit is started by the login target *and* by a Persistent=true
+        # timer catch-up that fires one second after the user manager, before
+        # X exists. Wait for the server -- for as long as it takes, no clock --
+        # before the first fetch, so the pool is not resolved against a network
+        # that is also still coming up, and so a missing display is a wait
+        # rather than an exit-1 that burns the day's timer stamp (2026-09-13).
+        wait_for_x_server()
 
     client = build_client()
     now = datetime.now().astimezone()

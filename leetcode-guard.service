@@ -11,16 +11,25 @@ Type=simple
 # deployment by accident.
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=%h/.Xauthority
-ExecStartPre=/bin/sleep 1
+# No ExecStartPre sleep: the run itself waits for an X server, for as long as
+# that takes (gatelock.wait_for_x_server, unbounded). A fixed delay is either
+# too short on a slow boot or wasted on a fast one.
 ExecStart=/usr/bin/python3 -m leetcode_guard --production
 Restart=on-failure
 RestartSec=2s
 RestartPreventExitStatus=0
 User=%u
 
-# Deliberately NO [Install] section.
+[Install]
+# Started at login AND by the timer (2026-09-13). The timer alone missed a
+# whole morning: its Persistent=true catch-up fired one second into a boot,
+# before X existed, the run died, and systemd had already stamped the slot as
+# done -- so the next boot ten minutes later armed nothing until 13:00.
 #
-# The gate must fire on a schedule, not at login. With WantedBy=
-# graphical-session.target it would arm on every single login, including the
-# one right after you cleared it. wake-alarm carries the same comment and the
-# same omission -- do not "fix" this.
+# Login arming is safe because the run is idempotent per day: every way a day
+# gets cleared (a solve, banked credit, the escape hatch, a classified outage)
+# writes charge:<today>, and `decide` exits "already unlocked" on it without a
+# window. A run that CANNOT see the day as settled is the seeding run, and that
+# one defers by returning, never by writing state. wake-alarm keeps its
+# no-[Install] rule for its own reasons; do not copy this there.
+WantedBy=graphical-session.target

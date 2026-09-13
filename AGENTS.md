@@ -68,6 +68,15 @@ next *pre-verified* candidate moves up — hence `SUGGESTION_COUNT` (14) over
 `PROBLEM_DISPLAY_LIMIT` (8). Rows are reconfigured, never rebuilt, and every
 promoted Open button is re-bound: `_view_update.py` says what both cost.
 
+**Arming runs at login and on the timer; the X wait is unbounded.** The
+timer's `Persistent=true` catch-up fires one second into a boot, before X
+exists, and systemd stamps the slot as done whether or not a window followed
+(`DOCS-incident-2026-09-13.md`). So the unit is `WantedBy=graphical-session.target`
+too, and `_run_lock` calls `gatelock.wait_for_x_server` -- no deadline, no
+X means no usable machine -- before its first fetch. Every clear writes
+`charge:<today>`, so an extra run on a settled day exits without a window. Do
+not wait on the *network* before arming; that is the unplug-the-cable bypass.
+
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
 with no window. Standing down permanently would make "start the workout lock" a
 way to skip the grind. The deadline arms anyway rather than leaving the machine
@@ -180,36 +189,18 @@ green — add the `T201` entry in the same commit as any new print-driven module
 ## Verifying
 
 Tests and lint are necessary but not sufficient. The demo lock must be run on
-`Xvfb :81 -screen 0 1600x1200x24` and **screenshotted** with the loop below.
-Never `pkill -f leetcode_guard` (it matches the shell running it); kill by PID.
+`Xvfb :81 -screen 0 1600x1200x24` and **screenshotted** with
+`scripts/screenshot_lock.sh [out.png]`. Never `pkill -f leetcode_guard` (it
+matches the shell running it); the script kills by PID.
 
 **One `import -window root` is not a screenshot.** Fired before the surfaces
 paint it returns the `overrideredirect` backdrop: a uniformly charcoal image
 that looks exactly like a lock screen that rendered and happens to be empty,
 which is indistinguishable from a real failure. Two of the three captures on
 2026-08-09 were blank this way, and `-window <id>` does not help — the surface
-reports its full 1600x1200 geometry before it has drawn anything. Sample for the
-whole window and keep the largest file; the sizes are not close, so the check is
-unambiguous:
-
-```bash
-DISPLAY=:81 python3 -m leetcode_guard & SHOT=$!
-BEST=0
-for _ in $(seq 1 30); do
-  DISPLAY=:81 import -window root /tmp/try.png 2>/dev/null
-  SZ=$(stat -c%s /tmp/try.png 2>/dev/null || echo 0)
-  if [ "$SZ" -gt "$BEST" ]; then BEST=$SZ; cp /tmp/try.png /tmp/lock.png; fi
-  kill -0 "$SHOT" 2>/dev/null || break
-done
-```
-
-`if`, not `[ ... ] && { ...; }` — as the last command in the body the `&&` form
-returns non-zero on every iteration that is not a new maximum, which under
-`set -euo pipefail` kills the enclosing script. The `kill -0` break matters too:
-without it the loop keeps shooting blanks for the full 30 iterations after the
-render has already exited.
-
-A blank frame is ~400 bytes; a painted one is ~90 KB. Anything in the hundreds
+reports its full 1600x1200 geometry before it has drawn anything. The script
+samples the whole window and keeps the largest file, and fails below 10 KB: a
+blank frame is ~400 bytes, a painted one ~90 KB, and anything in the hundreds
 of bytes means you photographed the backdrop, whatever the window id said.
 
 **Fixtures asserting LeetCode's behaviour need a live check.** A mock can only

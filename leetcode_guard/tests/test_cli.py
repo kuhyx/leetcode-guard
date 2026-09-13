@@ -149,6 +149,34 @@ def test_production_opts_out_of_demo(monkeypatch, data_dir: Path):
     assert built["deps"].ledger_path.name == "ledger.json"
 
 
+class _StopError(Exception):
+    """Abort the run right after the point under test."""
+
+
+def test_production_waits_for_an_x_server_before_touching_the_network(
+    monkeypatch, data_dir: Path
+):
+    """2026-09-13: the unit started before X existed. Wait first; demo skips."""
+    order: list[str] = []
+
+    def stop_at_client():
+        order.append("client")
+        raise _StopError
+
+    monkeypatch.setattr(_cli, "wait_for_x_server", lambda: order.append("x"))
+    monkeypatch.setattr(_cli, "build_client", stop_at_client)
+    _seeded_ledger(data_dir)
+
+    with pytest.raises(_StopError):
+        _cli.main(["--production"])
+    assert order == ["x", "client"]
+
+    order.clear()
+    with pytest.raises(_StopError):
+        _cli.main([])
+    assert order == ["client"], "demo mode must not wait for a display"
+
+
 def _seeded_ledger(data_dir: Path) -> None:
     """Write a ledger that already carries its bootstrap marker."""
     ledger = Ledger()

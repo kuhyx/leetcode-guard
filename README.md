@@ -160,8 +160,12 @@ never reaches the ledger and earns nothing.
 bash scripts/setup_mcp.sh    # optional: the read-only MCP server
 ```
 
-Fires at **09:00** with a **13:00** retry. The retry is free: a day already
-settled exits in milliseconds and draws nothing.
+Arms at **login** (`WantedBy=graphical-session.target`, plus an explicit
+`systemctl --user start` from the i3 config because i3 does not always reach
+that target), and at **09:00** / **13:00** for a machine that stayed on. Every
+extra run is free: a day already settled exits in milliseconds and draws
+nothing. The production run waits for an X server before its first network
+call, for as long as that takes -- a boot-time catch-up fires before X exists.
 
 **The gate does not come into force until 2026-08-04** (`GATE_START_DATE` in
 `_constants.py`). Until then every scheduled run exits immediately without even

@@ -59,6 +59,11 @@ def _hermetic_gatelock(
         patch("gatelock._outputs.RandrBackend.create", return_value=None),
         patch("gatelock._outputs.scan_xrandr", return_value=FAKE_OUTPUTS),
         patch("gatelock._detect._RandrEventSource.start", return_value=False),
+        # The production run waits for an X server before its first fetch, and
+        # the default probe opens a real Tk root through gatelock's own
+        # tkinter -- the one module the stub does not cover. Unpatched, a
+        # production-path test would wait forever on a headless runner.
+        patch("leetcode_guard._cli.wait_for_x_server", return_value=True),
     ):
         yield
 

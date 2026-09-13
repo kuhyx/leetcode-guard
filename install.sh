@@ -82,10 +82,14 @@ install_units() {
     install -m 644 "$REPO_DIR/leetcode-guard-web.service" "$UNIT_DIR/"
     systemctl --user daemon-reload
     systemctl --user enable --now leetcode-guard.timer
+    # Enabled, not started: the service arms on the next login (and on every
+    # timer slot). Starting it here would lock the screen of whoever is
+    # running the installer.
+    systemctl --user enable leetcode-guard.service
     # The status API is what steam-backlog-enforcer falls back to when it
     # cannot read the ledger directly; it must be up whenever the user is.
     systemctl --user enable --now leetcode-guard-web.service
-    log "timer enabled; next run:"
+    log "service enabled at login; timer enabled; next timer run:"
     systemctl --user list-timers leetcode-guard.timer --no-pager || true
     systemctl --user --no-pager --lines=0 status leetcode-guard-web.service || true
 }
