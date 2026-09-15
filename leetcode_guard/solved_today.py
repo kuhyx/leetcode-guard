@@ -3,7 +3,10 @@
 Public on purpose: this is a cross-repo contract, like :mod:`status_view`.
 ``steam-backlog-enforcer`` grants an extra hour of gaming budget on a day with
 a solve, and asks this question through the endpoint in
-:mod:`leetcode_guard._web_server`.
+:mod:`leetcode_guard._web_server`. ``screen-locker`` pushes the machine's
+shutdown time one hour later on the same fact (``_leetcode_bonus.py`` there).
+Both read the ledger with the rules below; this module never writes either
+reward -- the hour values belong to the consumers.
 
 Three things here are easy to get wrong and are pinned deliberately.
 
