@@ -174,9 +174,23 @@ with the recent list, which days are settled, both escape budgets, ledger
 integrity and clock trust, timer state and next fire, cache freshness, and the
 suggested problems.
 
-It is read-only and offline — safe to open at any moment, including while the
-lock is up. It closes four ways: the Close button, Escape, the window
-manager's close box, and clicking the tray icon again.
+It also carries **Progress & projection**: solved / total per difficulty as
+your LeetCode profile reports them (premium problems included in the total),
+and a date entry — "how many will I have solved by dd.mm.yyyy" — assuming every
+gated day up to then is fed at its base price *and* the outstanding debt is
+cleared in full, minus whatever is banked. Future solves are assumed Easy →
+Medium → Hard, the suggestion order, one new problem per credit. The line
+"the rules alone would demand N" is the honest smaller number: the mechanism
+repays at most one debt credit per gated day. The counts come from one public
+query, fetched on a background thread when the window opens or Refresh is
+pressed, and mirrored to `progress_cache.json` by every lock run and `--sync`.
+The gate never reads that file. Same table from the shell:
+`leetcode-guard --status --by 31.12.2026`.
+
+It never writes ledger state and its one fetch never blocks — safe to open at
+any moment, including while the lock is up, and Escape works mid-fetch. It
+closes four ways: the Close button, Escape, the window manager's close box,
+and clicking the tray icon again.
 
 ```bash
 leetcode-guard-status              # the window
@@ -191,6 +205,7 @@ python3 -m leetcode_guard              # demo lock (safe: local grab, close butt
 python3 -m leetcode_guard --production # the real thing
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
+python3 -m leetcode_guard --status --by 31.12.2026  # + solved counts and a projection
 python3 -m leetcode_guard --probe      # live API data
 python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync

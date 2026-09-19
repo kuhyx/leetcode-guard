@@ -22,6 +22,7 @@ from leetcode_guard._status_health import (
     section_integrity,
     section_suggestions,
 )
+from leetcode_guard._status_progress import ProjectionControls, section_progress
 from leetcode_guard._status_rows import DEFAULT_WRAP, set_wrap
 from leetcode_guard._status_rows import section_heading as _heading
 from leetcode_guard._status_rows import section_row as _row
@@ -164,12 +165,23 @@ def _section_budgets(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
 
 
 def render_sections(
-    parent: tk.Misc, config: LockConfig, full: FullStatus, *, wrap: int = DEFAULT_WRAP
+    parent: tk.Misc,
+    config: LockConfig,
+    full: FullStatus,
+    *,
+    wrap: int = DEFAULT_WRAP,
+    projection: ProjectionControls | None = None,
 ) -> None:
-    """Render every section, in the order a person reads them."""
+    """Render every section, in the order a person reads them.
+
+    ``projection`` carries the date control's state; the section is skipped
+    when the caller has none, which only the tests do.
+    """
     set_wrap(wrap)
     _section_verdict(parent, config, full)
     _section_credits(parent, config, full)
+    if projection is not None:
+        section_progress(parent, config, projection)
     _section_solves(parent, config, full)
     _section_days(parent, config, full)
     _section_budgets(parent, config, full)

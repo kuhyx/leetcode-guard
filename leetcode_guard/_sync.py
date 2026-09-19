@@ -43,15 +43,7 @@ from crdt_sync import (
     sync_log,
 )
 
-from leetcode_guard._constants import (
-    DEVICE_ID,
-    SYNC_PATH_PREFIX,
-    SYNC_REPO_NAME,
-    SYNC_REPO_OWNER,
-    SYNC_STATE_FILE,
-    SYNC_TIMEOUT_SECONDS,
-    SYNC_TOKEN_FILE,
-)
+from leetcode_guard._constants import DEVICE_ID, SYNC_STATE_FILE, SYNC_TOKEN_FILE
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._sync_records import (
     decode_log,
@@ -66,6 +58,12 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
+# The GitHub mirror's coordinates. Here rather than in ``_constants`` because
+# this is their only reader, and that file is at the line cap.
+SYNC_REPO_OWNER: Final = "kuhyx"
+SYNC_REPO_NAME: Final = "syncs"
+SYNC_PATH_PREFIX: Final = "leetcode-guard-sync/devices"
+SYNC_TIMEOUT_SECONDS: Final = 15.0
 
 _FILENAME: Final = "ledger.json"
 

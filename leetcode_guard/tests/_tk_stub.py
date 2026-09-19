@@ -72,6 +72,7 @@ TK_MODULES = (
     "leetcode_guard._view",
     "leetcode_guard._view_problems",
     "leetcode_guard._escape_form",
+    "leetcode_guard._status_progress",
     "leetcode_guard._status_sections",
     "leetcode_guard._study",
     "leetcode_guard._study_resume",

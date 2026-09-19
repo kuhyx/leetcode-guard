@@ -1,17 +1,14 @@
 # CLAUDE.md — leetcode-guard
 
-Read this before changing anything. Most of it is a record of something that
-already went wrong once.
+Read this before changing anything; most of it is something that already went wrong once.
 
 ## The deployment path is system python
 
 `/usr/bin/python3` plus user site-packages. **Not** a venv, no
 `WorkingDirectory`, no `PYTHONPATH`. `install.sh` verifies imports with that
-exact interpreter, because testing in a dev venv and shipping to
-`/usr/bin/python3` is how diet_guard was silently dead for three days.
-
-The venv under `~/.venvs/leetcode-guard-mcp` exists only for the MCP server, so
-the MCP SDK never has to be importable on the systemd path.
+exact interpreter: a dev venv that ships to `/usr/bin/python3` is how
+diet_guard was silently dead for three days. `~/.venvs/leetcode-guard-mcp`
+exists only for the MCP server, so the MCP SDK never has to be on the systemd path.
 
 ## Never break these
 
@@ -36,6 +33,14 @@ free day is owed at its price, and every day costs one more until it is repaid
 back-filling `charge:<past-date>` would unlock those dates. `DOCS-debt.md` has
 the rest: why repayment follows the credit rule, and the test plumbing.
 
+**The progress mirror is display-only.** `progress_cache.json` holds the
+profile's solved/total counts for the status window's projection and nothing
+else. Nothing that decides, charges or credits may read it: the moment the gate
+consulted it, editing the JSON would be a bypass. A failed fetch renders
+"unknown", never `0 / 4055` — an unknown username answers HTTP 200 with a
+healthy `allQuestionsCount` and `matchedUser: null`, so a good denominator says
+nothing about the numerator (`_progress.parse_progress`).
+
 **Seeding is not optional.** Without it the first run harvests ~20 recent
 submissions as credits — three weeks of free unlocks — and the gate never once
 gates. Marking the whole feed already-seen leaves a gate satisfiable only by a
@@ -57,9 +62,9 @@ is the executable form; it failed against the code that shipped that morning.
 
 **Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases
 the X global grab so a browser can receive keystrokes — hiding surfaces is not
-enough, the grab is on the root and blocks every other client. There is no
-timeout: press Open and walk away and the machine stays open until a solve lands
-or "Back to lock" is pressed (why, and the warning logged on both transitions:
+enough, the grab is on the root and blocks every other client. No timeout: press
+Open and walk away and the machine stays open until a solve lands or "Back to
+lock" is pressed (why, and the warning on both transitions:
 `DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; no
 unit test can, because a mocked root reports success either way.
 
@@ -77,17 +82,22 @@ X means no usable machine -- before its first fetch. Every clear writes
 `charge:<today>`, so an extra run on a settled day exits without a window. Do
 not wait on the *network* before arming; that is the unplug-the-cable bypass.
 
+**The morning session defers an arming run, never settles a day.** After the
+X wait, `_run_lock` reads wake-alarm's signed `morning_session.json`
+(`_morning_session.py`); while its `exempt_until` is ahead it prints `deferred:`
+and returns `EXIT_OK` with nothing written, so `decide()` stays pure and a deleted
+file cannot mint an unlocked day. The 09:30/11:00 slots re-decide. Never re-derive
+the cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
+
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
-with no window. Standing down permanently would make "start the workout lock" a
-way to skip the grind. The deadline arms anyway rather than leaving the machine
-unlocked.
+with no window: standing down would make "start the workout lock" a way to skip
+the grind. The deadline arms anyway rather than leaving the machine unlocked.
 
 ## Traps that have already cost time
 
-**`questionList` caps a page at 100 rows** regardless of the `limit` you send —
-no error, no indication. `fetch_pool` advances `skip` by rows *actually
-returned*. An earlier version advanced by the requested size and collected 657
-of 4003 problems while reporting success.
+**`questionList` caps a page at 100 rows** regardless of `limit` — no error, no
+indication. `fetch_pool` advances `skip` by rows *actually returned*; an earlier
+version advanced by the requested size and collected 657 of 4003 problems.
 
 **`status` has three values and `null` means two different things.** Measured
 against a live session on 2026-08-14: `"ac"` = solved, `"notac"` = attempted and
@@ -98,17 +108,16 @@ all-null sweep too. Inferring "expired session" from it made the lock announce
 "could not check solved-state" while holding a freshly verified cookie, **and**
 trip the early exit that abandons the rest of the sweep, so a solved problem
 further down would have survived. `_live_solved` therefore splits `checked`
-(the request returned a readable `question` envelope) from `recognised` (the
-status was non-null): a null inside a valid envelope is an *answer*, a missing
-envelope is silence. Only silence means "could not check". Detecting a dead
-cookie is `--login`'s job, and it probes a slug chosen to be non-null.
+(a readable `question` envelope came back) from `recognised` (the status was
+non-null): a null inside a valid envelope is an *answer*, a missing envelope is
+silence, and only silence means "could not check". Detecting a dead cookie is
+`--login`'s job, and it probes a slug chosen to be non-null.
 
 The pool query is public, so expired cookies return HTTP 200 with a complete,
 healthy-looking problem list of nulls — not an error, not an empty payload.
-Filtering on `status == "ac"` needs no auth flag guarding it: an
-unauthenticated null simply does not match. An `exclude_solved` flag wired to
-"cookies loaded" once did guard it, and in the signed-out branch it *discarded*
-the genuine `"ac"` rows a partly-authenticated fetch had returned.
+Filtering on `status == "ac"` needs no auth flag: an unauthenticated null simply
+does not match. An `exclude_solved` flag wired to "cookies loaded" once guarded
+it, and in the signed-out branch *discarded* genuine `"ac"` rows.
 
 **Solved-state is checked live, but only for what is displayed.** Re-paging the
 whole authenticated pool is 41 requests before the window exists, and LeetCode

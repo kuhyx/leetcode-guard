@@ -5,7 +5,8 @@ of it -- solve history, budgets, cache freshness, whether systemd will even
 fire -- because the whole point of the status window is that you should never
 have to go and read a JSON file to find out what happened.
 
-Offline and read-only throughout.
+Offline and read-only throughout. The solved-count mirror is *read* here; the
+window's live fetch of it is the window's business.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from leetcode_guard._constants import (
     LEDGER_FILE,
     NETWORK_INCIDENTS_FILE,
     POOL_CACHE_FILE,
+    PROGRESS_CACHE_FILE,
     STATEMENTS_CACHE_FILE,
     SYNC_TOKEN_FILE,
 )
@@ -28,6 +30,7 @@ from leetcode_guard._daycost import local_today
 from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
+from leetcode_guard._progress import Progress, read_progress_cache
 from leetcode_guard._status import StatusSnapshot, gather_status
 from leetcode_guard._status_extra import (
     BudgetStatus,
@@ -65,6 +68,8 @@ class FullStatus:
     sync_configured: bool
     cookies_configured: bool
     ledger_path: str
+    progress: Progress | None
+    """The profile's solved counts as last mirrored, or ``None`` if never."""
 
 
 def gather_full(
@@ -104,6 +109,7 @@ def gather_full(
         sync_configured=SYNC_TOKEN_FILE.exists(),
         cookies_configured=COOKIES_FILE.exists(),
         ledger_path=str(ledger_file),
+        progress=read_progress_cache(PROGRESS_CACHE_FILE),
     )
 
 

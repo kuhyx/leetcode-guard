@@ -160,6 +160,40 @@ def recent_ac_variables(username: str) -> dict[str, object]:
     return {"username": username, "limit": RECENT_AC_LIMIT}
 
 
+PROGRESS_QUERY: Final = """
+query progress($username: String!) {
+  allQuestionsCount {
+    difficulty
+    count
+  }
+  matchedUser(username: $username) {
+    submitStatsGlobal {
+      acSubmissionNum {
+        difficulty
+        count
+      }
+    }
+  }
+}
+"""
+"""Solved and total per difficulty, as the public profile page shows them.
+
+Public, no cookie. ``acSubmissionNum`` counts *distinct* problems solved, not
+submissions -- the harvest mints a credit per submission id, so the two can
+drift apart and this is the only source for the profile figure. Measured on
+2026-09-19: ``difficulty`` takes ``"All"``, ``"Easy"``, ``"Medium"`` and
+``"Hard"``, ``allQuestionsCount`` includes premium-only problems (4055 that
+day), and an unknown username answers HTTP 200 with ``allQuestionsCount``
+populated, ``matchedUser: null`` **and** a GraphQL error -- so a healthy
+denominator says nothing about the numerator.
+"""
+
+
+def progress_variables(username: str) -> dict[str, object]:
+    """Build variables for :data:`PROGRESS_QUERY`."""
+    return {"username": username}
+
+
 def statement_variables(title_slug: str) -> dict[str, object]:
     """Build variables for :data:`STATEMENT_QUERY`."""
     return {"titleSlug": title_slug}

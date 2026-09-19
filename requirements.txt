@@ -17,5 +17,5 @@ pytest==9.1.1
 pytest-cov==7.1.0
 pytest-randomly==5.0.0
 requests==2.34.2
-ruff==0.16.7
+ruff==0.16.8
 types-requests==2.33.0.20260906

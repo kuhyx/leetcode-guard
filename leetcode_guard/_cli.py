@@ -12,12 +12,12 @@ no flag here can move the balance or settle a day.
 
 from __future__ import annotations
 
-import argparse
 from datetime import datetime
 import sys
 
 from gatelock import wait_for_x_server
 
+from leetcode_guard._cli_args import build_parser
 from leetcode_guard._cli_commands import (
     cmd_cache_statements,
     cmd_check,
@@ -35,6 +35,7 @@ from leetcode_guard._constants import (
     INSTANCE_LOCK_FILE,
     LEDGER_FILE,
     POOL_CACHE_FILE,
+    PROGRESS_CACHE_FILE,
 )
 from leetcode_guard._daycost import local_today
 from leetcode_guard._gate import apply_decision
@@ -45,67 +46,11 @@ from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._logging_setup import configure_logging
+from leetcode_guard._morning_session import defer_for_morning_session
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
+from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
-
-
-def build_parser() -> argparse.ArgumentParser:
-    """Define the command line."""
-    parser = argparse.ArgumentParser(
-        prog="leetcode-guard",
-        description="Lock the PC until a LeetCode problem is solved.",
-    )
-    parser.add_argument(
-        "--production",
-        action="store_true",
-        help="Arm for real: global input grab, VT switching disabled, real ledger.",
-    )
-    parser.add_argument(
-        "--probe",
-        action="store_true",
-        help="Print live LeetCode data and exit. Opens no window, writes nothing.",
-    )
-    parser.add_argument(
-        "--status",
-        action="store_true",
-        help="Print the ledger position from disk. No network, no window, no writes.",
-    )
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help=(
-            "Print today's full decision trace against live LeetCode data. "
-            "Opens no window and writes nothing -- the dry run."
-        ),
-    )
-    parser.add_argument(
-        "--cache-statements",
-        action="store_true",
-        help=(
-            "Mirror the top suggestions' problem text for offline reading. "
-            "One request per problem, so run it rarely."
-        ),
-    )
-    parser.add_argument(
-        "--login",
-        action="store_true",
-        help=(
-            "Store LeetCode cookies, read from stdin and saved only if a live "
-            "query proves they work. Re-run when the session expires."
-        ),
-    )
-    parser.add_argument(
-        "--sync",
-        action="store_true",
-        help="Push the ledger to the sync repo and merge other devices in.",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Log at DEBUG.",
-    )
-    return parser
 
 
 def cmd_lock(*, demo_mode: bool) -> int:
@@ -146,8 +91,15 @@ def _run_lock(*, demo_mode: bool) -> int:
         # rather than an exit-1 that burns the day's timer stamp (2026-09-13).
         wait_for_x_server()
 
-    client = build_client()
     now = datetime.now().astimezone()
+    if not demo_mode and (why := defer_for_morning_session(now, wait=True)) is not None:
+        # The phone's morning session earned the carrot: no gate until the
+        # signed instant. A run deferral, never ledger state -- nothing is
+        # written, so the next run (login, 09:30 or 11:00 slot) re-decides.
+        print(f"deferred: {why}; not arming this run")
+        return EXIT_OK
+
+    client = build_client()
     day = local_today(now=now)
 
     ledger_path = DEMO_LEDGER_FILE if demo_mode else LEDGER_FILE
@@ -169,6 +121,13 @@ def _run_lock(*, demo_mode: bool) -> int:
         return EXIT_OK
 
     probe = fetch_recent_ac(client.post, client.username)
+    if not demo_mode:
+        # Mirror the profile's solved counts while the network is already in
+        # use, so the status window has a figure to show before it fetches its
+        # own. Display only; the gate never reads it.
+        refresh_progress(
+            client.post, client.username, PROGRESS_CACHE_FILE, now=now.timestamp()
+        )
 
     # The run that *creates* the ledger does not arm. Seeding marks the whole
     # recent feed already-seen, so the gate it hands over can only be satisfied
@@ -232,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.probe:
         return cmd_probe()
     if args.status:
-        return cmd_status()
+        return cmd_status(by=args.by)
     if args.check:
         return cmd_check()
     if args.login:

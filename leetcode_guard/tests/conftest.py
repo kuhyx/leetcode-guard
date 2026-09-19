@@ -54,13 +54,31 @@ class _BlockedSession:
         raise AssertionError(message)
 
 
-pytest_plugins = ["leetcode_guard.tests._debt_fixtures"]
+pytest_plugins = [
+    "leetcode_guard.tests._debt_fixtures",
+    "leetcode_guard.tests._paths_fixture",
+]
 
 
 @pytest.fixture(autouse=True)
 def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make real HTTP impossible for the whole suite."""
     monkeypatch.setattr(leetcode_module.requests, "Session", _BlockedSession)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_progress(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub the status surfaces' one network call to "nothing known".
+
+    The window starts it on a worker thread, where the network rail above
+    would only surface as a logged exception; ``--sync`` and ``--status --by``
+    make it inline. Tests about the fetch itself rebind these explicitly.
+    """
+    import leetcode_guard._cli_commands as cli_commands
+    import leetcode_guard._status_fetch as status_fetch
+
+    for module in (cli_commands, status_fetch):
+        monkeypatch.setattr(module, "fetch_live_progress", lambda: None)
 
 
 @pytest.fixture(autouse=True)
@@ -106,6 +124,19 @@ def _gate_in_force(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_morning_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never let the morning-session reader sleep in a test.
+
+    Its file is redirected by ``_isolate_paths``; this is the other half --
+    on the enforce path a missing file inside 07:00-11:00 is retried for 30
+    real seconds, which a test running in that window would silently pay.
+    """
+    from leetcode_guard import _morning_session
+
+    monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 0.0, raising=True)
+
+
+@pytest.fixture(autouse=True)
 def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Never let the gate read the developer's real free-day pool.
 
@@ -121,57 +152,6 @@ def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
         "resolve_paths",
         lambda paths: paths or freedays.Paths.under(tmp_path / "freedays"),
     )
-
-
-@pytest.fixture(autouse=True)
-def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Point every configured path at a per-test directory.
-
-    Patched at each *importing* module rather than only at ``_constants``:
-    ``from ... import X`` binds a new name, so rebinding the original leaves
-    every consumer still pointing at the real file.
-    """
-    config = tmp_path / "config"
-    data = tmp_path / "data"
-    config.mkdir()
-    data.mkdir()
-
-    from leetcode_guard import _constants
-
-    overrides = {
-        "CONFIG_DIR": config,
-        "DATA_DIR": data,
-        "LEDGER_FILE": data / "ledger.json",
-        "DEMO_LEDGER_FILE": data / "ledger_demo.json",
-        "POOL_CACHE_FILE": data / "pool_cache.json",
-        "STATEMENTS_CACHE_FILE": data / "statements_cache.json",
-        "ESCAPE_HISTORY_FILE": data / "escape_history.json",
-        "DEMO_ESCAPE_HISTORY_FILE": data / "escape_history_demo.json",
-        "NETWORK_INCIDENTS_FILE": data / "network_incidents.json",
-        "DEMO_NETWORK_INCIDENTS_FILE": data / "network_incidents_demo.json",
-        "USERNAME_FILE": config / "username",
-        "COOKIES_FILE": config / "cookies.json",
-        "SYNC_TOKEN_FILE": config / "sync_token",
-        "INSTANCE_LOCK_FILE": data / "instance.lock",
-        # Added with the Firebase cutover. Redirected for the same reason as
-        # everything above: a test must not read or write the developer's own
-        # sync state.
-        "SYNC_STATE_FILE": data / "sync_state.json",
-    }
-    for name, value in overrides.items():
-        monkeypatch.setattr(_constants, name, value, raising=True)
-
-    # Every already-imported module that pulled a path constant in by value
-    # gets its own copy rebound. Enumerating modules by hand was the version of
-    # this that went wrong: adding _status.py silently left it reading the real
-    # ~/.local/share directory, because nothing failed -- the tests just quietly
-    # started depending on the developer's own ledger.
-    for module_name, module in list(sys.modules.items()):
-        if not module_name.startswith("leetcode_guard."):
-            continue
-        for name, value in overrides.items():
-            if hasattr(module, name):
-                monkeypatch.setattr(module, name, value, raising=True)
 
 
 @pytest.fixture

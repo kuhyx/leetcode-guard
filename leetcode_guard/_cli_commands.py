@@ -26,10 +26,12 @@ from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import harvest, needs_seeding
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._login import login
+from leetcode_guard._morning_session import defer_for_morning_session
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
 from leetcode_guard._status import format_status, gather_status
+from leetcode_guard._status_projection import build_report, fetch_live_progress
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 from leetcode_guard._sync import sync_ledger
 
@@ -83,10 +85,26 @@ def cmd_probe() -> int:
     return EXIT_OK if probe.status is ProbeStatus.OK else EXIT_UNVERIFIABLE
 
 
-def cmd_status() -> int:
-    """Print the position from disk. Never touches the network."""
+def cmd_status(*, by: str | None = None) -> int:
+    """Print the position from disk, plus a projection when ``--by`` is given.
+
+    Without ``--by`` this never touches the network. With it, the profile's
+    solved counts are fetched (one public query) and the lines the status
+    window would show for that date are printed after the position.
+    """
     snapshot = gather_status()
     print(format_status(snapshot))
+    if by is None:
+        return EXIT_LOCKED if snapshot.locked else EXIT_OK
+    report = build_report(snapshot, fetch_live_progress(), by)
+    print("\nsolved now")
+    for line in report.now_lines():
+        print(f"  {line}")
+    print(f"\nby {by}")
+    for line in report.then_lines():
+        print(f"  {line}")
+    if report.projection is None:
+        return EXIT_UNVERIFIABLE
     return EXIT_LOCKED if snapshot.locked else EXIT_OK
 
 
@@ -105,6 +123,7 @@ def cmd_check() -> int:
     seeding = needs_seeding(ledger)
     print(f"ledger     {len(ledger.entries)} entries from {LEDGER_FILE}")
     print(f"integrity  {'on' if ledger.integrity_ok else 'OFF (key unreadable)'}")
+    print(f"morning    {defer_for_morning_session(now) or 'no exemption in force'}")
 
     probe = fetch_recent_ac(client.post, client.username)
     print(f"probe      {probe.status.value} -- {probe.reason}")
@@ -170,7 +189,8 @@ def cmd_login() -> int:
 
 
 def cmd_sync() -> int:
-    """Sync the ledger. Opens no window."""
+    """Sync the ledger and refresh the solve-progress mirror. Opens no window."""
+    fetch_live_progress()
     result = sync_ledger(LEDGER_FILE)
     print(
         f"sync       {'pushed' if result.pushed else 'not pushed'} -- {result.reason}"

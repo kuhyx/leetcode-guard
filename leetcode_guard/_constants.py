@@ -78,12 +78,21 @@ LEDGER_FILE: Final = DATA_DIR / "ledger.json"
 # peer's records are already merged into the local log, so state that outlived
 # its ledger would skip peers whose data had been lost.
 SYNC_STATE_FILE: Final = DATA_DIR / "sync_state.json"
+
+MORNING_SESSION_FILE: Final = (
+    Path.home() / ".local" / "state" / "wake_alarm" / "morning_session.json"
+)
+"""wake-alarm's signed copy of the phone's morning session; a completed morning
+defers this gate until its ``exempt_until``. Keep in step with wake_alarm."""
 DEMO_LEDGER_FILE: Final = DATA_DIR / "ledger_demo.json"
 """Wiped and re-seeded on every demo run. Never the real ledger: a demo must
 not be able to mint a credit, and must not be able to spend one either."""
 
 POOL_CACHE_FILE: Final = DATA_DIR / "pool_cache.json"
 STATEMENTS_CACHE_FILE: Final = DATA_DIR / "statements_cache.json"
+PROGRESS_CACHE_FILE: Final = DATA_DIR / "progress_cache.json"
+"""Solved/total per difficulty, as LeetCode's profile reports it. Display
+only: nothing that decides, charges or credits may read it."""
 
 ESCAPE_HISTORY_FILE: Final = DATA_DIR / "escape_history.json"
 DEMO_ESCAPE_HISTORY_FILE: Final = DATA_DIR / "escape_history_demo.json"
@@ -232,15 +241,6 @@ record shown back on screen -- never exhaustion."""
 
 JUSTIFICATION_MIN_CHARS: Final = 120
 HISTORY_REVIEW_COUNT: Final = 10
-
-# --------------------------------------------------------------------------
-# Sync
-# --------------------------------------------------------------------------
-
-SYNC_REPO_OWNER: Final = "kuhyx"
-SYNC_REPO_NAME: Final = "syncs"
-SYNC_PATH_PREFIX: Final = "leetcode-guard-sync/devices"
-SYNC_TIMEOUT_SECONDS: Final = 15.0
 
 # Process exit codes. Here rather than in _cli.py because they are the
 # program's contract with whatever ran it -- a systemd unit reads them, and the

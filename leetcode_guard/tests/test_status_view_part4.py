@@ -105,13 +105,13 @@ def test_the_refresh_callback_rerenders(monkeypatch, data_dir: Path, tk_mock):
     monkeypatch.setattr(status_view.StatusWindow, "render", counting_render)
 
     status_view.main([])
-    button_commands = [
+    refresh = next(
         call.kwargs["command"]
         for call in tk_mock.Button.call_args_list
-        if "command" in call.kwargs
-    ]
+        if call.kwargs.get("text") == "Refresh"
+    )
     before = len(calls)
-    button_commands[0]()  # Refresh
+    refresh()
 
     assert len(calls) > before
 

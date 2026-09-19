@@ -3,10 +3,14 @@
 Mirrors screen-locker's workout-status window: same shape, same colours, same
 ``--summary`` / ``--state`` flags so the same kind of tray icon can drive it.
 
-**Nothing here writes and nothing here fetches.** Opening or refreshing reads
-files already on disk. That matters because this window is the thing you reach
+**Nothing here writes ledger state, and the one fetch never blocks.** Opening
+or refreshing reads files already on disk and paints them at once; the single
+network call -- the profile's solved counts, for the "Progress & projection"
+section -- runs on a worker thread and repaints when it lands, writing only
+its own mirror file. That matters because this window is the thing you reach
 for when the gate has done something surprising -- it must be safe to open at
-any moment, including while the lock itself is up.
+any moment, including while the lock itself is up, and Escape must work while
+LeetCode is still thinking.
 
 Closing is deliberately over-provided: a Close button, the Escape key, the
 window manager's own close box, and clicking the tray icon again. A status
@@ -22,12 +26,18 @@ from typing import TYPE_CHECKING, Final
 
 from gatelock import ButtonStyle, LockConfig, ScrollableSurface, make_button
 
+from leetcode_guard._daycost import local_today
+from leetcode_guard._projection import default_target, format_target
+from leetcode_guard._status_fetch import BackgroundFetch
 from leetcode_guard._status_full import gather_full
+from leetcode_guard._status_progress import ProjectionControls
+from leetcode_guard._status_projection import build_report
 from leetcode_guard._status_sections import DEFAULT_WRAP, render_sections
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from leetcode_guard._progress import Progress
     from leetcode_guard._status_full import FullStatus
 
 _COLORS: Final = LockConfig()
@@ -67,10 +77,40 @@ class StatusWindow:
         # geometry. This is a normal window, so it fills it.
         self._surface.container.pack(fill="both", expand=True)
         self.container = self._surface.content
+        # The projection's inputs outlive any repaint: the entry is rebuilt
+        # with the rest, so its text lives here, and the live fetch's answer
+        # replaces the mirrored one until the next full refresh re-reads it.
+        self.target_text = format_target(default_target(local_today()))
+        self.fetching = False
+        self._snapshot = snapshot
+        self._live: Progress | None = None
         self.render(snapshot)
+
+    @property
+    def snapshot(self) -> FullStatus:
+        """What is currently painted."""
+        return self._snapshot
+
+    def project(self, target_text: str) -> None:
+        """Re-run the projection for what the entry holds."""
+        self.target_text = target_text
+        self.render(self._snapshot)
+
+    def set_progress(self, progress: Progress | None) -> None:
+        """Take the live fetch's answer and repaint; ``None`` keeps what is shown."""
+        self.fetching = False
+        if progress is not None:
+            self._live = progress
+        self.render(self._snapshot)
+
+    @property
+    def progress(self) -> Progress | None:
+        """The live answer once there is one, else the mirror the snapshot read."""
+        return self._live if self._live is not None else self._snapshot.progress
 
     def render(self, snapshot: FullStatus) -> None:
         """Redraw everything from ``snapshot``."""
+        self._snapshot = snapshot
         for child in list(self.container.winfo_children()):
             child.destroy()
 
@@ -83,7 +123,19 @@ class StatusWindow:
         )
         title.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
 
-        render_sections(self.container, _COLORS, snapshot, wrap=self._wrap_width())
+        controls = ProjectionControls(
+            target_text=self.target_text,
+            report=build_report(snapshot.gate, self.progress, self.target_text),
+            on_project=self.project,
+            fetching=self.fetching,
+        )
+        render_sections(
+            self.container,
+            _COLORS,
+            snapshot,
+            wrap=self._wrap_width(),
+            projection=controls,
+        )
         self._buttons()
         # Idempotent, and it re-derives the scroll region, the fit state and
         # the focus bindings for the widgets this repaint just created.
@@ -164,12 +216,22 @@ def main(argv: list[str] | None = None) -> int:
     root.geometry(_DEFAULT_GEOMETRY)
 
     def close() -> None:
+        fetch.cancel()
         root.destroy()
 
     def refresh() -> None:
+        # Disk first, so the repaint is instant; the network answer follows.
         window.render(gather_full())
+        start_fetch()
+
+    def start_fetch() -> None:
+        if fetch.start():
+            window.fetching = True
+            window.render(window.snapshot)
 
     window = StatusWindow(root, gather_full(), on_refresh=refresh, on_close=close)
+    fetch = BackgroundFetch(root, window.set_progress)
+    start_fetch()
     # Three independent ways out, plus the tray toggle. See the module
     # docstring: a status panel you cannot dismiss is its own bug.
     root.protocol("WM_DELETE_WINDOW", close)

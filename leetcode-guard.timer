@@ -3,6 +3,11 @@ Description=Fire the LeetCode gate in the morning, with an afternoon retry
 
 [Timer]
 OnCalendar=*-*-* 09:00:00
+# The morning-session carrot (wake-alarm's morning_session.json): a live
+# session defers the 09:00 run until at most 09:30, a completed one until
+# 11:00. These two slots are where a deferred run gets re-decided.
+OnCalendar=*-*-* 09:30:00
+OnCalendar=*-*-* 11:00:00
 OnCalendar=*-*-* 13:00:00
 Unit=leetcode-guard.service
 # Persistent=true on purpose (flipped 2026-08-12). Persistent=false meant a
