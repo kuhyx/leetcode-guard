@@ -77,3 +77,13 @@ jobs:
           root.update_idletasks(); root.update(); root.destroy()
           print('status window rendered')
           "
+
+      # Ran only in the local pre-push hook until 2026-09-20, when that became
+      # a 1-second stamp check (pre-commit's manual stage holds it now); this
+      # is the only other place with an X server to prove it on every push.
+      # solved-semantics stays manual-only: it needs kuhy's live LeetCode
+      # session and ledger, which CI must never hold.
+      - name: Study mode really releases the X grab
+        run: |
+          xvfb-run -a -s "-screen 0 1600x1200x24" \
+            python3 -m scripts.verify_study_grab
