@@ -14,7 +14,11 @@ from leetcode_guard._status_progress import (
     ProjectionControls,
     section_progress,
 )
-from leetcode_guard._status_projection import PAST_TARGET, build_report
+from leetcode_guard._status_projection import (
+    PAST_TARGET,
+    ProjectionInputs,
+    build_report,
+)
 from leetcode_guard._status_sections import render_sections
 from leetcode_guard.tests.test_projection import progress
 from leetcode_guard.tests.test_status_view_part3 import a_root, full_for
@@ -38,12 +42,28 @@ def snapshot_for(data_dir: Path, hmac_key: Path):
 
 
 def controls_for(snapshot, target="31.12.2999", **extra) -> ProjectionControls:
+    inputs = ProjectionInputs(target_text=target, price_text=extra.pop("price", "2"))
     return ProjectionControls(
-        target_text=target,
-        report=build_report(snapshot, progress(), target),
-        on_project=extra.pop("on_project", lambda _text: None),
+        inputs=inputs,
+        report=build_report(snapshot, progress(), inputs),
+        on_project=extra.pop("on_project", lambda _inputs: None),
         **extra,
     )
+
+
+def fresh_entries(tk_mock) -> list[MagicMock]:
+    """One mock per ``tk.Entry`` -- the row builds five and reads each back."""
+    made: list[MagicMock] = []
+
+    def make(*_args, **_kwargs) -> MagicMock:
+        entry = MagicMock()
+        entry.insert.side_effect = lambda _index, text: setattr(entry, "typed", text)
+        entry.get.side_effect = lambda: entry.typed
+        made.append(entry)
+        return entry
+
+    tk_mock.Entry.side_effect = make
+    return made
 
 
 def test_the_section_draws_counts_in_monospace_and_the_working_as_captions(
@@ -88,21 +108,26 @@ def test_an_unusable_date_is_one_red_line_and_no_counts(data_dir, hmac_key, tk_m
     assert not any(t.startswith("By ") for t in label_texts(tk_mock))
 
 
-def test_the_entry_hands_its_text_to_on_project_on_enter_and_on_the_button(
+def test_the_entries_hand_their_text_to_on_project_on_enter_and_on_the_button(
     data_dir, hmac_key, tk_mock
 ):
     snapshot = snapshot_for(data_dir, hmac_key)
-    asked: list[str] = []
-    entry = tk_mock.Entry.return_value
-    entry.get.return_value = "26.09.2026"
+    asked: list[ProjectionInputs] = []
+    entries = fresh_entries(tk_mock)
 
     section_progress(
         a_root(tk_mock), CONFIG, controls_for(snapshot, on_project=asked.append)
     )
 
-    entry.insert.assert_called_once_with(0, "31.12.2999")
+    price, easy, medium, hard, target = entries
+    assert [e.typed for e in entries] == ["2", "", "", "", "31.12.2999"]
+    target.typed = "26.09.2026"
+    easy.typed = "837"
+    price.typed = "1"
     on_return = next(
-        call.args[1] for call in entry.bind.call_args_list if call.args[0] == "<Return>"
+        call.args[1]
+        for call in medium.bind.call_args_list
+        if call.args[0] == "<Return>"
     )
     on_return(MagicMock())
     project_button = next(
@@ -112,7 +137,11 @@ def test_the_entry_hands_its_text_to_on_project_on_enter_and_on_the_button(
     )
     project_button()
 
-    assert asked == ["26.09.2026", "26.09.2026"]
+    expected = ProjectionInputs(
+        "26.09.2026", "1", {"Easy": "837", "Medium": "", "Hard": ""}
+    )
+    assert asked == [expected, expected]
+    assert hard.bind.called
 
 
 def test_render_sections_skips_the_section_without_controls(
@@ -132,14 +161,16 @@ def test_the_window_reprojects_for_a_new_date_and_keeps_it_across_refresh(
         on_refresh=lambda: None,
         on_close=lambda: None,
     )
-    assert window.target_text.startswith("31.12.")
+    assert window.inputs.target_text.startswith("31.12.")
+    assert window.inputs.price_text == "2"
 
-    window.project("31.12.2999")
+    window.project(ProjectionInputs("31.12.2999", "3"))
     assert any(t.startswith("By 31.12.2999") for t in label_texts(tk_mock))
+    assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri/Sat/Sun cost 6." in label_texts(tk_mock)
 
     tk_mock.Label.reset_mock()
     window.render(full_for(data_dir, hmac_key))
-    assert window.target_text == "31.12.2999"
+    assert window.inputs == ProjectionInputs("31.12.2999", "3")
     assert any(t.startswith("By 31.12.2999") for t in label_texts(tk_mock))
 
 

@@ -40,6 +40,25 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--price",
+        type=int,
+        metavar="N",
+        help=(
+            "With --status: project at this Tue-Thu base price instead of the "
+            "live one (Mon/Fri/Sat/Sun cost twice it). Implies --by end of year."
+        ),
+    )
+    parser.add_argument(
+        "--goal",
+        action="append",
+        metavar="DIFFICULTY=N",
+        help=(
+            "With --status: an absolute solved-count target, e.g. Easy=837; "
+            "repeatable. Prints when the price reaches it and the smallest "
+            "price that lands it on the --by date. Implies --by end of year."
+        ),
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help=(

@@ -8,9 +8,10 @@ cost nothing.
 
 - Every past day from `DEBT_START_DATE` (= the gate start, 2026-08-04) that
   carries **no charge** and was **not a declared free day** is *owed* at the
-  price it would have cost: 1 on a weekday, 2 on Saturday or Sunday.
+  price it would have cost on that date: from 2026-09-21, 2 on Tue-Thu and 4 on
+  Mon/Fri/Sat/Sun; before that, 1 on a weekday and 2 on Saturday or Sunday.
 - While anything is outstanding, every gated day costs **one extra credit**;
-  that credit is the repayment. Weekday 1 → 2, weekend 2 → 3.
+  that credit is the repayment. Tue-Thu 2 → 3, doubled day 4 → 5.
 - Repayment is one per day. No cap on the debt, permanent rule.
 - Free days pause the debt: no charge, no repayment.
 - An escape-hatch or outage settlement charges the *base* cost: that day is

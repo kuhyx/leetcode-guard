@@ -31,7 +31,11 @@ from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
 from leetcode_guard._status import format_status, gather_status
-from leetcode_guard._status_projection import build_report, fetch_live_progress
+from leetcode_guard._status_projection import (
+    ProjectionInputs,
+    build_report,
+    fetch_live_progress,
+)
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 from leetcode_guard._sync import sync_ledger
 
@@ -85,27 +89,54 @@ def cmd_probe() -> int:
     return EXIT_OK if probe.status is ProbeStatus.OK else EXIT_UNVERIFIABLE
 
 
-def cmd_status(*, by: str | None = None) -> int:
-    """Print the position from disk, plus a projection when ``--by`` is given.
+def cmd_status(
+    *,
+    by: str | None = None,
+    price: int | None = None,
+    goals: list[str] | None = None,
+) -> int:
+    """Print the position from disk, plus a projection when asked for one.
 
-    Without ``--by`` this never touches the network. With it, the profile's
-    solved counts are fetched (one public query) and the lines the status
-    window would show for that date are printed after the position.
+    Without ``--by``, ``--price`` or ``--goal`` this never touches the network.
+    With any of them, the profile's solved counts are fetched (one public
+    query) and the lines the status window would show for those inputs are
+    printed after the position.
     """
     snapshot = gather_status()
     print(format_status(snapshot))
-    if by is None:
+    if by is None and price is None and goals is None:
         return EXIT_LOCKED if snapshot.locked else EXIT_OK
-    report = build_report(snapshot, fetch_live_progress(), by)
+    inputs = projection_inputs(by, price, goals)
+    report = build_report(snapshot, fetch_live_progress(), inputs)
     print("\nsolved now")
     for line in report.now_lines():
         print(f"  {line}")
-    print(f"\nby {by}")
-    for line in report.then_lines():
+    print(f"\nby {inputs.target_text}")
+    for line in (*report.then_lines(), *report.goal_lines()):
         print(f"  {line}")
-    if report.projection is None:
+    if report.projection is None or report.goal_problem is not None:
         return EXIT_UNVERIFIABLE
     return EXIT_LOCKED if snapshot.locked else EXIT_OK
+
+
+def projection_inputs(
+    by: str | None, price: int | None, goals: list[str] | None
+) -> ProjectionInputs:
+    """The window's three controls, from the flags; ``--by`` defaults to year end.
+
+    A ``--goal`` without an ``=`` is kept under its own text so the report's
+    own validation names it, rather than a second parser here.
+    """
+    defaults = ProjectionInputs.default(local_today())
+    goal_texts: dict[str, str] = {}
+    for spec in goals or []:
+        name, _, count = spec.partition("=")
+        goal_texts[name.strip()] = count if _ else "?"
+    return ProjectionInputs(
+        target_text=defaults.target_text if by is None else by,
+        price_text=defaults.price_text if price is None else str(price),
+        goal_texts=goal_texts,
+    )
 
 
 def cmd_check() -> int:

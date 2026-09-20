@@ -191,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.probe:
         return cmd_probe()
     if args.status:
-        return cmd_status(by=args.by)
+        return cmd_status(by=args.by, price=args.price, goals=args.goal)
     if args.check:
         return cmd_check()
     if args.login:

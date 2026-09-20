@@ -17,7 +17,9 @@ from leetcode_guard._projection import (
 )
 
 SAT = date(2026, 9, 19)
-"""The Saturday this was built on: Sun 20 + Mon-Fri + Sat 26 = 2+5+2 = 9."""
+"""The Saturday this was built on. The week after it straddles the 2026-09-21
+reprice: Sun 20 costs 2 (original prices), then Mon 4, Tue-Thu 2 each, Fri 4,
+Sat 26 4 = 2+4+6+4+4 = 20."""
 
 
 def never_free(_day):
@@ -64,17 +66,30 @@ def test_the_default_target_is_new_years_eve_in_dotted_form():
 
 
 def test_a_week_ahead_from_a_settled_saturday():
-    """The worked example: 9 base + 14 debt - 0 banked = 23, rules collect 16."""
+    """The worked example: 20 base + 14 debt - 0 banked = 34, rules collect 27."""
     result = project(
         date(2026, 9, 26), position(), is_free=never_free, progress=progress()
     )
 
     assert result.first_day == date(2026, 9, 20)
-    assert (result.gated_days, result.free_days, result.base_cost) == (7, 0, 9)
-    assert result.required == 23
-    assert result.rules_demand == 16
+    assert (result.gated_days, result.free_days, result.base_cost) == (7, 0, 20)
+    assert result.required == 34
+    assert result.rules_demand == 27
     assert result.debt_left_by_rules == 7
-    assert result.projected == {"Easy": 78, "Medium": 0, "Hard": 0}
+    assert result.projected == {"Easy": 89, "Medium": 0, "Hard": 0}
+
+
+def test_the_price_table_is_an_argument_not_a_global():
+    """A what-if hands in its own prices; nothing module-level is patched."""
+    result = project(
+        date(2026, 9, 26),
+        position(),
+        is_free=never_free,
+        progress=None,
+        cost_of=lambda _day: 1,
+    )
+
+    assert result.base_cost == 7
 
 
 def test_an_unsettled_today_is_counted_and_costs_the_weekend_price():
@@ -103,8 +118,9 @@ def test_free_days_cost_nothing_and_repay_nothing():
         date(2026, 9, 26), position(), is_free=free.__contains__, progress=None
     )
 
-    assert (result.gated_days, result.free_days, result.base_cost) == (5, 2, 7)
-    assert result.rules_demand == 7 + 5
+    # Sun 20 (2) + Wed 23, Thu 24 (2 each) + Fri 25, Sat 26 (4 each).
+    assert (result.gated_days, result.free_days, result.base_cost) == (5, 2, 14)
+    assert result.rules_demand == 14 + 5
     assert result.debt_left_by_rules == 9
 
 
@@ -139,9 +155,9 @@ def test_new_solves_fill_easy_then_medium_then_hard():
         date(2026, 9, 26), position(debt=0), is_free=never_free, progress=nearly_done
     )
 
-    # 9 required: 2 finish Easy, 1 finishes Medium, 5 land on Hard, 1 spills
-    # past the end of the site and is dropped rather than invented.
-    assert result.required == 9
+    # 20 required: 2 finish Easy, 1 finishes Medium, 5 land on Hard, 12 spill
+    # past the end of the site and are dropped rather than invented.
+    assert result.required == 20
     assert result.projected == {"Easy": 965, "Medium": 2115, "Hard": 975}
 
 

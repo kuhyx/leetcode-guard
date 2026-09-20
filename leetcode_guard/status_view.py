@@ -27,11 +27,10 @@ from typing import TYPE_CHECKING, Final
 from gatelock import ButtonStyle, LockConfig, ScrollableSurface, make_button
 
 from leetcode_guard._daycost import local_today
-from leetcode_guard._projection import default_target, format_target
 from leetcode_guard._status_fetch import BackgroundFetch
 from leetcode_guard._status_full import gather_full
 from leetcode_guard._status_progress import ProjectionControls
-from leetcode_guard._status_projection import build_report
+from leetcode_guard._status_projection import ProjectionInputs, build_report
 from leetcode_guard._status_sections import DEFAULT_WRAP, render_sections
 
 if TYPE_CHECKING:
@@ -77,10 +76,10 @@ class StatusWindow:
         # geometry. This is a normal window, so it fills it.
         self._surface.container.pack(fill="both", expand=True)
         self.container = self._surface.content
-        # The projection's inputs outlive any repaint: the entry is rebuilt
-        # with the rest, so its text lives here, and the live fetch's answer
+        # The projection's inputs outlive any repaint: the entries are rebuilt
+        # with the rest, so their text lives here, and the live fetch's answer
         # replaces the mirrored one until the next full refresh re-reads it.
-        self.target_text = format_target(default_target(local_today()))
+        self.inputs = ProjectionInputs.default(local_today())
         self.fetching = False
         self._snapshot = snapshot
         self._live: Progress | None = None
@@ -91,9 +90,9 @@ class StatusWindow:
         """What is currently painted."""
         return self._snapshot
 
-    def project(self, target_text: str) -> None:
-        """Re-run the projection for what the entry holds."""
-        self.target_text = target_text
+    def project(self, inputs: ProjectionInputs) -> None:
+        """Re-run the projection for what the entries hold."""
+        self.inputs = inputs
         self.render(self._snapshot)
 
     def set_progress(self, progress: Progress | None) -> None:
@@ -124,8 +123,8 @@ class StatusWindow:
         title.pack(pady=(_COLORS.space("md"), _COLORS.space("sm")))
 
         controls = ProjectionControls(
-            target_text=self.target_text,
-            report=build_report(snapshot.gate, self.progress, self.target_text),
+            inputs=self.inputs,
+            report=build_report(snapshot.gate, self.progress, self.inputs),
             on_project=self.project,
             fetching=self.fetching,
         )

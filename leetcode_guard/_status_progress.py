@@ -1,12 +1,13 @@
 """The "Progress & projection" section of the status window.
 
-Its own module because it is the one section with controls -- a date entry and
-a button -- and because ``_status_sections`` sits near the line cap. The
-arithmetic and the wording live in ``_status_projection`` and
-``_projection_text``; this file only lays them out.
+Its own module because it is the one section with controls -- a price entry,
+three goal entries, a date entry and a button -- and because
+``_status_sections`` sits near the line cap. The arithmetic and the wording
+live in ``_status_projection``, ``_projection_text`` and ``_scenario_text``;
+this file only lays them out.
 
-The entry's text survives a repaint: the window rebuilds every widget on
-refresh, so the value is owned by the caller and handed back in through
+The entries' text survives a repaint: the window rebuilds every widget on
+refresh, so the values are owned by the caller and handed back in through
 :class:`ProjectionControls`, never read off a widget that no longer exists.
 """
 
@@ -18,7 +19,9 @@ from typing import TYPE_CHECKING, Final
 
 from gatelock import ButtonStyle, make_button
 
+from leetcode_guard._progress import DIFFICULTIES
 from leetcode_guard._projection_text import is_count_line
+from leetcode_guard._status_projection import ProjectionInputs
 from leetcode_guard._status_rows import section_heading as _heading
 from leetcode_guard._status_rows import section_row as _row
 
@@ -33,8 +36,11 @@ _MONO: Final = "monospace"
 """The count rows are column-aligned with spaces, so they need a fixed-pitch
 face; every other line uses the type scale as-is."""
 
-_ENTRY_WIDTH: Final = 12
+_DATE_WIDTH: Final = 12
 """``dd.mm.yyyy`` plus room to overtype."""
+
+_COUNT_WIDTH: Final = 5
+"""A price or a goal: four digits at most, plus the cursor."""
 
 FETCHING_NOTE: Final = "Fetching today's solved counts from LeetCode..."
 
@@ -44,16 +50,16 @@ class ProjectionControls:
     """What the section needs beyond the snapshot.
 
     Attributes:
-        target_text: The entry's current value, owned by the window.
-        report: The projection for that value, already computed.
-        on_project: Called with the entry's text when "Project" is pressed.
+        inputs: The entries' current values, owned by the window.
+        report: The projection for those values, already computed.
+        on_project: Called with the entries' text when "Project" is pressed.
         fetching: Whether a live fetch is in flight, so the section can say
             the counts shown are the cached ones for now.
     """
 
-    target_text: str
+    inputs: ProjectionInputs
     report: ProjectionReport
-    on_project: Callable[[str], None]
+    on_project: Callable[[ProjectionInputs], None]
     fetching: bool = False
 
 
@@ -73,34 +79,63 @@ def _lines(parent: tk.Misc, config: LockConfig, lines: list[str]) -> None:
             _row(parent, config, line, color=config.palette.muted, role="caption")
 
 
-def _entry_row(
-    parent: tk.Misc, config: LockConfig, controls: ProjectionControls
-) -> None:
-    """The date entry and its button, on one line."""
-    frame = tk.Frame(parent, bg=config.palette.bg)
-    frame.pack(fill="x", padx=config.space("lg"), pady=config.space("xs"))
+def _label(frame: tk.Misc, config: LockConfig, text: str) -> None:
     tk.Label(
         frame,
-        text="How many will I have solved by",
+        text=text,
         font=config.font("label"),
         fg=config.palette.fg,
         bg=config.palette.bg,
     ).pack(side="left", padx=(0, config.space("sm")))
+
+
+def _entry(frame: tk.Misc, config: LockConfig, text: str, width: int) -> tk.Entry:
     entry = tk.Entry(
         frame,
-        width=_ENTRY_WIDTH,
+        width=width,
         bg=config.palette.field_bg,
         fg=config.palette.fg,
         insertbackground=config.palette.fg,
         font=config.font("label", family=_MONO),
     )
-    entry.insert(0, controls.target_text)
+    entry.insert(0, text)
     entry.pack(side="left", padx=(0, config.space("sm")))
+    return entry
+
+
+def _entry_row(
+    parent: tk.Misc, config: LockConfig, controls: ProjectionControls
+) -> None:
+    """Price, the three goals, the date and the button, on one line.
+
+    Reads the entries only inside ``submit``, at the moment they still exist.
+    """
+    frame = tk.Frame(parent, bg=config.palette.bg)
+    frame.pack(fill="x", padx=config.space("lg"), pady=config.space("xs"))
+    inputs = controls.inputs
+    _label(frame, config, "Tue-Thu price")
+    price = _entry(frame, config, inputs.price_text, _COUNT_WIDTH)
+    _label(frame, config, "goal")
+    goals = {}
+    for name in DIFFICULTIES:
+        _label(frame, config, name)
+        goals[name] = _entry(
+            frame, config, inputs.goal_texts.get(name, ""), _COUNT_WIDTH
+        )
+    _label(frame, config, "by")
+    target = _entry(frame, config, inputs.target_text, _DATE_WIDTH)
 
     def submit(_event: object = None) -> None:
-        controls.on_project(entry.get())
+        controls.on_project(
+            ProjectionInputs(
+                target_text=target.get(),
+                price_text=price.get(),
+                goal_texts={name: entry.get() for name, entry in goals.items()},
+            )
+        )
 
-    entry.bind("<Return>", submit)
+    for entry in (price, *goals.values(), target):
+        entry.bind("<Return>", submit)
     make_button(
         frame, config, "Project", submit, ButtonStyle(variant="secondary")
     ).pack(side="left")
@@ -119,7 +154,12 @@ def section_progress(
     _lines(parent, config, report.now_lines())
     _entry_row(parent, config, controls)
     if report.projection is None:
-        # A date that could not be used: one line, in the colour that says so.
+        # A date or price that could not be used: one line, in the colour
+        # that says so.
         _row(parent, config, report.then_lines()[0], color=config.palette.danger)
         return
     _lines(parent, config, report.then_lines())
+    if report.goal_problem is not None:
+        _row(parent, config, report.goal_problem, color=config.palette.danger)
+        return
+    _lines(parent, config, report.goal_lines())

@@ -129,8 +129,14 @@ def project(
     *,
     is_free: Callable[[date], bool],
     progress: Progress | None,
+    cost_of: Callable[[date], int] = day_cost,
 ) -> Projection:
-    """Compute the position on ``target``. See the module docstring."""
+    """Compute the position on ``target``. See the module docstring.
+
+    ``cost_of`` is the live price table unless a what-if asks otherwise
+    (:func:`~leetcode_guard._daycost.what_if`); it is an argument, never a
+    patched global, because a patched price is a bypass surface.
+    """
     today, debt_outstanding = position.today, position.debt_outstanding
     available = position.available
     first_day = today + timedelta(days=1) if position.charged_today else today
@@ -141,7 +147,7 @@ def project(
             free += 1
         else:
             gated += 1
-            base_cost += day_cost(cursor)
+            base_cost += cost_of(cursor)
         cursor += timedelta(days=1)
     required = max(0, base_cost + debt_outstanding - available)
     repaid_by_rules = min(debt_outstanding, gated)

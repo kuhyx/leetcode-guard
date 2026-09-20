@@ -18,6 +18,7 @@ from leetcode_guard._status import gather_status
 from leetcode_guard._status_projection import (
     PAST_TARGET,
     UNREADABLE_TARGET,
+    ProjectionInputs,
     build_report,
     cached_progress,
     fetch_live_progress,
@@ -55,11 +56,11 @@ def test_projection_lines_show_the_working_and_the_counts():
     )
     assert (
         lines[1]
-        == "9 (day prices) + 14 (debt) - 0 (banked) = 23 new problem(s) to solve."
+        == "20 (day prices) + 14 (debt) - 0 (banked) = 34 new problem(s) to solve."
     )
-    assert "demand 16 by then and leave 7 of the debt" in lines[2]
-    assert lines[3] == "Easy      78 / 965   (  8.1 %)   887 left"
-    assert lines[6] == "All       78 / 4055  (  1.9 %)  3977 left"
+    assert "demand 27 by then and leave 7 of the debt" in lines[2]
+    assert lines[3] == "Easy      89 / 965   (  9.2 %)   876 left"
+    assert lines[6] == "All       89 / 4055  (  2.2 %)  3966 left"
     assert lines[7].startswith("Assumes every new solve")
 
 
@@ -68,7 +69,7 @@ def test_a_horizon_that_clears_the_debt_says_so():
 
     lines = projection_lines(result, None)
 
-    assert "the same 146 by then (debt fully repaid" in lines[2]
+    assert "the same 334 by then (debt fully repaid" in lines[2]
     assert lines[3] == "Per-difficulty projection needs the solved counts above."
     assert len(lines) == 4
 
@@ -76,7 +77,7 @@ def test_a_horizon_that_clears_the_debt_says_so():
 def test_the_report_rejects_an_unreadable_date(data_dir: Path, hmac_key: Path):
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
 
-    report = build_report(snapshot, progress(), "banana")
+    report = build_report(snapshot, progress(), ProjectionInputs("banana"))
 
     assert report.projection is None
     assert report.then_lines() == [UNREADABLE_TARGET]
@@ -86,7 +87,7 @@ def test_the_report_rejects_an_unreadable_date(data_dir: Path, hmac_key: Path):
 def test_the_report_rejects_a_date_behind_today(data_dir: Path, hmac_key: Path):
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
 
-    report = build_report(snapshot, None, "01.01.2000")
+    report = build_report(snapshot, None, ProjectionInputs("01.01.2000"))
 
     assert report.then_lines() == [PAST_TARGET]
 
@@ -94,11 +95,15 @@ def test_the_report_rejects_a_date_behind_today(data_dir: Path, hmac_key: Path):
 def test_the_report_projects_from_the_snapshot(data_dir: Path, hmac_key: Path):
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
 
-    report = build_report(snapshot, progress(), "31.12.2999")
+    report = build_report(snapshot, progress(), ProjectionInputs("31.12.2999"))
 
     assert report.projection is not None
     assert report.projection.target == date(2999, 12, 31)
-    assert report.then_lines()[0].startswith("By 31.12.2999")
+    assert (
+        report.then_lines()[0] == "Prices: Tue/Wed/Thu cost 2, Mon/Fri/Sat/Sun cost 4."
+    )
+    assert report.then_lines()[1].startswith("By 31.12.2999")
+    assert report.goal_lines() == []
 
 
 def test_a_problem_free_report_with_no_projection_falls_back_to_the_generic_line():
@@ -134,7 +139,7 @@ def test_free_days_reach_the_projection(data_dir: Path, hmac_key: Path, monkeypa
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     monkeypatch.setattr(_status_projection.freedays, "is_free_day", lambda _day: True)
 
-    report = build_report(snapshot, None, "31.12.2999")
+    report = build_report(snapshot, None, ProjectionInputs("31.12.2999"))
 
     assert report.projection is not None
     assert report.projection.gated_days == 0

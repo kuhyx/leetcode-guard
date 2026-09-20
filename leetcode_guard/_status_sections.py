@@ -15,6 +15,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from leetcode_guard._daycost import CURRENT_PRICING, ORIGINAL_PRICING, REPRICE_DATE
 from leetcode_guard._debt import debt_summary
 from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._status_health import (
@@ -113,9 +114,9 @@ def _section_credits(parent: tk.Misc, config: LockConfig, full: FullStatus) -> N
     _row(
         parent,
         config,
-        "A weekday costs 1, Saturday and Sunday cost 2, plus 1 while any debt "
-        "is outstanding. A missed day is owed at its price. Credits never "
-        "expire and are not capped.",
+        f"{CURRENT_PRICING.describe()}, plus 1 while any debt is outstanding "
+        f"(before {REPRICE_DATE:%d.%m.%Y}: {ORIGINAL_PRICING.describe()}). A missed "
+        "day is owed at its price. Credits never expire and are not capped.",
         color=config.palette.muted,
         role="caption",
     )

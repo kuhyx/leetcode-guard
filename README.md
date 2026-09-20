@@ -12,15 +12,14 @@ A **derived-balance ledger**, never a stored counter.
 | | |
 |---|---|
 | One accepted LeetCode submission | **+1 credit** |
-| A weekday | **costs 1 credit** |
-| Saturday or Sunday | **costs 2 credits** |
+| Tuesday, Wednesday or Thursday | **costs 2 credits** |
+| Monday, Friday, Saturday or Sunday | **costs 4 credits** (always twice the base) |
 | A day the gate never charged | **owed** at that price -- debt |
 | Any day while debt is outstanding | **costs 1 more**, and that credit repays 1 |
 | Balance | `sum(credits) - sum(charges)`, recomputed every time |
 
-Credits are uncapped and fungible: solve three on Monday and Monday, Tuesday
-and Wednesday are all clear; Thursday locks again. A credit earned midweek
-spends fine on a Saturday, it just goes half as far.
+Credits are uncapped and fungible. Prices since 2026-09-21 (to clear every free
+Easy by 2027-05); earlier days keep the original 1 / 2 (Sat-Sun), so old debt holds.
 
 Two properties fall out of keying credits on LeetCode's own **submission id**
 rather than a time window:
@@ -32,9 +31,9 @@ rather than a time window:
 gate actually settled -- nothing is back-filled for days the PC was off. But
 from 2026-08-04 every past day with no charge that was not a declared free day
 is *owed* at its price, and each day costs one extra credit until the debt is
-gone: a weekday needs 2 solves instead of 1, a weekend day 3 instead of 2.
-Eight days away (Thu-Wed, with a weekend) is 10 credits, so ten surcharged
-days. Debt is derived from the calendar and the ledger every time and never
+gone: a Tue-Thu day needs 3 solves instead of 2, a doubled day 5 instead of 4.
+Eight days away (Thu-Wed) is 26 credits, so twenty-six surcharged days. Debt
+is derived from the calendar and the ledger every time and never
 stored; deleting the ledger makes every day since the epoch uncharged, so it
 grows the debt. Free days (`freedays mark`) must be declared in advance and
 are the only way to be away for free.
@@ -176,16 +175,19 @@ suggested problems.
 
 It also carries **Progress & projection**: solved / total per difficulty as
 your LeetCode profile reports them (premium problems included in the total),
-and a date entry — "how many will I have solved by dd.mm.yyyy" — assuming every
-gated day up to then is fed at its base price *and* the outstanding debt is
-cleared in full, minus whatever is banked. Future solves are assumed Easy →
+and one row of what-if controls: a Tue-Thu base price (doubled days follow,
+past days never re-price), absolute goals per difficulty, and a date. It
+assumes every gated day up to then is fed at that price *and* the debt is
+cleared in full, minus what is banked. With a goal set it also says when that
+price lands the goal (or how far short it falls) and the exact fractional
+price — plus its whole-number ceiling — that lands it on the date. Future solves are assumed Easy →
 Medium → Hard, the suggestion order, one new problem per credit. The line
 "the rules alone would demand N" is the honest smaller number: the mechanism
 repays at most one debt credit per gated day. The counts come from one public
 query, fetched on a background thread when the window opens or Refresh is
 pressed, and mirrored to `progress_cache.json` by every lock run and `--sync`.
 The gate never reads that file. Same table from the shell:
-`leetcode-guard --status --by 31.12.2026`.
+`leetcode-guard --status --by 31.12.2027 --price 2 --goal Easy=837`.
 
 It never writes ledger state and its one fetch never blocks — safe to open at
 any moment, including while the lock is up, and Escape works mid-fetch. It
@@ -206,6 +208,7 @@ python3 -m leetcode_guard --production # the real thing
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
 python3 -m leetcode_guard --status --by 31.12.2026  # + solved counts and a projection
+python3 -m leetcode_guard --status --by 31.12.2027 --price 1 --goal Easy=837  # what price lands the goal
 python3 -m leetcode_guard --probe      # live API data
 python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync
