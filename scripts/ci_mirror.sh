@@ -18,8 +18,9 @@
 #      suite mocks tkinter away, so without this a widget regression is green
 #      locally and red in CI -- exactly the gap this script exists to close.
 #
-# Wired as the pre-push hook, so a red result blocks the push before CI ever
-# sees it. Escape hatch for genuine emergencies: `git push --no-verify`.
+# Runs on demand (`scripts/check_gate_stamp.sh full`, pre-commit's manual
+# stage) and in CI. It left the pre-push path on 2026-09-20: 10+ minutes
+# per push under the resource cap, for work finish_auto.sh had just done.
 # ============================================================================
 
 set -euo pipefail
@@ -40,7 +41,7 @@ log() { printf 'ci-mirror: %s\n' "$1" >&2; }
 
 fail() {
     log "FAILED — $1"
-    log "CI would be red. Fix the above, or 'git push --no-verify' to override."
+    log "CI would be red. Fix the above before pushing."
     exit 1
 }
 
