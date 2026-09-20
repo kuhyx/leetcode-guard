@@ -103,27 +103,35 @@ def _entry(frame: tk.Misc, config: LockConfig, text: str, width: int) -> tk.Entr
     return entry
 
 
+def _input_frame(parent: tk.Misc, config: LockConfig) -> tk.Frame:
+    frame = tk.Frame(parent, bg=config.palette.bg)
+    frame.pack(fill="x", padx=config.space("lg"), pady=config.space("xs"))
+    return frame
+
+
 def _entry_row(
     parent: tk.Misc, config: LockConfig, controls: ProjectionControls
 ) -> None:
-    """Price, the three goals, the date and the button, on one line.
+    """Price and the three goals on one line; the date and the button on the next.
 
-    Reads the entries only inside ``submit``, at the moment they still exist.
+    Two lines because Tk clips rather than wraps: on one line the button sat
+    off the right edge at the window's minimum width. Reads the entries only
+    inside ``submit``, at the moment they still exist.
     """
-    frame = tk.Frame(parent, bg=config.palette.bg)
-    frame.pack(fill="x", padx=config.space("lg"), pady=config.space("xs"))
     inputs = controls.inputs
-    _label(frame, config, "Tue-Thu price")
-    price = _entry(frame, config, inputs.price_text, _COUNT_WIDTH)
-    _label(frame, config, "goal")
+    first = _input_frame(parent, config)
+    _label(first, config, "Tue-Thu price")
+    price = _entry(first, config, inputs.price_text, _COUNT_WIDTH)
+    _label(first, config, "goal")
     goals = {}
     for name in DIFFICULTIES:
-        _label(frame, config, name)
+        _label(first, config, name)
         goals[name] = _entry(
-            frame, config, inputs.goal_texts.get(name, ""), _COUNT_WIDTH
+            first, config, inputs.goal_texts.get(name, ""), _COUNT_WIDTH
         )
-    _label(frame, config, "by")
-    target = _entry(frame, config, inputs.target_text, _DATE_WIDTH)
+    second = _input_frame(parent, config)
+    _label(second, config, "by")
+    target = _entry(second, config, inputs.target_text, _DATE_WIDTH)
 
     def submit(_event: object = None) -> None:
         controls.on_project(
@@ -137,7 +145,7 @@ def _entry_row(
     for entry in (price, *goals.values(), target):
         entry.bind("<Return>", submit)
     make_button(
-        frame, config, "Project", submit, ButtonStyle(variant="secondary")
+        second, config, "Project", submit, ButtonStyle(variant="secondary")
     ).pack(side="left")
 
 
