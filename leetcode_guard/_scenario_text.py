@@ -29,7 +29,7 @@ NO_PRICED_DAY = (
 
 
 def prices_line(base_cost: int) -> str:
-    """``Prices: Tue/Wed/Thu cost 2, Mon/Fri/Sat/Sun cost 4.``."""
+    """``Prices: Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2.``."""
     return f"Prices: {CURRENT_PRICING.with_base(base_cost).describe()}."
 
 

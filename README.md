@@ -12,14 +12,14 @@ A **derived-balance ledger**, never a stored counter.
 | | |
 |---|---|
 | One accepted LeetCode submission | **+1 credit** |
-| Tuesday, Wednesday or Thursday | **costs 2 credits** |
-| Monday, Friday, Saturday or Sunday | **costs 4 credits** (always twice the base) |
+| Tuesday, Wednesday or Thursday | **costs 1 credit** |
+| Monday, Friday, Saturday or Sunday | **costs 2 credits** (always twice the base) |
 | A day the gate never charged | **owed** at that price -- debt |
 | Any day while debt is outstanding | **costs 1 more**, and that credit repays 1 |
 | Balance | `sum(credits) - sum(charges)`, recomputed every time |
 
-Credits are uncapped and fungible. Prices since 2026-09-21 (to clear every free
-Easy by 2027-05); earlier days keep the original 1 / 2 (Sat-Sun), so old debt holds.
+Credits are uncapped and fungible. Mon and Fri doubled from 2026-09-21 (lands
+the 837 free Easy on 2028-01-21, an accepted 3 weeks late); old debt holds.
 
 Two properties fall out of keying credits on LeetCode's own **submission id**
 rather than a time window:
@@ -31,8 +31,8 @@ rather than a time window:
 gate actually settled -- nothing is back-filled for days the PC was off. But
 from 2026-08-04 every past day with no charge that was not a declared free day
 is *owed* at its price, and each day costs one extra credit until the debt is
-gone: a Tue-Thu day needs 3 solves instead of 2, a doubled day 5 instead of 4.
-Eight days away (Thu-Wed) is 26 credits, so twenty-six surcharged days. Debt
+gone: a Tue-Thu day needs 2 solves instead of 1, a doubled day 3 instead of 2.
+Eight days away (Thu-Wed) is 13 credits, so thirteen surcharged days. Debt
 is derived from the calendar and the ledger every time and never
 stored; deleting the ledger makes every day since the epoch uncharged, so it
 grows the debt. Free days (`freedays mark`) must be declared in advance and
@@ -187,7 +187,7 @@ repays at most one debt credit per gated day. The counts come from one public
 query, fetched on a background thread when the window opens or Refresh is
 pressed, and mirrored to `progress_cache.json` by every lock run and `--sync`.
 The gate never reads that file. Same table from the shell:
-`leetcode-guard --status --by 31.12.2027 --price 2 --goal Easy=837`.
+`leetcode-guard --status --by 31.12.2027 --price 1 --goal Easy=837`.
 
 It never writes ledger state and its one fetch never blocks — safe to open at
 any moment, including while the lock is up, and Escape works mid-fetch. It

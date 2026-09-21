@@ -71,6 +71,6 @@ def test_projection_inputs_mirror_the_flags():
         ProjectionInputs("01.02.2030", "4", {"Easy": "1", "Hard": " 2 "})
     )
     defaults = projection_inputs(None, None, None)
-    assert defaults.price_text == "2"
+    assert defaults.price_text == "1"
     assert defaults.goal_texts == {}
     assert projection_inputs(None, None, ["Medium"]).goal_texts == {"Medium": "?"}

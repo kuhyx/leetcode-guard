@@ -8,9 +8,9 @@ charging it at the same hour on Monday -- neither of which is a weekend as the
 user experiences one. UTC is used for ``created_at`` and HLC ordering, and
 nowhere else.
 
-**Doubled days cost exactly twice the base.** Since 2026-09-21 the base is 2
-and Monday, Friday, Saturday and Sunday are doubled (4); before that the base
-was 1 and only Saturday and Sunday doubled. The factor is structural
+**Doubled days cost exactly twice the base.** Since 2026-09-21 Monday, Friday,
+Saturday and Sunday are doubled (2) around a base of 1; before that only
+Saturday and Sunday doubled. The factor is structural
 (:attr:`Pricing.doubled_cost`), so the base is the one knob and "times two"
 cannot drift back into "plus one". Credits stay fungible: one earned on
 Wednesday can be spent on Saturday, it just goes half as far.
@@ -84,9 +84,11 @@ class Pricing:
 ORIGINAL_PRICING: Final = Pricing(base_cost=1, doubled_days=frozenset({5, 6}))
 """Weekdays 1, Saturday and Sunday 2 -- the prices from the gate's start."""
 
-CURRENT_PRICING: Final = Pricing(base_cost=2, doubled_days=frozenset({0, 4, 5, 6}))
-"""Tue/Wed/Thu 2, Mon/Fri/Sat/Sun 4 -- chosen 2026-09-20 to clear every free
-Easy problem by 2027-05 at the latest."""
+CURRENT_PRICING: Final = Pricing(base_cost=1, doubled_days=frozenset({0, 4, 5, 6}))
+"""Tue/Wed/Thu 1, Mon/Fri/Sat/Sun 2. Chosen 2026-09-21 knowing it lands the
+837 free Easy problems on 2028-01-21, three weeks past the 31.12.2027 target
+-- a base of 2 would have landed in 2027-05 and then doubled every day for
+seven months. The 33-problem gap is accepted, not overlooked."""
 
 REPRICE_DATE: Final = date(2026, 9, 21)
 """First day :data:`CURRENT_PRICING` applies. Earlier days keep

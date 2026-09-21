@@ -39,10 +39,8 @@ if TYPE_CHECKING:
 
 SURCHARGE: Final = 1
 """How many extra credits a day costs while debt is outstanding. One, by
-decision, whatever the day's own price: a Tue-Thu day goes from 2 to 3 and a
-doubled day from 4 to 5 until the account is back on track. Left at one when
-the prices doubled on 2026-09-21, so a missed day now takes longer to repay
-than it did -- an eight-day absence is ~26 credits of debt, ~26 days."""
+decision, whatever the day's own price: a Tue-Thu day goes from 1 to 2 and a
+doubled day from 2 to 3 until the account is back on track."""
 
 
 @dataclass(frozen=True)

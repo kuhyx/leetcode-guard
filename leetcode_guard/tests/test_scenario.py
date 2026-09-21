@@ -6,6 +6,7 @@ nothing banked. Worked by hand first: 201 Tue-Thu days plus 266 doubled days
 between 21.09.2026 and 31.12.2027, so price 1 forces 733 + 13 = 746 of the 779
 needed and lands on 21.01.2028; the exact price is 766/733; price 2 lands on
 22.05.2027. The code must reproduce those figures, not the other way round.
+kuhy chose price 1 on 2026-09-21, accepting the three-week miss.
 """
 
 from __future__ import annotations
@@ -69,7 +70,7 @@ def test_the_original_question_at_price_one():
     assert scenario.minimal_lands_on == date(2027, 5, 22)
 
 
-def test_the_original_question_at_the_chosen_price_two():
+def test_the_original_question_at_price_two():
     scenario, _ = worked(2)
 
     assert scenario.forced == 1479

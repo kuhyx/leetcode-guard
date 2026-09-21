@@ -42,7 +42,7 @@ def snapshot_for(data_dir: Path, hmac_key: Path):
 
 
 def controls_for(snapshot, target="31.12.2999", **extra) -> ProjectionControls:
-    inputs = ProjectionInputs(target_text=target, price_text=extra.pop("price", "2"))
+    inputs = ProjectionInputs(target_text=target, price_text=extra.pop("price", "1"))
     return ProjectionControls(
         inputs=inputs,
         report=build_report(snapshot, progress(), inputs),
@@ -120,10 +120,10 @@ def test_the_entries_hand_their_text_to_on_project_on_enter_and_on_the_button(
     )
 
     price, easy, medium, hard, target = entries
-    assert [e.typed for e in entries] == ["2", "", "", "", "31.12.2999"]
+    assert [e.typed for e in entries] == ["1", "", "", "", "31.12.2999"]
     target.typed = "26.09.2026"
     easy.typed = "837"
-    price.typed = "1"
+    price.typed = "3"
     on_return = next(
         call.args[1]
         for call in medium.bind.call_args_list
@@ -138,7 +138,7 @@ def test_the_entries_hand_their_text_to_on_project_on_enter_and_on_the_button(
     project_button()
 
     expected = ProjectionInputs(
-        "26.09.2026", "1", {"Easy": "837", "Medium": "", "Hard": ""}
+        "26.09.2026", "3", {"Easy": "837", "Medium": "", "Hard": ""}
     )
     assert asked == [expected, expected]
     assert hard.bind.called
@@ -162,7 +162,7 @@ def test_the_window_reprojects_for_a_new_date_and_keeps_it_across_refresh(
         on_close=lambda: None,
     )
     assert window.inputs.target_text.startswith("31.12.")
-    assert window.inputs.price_text == "2"
+    assert window.inputs.price_text == "1"
 
     window.project(ProjectionInputs("31.12.2999", "3"))
     assert any(t.startswith("By 31.12.2999") for t in label_texts(tk_mock))

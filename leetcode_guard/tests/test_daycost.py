@@ -45,17 +45,17 @@ def test_day_cost_across_a_full_week_before_the_reprice(day: date, expected: int
 @pytest.mark.parametrize(
     ("day", "expected"),
     [
-        (date(2026, 9, 21), 4),  # Monday -- the first repriced day
-        (date(2026, 9, 22), 2),
-        (date(2026, 9, 23), 2),
-        (date(2026, 9, 24), 2),
-        (date(2026, 9, 25), 4),  # Friday
-        (date(2026, 9, 26), 4),  # Saturday
-        (date(2026, 9, 27), 4),  # Sunday
+        (date(2026, 9, 21), 2),  # Monday -- the first repriced day
+        (date(2026, 9, 22), 1),
+        (date(2026, 9, 23), 1),
+        (date(2026, 9, 24), 1),
+        (date(2026, 9, 25), 2),  # Friday
+        (date(2026, 9, 26), 2),  # Saturday
+        (date(2026, 9, 27), 2),  # Sunday
     ],
 )
 def test_day_cost_across_the_first_repriced_week(day: date, expected: int):
-    """Tue-Thu cost 2, Mon/Fri/Sat/Sun cost twice that, from 2026-09-21."""
+    """Tue-Thu cost 1, Mon/Fri/Sat/Sun cost twice that, from 2026-09-21."""
     assert day_cost(day) == expected
 
 
@@ -86,10 +86,11 @@ def test_what_if_reprices_only_the_current_era():
     assert cost(date(2026, 9, 21)) == 14
     assert cost(date(2026, 9, 20)) == day_cost(date(2026, 9, 20)) == 2
     assert cost(date(2026, 8, 12)) == 1
+    assert day_cost(date(2026, 9, 22)) == 1
 
 
 def test_describe_names_the_days_on_each_side():
-    assert CURRENT_PRICING.describe() == "Tue/Wed/Thu cost 2, Mon/Fri/Sat/Sun cost 4"
+    assert CURRENT_PRICING.describe() == "Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2"
     assert ORIGINAL_PRICING.describe() == "Mon/Tue/Wed/Thu/Fri cost 1, Sat/Sun cost 2"
     assert Pricing(3, frozenset()).describe() == (
         "Mon/Tue/Wed/Thu/Fri/Sat/Sun cost 3,  cost 6"
