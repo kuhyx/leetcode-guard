@@ -202,4 +202,31 @@ def test_without_a_free_day_the_normal_rules_still_apply(hmac_key: Path):
     decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=False)
 
     assert decision.state is GateState.LOCKED_INSUFFICIENT
+
+
+def test_a_workday_penalty_removes_tuesdays_discount(hmac_key: Path):
+    decision = decide(
+        Ledger(), day=TUESDAY, now=NOW, key_file=hmac_key, workday_penalty=True
+    )
+
+    assert decision.cost == 2
+    assert "Tuesday costs 2" in decision.reason
+
+
+def test_no_workday_penalty_keeps_tuesdays_discount(hmac_key: Path):
+    decision = decide(
+        Ledger(), day=TUESDAY, now=NOW, key_file=hmac_key, workday_penalty=False
+    )
+
+    assert decision.cost == 1
+
+
+def test_a_workday_penalty_on_an_already_doubled_day_changes_nothing(
+    hmac_key: Path,
+):
+    decision = decide(
+        Ledger(), day=SATURDAY, now=NOW, key_file=hmac_key, workday_penalty=True
+    )
+
+    assert decision.cost == 2
     assert decision.locked

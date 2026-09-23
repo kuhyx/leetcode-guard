@@ -79,11 +79,11 @@ LEDGER_FILE: Final = DATA_DIR / "ledger.json"
 # its ledger would skip peers whose data had been lost.
 SYNC_STATE_FILE: Final = DATA_DIR / "sync_state.json"
 
-MORNING_SESSION_FILE: Final = (
-    Path.home() / ".local" / "state" / "wake_alarm" / "morning_session.json"
-)
-"""wake-alarm's signed copy of the phone's morning session; a completed morning
-defers this gate until its ``exempt_until``. Keep in step with wake_alarm."""
+_WAKE_ALARM_STATE_DIR: Final = Path.home() / ".local" / "state" / "wake_alarm"
+MORNING_SESSION_FILE: Final = _WAKE_ALARM_STATE_DIR / "morning_session.json"
+"""wake-alarm's signed copy of the phone's morning session; deferral carrot."""
+WORKDAY_PENALTY_FILE: Final = _WAKE_ALARM_STATE_DIR / "workday_penalty.json"
+"""A missed Tue/Wed/Thu ring costs tomorrow's discount; see wake_alarm."""
 DEMO_LEDGER_FILE: Final = DATA_DIR / "ledger_demo.json"
 """Wiped and re-seeded on every demo run. Never the real ledger: a demo must
 not be able to mint a credit, and must not be able to spend one either."""

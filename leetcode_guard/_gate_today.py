@@ -14,6 +14,7 @@ import freedays
 
 from leetcode_guard._debt import NO_DEBT, compute_debt
 from leetcode_guard._gate import GateDecision, decide
+from leetcode_guard._workday_penalty import workday_penalty_for
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -53,4 +54,5 @@ def decide_today(
         key_file=key_file,
         free_day=freedays.is_free_day(day),
         debt=debt,
+        workday_penalty=workday_penalty_for(day),
     )

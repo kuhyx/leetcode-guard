@@ -57,6 +57,9 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # The morning-session carrot: a test must never defer on the
         # developer's real morning.
         "MORNING_SESSION_FILE": data / "morning_session.json",
+        # The workday-stick penalty: a test must never price a day off the
+        # developer's real penalty state.
+        "WORKDAY_PENALTY_FILE": data / "workday_penalty.json",
     }
     for name, value in overrides.items():
         monkeypatch.setattr(_constants, name, value, raising=True)

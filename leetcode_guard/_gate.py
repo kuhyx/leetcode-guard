@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._balance import Balance, compute_balance
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import GATE_START_DATE
-from leetcode_guard._daycost import day_cost, day_key
+from leetcode_guard._daycost import day_cost, day_key, pricing_for
 from leetcode_guard._debt import NO_DEBT, Debt, cost_phrase
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
@@ -92,6 +92,7 @@ def decide(
     key_file: Path | None = None,
     free_day: bool = False,
     debt: Debt = NO_DEBT,
+    workday_penalty: bool = False,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
@@ -112,12 +113,17 @@ def decide(
         debt: The missed-day position, computed by the caller for the same
             reason. While anything is outstanding today costs one credit more,
             and that credit is the repayment.
+        workday_penalty: Whether a missed wake-alarm ring on a prior
+            Tue/Wed/Thu cost ``day`` its own Tue/Wed/Thu discount. Losing the
+            discount, not an added surcharge -- a day already priced at the
+            doubled rate (Fri, from a Thursday miss) is unaffected.
 
     Returns:
         The decision. Nothing is written.
     """
     balance = compute_balance(ledger)
-    cost = day_cost(day) + debt.surcharge
+    base_cost = pricing_for(day).doubled_cost if workday_penalty else day_cost(day)
+    cost = base_cost + debt.surcharge
     costs = cost_phrase(day, cost, debt)
 
     verdict = check_clock(ledger, day=day)
