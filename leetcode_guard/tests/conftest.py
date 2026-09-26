@@ -147,11 +147,11 @@ def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     """
     import freedays._api
 
-    monkeypatch.setattr(
-        freedays._api,
-        "resolve_paths",
-        lambda paths: paths or freedays.Paths.under(tmp_path / "freedays"),
-    )
+    # Built once: the projection tests ask is_free_day about ~700k days, and
+    # rebuilding this (frozen, side-effect-free) bundle per call was a large
+    # share of the suite's CI time.
+    isolated = freedays.Paths.under(tmp_path / "freedays")
+    monkeypatch.setattr(freedays._api, "resolve_paths", lambda paths: paths or isolated)
 
 
 @pytest.fixture
