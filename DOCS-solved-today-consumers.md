@@ -6,7 +6,8 @@ and the loopback endpoint in `leetcode_guard._web_server`. Both publish a
 
 Two programs consume the same fact. `screen-locker` moves the nightly shutdown
 **+1h** later on a day with an accepted submission (flat, once per day, on top
-of its 20:00 base and the workout bonuses, capped at 23:00). It reads
+of its base -- 20:00, 19:00 from 2026-10-01 -- and the workout bonuses,
+capped at 23:00). It reads
 `ledger.json` directly in `screen_locker/_leetcode_bonus.py` and fails closed;
 leetcode-guard never writes the shutdown config itself.
 
