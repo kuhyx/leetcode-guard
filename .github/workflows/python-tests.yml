@@ -19,17 +19,34 @@ jobs:
 
       # conftest.py imports tkinter at module scope to keep the real
       # `tk.TclError` while replacing the rest of the module with a mock, so
-      # even the fully-mocked suite needs tkinter present.
-      - name: Install system tkinter
+      # even the fully-mocked suite needs tkinter present. setup-python's
+      # interpreter already ships it on ubuntu-latest (the pre-commit job's
+      # screens-fit hook builds real Tk widgets with no apt step at all), so
+      # the 12 s apt install only runs if that ever stops being true.
+      - name: Ensure tkinter
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-tk tk-dev
+          python -c 'import tkinter' || {
+            sudo apt-get update
+            sudo apt-get install -y python3-tk tk-dev
+          }
+
+      # uv with a cached wheel store installs requirements.txt in seconds;
+      # plain pip took ~24 s here.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: requirements.txt
+          cache-suffix: test
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv pip install --system -r requirements.txt
 
+      # -n auto spreads the suite over every runner core (pytest-xdist is in
+      # requirements.txt); pytest-cov merges the workers' coverage. The 100%
+      # bar, --strict-* and the coverage flags all live in pyproject addopts;
+      # -q only cancels its -v (one line per test was ~900 lines of log).
       - name: Run tests with coverage
-        run: python -m pytest -v
+        run: python -m pytest -n auto -q
 
   # The suite replaces the whole `tk` module so it can never reach a display,
   # which means the real widget tree is never exercised there. Every UI bug
@@ -47,14 +64,29 @@ jobs:
         with:
           python-version: "3.x"
 
+      # xvfb-run and setup-python's tkinter are both already on ubuntu-latest
+      # (screens-fit in the pre-commit job re-execs under xvfb-run with no apt
+      # step), so the apt install that made up most of a 63 s step only runs
+      # if either goes missing.
+      - name: Ensure Xvfb and tkinter
+        run: |
+          if ! python -c 'import tkinter' || ! command -v xvfb-run; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb python3-tk tk-dev
+          fi
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: requirements.txt
+          cache-suffix: real-tk-render
+
+      # screenshot_states.py imports leetcode_guard directly rather than
+      # through pytest, which would have put the rootdir on sys.path.
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb python3-tk tk-dev
-          pip install -r requirements.txt
-          # screenshot_states.py imports leetcode_guard directly rather than
-          # through pytest, which would have put the rootdir on sys.path.
-          pip install -e . --no-deps
+          uv pip install --system -r requirements.txt
+          uv pip install --system -e . --no-deps
 
       - name: Every lock state builds real Tk widgets
         run: |

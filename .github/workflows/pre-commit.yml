@@ -7,8 +7,35 @@ on:
     branches: [main]
 
 jobs:
+  # mypy and pylint check the whole repo and were most of a single ~80 s job
+  # (35 s of it a pip install of requirements.txt), so each gets its own
+  # runner and the other hooks share a third; the workflow takes as long as
+  # the slowest group rather than the sum.
   pre-commit:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # mypy and pylint run in their own hook envs (additional_dependencies),
+          # so those groups need nothing but pre-commit itself.
+          - group: mypy
+            hooks: mypy
+            skip: ""
+            install: pre-commit
+          - group: pylint
+            hooks: pylint
+            skip: ""
+            install: pre-commit
+          # `rest` holds the language: system hooks. screens-fit imports
+          # gatelock and leetcode_guard, whose pins live in requirements.txt;
+          # dependency-freshness needs pyyaml and packaging, which that file
+          # already pulls in (via pre-commit and pytest).
+          - group: rest
+            hooks: ""
+            skip: mypy,pylint
+            install: -r requirements.txt
+    name: pre-commit (${{ matrix.group }})
     steps:
       - uses: actions/checkout@v4
 
@@ -25,9 +52,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+      # One uv cache per group: the groups install different sets, and a
+      # shared key would hold whichever saved first.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: requirements.txt
+          cache-suffix: ${{ matrix.group }}
+
       # The `ci-mirror` hook is pre-push only, so it does not run here --
       # which is deliberate. It builds its own venv and runs the whole suite;
       # letting it fire inside CI would nest a second install of everything.
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - uses: pre-commit/action@v3.0.1
+      - name: Install dependencies (${{ matrix.group }})
+        run: uv pip install --system ${{ matrix.install }}
+
+      # One cache per group: a shared key would hold whichever group saved
+      # first, and the others would rebuild their hook envs on every run.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.group }}-${{ env.pythonLocation }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: pre-commit run (${{ matrix.group }})
+        env:
+          SKIP: ${{ matrix.skip }}
+        run: pre-commit run ${{ matrix.hooks }} --all-files --show-diff-on-failure --color=always
