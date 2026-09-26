@@ -45,8 +45,11 @@ jobs:
       # requirements.txt); pytest-cov merges the workers' coverage. The 100%
       # bar, --strict-* and the coverage flags all live in pyproject addopts;
       # -q only cancels its -v (one line per test was ~900 lines of log).
+      # --dist worksteal: eleven projection tests hold ~80% of the suite's
+      # time, and the default `load` batches can leave several on one worker
+      # while the others sit idle; stealing rebalances that tail.
       - name: Run tests with coverage
-        run: python -m pytest -n auto -q
+        run: python -m pytest -n auto -q --dist worksteal
 
   # The suite replaces the whole `tk` module so it can never reach a display,
   # which means the real widget tree is never exercised there. Every UI bug
