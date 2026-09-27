@@ -29,6 +29,8 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Final
 
+import freedays
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -84,7 +86,7 @@ class Pricing:
 ORIGINAL_PRICING: Final = Pricing(base_cost=1, doubled_days=frozenset({5, 6}))
 """Weekdays 1, Saturday and Sunday 2 -- the prices from the gate's start."""
 
-CURRENT_PRICING: Final = Pricing(base_cost=1, doubled_days=frozenset({0, 4, 5, 6}))
+CURRENT_PRICING: Final = Pricing(base_cost=1, doubled_days=freedays.NON_WORKDAYS)
 """Tue/Wed/Thu 1, Mon/Fri/Sat/Sun 2. Chosen 2026-09-21 knowing it lands the
 837 free Easy problems on 2028-01-21, three weeks past the 31.12.2027 target
 -- a base of 2 would have landed in 2027-05 and then doubled every day for
