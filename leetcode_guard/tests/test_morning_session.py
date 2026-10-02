@@ -53,70 +53,30 @@ def _today() -> str:
     return datetime.now(tz=UTC).astimezone().strftime("%Y-%m-%d")
 
 
-class TestVerdict:
+class TestBinding:
+    """The verdict rules are gatelock's; this checks leetcode-guard's wiring."""
+
     def test_completed_defers_until_the_signed_instant(self) -> None:
         _write(_entry())
         assert defer_for_morning_session(NOW) == (
             "morning session completed, no gate until 11:00"
         )
 
-    def test_expired_absent_or_unreadable_exemptions_defer_nothing(self) -> None:
+    def test_expired_or_unsigned_defers_nothing(self) -> None:
         _write(_entry())
         assert defer_for_morning_session(NOW + timedelta(hours=3)) is None
-        _write(_entry("failed", exempt_until=None))
-        assert defer_for_morning_session(NOW) is None
-        _write({**_entry(), "exempt_until": "later"})
+        _write(_entry(), sign=False)
         assert defer_for_morning_session(NOW) is None
 
-    def test_yesterday_missing_tampered_and_broken_defer_nothing(self) -> None:
-        _write(_entry(date="2026-09-18"))
-        assert defer_for_morning_session(NOW) is None
-        path = _write(_entry(), sign=False)
-        assert defer_for_morning_session(NOW) is None
-        path.write_text("[1]")
-        assert defer_for_morning_session(NOW) is None
-        path.write_text("{")
-        assert defer_for_morning_session(NOW) is None
-        path.unlink()
-        assert defer_for_morning_session(NOW) is None
-        path.mkdir()
-        assert defer_for_morning_session(NOW) is None
-
-
-class TestBootRetry:
-    def test_waits_inside_the_window_then_warns(
-        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    def test_the_retry_budget_is_leetcode_guards_own(
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         naps: list[float] = []
-        monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 10.0)
-        # The window is re-checked against the real clock after each nap.
-        monkeypatch.setattr(_morning_session, "MORNING_WINDOW", ((0, 0), (23, 59)))
         assert defer_for_morning_session(NOW, wait=True, sleep=naps.append) is None
-        assert naps == [5.0, 5.0]
-        assert "is wake-alarm-session.timer running" in caplog.text
-
-    def test_a_file_landing_mid_wait_is_honoured(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 10.0)
-        monkeypatch.setattr(_morning_session, "MORNING_WINDOW", ((0, 0), (23, 59)))
-
-        def land(_seconds: float) -> None:
-            _write(_entry(date=_today(), exempt_until="23:59"))
-
-        assert defer_for_morning_session(NOW, wait=True, sleep=land) is not None
-
-    def test_never_waits_outside_the_window_or_without_wait(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        naps: list[float] = []
-        monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 10.0)
-        afternoon = NOW.replace(hour=14)
-        assert (
-            defer_for_morning_session(afternoon, wait=True, sleep=naps.append) is None
-        )
-        assert defer_for_morning_session(NOW, sleep=naps.append) is None
         assert naps == []
+        monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 10.0)
+        assert defer_for_morning_session(NOW, wait=True, sleep=naps.append) is None
+        assert naps
 
 
 class TestArmingRun:
