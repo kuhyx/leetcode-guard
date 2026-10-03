@@ -28,6 +28,8 @@ class ProblemLine:
 
     label: str
     url: str
+    slug: str = ""
+    """Which problem this is, so rows revealed by scrolling can be verified."""
 
 
 @dataclass(frozen=True)
@@ -86,6 +88,7 @@ def build_problem_lines(
                     f"{problem.ac_rate:.1f}% acceptance"
                 ),
                 url=problem.url,
+                slug=problem.title_slug,
             )
         )
     return tuple(lines), tuple(dropped)

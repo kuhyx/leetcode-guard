@@ -12,9 +12,10 @@ reason that outranks flicker: a destroy/rebuild opens a window, however short,
 in which no ``Open`` button exists on screen, and "the lock must always offer a
 way to do the thing it demands" is the 2026-08-05 rule.
 
-Rows only ever empty out, never grow: the solved set grows monotonically and
-the pool is fixed for the life of the window. So surplus rows are hidden from
-the tail and never need re-showing in the middle of the list.
+Rows are only ever *added* by scrolling (``_view_scroll.grow_rows``), at the
+tail, from the lines painted here. A repaint never adds or removes any: the
+solved set grows monotonically and the pool is fixed for the life of the
+window, so surplus rows are hidden from the tail and never need re-showing.
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
         view.balance_line.configure(text=model.balance_line)
         view.status_line.configure(text=model.status_line)
         view.notes_label.configure(text="\n".join(model.notes))
+        view.lines = model.problems
         _apply_problem_rows(view, model.problems)
         _apply_escape_visibility(view, model)
         count += 1

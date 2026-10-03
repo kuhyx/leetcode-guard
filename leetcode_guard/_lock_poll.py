@@ -12,7 +12,6 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Final
 
-from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._daycost import local_today
 from leetcode_guard._escape_flow import is_offerable
 from leetcode_guard._gate import apply_decision
@@ -69,6 +68,9 @@ class PollMixin:
     _incident_form_due: Callable[[], bool]
     _handle_outage: Callable[[], None]
     _end_study: Callable[[], None]
+    _end_burst: Callable[[], None]
+    _refresh_strip: Callable[[], None]
+    _last_probe: SolveProbe
     clear_outage: Callable[[], None]
     close: Callable[[], None]
 
@@ -107,7 +109,8 @@ class PollMixin:
             self._deps.auth,
             probe,
             checked_at=self._deps.moment(),
-            limit=PROBLEM_DISPLAY_LIMIT,
+            # Every unsolved problem: the surface scrolls (``_view_scroll``).
+            limit=len(self._deps.pool.problems),
             show_escape=self._should_offer_escape(),
             solved_slugs=self._solved_slugs(probe),
         )
@@ -171,7 +174,12 @@ class PollMixin:
                 submissions=(),
                 reason="the solve check crashed -- see the log",
             )
-        self._poller.state.record(usable=probe.status is ProbeStatus.OK)
+        usable = probe.status is ProbeStatus.OK
+        if usable or not self._poller.last_was_poke:
+            # A failed *extra* probe is not blind time: blind seconds are
+            # counted in poll intervals, so letting a burst of nudges count
+            # would buy the escape hatch in seconds.
+            self._poller.state.record(usable=usable)
         if probe.status is ProbeStatus.OK:
             self.clear_outage()
         elif self._blind_for_long_enough():
@@ -189,6 +197,8 @@ class PollMixin:
                 key_file=self._deps.key_file,
             )
             commit_harvest(self._ledger, result, self._deps.ledger_path)
+            if result.gained:
+                self._end_burst()
 
         decision = self._decision()
         if not decision.locked:
@@ -197,8 +207,10 @@ class PollMixin:
             self._release(probe)
             return
 
+        self._last_probe = probe
         self._model = self._build_model(probe)
         apply_viewmodel(self._views.values(), self._model)
+        self._refresh_strip()
 
     def _release(self, probe: SolveProbe) -> None:
         """Show the unlocked screen briefly, then let go.

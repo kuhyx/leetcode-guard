@@ -11,16 +11,24 @@ accent fill.
 from __future__ import annotations
 
 import tkinter as tk
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
+
+from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from gatelock import LockConfig
 
-    from leetcode_guard._viewmodel import ViewModel
+    from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
 _PAD = 16
+
+INITIAL_ROWS: Final = 2 * PROBLEM_DISPLAY_LIMIT
+"""Rows built up front: the visible eight plus one batch to scroll into."""
+
+ROW_BATCH: Final = PROBLEM_DISPLAY_LIMIT
+"""Rows added each time the list is scrolled near its end."""
 
 NO_PROBLEMS_TEXT = "Solve any LeetCode problem -- any accepted submission counts."
 """Shown when there is nothing to suggest.
@@ -36,13 +44,18 @@ def build_problem_rows(
     config: LockConfig,
     model: ViewModel,
     on_open: Callable[[str], None] | None,
+    *,
+    bind: Callable[[Any], None] | None = None,
 ) -> tuple[list[Any], list[Any]]:
-    """Render the suggestion list, or a stand-in when there isn't one.
+    """Render the first rows of the suggestion list, or a stand-in.
 
     Each problem is one row: its title on the left, a button that opens it on
     the right. The raw URL is deliberately *not* printed any more -- it was only
     ever there because there was nothing to click, and dropping that second line
     is what buys the vertical room the break-glass block needs.
+
+    Only :data:`INITIAL_ROWS` are built; the rest arrive through
+    :func:`append_rows` as the list is scrolled (``_view_scroll``).
 
     Returns:
         The label widgets and the Open buttons, in list order.
@@ -58,10 +71,34 @@ def build_problem_rows(
         )
         placeholder.pack(fill="x", padx=_PAD, pady=_PAD // 2)
         return [placeholder], []
+    return append_rows(
+        parent, config, model.problems[:INITIAL_ROWS], on_open, bind=bind
+    )
 
+
+def append_rows(
+    parent: tk.Misc,
+    config: LockConfig,
+    lines: tuple[ProblemLine, ...],
+    on_open: Callable[[str], None] | None,
+    *,
+    bind: Callable[[Any], None] | None = None,
+) -> tuple[list[Any], list[Any]]:
+    """Build one row per line under ``parent``.
+
+    Args:
+        parent: The scrolling frame the rows stack in.
+        config: Fonts and palette.
+        lines: What the new rows show.
+        on_open: The Open handler, or ``None`` for a list without buttons.
+        bind: Called on every new widget, so the wheel scrolls over it.
+
+    Returns:
+        The new labels and buttons, in list order.
+    """
     labels: list[Any] = []
     buttons: list[Any] = []
-    for line in model.problems:
+    for line in lines:
         row = tk.Frame(parent, bg=config.palette.field_bg)
         row.pack(fill="x", padx=_PAD, pady=_PAD // 4)
         label = tk.Label(
@@ -75,6 +112,7 @@ def build_problem_rows(
         )
         label.pack(side="left", fill="x", expand=True)
         labels.append(label)
+        widgets: list[Any] = [row, label]
         if on_open is not None:
             button = tk.Button(
                 row,
@@ -91,4 +129,8 @@ def build_problem_rows(
             )
             button.pack(side="right", padx=_PAD // 2)
             buttons.append(button)
+            widgets.append(button)
+        if bind is not None:
+            for widget in widgets:
+                bind(widget)
     return labels, buttons

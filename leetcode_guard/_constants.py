@@ -212,11 +212,11 @@ piece that meaningfully raises the API budget (one request each, on top of the
 POLL_INTERVAL_MS_PRODUCTION: Final = 30_000
 POLL_INTERVAL_MS_DEMO: Final = 10_000
 
-POLL_DRAIN_MS: Final = 200
-"""How often the Tk thread checks whether the in-flight network future has
-finished. Network work never runs on the Tk thread: a synchronous request
-inside an ``after`` callback would freeze a globally-grabbed lock for the whole
-timeout, which is indistinguishable from a hang."""
+POLL_DRAIN_MS: Final = 50
+"""How often the Tk thread checks for a finished future or a pending poke. It is
+paid twice on the browser-nudge path (notice the poke, notice the answer), whose
+budget is one second end to end. Network work never runs on the Tk thread: a
+request inside ``after`` would freeze a grabbed lock, which looks like a hang."""
 
 # --------------------------------------------------------------------------
 # Failure policy

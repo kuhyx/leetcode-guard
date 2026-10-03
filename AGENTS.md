@@ -68,10 +68,10 @@ lock" is pressed (why, and the warning on both transitions:
 `DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; no
 unit test can, because a mocked root reports success either way.
 
-**The suggestion list repaints live.** A solve mid-lock frees its slot and the
-next *pre-verified* candidate moves up — hence `SUGGESTION_COUNT` (14) over
-`PROBLEM_DISPLAY_LIMIT` (8). Rows are reconfigured, never rebuilt, and every
-promoted Open button is re-bound: `_view_update.py` says what both cost.
+**The suggestion list repaints live, and scrolls.** A solve mid-lock frees its
+slot and the next *pre-verified* candidate moves up; rows are reconfigured,
+never rebuilt, and Open buttons re-bound (`_view_update.py`). Scrolling and the
+browser nudge: read `DOCS-scroll-and-nudge.md` before touching either.
 
 **Arming runs at login and on the timer; the X wait is unbounded.** The
 timer's `Persistent=true` catch-up fires one second into a boot, before X

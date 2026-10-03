@@ -16,6 +16,7 @@ from __future__ import annotations
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 import logging
+import threading
 from typing import TYPE_CHECKING, Final, Protocol, TypeVar
 
 from leetcode_guard._constants import POLL_DRAIN_MS
@@ -40,6 +41,9 @@ class AfterScheduler(Protocol):
 
     def after(self, ms: int, func: Callable[[], None]) -> str:
         """Schedule ``func`` to run on the Tk thread after ``ms``."""
+
+    def after_cancel(self, job: str) -> None:
+        """Cancel a job ``after`` scheduled."""
 
 
 class SubmitsWork(Protocol):
@@ -108,12 +112,56 @@ class SolvePoller[R]:
         self._drain_ms = drain_ms
         self._future: Future[_R | None] | None = None
         self._stopped = False
+        self._tick_job: str | None = None
+        self._poked = threading.Event()
+        self._in_flight_poked = False
+        self.last_was_poke = False
+        """Whether the result being delivered came from :meth:`poke`.
+
+        Read by ``on_result``: an extra check asked for from outside must not
+        count towards blind time, or a burst of forged pokes would buy the
+        escape hatch in seconds."""
         self.state = PollState()
 
     def start(self) -> None:
-        """Kick off the first check immediately."""
+        """Kick off the first check immediately, and start watching for pokes."""
         self._stopped = False
         self._tick()
+        self._root.after(self._drain_ms, self._watch)
+
+    def poke(self) -> None:
+        """Ask for a check as soon as none is in flight.
+
+        Safe from any thread -- it only sets an Event; the Tk thread notices it
+        within ``drain_ms``. Pokes arriving while a check is in flight collapse
+        into one, so they can never stack requests.
+        """
+        self._poked.set()
+
+    def check_now(self) -> None:
+        """Tk thread only: :meth:`poke` without waiting for the next watch."""
+        self.poke()
+        self._fire_poke()
+
+    def _watch(self) -> None:
+        """On the Tk thread: turn a pending poke into an immediate check."""
+        if self._stopped:
+            return
+        self._fire_poke()
+        self._root.after(self._drain_ms, self._watch)
+
+    def _fire_poke(self) -> None:
+        """Start the poked check if the poller is idle between checks.
+
+        A pending tick means idle. While a check is in flight the poke stays
+        set and fires on the first watch after it lands.
+        """
+        if self._stopped or not self._poked.is_set() or self._tick_job is None:
+            return
+        self._poked.clear()
+        self._root.after_cancel(self._tick_job)
+        self._tick_job = None
+        self._tick(poked=True)
 
     def stop(self) -> None:
         """Stop scheduling. Idempotent."""
@@ -121,11 +169,13 @@ class SolvePoller[R]:
         if self._owns_executor:
             self._executor.shutdown(wait=False)
 
-    def _tick(self) -> None:
+    def _tick(self, *, poked: bool = False) -> None:
         """Submit a check, unless one is already in flight."""
+        self._tick_job = None
         if self._stopped:
             return
         if self._future is None or self._future.done():
+            self._in_flight_poked = poked
             self._future = self._executor.submit(self._guarded_work)
         self._root.after(self._drain_ms, self._drain)
 
@@ -150,8 +200,9 @@ class SolvePoller[R]:
         future = self._future
         if future is not None and future.done():
             self._future = None
+            self.last_was_poke = self._in_flight_poked
             self._deliver(future)
-            self._root.after(self._interval_ms, self._tick)
+            self._tick_job = self._root.after(self._interval_ms, self._tick)
             return
         self._root.after(self._drain_ms, self._drain)
 

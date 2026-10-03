@@ -47,6 +47,7 @@ from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._morning_session import defer_for_morning_session
+from leetcode_guard._nudge_server import NUDGE_PORT
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
@@ -174,6 +175,7 @@ def _run_lock(*, demo_mode: bool) -> int:
             pool=pool,
             probe=probe,
             sync_on_close=not demo_mode,
+            nudge_port=NUDGE_PORT,
         ),
     )
     guard.run()

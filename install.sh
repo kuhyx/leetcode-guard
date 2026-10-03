@@ -124,6 +124,7 @@ main() {
     ensure_hmac_key
     install_units
     install_tray
+    "${REPO_DIR}/scripts/install_nudge_extension.sh"
     log "done. Try: python3 -m leetcode_guard --check"
 }
 

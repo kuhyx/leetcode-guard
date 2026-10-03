@@ -44,8 +44,10 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._ledger_io import load_ledger
+from leetcode_guard._lock_nudge import NudgeMixin
 from leetcode_guard._lock_poll import PollMixin
 from leetcode_guard._lock_release import ReleaseMixin
+from leetcode_guard._lock_reveal import RevealMixin
 from leetcode_guard._lock_study import StudyMixin
 from leetcode_guard._network_incident import (
     build_tracker as build_incident_tracker,
@@ -67,7 +69,7 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 
-class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
+class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin, NudgeMixin, RevealMixin):
     """A gatelock consumer that releases when a LeetCode problem is solved.
 
     ``PollMixin`` comes first and the order is load-bearing. ``StudyMixin``
@@ -133,6 +135,7 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
 
         self._model = self._build_model(deps.probe)
         self._closed = False
+        self._start_reveal()
         # Built lazily by StudyMixin: the session needs the LockWindow, which
         # does not exist until further down this method.
         self._study = None
@@ -163,6 +166,7 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
             executor=deps.executor,
         )
         self._poller.start()
+        self._start_nudges(deps.nudge_port)
         self._lock.grab_input()
 
     # -- gatelock hooks ---------------------------------------------------
@@ -176,6 +180,7 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
             output_name=surface.output_name,
             on_escape=self._open_escape,
             on_open=self._open_problem,
+            on_reveal=self._on_reveal,
         )
         self._views[surface.output_name] = view
         self._frames.add(surface.output_name, parent)
@@ -207,6 +212,8 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin):
         # back, so ``LockWindow.close``'s restore is not skipped and the
         # machine does not exit with VT switching still disabled.
         self._end_study()
+        self._stop_nudges()
+        self._stop_reveal()
         self._poller.stop()
         if self._deps.write_ledger and self._deps.sync_on_close:
             # Best-effort and last: a sync failure must never abort teardown

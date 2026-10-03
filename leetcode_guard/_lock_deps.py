@@ -45,6 +45,12 @@ class GuardDeps:
     Off by default so tests and demos never touch the network on teardown;
     production turns it on."""
 
+    nudge_port: int | None = None
+    """Where to listen for the browser's "Accepted" doorbell (``_nudge_server``).
+
+    ``None`` opens no port, so tests never bind a real socket; the CLI sets it.
+    """
+
     wait_turn: bool = True
     """Whether to queue behind higher-ranked lockers before arming.
 

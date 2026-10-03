@@ -23,14 +23,16 @@ import tkinter as tk
 from typing import TYPE_CHECKING, Any
 
 from leetcode_guard._breakglass import breakglass_lines
+from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._view_problems import build_problem_rows
+from leetcode_guard._view_scroll import ScrollArea, grow_rows
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from gatelock import LockConfig
 
-    from leetcode_guard._viewmodel import ViewModel
+    from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
 _PAD = 16
 
@@ -50,6 +52,13 @@ class GuardView:
     escape_button: Any = None
     open_buttons: list[Any] = field(default_factory=list)
     breakglass_label: Any = None
+    scroll: Any = None
+    lines: tuple[ProblemLine, ...] = ()
+    """What the rows were last painted from; rows built on scroll read it."""
+
+    on_reveal: Callable[[int], None] | None = None
+    """Told how many rows exist after the list grows, so they can be verified."""
+
     on_open: Callable[[str], None] | None = None
     """Retained so a repaint can re-bind a row to a different problem.
 
@@ -67,6 +76,7 @@ def build_guard_view(
     output_name: str,
     on_escape: Callable[[], None] | None = None,
     on_open: Callable[[str], None] | None = None,
+    on_reveal: Callable[[int], None] | None = None,
 ) -> GuardView:
     """Create the widget tree for one surface.
 
@@ -81,6 +91,7 @@ def build_guard_view(
             harness and any read-only render want -- and what the lock itself
             did on 2026-08-05, when naming ten problems it would accept and
             offering no way to reach one made it unsatisfiable.
+        on_reveal: Invoked with the row count whenever scrolling builds more.
 
     Returns:
         Handles to every widget that later updates need to touch.
@@ -109,11 +120,14 @@ def build_guard_view(
     )
     balance_line.pack(pady=(0, _PAD))
 
-    problems_frame = tk.Frame(inner, bg=config.palette.field_bg)
-    problems_frame.pack(pady=(0, _PAD), padx=_PAD, fill="x")
+    grow: list[Callable[[], object]] = []
+    scroll = ScrollArea(inner, config, on_near_end=lambda: [g() for g in grow])
+    scroll.outer.pack(pady=(0, _PAD), padx=_PAD, fill="x")
+    problems_frame = scroll.inner
     problem_labels, open_buttons = build_problem_rows(
-        problems_frame, config, model, on_open
+        problems_frame, config, model, on_open, bind=scroll.bind_wheel
     )
+    scroll.fit_rows(len(problem_labels), PROBLEM_DISPLAY_LIMIT)
 
     status_line = tk.Label(
         inner,
@@ -168,8 +182,12 @@ def build_guard_view(
         problems_frame=problems_frame,
         open_buttons=open_buttons,
         breakglass_label=breakglass_label,
+        scroll=scroll,
+        lines=model.problems,
+        on_reveal=on_reveal,
         on_open=on_open,
     )
+    grow.append(lambda: grow_rows(view, config))
 
     if on_escape is not None:
         view.escape_button = tk.Button(

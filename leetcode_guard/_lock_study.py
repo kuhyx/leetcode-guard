@@ -143,6 +143,11 @@ class StudyMixin:
             needed=max(1, self._decision().needed),
         )
 
+    def _refresh_strip(self) -> None:
+        """Repaint the strip now, not on its next one-second tick."""
+        if self._strip is not None:
+            self._strip.tick(self._strip_text())
+
     # -- leaving ----------------------------------------------------------
 
     def _back_to_lock(self) -> None:
