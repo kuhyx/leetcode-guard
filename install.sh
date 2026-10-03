@@ -125,6 +125,10 @@ main() {
     install_units
     install_tray
     "${REPO_DIR}/scripts/install_nudge_extension.sh"
+    # The MCP venv pins its own copies of gatelock/freedays; without a refresh
+    # here a dependency bump leaves the server failing to import, which the
+    # client reports only as "Connection closed" (2026-10-03: freedays 0.1.0).
+    "${REPO_DIR}/scripts/setup_mcp.sh"
     log "done. Try: python3 -m leetcode_guard --check"
 }
 
