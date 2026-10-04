@@ -61,12 +61,10 @@ surface. `test_scenarios.py::test_a_freshly_seeded_lock_offers_a_way_out_at_t0`
 is the executable form; it failed against the code that shipped that morning.
 
 **Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases
-the X global grab so a browser can receive keystrokes — hiding surfaces is not
-enough, the grab is on the root and blocks every other client. No timeout: press
-Open and walk away and the machine stays open until a solve lands or "Back to
-lock" is pressed (why, and the warning on both transitions:
-`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; no
-unit test can, because a mocked root reports success either way.
+the X global grab so a browser can receive keystrokes (the grab is on the root).
+No timeout: the machine stays open until a solve lands or "Back to lock" is
+pressed (`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab
+drops; no unit test can, because a mocked root reports success either way.
 
 **The suggestion list repaints live, and scrolls.** A solve mid-lock frees its
 slot and the next *pre-verified* candidate moves up; rows are reconfigured,
@@ -90,8 +88,7 @@ file cannot mint an unlocked day. The 09:30/11:00 slots re-decide. Never re-deri
 the cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
 
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
-with no window: standing down would make "start the workout lock" a way to skip
-the grind. The deadline arms anyway rather than leaving the machine unlocked.
+with no window: standing down would let "start the workout lock" skip the grind.
 
 ## Traps that have already cost time
 
@@ -100,24 +97,18 @@ indication. `fetch_pool` advances `skip` by rows *actually returned*; an earlier
 version advanced by the requested size and collected 657 of 4003 problems.
 
 **`status` has three values and `null` means two different things.** Measured
-against a live session on 2026-08-14: `"ac"` = solved, `"notac"` = attempted and
-failed, **`null` = never attempted**. A dead session also returns `null`, for
-everything. So a null is *not* a reliable signal of being signed out — a
-signed-in user browsing ten problems they have never opened produces an
-all-null sweep too. Inferring "expired session" from it made the lock announce
-"could not check solved-state" while holding a freshly verified cookie, **and**
-trip the early exit that abandons the rest of the sweep, so a solved problem
-further down would have survived. `_live_solved` therefore splits `checked`
-(a readable `question` envelope came back) from `recognised` (the status was
-non-null): a null inside a valid envelope is an *answer*, a missing envelope is
-silence, and only silence means "could not check". Detecting a dead cookie is
-`--login`'s job, and it probes a slug chosen to be non-null.
+2026-08-14: `"ac"` = solved, `"notac"` = attempted and failed, **`null` = never
+attempted**; a dead session also returns `null` for everything, so null is *not*
+a signal of being signed out. Inferring "expired" from it announced "could not
+check" with a fresh cookie and tripped the early exit that abandons the sweep.
+`_live_solved` splits `checked` (a readable `question` envelope came back) from
+`recognised` (status non-null): null inside a valid envelope is an *answer*, a
+missing envelope is silence, only silence means "could not check". Detecting a
+dead cookie is `--login`'s job (it probes a slug chosen to be non-null).
 
-The pool query is public, so expired cookies return HTTP 200 with a complete,
-healthy-looking problem list of nulls — not an error, not an empty payload.
-Filtering on `status == "ac"` needs no auth flag: an unauthenticated null simply
-does not match. An `exclude_solved` flag wired to "cookies loaded" once guarded
-it, and in the signed-out branch *discarded* genuine `"ac"` rows.
+The pool query is public: expired cookies return HTTP 200 with a healthy list
+of nulls. Filtering on `status == "ac"` needs no auth flag; an `exclude_solved`
+flag wired to "cookies loaded" once *discarded* genuine `"ac"` rows when signed out.
 
 **Solved-state is checked live, but only for what is displayed.** Re-paging the
 whole authenticated pool is 41 requests before the window exists, and LeetCode
@@ -248,3 +239,12 @@ strip belongs on the primary output, because that is where the user is looking.
 strict`, `pylint enable = "all"`. Every `except` must re-raise or log at
 warning or above. Commit to `main`; never create a feature branch — these repos
 deploy from the working tree.
+
+## Commands
+
+- run: `python3 -m leetcode_guard._web_server`
+- test: `python3 -m pytest -n auto -q --dist worksteal`
+- test-changed: `scripts/test_changed.sh`
+- lint: `uvx ruff@0.15.2 check .`
+- coverage: `python3 -m pytest -q --cov --cov-branch --cov-report=xml`
+- coverage-gaps: `coverage-gaps coverage.xml`
