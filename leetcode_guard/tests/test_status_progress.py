@@ -162,11 +162,13 @@ def test_the_window_reprojects_for_a_new_date_and_keeps_it_across_refresh(
         on_close=lambda: None,
     )
     assert window.inputs.target_text.startswith("31.12.")
-    assert window.inputs.price_text == "1"
+    assert window.inputs.price_text == "2"
 
     window.project(ProjectionInputs("31.12.2999", "3"))
     assert any(t.startswith("By 31.12.2999") for t in label_texts(tk_mock))
-    assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri/Sat/Sun cost 6." in label_texts(tk_mock)
+    assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri cost 4, Sat/Sun cost 6." in label_texts(
+        tk_mock
+    )
 
     tk_mock.Label.reset_mock()
     window.render(full_for(data_dir, hmac_key))

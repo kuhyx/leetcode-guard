@@ -51,7 +51,7 @@ def test_a_goal_draws_its_lines_after_the_projection(data_dir: Path, hmac_key, t
     texts = label_texts(tk_mock)
     assert "Goal: Easy 100 (45 more)." in texts
     assert texts.index("Goal: Easy 100 (45 more).") > texts.index(
-        "Prices: Tue/Wed/Thu cost 2, Mon/Fri/Sat/Sun cost 4."
+        "Prices: Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4."
     )
     assert red_lines(tk_mock) == []
 

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Final
 import freedays
 
 from leetcode_guard._constants import PROGRESS_CACHE_FILE
-from leetcode_guard._daycost import CURRENT_PRICING, local_today, parse_day, what_if
+from leetcode_guard._daycost import CURRENT_BASE, local_today, parse_day, what_if
 from leetcode_guard._progress import (
     DIFFICULTIES,
     read_progress_cache,
@@ -71,7 +71,7 @@ class ProjectionInputs:
     """
 
     target_text: str
-    price_text: str = str(CURRENT_PRICING.base_cost)
+    price_text: str = str(CURRENT_BASE)
     goal_texts: dict[str, str] = field(default_factory=dict)
 
     @classmethod

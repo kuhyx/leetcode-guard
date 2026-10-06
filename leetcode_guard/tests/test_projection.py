@@ -66,7 +66,8 @@ def test_the_default_target_is_new_years_eve_in_dotted_form():
 
 
 def test_a_week_ahead_from_a_settled_saturday():
-    """The worked example: 11 base + 14 debt - 0 banked = 25, rules collect 18."""
+    """The worked example: 11 base + 14 debt - 0 banked = 25, rules collect 15
+    (a credit on each of Sun, Mon, Fri, Sat; Tue-Thu repay nothing)."""
     result = project(
         date(2026, 9, 26), position(), is_free=never_free, progress=progress()
     )
@@ -74,8 +75,8 @@ def test_a_week_ahead_from_a_settled_saturday():
     assert result.first_day == date(2026, 9, 20)
     assert (result.gated_days, result.free_days, result.base_cost) == (7, 0, 11)
     assert result.required == 25
-    assert result.rules_demand == 18
-    assert result.debt_left_by_rules == 7
+    assert result.rules_demand == 15
+    assert result.debt_left_by_rules == 10
     assert result.projected == {"Easy": 80, "Medium": 0, "Hard": 0}
 
 
@@ -120,8 +121,8 @@ def test_free_days_cost_nothing_and_repay_nothing():
 
     # Sun 20 (2) + Wed 23, Thu 24 (1 each) + Fri 25, Sat 26 (2 each).
     assert (result.gated_days, result.free_days, result.base_cost) == (5, 2, 8)
-    assert result.rules_demand == 8 + 5
-    assert result.debt_left_by_rules == 9
+    assert result.rules_demand == 8 + 3  # Sun, Fri, Sat repay; Wed, Thu do not
+    assert result.debt_left_by_rules == 11
 
 
 def test_banked_credits_reduce_the_demand_and_it_floors_at_zero():

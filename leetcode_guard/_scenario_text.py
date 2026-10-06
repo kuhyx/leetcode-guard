@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from leetcode_guard._daycost import CURRENT_PRICING
+from leetcode_guard._daycost import tiered
 from leetcode_guard._progress import DIFFICULTIES
 from leetcode_guard._projection import format_target
 
@@ -29,8 +29,8 @@ NO_PRICED_DAY = (
 
 
 def prices_line(base_cost: int) -> str:
-    """``Prices: Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2.``."""
-    return f"Prices: {CURRENT_PRICING.with_base(base_cost).describe()}."
+    """``Prices: Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4.``."""
+    return f"Prices: {tiered(base_cost).describe()}."
 
 
 def goal_line(goal: Goal, progress: Progress) -> str:

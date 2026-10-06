@@ -28,7 +28,13 @@ from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._balance import is_trusted
 from leetcode_guard._constants import DEBT_START_DATE
-from leetcode_guard._daycost import day_cost, day_key, parse_day, weekday_name
+from leetcode_guard._daycost import (
+    day_cost,
+    day_key,
+    parse_day,
+    surcharge_applies,
+    weekday_name,
+)
 from leetcode_guard._ledger import CHARGE
 
 if TYPE_CHECKING:
@@ -39,8 +45,8 @@ if TYPE_CHECKING:
 
 SURCHARGE: Final = 1
 """How many extra credits a day costs while debt is outstanding. One, by
-decision, whatever the day's own price: a Tue-Thu day goes from 1 to 2 and a
-doubled day from 2 to 3 until the account is back on track."""
+decision, whatever the day's own price, and never on Tue-Thu: Mon/Fri go from
+3 to 4 and Sat/Sun from 4 to 5 until the account is back on track."""
 
 
 @dataclass(frozen=True)
@@ -67,13 +73,13 @@ class Debt:
         """
         return max(0, self.owed - self.repaid)
 
-    @property
-    def surcharge(self) -> int:
-        """The extra cost today carries.
+    def surcharge_on(self, day: date) -> int:
+        """The extra cost ``day`` carries.
 
-        :data:`SURCHARGE` while anything is outstanding, otherwise nothing.
+        :data:`SURCHARGE` while anything is outstanding and ``day`` is not a
+        Tue-Thu, otherwise nothing.
         """
-        return SURCHARGE if self.outstanding else 0
+        return SURCHARGE if self.outstanding and surcharge_applies(day) else 0
 
 
 NO_DEBT: Final = Debt(owed=0, repaid=0, missed_days=0)
@@ -141,12 +147,10 @@ def cost_phrase(day: date, cost: int, debt: Debt) -> str:
     The surcharge spelled out, because a quota that silently doubled reads as
     a bug.
     """
-    if not debt.surcharge:
+    surcharge = debt.surcharge_on(day)
+    if not surcharge:
         return f"{weekday_name(day)} costs {cost}"
-    return (
-        f"{weekday_name(day)} costs {cost} "
-        f"({cost - debt.surcharge} +{debt.surcharge} debt)"
-    )
+    return f"{weekday_name(day)} costs {cost} ({cost - surcharge} +{surcharge} debt)"
 
 
 def debt_summary(debt: Debt) -> str:
@@ -165,4 +169,4 @@ def debt_line(debt: Debt) -> str:
     """One sentence for the lock surface: what is owed and how it goes away."""
     if not debt.outstanding:
         return "No debt -- on track"
-    return f"Debt: {debt_summary(debt)} -- +{debt.surcharge} per day until repaid"
+    return f"Debt: {debt_summary(debt)} -- +{SURCHARGE} on Mon/Fri/Sat/Sun until repaid"

@@ -117,7 +117,7 @@ def gather_status(
         weekday=weekday_name(day),
         cost=decision.cost,
         debt=decision.debt,
-        surcharge=decision.debt.surcharge,
+        surcharge=decision.debt.surcharge_on(decision.day),
         debt_owed=decision.debt.owed,
         debt_repaid=decision.debt.repaid,
         debt_outstanding=decision.debt.outstanding,

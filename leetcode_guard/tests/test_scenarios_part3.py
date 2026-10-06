@@ -35,6 +35,8 @@ if TYPE_CHECKING:
 
 NEXT_THURSDAY = THURSDAY + timedelta(days=7)
 """Back from a week away: Thursday to Wednesday missed, seven days."""
+NEXT_FRIDAY = NEXT_THURSDAY + timedelta(days=1)
+"""The first surcharged day back: the Thursday as well is missed, eight days."""
 
 
 def solve(ledger: Ledger, count: int, *, day: date, key_file: Path) -> None:
@@ -66,27 +68,43 @@ def a_week_away(hmac_key: Path) -> Ledger:
 def test_a_week_away_is_owed_at_the_price_of_each_missed_day(
     hmac_key: Path, debt_starts
 ):
-    """Thu, Fri, Mon, Tue, Wed at 1 and Sat, Sun at 2: nine credits, and the
-    first day back costs 2 instead of 1."""
+    """Thu, Fri, Mon, Tue, Wed, Thu at 1 and Sat, Sun at 2: ten credits, and
+    the first Friday back costs 2 instead of 1."""
+    debt_starts(MONDAY)
+    ledger = a_week_away(hmac_key)
+
+    decision = decide_today(ledger, day=NEXT_FRIDAY, now=NOW, key_file=hmac_key)
+
+    assert decision.debt.missed_days == 8
+    assert decision.debt.outstanding == 10
+    assert decision.cost == 2
+    assert decision.state is GateState.LOCKED_INSUFFICIENT
+    assert decision.needed == 2
+    assert "Friday costs 2 (1 +1 debt)" in decision.reason
+
+
+def test_a_thursday_back_from_a_week_away_costs_its_plain_price(
+    hmac_key: Path, debt_starts
+):
+    """Debt never surcharges Tue-Thu: nine credits owed, and the day still
+    costs 1."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
 
     decision = decide_today(ledger, day=NEXT_THURSDAY, now=NOW, key_file=hmac_key)
 
-    assert decision.debt.missed_days == 7
     assert decision.debt.outstanding == 9
-    assert decision.cost == 2
-    assert decision.state is GateState.LOCKED_INSUFFICIENT
-    assert decision.needed == 2
-    assert "Thursday costs 2 (1 +1 debt)" in decision.reason
+    assert decision.cost == 1
+    assert decision.needed == 1
+    assert "debt" not in decision.reason
 
 
 def test_one_solve_on_a_surcharged_weekday_still_locks(hmac_key: Path, debt_starts):
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
-    solve(ledger, 1, day=NEXT_THURSDAY, key_file=hmac_key)
+    solve(ledger, 1, day=NEXT_FRIDAY, key_file=hmac_key)
 
-    decision = decide_today(ledger, day=NEXT_THURSDAY, now=NOW, key_file=hmac_key)
+    decision = decide_today(ledger, day=NEXT_FRIDAY, now=NOW, key_file=hmac_key)
 
     assert decision.state is GateState.LOCKED_INSUFFICIENT
     assert decision.needed == 1
@@ -97,44 +115,66 @@ def test_two_solves_on_a_surcharged_weekday_unlock_and_repay_one(
 ):
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
-    solve(ledger, 2, day=NEXT_THURSDAY, key_file=hmac_key)
+    solve(ledger, 2, day=NEXT_FRIDAY, key_file=hmac_key)
+    path = tmp_path / "ledger.json"
+
+    decision = decide_today(ledger, day=NEXT_FRIDAY, now=NOW, key_file=hmac_key)
+    assert decision.state is GateState.UNLOCKED_CHARGED_NOW
+    assert decision.charge is not None
+    assert decision.charge.amount == 2
+    assert decision.charge.detail["surcharge"] == "1"
+    run_day(ledger, NEXT_FRIDAY, path, hmac_key, debt=decision.debt)
+
+    tomorrow = decide_today(
+        ledger, day=NEXT_FRIDAY + timedelta(days=1), now=NOW, key_file=hmac_key
+    )
+    assert tomorrow.debt.repaid == 1
+    assert tomorrow.debt.outstanding == 9
+    assert tomorrow.cost == 3  # Saturday: 2 plus the surcharge
+
+
+def test_a_solve_on_a_thursday_repays_nothing(
+    tmp_path: Path, hmac_key: Path, debt_starts
+):
+    """A Tue-Thu charge carries no surcharge, so it cannot repay any."""
+    debt_starts(MONDAY)
+    ledger = a_week_away(hmac_key)
+    solve(ledger, 1, day=NEXT_THURSDAY, key_file=hmac_key)
     path = tmp_path / "ledger.json"
 
     decision = decide_today(ledger, day=NEXT_THURSDAY, now=NOW, key_file=hmac_key)
     assert decision.state is GateState.UNLOCKED_CHARGED_NOW
     assert decision.charge is not None
-    assert decision.charge.amount == 2
-    assert decision.charge.detail["surcharge"] == "1"
+    assert "surcharge" not in decision.charge.detail
     run_day(ledger, NEXT_THURSDAY, path, hmac_key, debt=decision.debt)
 
     tomorrow = decide_today(
         ledger, day=NEXT_THURSDAY + timedelta(days=1), now=NOW, key_file=hmac_key
     )
-    assert tomorrow.debt.repaid == 1
-    assert tomorrow.debt.outstanding == 8
-    assert tomorrow.cost == 2
+    assert tomorrow.debt.repaid == 0
+    assert tomorrow.debt.outstanding == 9
 
 
 def test_paying_one_extra_a_day_gets_back_on_track_and_the_price_drops(
     tmp_path: Path, hmac_key: Path, debt_starts
 ):
-    """Nine credits of debt, one repaid per day: nine surcharged days, then
-    the tenth costs the ordinary price again."""
+    """Ten credits of debt, one repaid per Mon/Fri/Sat/Sun: ten surcharged
+    days, however many Tue-Thu days fall between, then the ordinary price."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
     path = tmp_path / "ledger.json"
     surcharged_days = 0
-    day = NEXT_THURSDAY
-    for _ in range(20):
+    day = NEXT_FRIDAY
+    for _ in range(40):
         decision = decide_today(ledger, day=day, now=NOW, key_file=hmac_key)
         if not decision.debt.outstanding:
             break
-        surcharged_days += 1
+        surcharged_days += decision.debt.surcharge_on(day)
         solve(ledger, decision.cost, day=day, key_file=hmac_key)
         run_day(ledger, day, path, hmac_key, debt=decision.debt)
         day += timedelta(days=1)
 
-    assert surcharged_days == 9
+    assert surcharged_days == 10
     assert decision.debt.outstanding == 0
     assert decision.cost == day_cost(day)
     assert "debt" not in decision.reason

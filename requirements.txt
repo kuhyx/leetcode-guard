@@ -19,4 +19,4 @@ pytest-randomly==5.0.0
 pytest-xdist==3.8.0
 requests==2.34.2
 ruff==0.16.10
-types-requests==2.33.0.20260906
+types-requests==2.33.0.20261006

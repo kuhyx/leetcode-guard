@@ -22,7 +22,7 @@ from fractions import Fraction
 import math
 from typing import TYPE_CHECKING
 
-from leetcode_guard._daycost import CURRENT_PRICING, REPRICE_DATE, day_cost, what_if
+from leetcode_guard._daycost import REPRICE_DATE, base_terms, day_cost, what_if
 from leetcode_guard._progress import DIFFICULTIES
 
 if TYPE_CHECKING:
@@ -131,8 +131,9 @@ def exact_price(
     """The base price at which the gated days up to the target sum to ``needed``.
 
     Days before :data:`REPRICE_DATE` keep their fixed price and are subtracted
-    first; the rest count in base units (one or two per day). ``None`` when
-    no day in range is priced in base units, so no price could land it.
+    first; the rest cost ``per_base * price + flat`` (:func:`base_terms`), so
+    the flat parts come off too. ``None`` when no day in range scales with the
+    price, so no price could land it.
     """
     fixed = units = 0
     cursor = projection.first_day
@@ -141,7 +142,9 @@ def exact_price(
             if cursor < REPRICE_DATE:
                 fixed += day_cost(cursor)
             else:
-                units += CURRENT_PRICING.multiplier(cursor)
+                per_base, flat = base_terms(cursor)
+                units += per_base
+                fixed += flat
         cursor += timedelta(days=1)
     if units == 0:
         return None

@@ -18,8 +18,9 @@ A **derived-balance ledger**, never a stored counter.
 | Any day while debt is outstanding | **costs 1 more**, and that credit repays 1 |
 | Balance | `sum(credits) - sum(charges)`, recomputed every time |
 
-Credits are uncapped and fungible. Mon and Fri doubled from 2026-09-21 (lands
-the 837 free Easy on 2028-01-21, an accepted 3 weeks late); old debt holds.
+Credits are uncapped and fungible. Each day keeps its era's price: weekdays 1,
+Sat/Sun 2 to 2026-09-20; Tue-Thu 1, rest 2 to 2026-10-06; **from 2026-10-07
+Tue-Thu 2, Mon/Fri 3, Sat/Sun 4**.
 
 Two properties fall out of keying credits on LeetCode's own **submission id**
 rather than a time window:
@@ -30,11 +31,9 @@ rather than a time window:
 **Charge on use, owe the rest.** A charge is only ever written for a day the
 gate actually settled -- nothing is back-filled for days the PC was off. But
 from 2026-08-04 every past day with no charge that was not a declared free day
-is *owed* at its price, and each day costs one extra credit until the debt is
-gone: a Tue-Thu day needs 2 solves instead of 1, a doubled day 3 instead of 2.
-Eight days away (Thu-Wed) is 13 credits, so thirteen surcharged days. Debt
-is derived from the calendar and the ledger every time and never
-stored; deleting the ledger makes every day since the epoch uncharged, so it
+is *owed* at its price, and each Mon/Fri/Sat/Sun costs one extra credit until
+the debt is gone (3 becomes 4, 4 becomes 5); Tue-Thu never carry it. Debt is
+derived from the calendar and the ledger every time and never stored; deleting the ledger makes every day since the epoch uncharged, so it
 grows the debt. Free days (`freedays mark`) must be declared in advance and
 are the only way to be away for free.
 
@@ -175,8 +174,8 @@ suggested problems.
 
 It also carries **Progress & projection**: solved / total per difficulty as
 your LeetCode profile reports them (premium problems included in the total),
-and one row of what-if controls: a Tue-Thu base price (doubled days follow,
-past days never re-price), absolute goals per difficulty, and a date. It
+and one row of what-if controls: the Tue-Thu price (Mon/Fri are that plus 1, Sat/Sun
+twice it; past days never re-price), absolute goals per difficulty, and a date. It
 assumes every gated day up to then is fed at that price *and* the debt is
 cleared in full, minus what is banked. With a goal set it also says when that
 price lands the goal (or how far short it falls) and the exact fractional

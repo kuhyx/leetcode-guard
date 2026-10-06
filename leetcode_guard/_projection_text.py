@@ -68,7 +68,7 @@ def _rules_line(projection: Projection) -> str:
     if projection.debt_left_by_rules == 0:
         return (
             f"The rules alone demand the same {projection.rules_demand} by then "
-            "(debt fully repaid at 1 per day)."
+            "(debt fully repaid at 1 per Mon/Fri/Sat/Sun)."
         )
     return (
         f"The rules alone would demand {projection.rules_demand} by then and "

@@ -102,19 +102,20 @@ def test_days_the_pc_was_off_are_owed_but_never_charged(
 ):
     """Coming back from nine days away does not present a bill for nine days
     -- no charge is ever written for a day the gate did not run -- but those
-    days are owed, and the first day back costs one more until they are."""
+    days are owed, and a surcharged day (here a Friday) costs one more until
+    they are."""
     debt_starts(MONDAY)
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
     run_day(ledger, MONDAY, path, hmac_key)
 
-    far_later = date(2026, 8, 20)
+    far_later = date(2026, 8, 21)
     decision = decide_today(ledger, day=far_later, now=NOW, key_file=hmac_key)
 
     assert decision.balance.charged == 1
     assert not any(e.day != MONDAY.isoformat() for e in ledger.of_kind("charge"))
-    assert decision.debt.missed_days == 9
-    assert decision.debt.outstanding == 7 + 2 + 2
+    assert decision.debt.missed_days == 10
+    assert decision.debt.outstanding == 8 + 2 + 2
     assert decision.state is GateState.LOCKED_INSUFFICIENT
     assert decision.needed == 2
 

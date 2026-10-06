@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
 from leetcode_guard.tests._guard_factories import create_guard, pool_of, probe_of
-from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW, TUESDAY, submission
+from leetcode_guard.tests._ledger_fixtures import FRIDAY, MONDAY, NOW, submission
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-TUESDAY_MORNING = datetime.combine(TUESDAY, NOW.timetz())
+FRIDAY_MORNING = datetime.combine(FRIDAY, NOW.timetz())
 
 
 def accepted(slug: str) -> SolveProbe:
@@ -34,6 +34,9 @@ def accepted(slug: str) -> SolveProbe:
 def owing_guard(tmp_path: Path, hmac_key: Path, *, poll_probe: SolveProbe):
     """A guard on a day that costs two credits, suggesting three problems.
 
+    A Friday after four missed days: the day's own price of one plus the debt
+    surcharge, which Tue-Thu never carry.
+
     Two is the smallest demand that can show the bug: with one owed, the
     first accepted submission unlocks the machine and the list stops
     mattering a second later.
@@ -45,7 +48,7 @@ def owing_guard(tmp_path: Path, hmac_key: Path, *, poll_probe: SolveProbe):
         poll_probe=poll_probe,
         pool=pool_of("alpha", "beta", "gamma"),
         key_file=hmac_key,
-        now=TUESDAY_MORNING,
+        now=FRIDAY_MORNING,
     )
     return guard
 
@@ -62,7 +65,7 @@ def test_a_problem_solved_mid_lock_stops_being_suggested(
 ):
     """The reported bug.
 
-    Monday's gate never charged, so Tuesday costs two. Solving Alpha earns
+    Monday's gate never charged, so Friday costs two. Solving Alpha earns
     one of them and leaves the lock up -- and Alpha, which can never earn the
     second, was still occupying the top slot. It now drops out and Beta and
     Gamma move up, renumbered.

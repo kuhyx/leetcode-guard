@@ -116,14 +116,16 @@ def decide(
         workday_penalty: Whether a missed wake-alarm ring on a prior
             Tue/Wed/Thu cost ``day`` its own Tue/Wed/Thu discount. Losing the
             discount, not an added surcharge -- a day already priced at the
-            doubled rate (Fri, from a Thursday miss) is unaffected.
+            penalty rate (Fri, from a Thursday miss) is unaffected.
 
     Returns:
         The decision. Nothing is written.
     """
     balance = compute_balance(ledger)
-    base_cost = pricing_for(day).doubled_cost if workday_penalty else day_cost(day)
-    cost = base_cost + debt.surcharge
+    pricing = pricing_for(day)
+    base_cost = pricing.penalised_cost(day) if workday_penalty else day_cost(day)
+    surcharge = debt.surcharge_on(day)
+    cost = base_cost + surcharge
     costs = cost_phrase(day, cost, debt)
 
     verdict = check_clock(ledger, day=day)
@@ -183,9 +185,7 @@ def decide(
             balance=balance,
             debt=debt,
             needed=0,
-            charge=charge_entry(
-                day, now=now, key_file=key_file, surcharge=debt.surcharge
-            ),
+            charge=charge_entry(day, now=now, key_file=key_file, surcharge=surcharge),
             reason=f"{balance.available} credits available, {costs}",
         )
 

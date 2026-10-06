@@ -37,7 +37,7 @@ def test_price_or_goal_alone_implies_the_end_of_year(monkeypatch, capsys, data_d
     out = capsys.readouterr().out
 
     assert "by 31.12." in out
-    assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri/Sat/Sun cost 6." in out
+    assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri cost 4, Sat/Sun cost 6." in out
 
 
 def test_a_bad_price_is_exit_2(monkeypatch, capsys, data_dir):
@@ -71,6 +71,6 @@ def test_projection_inputs_mirror_the_flags():
         ProjectionInputs("01.02.2030", "4", {"Easy": "1", "Hard": " 2 "})
     )
     defaults = projection_inputs(None, None, None)
-    assert defaults.price_text == "1"
+    assert defaults.price_text == "2"
     assert defaults.goal_texts == {}
     assert projection_inputs(None, None, ["Medium"]).goal_texts == {"Medium": "?"}

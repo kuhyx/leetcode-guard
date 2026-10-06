@@ -22,7 +22,7 @@ def test_the_debt_is_surfaced_with_the_price(
     save_ledger(ledger_path, Ledger())
 
     snapshot = gather_status(
-        now=MONDAY_NOON + timedelta(days=9),
+        now=MONDAY_NOON + timedelta(days=11),  # a Friday: surcharged
         ledger_path=ledger_path,
         cache_path=tmp_path / "pool.json",
         cookies_path=tmp_path / "cookies.json",
@@ -30,8 +30,10 @@ def test_the_debt_is_surfaced_with_the_price(
     )
     text = format_status(snapshot)
 
-    assert snapshot.missed_days == 9
-    assert snapshot.debt_outstanding == 11
+    assert snapshot.missed_days == 11
+    assert snapshot.debt_outstanding == 13
     assert snapshot.cost == 2
     assert "costs 2 (1 +1 debt)" in text
-    assert "debt       11 credits outstanding (9 missed days owed 11, 0 repaid)" in text
+    assert (
+        "debt       13 credits outstanding (11 missed days owed 13, 0 repaid)" in text
+    )

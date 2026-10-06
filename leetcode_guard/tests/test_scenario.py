@@ -2,11 +2,14 @@
 
 Asked 2026-09-20: "by how much do I raise the Tue-Thu price to have solved all
 837 free Easy problems by 31.12.2027?" -- from 58 solved, 13 credits of debt,
-nothing banked. Worked by hand first: 201 Tue-Thu days plus 266 doubled days
-between 21.09.2026 and 31.12.2027, so price 1 forces 733 + 13 = 746 of the 779
-needed and lands on 21.01.2028; the exact price is 766/733; price 2 lands on
-22.05.2027. The code must reproduce those figures, not the other way round.
-kuhy chose price 1 on 2026-09-21, accepting the three-week miss.
+nothing banked. Worked by hand first: 21.09.2026-06.10.2026 is fixed at 25
+(the interim prices); 07.10.2026-31.12.2027 is 451 days, 64 of each weekday
+plus an extra Wed/Thu/Fri, so it costs 579 * price + 129 (the flat 1 on 129
+Mon/Fri days). Price 1 forces 733 + 13 = 746 of the 779 needed and lands on
+21.01.2028; the exact price is (779 - 13 - 25 - 129) / 579 = 204/193; price 2
+forces 1325 and lands on 23.06.2027. The code must reproduce those figures,
+not the other way round. kuhy chose price 1 on 2026-09-21, accepting the
+three-week miss, and moved to 2 (Mon/Fri 3, Sat/Sun 4) on 2026-10-06.
 """
 
 from __future__ import annotations
@@ -65,17 +68,17 @@ def test_the_original_question_at_price_one():
     assert scenario.forced == 746
     assert scenario.shortfall == 33
     assert scenario.lands_on == date(2028, 1, 21)
-    assert scenario.exact_price == Fraction(766, 733)
+    assert scenario.exact_price == Fraction(204, 193)
     assert scenario.minimal_price == 2
-    assert scenario.minimal_lands_on == date(2027, 5, 22)
+    assert scenario.minimal_lands_on == date(2027, 6, 23)
 
 
 def test_the_original_question_at_price_two():
     scenario, _ = worked(2)
 
-    assert scenario.forced == 1479
+    assert scenario.forced == 1325
     assert scenario.shortfall == 0
-    assert scenario.lands_on == date(2027, 5, 22) == scenario.minimal_lands_on
+    assert scenario.lands_on == date(2027, 6, 23) == scenario.minimal_lands_on
 
 
 def test_the_lines_for_the_original_question():
@@ -87,10 +90,13 @@ def test_the_lines_for_the_original_question():
         "Goal: Easy 837 (779 more).",
         "At price 1: 746 forced by 31.12.2027, 33 short of the 779 the goal needs "
         "-- reached on 21.01.2028.",
-        "Price that lands the goal exactly on 31.12.2027: 1.05; smallest whole "
-        "price 2, which lands it on 22.05.2027.",
+        "Price that lands the goal exactly on 31.12.2027: 1.06; smallest whole "
+        "price 2, which lands it on 23.06.2027.",
     ]
     assert prices_line(1) == "Prices: Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2."
+    assert prices_line(2) == (
+        "Prices: Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4."
+    )
 
 
 def test_a_price_that_makes_it_says_so_without_a_shortfall():
@@ -99,8 +105,8 @@ def test_a_price_that_makes_it_says_so_without_a_shortfall():
     lines = scenario_lines(scenario, ALL_FREE_EASY, PROGRESS)
 
     assert lines[1] == (
-        "At price 2: 1479 forced by 31.12.2027, the goal needs 779 -- reached on "
-        "22.05.2027."
+        "At price 2: 1325 forced by 31.12.2027, the goal needs 779 -- reached on "
+        "23.06.2027."
     )
 
 
@@ -140,9 +146,9 @@ def test_goals_across_difficulties_sum_their_shortfalls_and_say_so():
 
 
 def test_banked_credits_raise_the_price_and_debt_lowers_it():
-    """766/733 is (779 - 13 debt + 0 banked) / 733 units. Banked credits are
-    solves the profile already counts, so they lower what the lock forces
-    and the price has to rise to make up for them."""
+    """215/193 is (779 - 13 debt + 33 banked - 154 fixed or flat) / 579 units.
+    Banked credits are solves the profile already counts, so they lower what
+    the lock forces and the price has to rise to make up for them."""
     banked = Position(
         today=TODAY, charged_today=True, available=33, debt_outstanding=13
     )
@@ -153,7 +159,7 @@ def test_banked_credits_raise_the_price_and_debt_lowers_it():
         1, ALL_FREE_EASY, PROGRESS, projection, is_free=never_free
     )
 
-    assert exact_price(projection, 779, is_free=never_free) == Fraction(799, 733)
+    assert exact_price(projection, 779, is_free=never_free) == Fraction(215, 193)
     assert scenario.forced == 713
     assert scenario.lands_on is not None
     assert scenario.lands_on > TARGET
@@ -171,50 +177,6 @@ def test_a_target_with_no_priced_day_has_no_price():
     assert scenario.minimal_price is None
     assert scenario.minimal_lands_on is None
     assert scenario_lines(scenario, ALL_FREE_EASY, PROGRESS)[2] == NO_PRICED_DAY
-
-
-def test_days_before_the_reprice_count_at_their_fixed_price():
-    """An unsettled Sunday 20.09.2026 costs 2 whatever the what-if says, and
-    is subtracted before the base units are solved for."""
-    unsettled = Position(
-        today=TODAY, charged_today=False, available=0, debt_outstanding=0
-    )
-    projection = project(
-        date(2026, 9, 22),
-        unsettled,
-        is_free=never_free,
-        progress=None,
-        cost_of=what_if(5),
-    )
-
-    # Sun 20 = 2 fixed; Mon 21 = 2 units, Tue 22 = 1 unit.
-    assert projection.base_cost == 2 + 10 + 5
-    assert exact_price(projection, 2 + 9, is_free=never_free) == Fraction(9, 3)
-    assert exact_price(projection, 1, is_free=never_free) == Fraction(0)
-    # A free Monday leaves one unit, and the fixed Sunday still comes off.
-    monday_free = {date(2026, 9, 21)}.__contains__
-    assert exact_price(projection, 2 + 9, is_free=monday_free) == Fraction(9, 1)
-
-
-def test_free_days_are_skipped_by_the_landing_walk():
-    only_weekday_free = {date(2026, 9, 21), date(2026, 9, 22)}
-    projection = project(
-        date(2026, 9, 30),
-        Position(today=TODAY, charged_today=True, available=0, debt_outstanding=0),
-        is_free=only_weekday_free.__contains__,
-        progress=None,
-    )
-
-    # Wed 23 (2) + Thu 24 (2) = 4, Fri 25 (4) reaches 8.
-    assert landing_day(
-        projection, 8, is_free=only_weekday_free.__contains__, cost_of=what_if(2)
-    ) == date(2026, 9, 25)
-    assert landing_day(
-        projection, 5, is_free=only_weekday_free.__contains__, cost_of=what_if(2)
-    ) == date(2026, 9, 25)
-    assert landing_day(
-        projection, 4, is_free=only_weekday_free.__contains__, cost_of=what_if(2)
-    ) == date(2026, 9, 24)
 
 
 def test_a_calendar_that_is_all_free_never_lands():

@@ -7,23 +7,29 @@ from datetime import UTC, date, datetime, timedelta, timezone
 import pytest
 
 from leetcode_guard._daycost import (
+    CURRENT_BASE,
     CURRENT_PRICING,
+    INTERIM_DATE,
+    INTERIM_PRICING,
     ORIGINAL_PRICING,
     REPRICE_DATE,
     Pricing,
+    base_terms,
     day_cost,
     day_key,
     local_now,
     local_today,
     parse_day,
     pricing_for,
+    surcharge_applies,
+    tiered,
     weekday_name,
     what_if,
 )
 
-WEEKDAY_COST = ORIGINAL_PRICING.base_cost
-WEEKEND_COST = ORIGINAL_PRICING.doubled_cost
-"""The pre-reprice prices; the July 2026 week below is priced under them."""
+WEEKDAY_COST = 1
+WEEKEND_COST = 2
+"""The original prices; the July 2026 week below is priced under them."""
 
 
 @pytest.mark.parametrize(
@@ -59,42 +65,104 @@ def test_day_cost_across_the_first_repriced_week(day: date, expected: int):
     assert day_cost(day) == expected
 
 
-def test_the_day_before_the_reprice_keeps_the_original_price():
-    """Sunday 2026-09-20 was charged 2 before the rule changed; re-pricing it
-    would turn a settled day into a different amount of debt."""
-    assert date(2026, 9, 21) == REPRICE_DATE
-    assert day_cost(REPRICE_DATE - timedelta(days=1)) == ORIGINAL_PRICING.doubled_cost
-    assert pricing_for(REPRICE_DATE - timedelta(days=1)) is ORIGINAL_PRICING
+@pytest.mark.parametrize(
+    ("day", "expected"),
+    [
+        (date(2026, 10, 7), 2),  # Wednesday -- the first day of the third era
+        (date(2026, 10, 8), 2),  # Thursday
+        (date(2026, 10, 9), 3),  # Friday
+        (date(2026, 10, 10), 4),  # Saturday
+        (date(2026, 10, 11), 4),  # Sunday
+        (date(2026, 10, 12), 3),  # Monday
+        (date(2026, 10, 13), 2),  # Tuesday
+    ],
+)
+def test_day_cost_across_the_first_week_of_the_current_prices(day: date, expected: int):
+    """Tue-Thu 2, Mon/Fri 3, Sat/Sun 4, from 2026-10-07."""
+    assert day_cost(day) == expected
+
+
+def test_each_day_keeps_the_price_of_the_era_it_fell_in():
+    """Re-pricing a settled day would turn it into a different amount of debt."""
+    assert date(2026, 9, 21) == INTERIM_DATE
+    assert date(2026, 10, 7) == REPRICE_DATE
+    assert day_cost(INTERIM_DATE - timedelta(days=1)) == 2  # Sunday, original
+    assert day_cost(REPRICE_DATE - timedelta(days=1)) == 1  # Tuesday, interim
+    assert pricing_for(INTERIM_DATE - timedelta(days=1)) is ORIGINAL_PRICING
+    assert pricing_for(INTERIM_DATE) is INTERIM_PRICING
+    assert pricing_for(REPRICE_DATE - timedelta(days=1)) is INTERIM_PRICING
     assert pricing_for(REPRICE_DATE) is CURRENT_PRICING
 
 
-def test_doubled_days_cost_exactly_twice_the_base_by_construction():
-    """Rule 2 is "times two, not plus one" -- a structural property, not a
-    second number that could drift."""
+def test_the_current_prices_are_the_tiers_around_the_current_base():
+    assert CURRENT_BASE == 2
+    assert tiered(CURRENT_BASE) == CURRENT_PRICING
+
+
+def test_tiers_are_base_then_one_more_then_twice_the_base():
     for base in (1, 2, 3, 7):
-        pricing = CURRENT_PRICING.with_base(base)
-        assert pricing.doubled_cost == 2 * base
-        assert pricing.cost(date(2026, 9, 21)) == 2 * base  # Monday
-        assert pricing.cost(date(2026, 9, 22)) == base  # Tuesday
+        pricing = tiered(base)
+        assert pricing.cost(date(2026, 10, 13)) == base  # Tuesday
+        assert pricing.cost(date(2026, 10, 12)) == base + 1  # Monday
+        assert pricing.cost(date(2026, 10, 9)) == base + 1  # Friday
+        assert pricing.cost(date(2026, 10, 10)) == 2 * base  # Saturday
+
+
+def test_base_terms_reproduce_the_tiers():
+    """cost == per_base * price + flat, so the what-if can solve for price."""
+    for offset in range(7):
+        day = date(2026, 10, 12) + timedelta(days=offset)
+        per_base, flat = base_terms(day)
+        for base in (1, 2, 5):
+            assert per_base * base + flat == tiered(base).cost(day)
 
 
 def test_what_if_reprices_only_the_current_era():
     """A what-if price changes nothing that is already owed."""
     cost = what_if(7)
 
-    assert cost(date(2026, 9, 22)) == 7
-    assert cost(date(2026, 9, 21)) == 14
+    assert cost(date(2026, 10, 13)) == 7
+    assert cost(date(2026, 10, 12)) == 8
+    assert cost(date(2026, 10, 10)) == 14
+    assert cost(date(2026, 10, 6)) == day_cost(date(2026, 10, 6)) == 1
     assert cost(date(2026, 9, 20)) == day_cost(date(2026, 9, 20)) == 2
     assert cost(date(2026, 8, 12)) == 1
-    assert day_cost(date(2026, 9, 22)) == 1
+    assert day_cost(date(2026, 10, 13)) == 2
+
+
+@pytest.mark.parametrize(
+    ("day", "expected"),
+    [
+        (date(2026, 10, 12), True),  # Monday
+        (date(2026, 10, 13), False),  # Tuesday
+        (date(2026, 10, 14), False),  # Wednesday
+        (date(2026, 10, 15), False),  # Thursday
+        (date(2026, 10, 16), True),  # Friday
+        (date(2026, 10, 17), True),  # Saturday
+        (date(2026, 10, 18), True),  # Sunday
+    ],
+)
+def test_the_debt_surcharge_never_applies_on_tuesday_to_thursday(
+    day: date, expected: bool
+):
+    assert surcharge_applies(day) is expected
+
+
+def test_losing_the_tue_thu_discount_prices_a_day_like_a_friday_never_below_its_own():
+    pricing = CURRENT_PRICING
+
+    assert pricing.penalised_cost(date(2026, 10, 14)) == 3  # Wednesday -> Friday's
+    assert pricing.penalised_cost(date(2026, 10, 16)) == 3  # Friday unchanged
+    assert pricing.penalised_cost(date(2026, 10, 17)) == 4  # Saturday keeps its own
 
 
 def test_describe_names_the_days_on_each_side():
-    assert CURRENT_PRICING.describe() == "Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2"
-    assert ORIGINAL_PRICING.describe() == "Mon/Tue/Wed/Thu/Fri cost 1, Sat/Sun cost 2"
-    assert Pricing(3, frozenset()).describe() == (
-        "Mon/Tue/Wed/Thu/Fri/Sat/Sun cost 3,  cost 6"
+    assert CURRENT_PRICING.describe() == (
+        "Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4"
     )
+    assert INTERIM_PRICING.describe() == "Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2"
+    assert ORIGINAL_PRICING.describe() == "Mon/Tue/Wed/Thu/Fri cost 1, Sat/Sun cost 2"
+    assert Pricing((3,) * 7, 3).describe() == "Mon/Tue/Wed/Thu/Fri/Sat/Sun cost 3"
 
 
 def test_the_weekend_boundary_follows_local_time_not_utc():

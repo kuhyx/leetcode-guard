@@ -46,14 +46,15 @@ def test_every_uncharged_day_in_the_window_is_owed_at_its_price(hmac_key: Path):
     assert debt.owed == 5 + 2 + 2
     assert debt.repaid == 0
     assert debt.outstanding == 9
-    assert debt.surcharge == 1
+    assert debt.surcharge_on(MONDAY) == 1
+    assert debt.surcharge_on(TUESDAY) == 0
 
 
 def test_today_is_not_owed_while_it_is_still_today():
     debt = compute_debt(Ledger(), day=MONDAY, is_free=never_free, start=MONDAY)
 
     assert debt == NO_DEBT
-    assert debt.surcharge == 0
+    assert debt.surcharge_on(MONDAY) == 0
 
 
 def test_a_charged_day_is_not_owed(hmac_key: Path):
@@ -107,7 +108,7 @@ def test_a_surcharged_charge_repays_one(hmac_key: Path):
     assert debt.owed == 1  # Monday
     assert debt.repaid == 1
     assert debt.outstanding == 0
-    assert debt.surcharge == 0
+    assert debt.surcharge_on(MONDAY) == 0
 
 
 def test_overpayment_never_becomes_credit():
@@ -200,15 +201,16 @@ def test_deleting_the_ledger_grows_the_debt(hmac_key: Path):
 def test_cost_phrase_spells_out_the_surcharge():
     owing = Debt(owed=3, repaid=0, missed_days=2)
 
-    assert cost_phrase(TUESDAY, 1, NO_DEBT) == "Tuesday costs 1"
-    assert cost_phrase(TUESDAY, 2, owing) == "Tuesday costs 2 (1 +1 debt)"
+    assert cost_phrase(MONDAY, 1, NO_DEBT) == "Monday costs 1"
+    assert cost_phrase(MONDAY, 2, owing) == "Monday costs 2 (1 +1 debt)"
+    assert cost_phrase(SATURDAY, 3, owing) == "Saturday costs 3 (2 +1 debt)"
 
 
 def test_debt_line_reads_as_a_sentence():
     assert debt_line(NO_DEBT) == "No debt -- on track"
     assert debt_line(Debt(owed=2, repaid=0, missed_days=1)) == (
         "Debt: 2 credits outstanding (1 missed day owed 2, 0 repaid) "
-        "-- +1 per day until repaid"
+        "-- +1 on Mon/Fri/Sat/Sun until repaid"
     )
     assert debt_summary(Debt(owed=4, repaid=1, missed_days=3)) == (
         "3 credits outstanding (3 missed days owed 4, 1 repaid)"
@@ -233,7 +235,7 @@ def test_decide_today_computes_the_debt_for_real_runs(hmac_key: Path, debt_start
     decision = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
 
     assert decision.debt.missed_days == 2
-    assert decision.cost == 2
+    assert decision.cost == 1  # Wednesday: debt never surcharges Tue-Thu
 
 
 def test_the_demo_shows_no_debt(hmac_key: Path, debt_starts):

@@ -7,11 +7,11 @@ The question is "what does the lock demand between now and *T*, if I do every
 day and also clear the debt". So the sum runs over every gated day up to and
 including *T*, at each day's **base** price, plus the outstanding debt **in
 full**, minus whatever is already banked. The daily surcharge is deliberately
-not added on top: it *is* the debt being repaid, one credit per gated day, and
-adding both would count the debt twice.
+not added on top: it *is* the debt being repaid, one credit per gated
+Mon/Fri/Sat/Sun (never Tue-Thu), and adding both would count the debt twice.
 
 That "in full" is a choice the user made: the mechanism only ever collects one
-credit of debt per gated day, so on a near date it would demand less than this
+credit of debt per surcharged day, so on a near date it would demand less than this
 figure and leave the rest owed. Both numbers are reported -- the pay-it-all
 target and what the rules will actually have collected by then -- so the
 printed breakdown reproduces by hand.
@@ -30,7 +30,7 @@ from datetime import date, timedelta
 import logging
 from typing import TYPE_CHECKING, Final
 
-from leetcode_guard._daycost import day_cost
+from leetcode_guard._daycost import day_cost, surcharge_applies
 from leetcode_guard._progress import DIFFICULTIES
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ class Projection:
         available: Credits already banked, which the sum is reduced by.
         required: New solves needed under the pay-it-all reading.
         rules_demand: What the mechanism will actually have collected by
-            ``target`` -- debt repays at most one credit per gated day.
+            ``target`` -- debt repays at most one credit per surcharged day.
         debt_left_by_rules: Debt still owed on ``target`` under the rules.
         projected: Solved count per difficulty after ``required`` new solves,
             Easy first; ``None`` when the current counts are unknown.
@@ -140,7 +140,7 @@ def project(
     today, debt_outstanding = position.today, position.debt_outstanding
     available = position.available
     first_day = today + timedelta(days=1) if position.charged_today else today
-    gated = free = base_cost = 0
+    gated = free = base_cost = surcharged = 0
     cursor = first_day
     while cursor <= target:
         if is_free(cursor):
@@ -148,9 +148,10 @@ def project(
         else:
             gated += 1
             base_cost += cost_of(cursor)
+            surcharged += surcharge_applies(cursor)
         cursor += timedelta(days=1)
     required = max(0, base_cost + debt_outstanding - available)
-    repaid_by_rules = min(debt_outstanding, gated)
+    repaid_by_rules = min(debt_outstanding, surcharged)
     rules_demand = max(0, base_cost + repaid_by_rules - available)
     return Projection(
         target=target,
