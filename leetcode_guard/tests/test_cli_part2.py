@@ -7,12 +7,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard import _cli, _cli_commands
 from leetcode_guard._daycost import day_cost, local_today
 from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
-from leetcode_guard.tests._ledger_fixtures import NOW, ledger_with_credits
+from leetcode_guard.tests._ledger_fixtures import NOW, ledger_paying_for_today
 from leetcode_guard.tests._net_fixtures import (
     recent_ac_result,
     submission_row,
@@ -71,7 +73,7 @@ def test_check_reports_an_unverifiable_probe(monkeypatch, capsys, data_dir: Path
 def test_check_reports_an_unlocked_day(
     monkeypatch, capsys, data_dir: Path, hmac_key: Path
 ):
-    ledger = ledger_with_credits(3, day=local_today(), key_file=hmac_key)
+    ledger = ledger_paying_for_today(key_file=hmac_key)
     # Bootstrapped, as any ledger that has ever run the gate would be. Without
     # the marker `needs_seeding` is correctly True even though credits exist.
     append(
@@ -149,3 +151,23 @@ def test_sync_reports_what_it_did(monkeypatch, capsys, data_dir: Path):
     assert exit_code == 0
     assert "sync       pushed" in out
     assert "7 total, 2 merged in" in out
+
+
+def test_production_persists_the_charge_when_banked_credit_pays_for_today(
+    monkeypatch, capsys, data_dir: Path, hmac_key: Path
+):
+    """The timer path must debit the bank, not just report it. Without the
+    write, a day paid from credit leaves no charge behind and reads, later,
+    as a day that was never settled."""
+    ledger = ledger_paying_for_today(key_file=hmac_key)
+    ledger_path = data_dir / "ledger.json"
+    patch_cli(monkeypatch, "LEDGER_FILE", ledger_path)
+    patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
+    monkeypatch.setattr(
+        _cli, "LeetcodeGuard", lambda **kwargs: pytest.fail("should not have armed")
+    )
+
+    assert _cli.main(["--production"]) == 0
+    assert "already unlocked" in capsys.readouterr().out
+    on_disk = load_ledger(ledger_path)
+    assert on_disk.has(f"charge:{local_today().isoformat()}")

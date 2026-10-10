@@ -45,6 +45,8 @@ class StudyMixin:
     _views: dict[str, GuardView]
     _config: LockConfig
     _lock: Any
+    nudge_verifying: bool
+    nudge_down: bool
 
     def _decision(self) -> GateDecision:
         """Provided by the host class."""
@@ -141,6 +143,8 @@ class StudyMixin:
         return StripText(
             elapsed_seconds=session.elapsed_seconds(),
             needed=max(1, self._decision().needed),
+            verifying=self.nudge_verifying,
+            fast_path_down=self.nudge_down,
         )
 
     def _refresh_strip(self) -> None:

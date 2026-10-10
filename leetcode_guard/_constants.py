@@ -212,10 +212,10 @@ piece that meaningfully raises the API budget (one request each, on top of the
 POLL_INTERVAL_MS_PRODUCTION: Final = 30_000
 POLL_INTERVAL_MS_DEMO: Final = 10_000
 
-POLL_DRAIN_MS: Final = 50
-"""How often the Tk thread checks for a finished future or a pending poke. It is
-paid twice on the browser-nudge path (notice the poke, notice the answer), whose
-budget is one second end to end. Network work never runs on the Tk thread: a
+POLL_DRAIN_MS: Final = 20
+"""How often the Tk thread checks for a finished future or a pending poke. Paid
+twice on the browser-nudge path, whose credit budget is 1 s and whose note
+should show within 100 ms. Network work never runs on the Tk thread: a
 request inside ``after`` would freeze a grabbed lock, which looks like a hang."""
 
 # --------------------------------------------------------------------------

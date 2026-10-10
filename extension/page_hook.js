@@ -4,6 +4,9 @@
 // or the verdict: the lock re-checks LeetCode itself, so the signal is not trusted.
 (() => {
   const CHECK = /\/submissions\/detail\/\d+\/check\/?/;
+  // Any verdict poll, Run included. Only logged: a "Run" proves interception
+  // works on the live site (DevTools console) without minting a credit.
+  const ANY_CHECK = /\/submissions\/detail\/[^/]+\/check\/?/;
   const announce = (body) => {
     // status_code 10 is Accepted (leetcode.el's table); either field suffices.
     const accepted = body && (body.status_msg === "Accepted" || body.status_code === 10);
@@ -12,15 +15,18 @@
     }
   };
   const inspect = (url, text) => {
-    if (!CHECK.test(url)) return;
-    try { announce(JSON.parse(text)); } catch (_) { /* not JSON: not a verdict */ }
+    if (!ANY_CHECK.test(url)) return;
+    let body;
+    try { body = JSON.parse(text); } catch (_) { return; /* not JSON: not a verdict */ }
+    console.debug("[leetcode-guard] verdict poll", url, body && body.state, body && body.status_msg);
+    if (CHECK.test(url)) announce(body);
   };
 
   const realFetch = window.fetch;
   window.fetch = async function (...args) {
     const response = await realFetch.apply(this, args);
     const url = response.url || String(args[0] && args[0].url ? args[0].url : args[0]);
-    if (CHECK.test(url)) response.clone().text().then((t) => inspect(url, t), () => {});
+    if (ANY_CHECK.test(url)) response.clone().text().then((t) => inspect(url, t), () => {});
     return response;
   };
 

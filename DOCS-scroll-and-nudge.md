@@ -27,8 +27,11 @@ The lock polls every 30 s. `extension/` (Helium, loaded via
 `/submissions/detail/<numeric id>/check/` responses and, on an Accepted verdict,
 POSTs to `_nudge_server` on 127.0.0.1:8772. Runs (`runcode_` ids) never ring.
 
-The lock then probes the recent-AC feed at once and at +1/2/4 s, in case the
-feed lags the verdict. Rules, all enforced in code because the port is
+The lock then probes the recent-AC feed at once and at +0.25/0.5/1/2/4 s, in
+case the feed lags the verdict (tightened 2026-10-10: at +1 s, a feed lagging by
+50 ms pushed the credit past the one-second target). While the burst runs the
+study strip's accent line reads "Accepted seen -- verifying"; the count does not
+move until the feed confirms, and the note clears when the burst runs out. Rules, all enforced in code because the port is
 unauthenticated:
 
 - The request body is never read. A ring can only cause a probe; credits still
@@ -41,7 +44,30 @@ unauthenticated:
 - The port is open only while a lock is up (`GuardDeps.nudge_port`, set by the
   CLI; tests leave it `None`).
 
+## Why the nudge was dead until 2026-10-10
+
+Two independent faults, each enough on its own; neither raised an error.
+
+- **Port 8772 was taken** by plc-lab's tutor (moved to 8778). The lock only
+  logged a warning, so it fell back to the 30 s poll in silence. A failed bind
+  now titles the strip "instant check OFF".
+- **The extension never loaded.** Chromium keeps only the *last*
+  `--load-extension`. Helium's launcher puts `helium-browser-flags.conf` first
+  and the caller's arguments after, and `/usr/local/bin/helium-browser` is
+  `browser-preexec-wrapper`, whose exec line carried LeechBlock's flag twice.
+  The conf entry is broken a second way too: the launcher's tilde-escaping
+  turns `/home/kuhy/...` into a literal `~/...`. So
+  `scripts/install_nudge_extension.sh` merges every flag on the wrapper's exec
+  line into one that lists `extension/` (sudo), and digital-wellbeing's
+  LeechBlock installer, rerun on every `pacman -S`, now joins that flag rather
+  than appending a second one.
+
+Live check without minting a credit: click **Run** on any problem; the page's
+DevTools console logs `[leetcode-guard] verdict poll`. Run ids never ring.
+
 Measured: the extension rings 2-7 ms after the verdict
 (`scripts/verify_nudge_extension.py`, headless Helium against a mock); the lock
 repaints ~4 ms after LeetCode answers (`scripts/verify_nudge_latency.py`), so
 end to end is one LeetCode round trip, ~0.3 s, plus any feed lag.
+`verify_nudge_latency.py --port 8799 --lag 0.5`: note ~5 ms, credit ~630 ms
+(1.3 s under the old ladder).

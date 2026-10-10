@@ -46,6 +46,28 @@ class StripText:
 
     elapsed_seconds: float
     needed: int
+    verifying: bool = False
+    """The browser reported an Accepted verdict and LeetCode is being asked."""
+    fast_path_down: bool = False
+    """The browser doorbell is closed: a solve waits for the regular poll."""
+
+    @property
+    def title(self) -> str:
+        """The heading; it is where a dead instant check is admitted."""
+        if self.fast_path_down:
+            return "Study mode -- instant check OFF"
+        return "Study mode -- the lock is waiting"
+
+    @property
+    def headline(self) -> str:
+        """The accent line: the verdict being checked, else elapsed time.
+
+        The count below never moves on the browser's word alone; this line is
+        the only thing a ring changes, and only for as long as the burst runs.
+        """
+        if self.verifying:
+            return "Accepted seen -- verifying"
+        return self.elapsed
 
     @property
     def elapsed(self) -> str:
@@ -70,10 +92,12 @@ class StudyStrip:
         elapsed_label: tk.Label,
         needed_label: tk.Label,
         *,
+        title_label: tk.Label | None = None,
         tick_ms: int = STUDY_STRIP_TICK_MS,
     ) -> None:
         """Wrap an already-built strip window."""
         self.window = window
+        self._title_label = title_label
         self._elapsed_label = elapsed_label
         self._needed_label = needed_label
         self._tick_ms = tick_ms
@@ -85,7 +109,9 @@ class StudyStrip:
         if self._destroyed:
             return
         try:
-            self._elapsed_label.configure(text=text.elapsed)
+            if self._title_label is not None:
+                self._title_label.configure(text=text.title)
+            self._elapsed_label.configure(text=text.headline)
             self._needed_label.configure(text=text.owed)
             self.window.lift()
         except tk.TclError:
@@ -156,7 +182,7 @@ def build_strip(
 
     title = tk.Label(
         window,
-        text="Study mode -- the lock is waiting",
+        text=text.title,
         font=config.font("label", bold=True),
         fg=config.palette.fg,
         bg=config.palette.field_bg,
@@ -165,7 +191,7 @@ def build_strip(
 
     elapsed_label = tk.Label(
         window,
-        text=text.elapsed,
+        text=text.headline,
         font=config.font("body"),
         fg=config.palette.accent,
         bg=config.palette.field_bg,
@@ -194,7 +220,7 @@ def build_strip(
     )
     back.pack(pady=(config.space("xs"), config.space("sm")))
 
-    return StudyStrip(window, elapsed_label, needed_label)
+    return StudyStrip(window, elapsed_label, needed_label, title_label=title)
 
 
 def _geometry(config: LockConfig, rect: OutputRect) -> str:

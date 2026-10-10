@@ -6,7 +6,9 @@ guard on Xvfb whose network seam answers like LeetCode after ``--rtt`` seconds
 (0.3 s is what ``curl`` measured against leetcode.com/graphql on 2026-10-03).
 The fake feed gains a new accepted submission, the doorbell is rung over real
 HTTP, and the clock stops when the poll handler has minted the credit and
-repainted -- the moment "still need N" changes on screen.
+repainted -- the moment "still need N" changes on screen. ``--lag`` makes the
+feed trail the verdict, which is what the retry ladder exists for; the time to
+the "verifying" note (the only thing a ring shows at once) is reported too.
 
     xvfb-run -a -s "-screen 0 1600x1200x24" python3 -m scripts.verify_nudge_latency
 
@@ -80,11 +82,22 @@ def _ring(port: int) -> None:
     conn.close()
 
 
-def trial(rtt: float, workdir: Path) -> float:
-    """One nudge; returns seconds from ring to credited repaint."""
+class TimedGuard(LeetcodeGuard):
+    """Notes when the "verifying" note first goes up."""
+
+    noted: float | None = None
+
+    def _refresh_strip(self) -> None:
+        if self.nudge_verifying and self.noted is None:
+            self.noted = time.monotonic()
+        super()._refresh_strip()
+
+
+def trial(rtt: float, workdir: Path, *, lag: float, port: int) -> tuple[float, float]:
+    """One nudge; seconds from ring to the note, and to the credited repaint."""
     _gate.GATE_START_DATE = date(2000, 1, 1)
     feed = FakeFeed(rtt)
-    guard = LeetcodeGuard(
+    guard = TimedGuard(
         demo_mode=True,
         deps=GuardDeps(
             ledger_path=workdir / "ledger.json",
@@ -97,7 +110,7 @@ def trial(rtt: float, workdir: Path) -> float:
             probe=SolveProbe(status=ProbeStatus.OK, submissions=(), reason="seed"),
             wait_turn=False,
             now=lambda: NOW,
-            nudge_port=NUDGE_PORT,
+            nudge_port=port,
         ),
     )
     # Watch the repaint itself: the first model whose balance line differs
@@ -119,9 +132,13 @@ def trial(rtt: float, workdir: Path) -> float:
 
     def ring_later() -> None:
         time.sleep(SETTLE_SECONDS)
-        feed.accept(f"sub-{time.monotonic_ns()}")
+        if lag <= 0:
+            feed.accept(f"sub-{time.monotonic_ns()}")
         rung.append(time.monotonic())
-        _ring(NUDGE_PORT)
+        _ring(port)
+        if lag > 0:
+            time.sleep(lag)
+            feed.accept(f"sub-{time.monotonic_ns()}")
 
     threading.Thread(target=ring_later, daemon=True).start()
     guard.root.after(int((SETTLE_SECONDS + 10) * 1000), guard.root.quit)
@@ -131,9 +148,12 @@ def trial(rtt: float, workdir: Path) -> float:
         _lock_poll.apply_viewmodel = paint
         guard.on_close()
         guard.root.destroy()
+    if guard.nudge_down:
+        _say(f"port {port} is taken: the doorbell never opened")
+    note = float("inf") if guard.noted is None else guard.noted - rung[0]
     if not credited:
-        return float("inf")
-    return credited[0] - rung[0]
+        return note, float("inf")
+    return note, credited[0] - rung[0]
 
 
 def main() -> int:
@@ -142,15 +162,20 @@ def main() -> int:
     parser.add_argument("--rtt", type=float, default=0.3)
     parser.add_argument("--trials", type=int, default=5)
     parser.add_argument("--budget", type=float, default=1.0)
+    parser.add_argument("--lag", type=float, default=0.0)
+    parser.add_argument("--port", type=int, default=NUDGE_PORT)
     args = parser.parse_args()
     results = []
     for index in range(args.trials):
         with tempfile.TemporaryDirectory(
             dir=Path.home() / "data" / "claude-scratch"
         ) as tmp:
-            seconds = trial(args.rtt, Path(tmp))
+            note, seconds = trial(args.rtt, Path(tmp), lag=args.lag, port=args.port)
         results.append(seconds)
-        _say(f"trial {index + 1}: {1000 * seconds:.0f} ms")
+        _say(
+            f"trial {index + 1}: note {1000 * note:.0f} ms, "
+            f"credit {1000 * seconds:.0f} ms"
+        )
     overhead = statistics.median(r - args.rtt for r in results)
     _say(
         f"median {1000 * statistics.median(results):.0f} ms, max "

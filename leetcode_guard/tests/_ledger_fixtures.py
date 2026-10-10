@@ -12,6 +12,7 @@ from datetime import UTC, date, datetime
 import secrets
 from typing import TYPE_CHECKING
 
+from leetcode_guard._daycost import day_cost, local_today
 from leetcode_guard._ledger import LedgerEntry, sign
 from leetcode_guard._ledger_entries import charge_entry, credit_entry
 from leetcode_guard._ledger_io import Ledger, append
@@ -76,6 +77,15 @@ def ledger_with_credits(
     ledger = Ledger()
     append(ledger, credits_for(count, day=day, now=now, key_file=key_file))
     return ledger
+
+
+def ledger_paying_for_today(*, key_file: Path) -> Ledger:
+    """Exactly enough credits for today's price, whatever day the suite runs.
+
+    A fixed count broke every weekend once Sat/Sun cost 4 (2026-10-07).
+    """
+    today = local_today()
+    return ledger_with_credits(day_cost(today), day=today, key_file=key_file)
 
 
 def add_charge(

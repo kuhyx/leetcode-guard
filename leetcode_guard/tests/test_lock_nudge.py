@@ -7,11 +7,16 @@ and a failed extra check never counts as blind time.
 
 from __future__ import annotations
 
+import socket
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 from leetcode_guard import _lock_nudge
-from leetcode_guard._lock_nudge import NUDGE_BURST_RETRY_MS, NUDGE_COOLDOWN_SECONDS
+from leetcode_guard._lock_nudge import (
+    NUDGE_BURST_RETRY_MS,
+    NUDGE_COOLDOWN_SECONDS,
+    NUDGE_VERIFY_GRACE_MS,
+)
 from leetcode_guard.tests._guard_factories import (
     UNVERIFIABLE,
     create_guard,
@@ -114,3 +119,51 @@ def test_a_port_opens_a_real_doorbell_and_close_shuts_it(tmp_path: Path) -> None
 
     guard._stop_nudges()
     assert server.port is None
+
+
+def test_a_ring_shows_the_verifying_note_and_books_its_end(tmp_path: Path) -> None:
+    guard = _armed(tmp_path)
+    guard._refresh_strip = MagicMock()
+
+    guard._bell.set()
+    guard._watch_bell()
+
+    assert guard.nudge_verifying
+    guard._refresh_strip.assert_called_once_with()
+    delays = [c.args[0] for c in guard.root.after.call_args_list]
+    assert NUDGE_BURST_RETRY_MS[-1] + NUDGE_VERIFY_GRACE_MS in delays
+
+
+def test_a_burst_that_runs_out_drops_the_note(tmp_path: Path) -> None:
+    """A forged ring must not leave a claim on screen."""
+    guard = _armed(tmp_path)
+    guard._refresh_strip = MagicMock()
+    guard.nudge_verifying = True
+    guard._burst_jobs = ["retry-1"]
+
+    guard._burst_ran_out()
+
+    assert not guard.nudge_verifying
+    assert guard._burst_jobs == []
+    guard._refresh_strip.assert_called_once_with()
+
+
+def test_a_credit_drops_the_note(tmp_path: Path) -> None:
+    guard, _calls = create_guard(tmp_path, seeded=True)
+    guard.nudge_verifying = True
+
+    guard._on_poll_result(probe_of("fresh"))
+
+    assert not guard.nudge_verifying
+
+
+def test_a_taken_port_marks_the_doorbell_down(tmp_path: Path) -> None:
+    """2026-10-10: another app held 8772 and the lock only logged it."""
+    guard, _calls = create_guard(tmp_path, seeded=True)
+    with socket.socket() as squatter:
+        squatter.bind(("127.0.0.1", 0))
+        squatter.listen()
+        guard._start_nudges(squatter.getsockname()[1])
+
+    assert guard.nudge_down
+    guard._stop_nudges()
