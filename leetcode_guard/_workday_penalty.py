@@ -7,6 +7,9 @@ carries a signed ``penalty_date``, and the only decision here is *HMAC ok,
 dated today*. Anything else -- missing file, stale date, bad signature -- is
 "no penalty", i.e. today's ordinary price. A penalty whose missed ring fell
 on a sick day is void too: wake-alarm retracts it, but up to ~15 min late.
+That is the *alarm* switch's call (a sick day keeping ``alarm`` still rang);
+the penalty date is leetcode's, and ``decide`` ignores the penalty there
+only when leetcode stands down.
 """
 
 from __future__ import annotations
@@ -16,9 +19,9 @@ import json
 import logging
 
 from gatelock.log_integrity import verify_entry_hmac
-import sickdays
 
 from leetcode_guard._constants import WORKDAY_PENALTY_FILE
+from leetcode_guard._sick import alarm_stands_down
 
 _logger = logging.getLogger(__name__)
 
@@ -47,17 +50,17 @@ def workday_penalty_for(day: date) -> bool:
     if entry.get("penalty_date") != day.isoformat():
         return False
     issued = entry.get("issued_date")
-    if isinstance(issued, str) and _sick_on(issued):
-        _logger.info("Workday penalty void: the missed ring %s was a sick day", issued)
+    if isinstance(issued, str) and _alarm_off_on(issued):
+        _logger.info("Workday penalty void: the alarm stood down on %s", issued)
         return False
     return True
 
 
-def _sick_on(iso: str) -> bool:
-    """Whether the ISO date ``iso`` is a sick day; an unparsable date is not."""
+def _alarm_off_on(iso: str) -> bool:
+    """Whether the alarm stood down on ISO date ``iso``; an unparsable date: no."""
     try:
         issued = date.fromisoformat(iso)
     except ValueError:
         _logger.warning("Workday penalty has a bad issued_date %r", iso)
         return False
-    return sickdays.is_sick_day(issued)
+    return alarm_stands_down(issued)

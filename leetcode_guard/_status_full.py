@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Final
 
+import sickdays
+
 from leetcode_guard._constants import (
     COOKIES_FILE,
     ESCAPE_HISTORY_FILE,
@@ -26,7 +28,7 @@ from leetcode_guard._constants import (
     STATEMENTS_CACHE_FILE,
     SYNC_TOKEN_FILE,
 )
-from leetcode_guard._daycost import local_today
+from leetcode_guard._daycost import local_today, parse_day
 from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
@@ -162,9 +164,20 @@ def explain_not_triggered(full: FullStatus) -> list[str]:
         )
     elif gate.state == "not-started" and full.in_force:
         lines.append(gate.reason)
+    if _keeps_leetcode(gate.day):
+        lines.append(
+            "Today is a sick day that keeps leetcode: the gate locks, prices "
+            "and owes exactly as on any other day."
+        )
 
     lines.extend(_warnings(gate))
     return lines
+
+
+def _keeps_leetcode(iso: str) -> bool:
+    """Whether the gate's day is a sick day that keeps this gate active."""
+    day = parse_day(iso)
+    return day is not None and sickdays.LOCKER_LEETCODE in sickdays.kept_lockers(day)
 
 
 def _warnings(gate: StatusSnapshot) -> list[str]:

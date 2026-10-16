@@ -36,7 +36,7 @@ extra credit until the debt is gone (3 becomes 4, 4 becomes 5); Tue-Thu never
 carry it. Debt is derived from the calendar and the ledger every time and never
 stored; deleting the ledger grows it. Free days (`freedays mark`) are declared
 in advance; a **sick day** (`sickdays add`, its own pool, today or later) stands
-the gate down and adds nothing to the debt.
+the gate down and adds nothing to the debt, unless it keeps `leetcode`.
 
 ## What counts
 

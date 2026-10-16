@@ -25,9 +25,13 @@ def _no_sick_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     """
     import sickdays
     import sickdays._api
+    import sickdays._keep_api
 
     isolated = sickdays.Paths.under(tmp_path / "sickdays")
-    monkeypatch.setattr(sickdays._api, "resolve_paths", lambda paths: paths or isolated)
+    # Reads (is_sick_day, stands_down, kept_lockers) go through _api.load;
+    # set_kept_lockers binds its own resolve_paths in _keep_api.
+    for module in (sickdays._api, sickdays._keep_api):
+        monkeypatch.setattr(module, "resolve_paths", lambda paths: paths or isolated)
 
 
 @pytest.fixture(autouse=True)

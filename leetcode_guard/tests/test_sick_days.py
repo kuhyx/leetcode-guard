@@ -47,6 +47,11 @@ def sick_on(*days: date):
     return lambda day: day in days
 
 
+def stands_down_on(*days: date):
+    """A fake ``sickdays.stands_down``: these days are sick, keeping nothing."""
+    return lambda _locker, day=None, **_kw: day in days
+
+
 def test_a_sick_day_stands_down_with_no_credit_and_no_charge(hmac_key: Path):
     decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, sick_day=True)
 
@@ -112,7 +117,7 @@ def test_a_charge_on_a_sick_day_repays_by_the_ordinary_rule(hmac_key: Path):
 
 def test_decide_today_reads_the_sick_pool(hmac_key: Path, debt_starts, monkeypatch):
     debt_starts(MONDAY)
-    monkeypatch.setattr(sickdays, "is_sick_day", sick_on(MONDAY, TUESDAY))
+    monkeypatch.setattr(sickdays, "stands_down", stands_down_on(MONDAY, TUESDAY))
 
     sick = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
     on_the_day = _gate_today.decide_today(Ledger(), day=TUESDAY, now=NOW)
@@ -155,7 +160,7 @@ def test_sick_days_reach_the_status_projection(
     from leetcode_guard._status import gather_status
 
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
-    monkeypatch.setattr(_status_projection.sickdays, "is_sick_day", lambda _day: True)
+    monkeypatch.setattr(sickdays, "stands_down", lambda *_a, **_k: True)
 
     report = _status_projection.build_report(
         snapshot, None, _status_projection.ProjectionInputs("31.12.2999")
@@ -184,7 +189,7 @@ def test_the_window_says_sick_not_unlocked(hmac_key: Path):
 
 
 def test_status_explains_a_sick_day(data_dir: Path, hmac_key: Path, monkeypatch):
-    monkeypatch.setattr(sickdays, "is_sick_day", lambda _day: True)
+    monkeypatch.setattr(sickdays, "stands_down", lambda *_a, **_k: True)
     ledger = ledger_with_credits(0, day=MONDAY, key_file=hmac_key)
 
     lines = explain_not_triggered(full_for(data_dir, hmac_key, ledger))

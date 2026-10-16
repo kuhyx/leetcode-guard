@@ -27,8 +27,17 @@ cost nothing.
   charge: it is never owed, and it repays by the same rule as on any other
   day -- a `+1` surcharge on a sick Mon/Fri/Sat/Sun still counts, Tue-Thu
   never carries one. Solves on a sick day credit normally. An unreadable
-  sick-day pool reads as "not sick" (`sickdays.is_sick_day` never raises), so
+  sick-day pool reads as "not sick" (`sickdays.stands_down` never raises), so
   the normal rules apply.
+- **A sick day can keep this gate** (`sickdays add --keep leetcode`, or
+  `sickdays keep <day> leetcode`; sickdays 0.2.0). "Sick" above always means
+  *leetcode stands down* (`_sick.leetcode_stands_down`): sick **and** not kept.
+  A kept sick day is an ordinary day in every respect -- it locks, it is
+  priced as usual, a workday penalty dated on it applies, and if it passes
+  with no charge it is **owed**, past days included. The keep set can only be
+  edited for today or later, so a past day's debt cannot be rewritten. A
+  workday penalty is void only when the *missed ring* fell on a day the
+  `alarm` switch stood down; keeping `alarm` keeps the penalty.
 - An escape-hatch or outage settlement charges the *base* cost: that day is
   settled (not owed) but repays nothing.
 

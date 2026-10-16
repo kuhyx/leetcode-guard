@@ -15,7 +15,6 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 import freedays
-import sickdays
 
 from leetcode_guard._constants import PROGRESS_CACHE_FILE
 from leetcode_guard._daycost import CURRENT_BASE, local_today, parse_day, what_if
@@ -35,6 +34,7 @@ from leetcode_guard._projection_text import progress_lines, projection_lines
 from leetcode_guard._scenario import MIN_PRICE, Goal, Scenario, build_scenario
 from leetcode_guard._scenario_text import prices_line, scenario_lines
 from leetcode_guard._settings import build_client
+from leetcode_guard._sick import leetcode_stands_down
 
 if TYPE_CHECKING:
     from datetime import date
@@ -153,7 +153,7 @@ def position_of(snapshot: StatusSnapshot) -> Position:
         charged_today=snapshot.charged_today,
         available=snapshot.available,
         debt_outstanding=snapshot.debt_outstanding,
-        is_sick=sickdays.is_sick_day,
+        is_sick=leetcode_stands_down,
     )
 
 
@@ -214,7 +214,7 @@ def _is_off_day(day: date) -> bool:
 
     That is all the what-if arithmetic needs to know.
     """
-    return freedays.is_free_day(day) or sickdays.is_sick_day(day)
+    return freedays.is_free_day(day) or leetcode_stands_down(day)
 
 
 def cached_progress() -> Progress | None:

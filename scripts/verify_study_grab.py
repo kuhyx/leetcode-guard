@@ -94,7 +94,8 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
     """
     _gate.GATE_START_DATE = date(2000, 1, 1)
     freedays.is_free_day = lambda *_a, **_k: False
-    sickdays.is_sick_day = lambda *_a, **_k: False
+    sickdays.is_sick_day = sickdays.stands_down = lambda *_a, **_k: False
+    sickdays.kept_lockers = lambda *_a, **_k: frozenset()
     cached = read_cache(POOL_CACHE_FILE)
     problems = tuple(rank_pool(cached.problems)) if cached else ()
     signed_out = AuthState(cookies=None, note="Not signed in.")

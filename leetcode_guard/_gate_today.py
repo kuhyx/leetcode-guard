@@ -11,10 +11,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import freedays
-import sickdays
 
 from leetcode_guard._debt import NO_DEBT, compute_debt
 from leetcode_guard._gate import GateDecision, decide
+from leetcode_guard._sick import leetcode_stands_down
 from leetcode_guard._workday_penalty import workday_penalty_for
 
 if TYPE_CHECKING:
@@ -34,6 +34,9 @@ def decide_today(
 ) -> GateDecision:
     """Look up the free-day and sick-day pools and the debt, then decide.
 
+    "Sick" means this gate stands down: a sick day that keeps ``leetcode``
+    is an ordinary day here, for today's verdict and for the debt alike.
+
     Args:
         ledger: The loaded ledger.
         day: Today's local date.
@@ -52,7 +55,7 @@ def decide_today(
             ledger,
             day=day,
             is_free=freedays.is_free_day,
-            is_sick=sickdays.is_sick_day,
+            is_sick=leetcode_stands_down,
         )
     )
     return decide(
@@ -63,5 +66,5 @@ def decide_today(
         free_day=freedays.is_free_day(day),
         debt=debt,
         workday_penalty=workday_penalty_for(day),
-        sick_day=sickdays.is_sick_day(day),
+        sick_day=leetcode_stands_down(day),
     )

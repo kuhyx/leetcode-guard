@@ -142,9 +142,9 @@ def decide(
             discount, not an added surcharge -- a day already priced at the
             penalty rate (Fri, from a Thursday miss) is unaffected. Ignored on
             a sick day.
-        sick_day: Whether ``day`` is in the shared sick-day pool. Checked
-            after the clock, like ``free_day``. A charge already on the
-            ledger for the day repays exactly as on any other day.
+        sick_day: Whether ``day`` is sick and does not keep ``leetcode``
+            (``_sick.leetcode_stands_down``). Checked after the clock, like
+            ``free_day``. A charge on the day repays as on any other day.
 
     Returns:
         The decision. Nothing is written.
