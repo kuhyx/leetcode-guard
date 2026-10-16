@@ -38,12 +38,16 @@ import sys
 import tempfile
 from typing import TYPE_CHECKING
 
+import freedays
+import sickdays
+
 from leetcode_guard import _gate
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
 from leetcode_guard._daycost import local_today
 from leetcode_guard._ledger_entries import credit_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
+from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._pool_cache import read_cache
@@ -131,9 +135,13 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
     """Construct a guard already in the requested state.
 
     The start date is pushed into the past first: these shots are meant to show
-    the gate as it will look *in force*, not the inert pre-start screen.
+    the gate as it will look *in force*, not the inert pre-start screen. For
+    the same reason today is pinned to an ordinary day: on a real free or sick
+    day every shot would show the gate standing down.
     """
     _gate.GATE_START_DATE = date(2000, 1, 1)
+    freedays.is_free_day = lambda *_a, **_k: False
+    sickdays.is_sick_day = lambda *_a, **_k: False
 
     ledger_path = workdir / "ledger.json"
     ledger = Ledger()
@@ -159,7 +167,8 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             ledger_path=ledger_path,
             escape_path=workdir / "escape.json",
             incident_path=workdir / "incidents.json",
-            post=lambda _q, _v: None,
+            # The poller binds the real ``_check``: answer a well-formed empty feed.
+            post=lambda _q, _v: GraphQLResult(data={"recentAcSubmissionList": []}),
             username="kuchy",
             auth=SIGNED_OUT,
             pool=pool,
@@ -170,7 +179,6 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             now=lambda: NOW,
         ),
     )
-    guard._check = probe
 
     if state == "unlocked":
         guard._on_poll_result(probe("fresh-solve"))
