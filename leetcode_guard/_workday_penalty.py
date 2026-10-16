@@ -5,21 +5,20 @@ Tue/Wed/Thu price discount (see ``_daycost.Pricing.doubled_days``) instead of
 just resetting to normal. This module never re-derives that policy: the file
 carries a signed ``penalty_date``, and the only decision here is *HMAC ok,
 dated today*. Anything else -- missing file, stale date, bad signature -- is
-"no penalty", i.e. today's ordinary price.
+"no penalty", i.e. today's ordinary price. A penalty whose missed ring fell
+on a sick day is void too: wake-alarm retracts it, but up to ~15 min late.
 """
 
 from __future__ import annotations
 
+from datetime import date
 import json
 import logging
-from typing import TYPE_CHECKING
 
 from gatelock.log_integrity import verify_entry_hmac
+import sickdays
 
 from leetcode_guard._constants import WORKDAY_PENALTY_FILE
-
-if TYPE_CHECKING:
-    from datetime import date
 
 _logger = logging.getLogger(__name__)
 
@@ -45,4 +44,20 @@ def workday_penalty_for(day: date) -> bool:
     entry = _read_verified()
     if entry is None:
         return False
-    return entry.get("penalty_date") == day.isoformat()
+    if entry.get("penalty_date") != day.isoformat():
+        return False
+    issued = entry.get("issued_date")
+    if isinstance(issued, str) and _sick_on(issued):
+        _logger.info("Workday penalty void: the missed ring %s was a sick day", issued)
+        return False
+    return True
+
+
+def _sick_on(iso: str) -> bool:
+    """Whether the ISO date ``iso`` is a sick day; an unparsable date is not."""
+    try:
+        issued = date.fromisoformat(iso)
+    except ValueError:
+        _logger.warning("Workday penalty has a bad issued_date %r", iso)
+        return False
+    return sickdays.is_sick_day(issued)

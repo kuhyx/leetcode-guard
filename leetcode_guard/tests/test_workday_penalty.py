@@ -56,3 +56,16 @@ def test_missing_unreadable_tampered_are_all_no_penalty(tmp_path: Path) -> None:
     assert workday_penalty_for(WEDNESDAY) is False
     path.unlink()
     assert workday_penalty_for(WEDNESDAY) is False
+
+
+def test_a_penalty_from_a_sick_days_missed_ring_is_void() -> None:
+    import sickdays
+
+    _write({"penalty_date": "2026-08-12", "issued_date": "2026-08-11"})
+    sickdays.import_legacy([TUESDAY])
+    assert workday_penalty_for(WEDNESDAY) is False
+
+
+def test_a_bad_issued_date_keeps_the_penalty() -> None:
+    _write({"penalty_date": "2026-08-12", "issued_date": "yesterday"})
+    assert workday_penalty_for(WEDNESDAY) is True
