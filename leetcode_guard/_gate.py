@@ -140,8 +140,8 @@ def decide(
         workday_penalty: Whether a missed wake-alarm ring on a prior
             Tue/Wed/Thu cost ``day`` its own Tue/Wed/Thu discount. Losing the
             discount, not an added surcharge -- a day already priced at the
-            penalty rate (Fri, from a Thursday miss) is unaffected. Ignored on
-            a sick day.
+            penalty rate (Fri, from a Thursday miss) is unaffected. Ignored
+            when ``sick_day`` (a sick day that keeps leetcode still pays it).
         sick_day: Whether ``day`` is sick and does not keep ``leetcode``
             (``_sick.leetcode_stands_down``). Checked after the clock, like
             ``free_day``. A charge on the day repays as on any other day.
