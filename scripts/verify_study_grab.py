@@ -37,11 +37,15 @@ import sys
 import tempfile
 from typing import TYPE_CHECKING, Final
 
+import freedays
+import sickdays
+
 from leetcode_guard import _browser as browser
 from leetcode_guard import _gate
 from leetcode_guard import _lock_study as lock_study
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
+from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._pool_cache import read_cache
@@ -83,20 +87,26 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
     ``pyproject.toml``), so a ``from scripts.x import y`` makes mypy see that
     file under two module names and fail -- which it did, in CI, on a clean
     cache, while a warm local cache stayed quiet.
+
+    Today is pinned to an ordinary day: on a real free or sick day the first
+    poll rightly unlocks and ends study mode (2026-10-16 failed so). The poller
+    binds the real ``_check``, so ``post`` must answer a well-formed empty feed.
     """
     _gate.GATE_START_DATE = date(2000, 1, 1)
+    freedays.is_free_day = lambda *_a, **_k: False
+    sickdays.is_sick_day = lambda *_a, **_k: False
     cached = read_cache(POOL_CACHE_FILE)
     problems = tuple(rank_pool(cached.problems)) if cached else ()
     signed_out = AuthState(cookies=None, note="Not signed in.")
     probe = SolveProbe(status=ProbeStatus.OK, submissions=(), reason="none recent")
 
-    guard = LeetcodeGuard(
+    return LeetcodeGuard(
         demo_mode=False,
         deps=GuardDeps(
             ledger_path=workdir / "ledger.json",
             escape_path=workdir / "escape.json",
             incident_path=workdir / "incidents.json",
-            post=lambda _q, _v: None,
+            post=lambda _q, _v: GraphQLResult(data={"recentAcSubmissionList": []}),
             username="kuchy",
             auth=signed_out,
             pool=PoolResolution(
@@ -109,8 +119,6 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
             now=lambda: NOW,
         ),
     )
-    guard._check = lambda: probe
-    return guard
 
 
 class _Recorder:
