@@ -155,6 +155,11 @@ def explain_not_triggered(full: FullStatus) -> list[str]:
             f"and {gate.weekday} costs {gate.cost}, so the day was paid for "
             "without asking you to solve anything."
         )
+    elif gate.state == "sick-day":
+        lines.append(
+            "Today is a declared sick day: the gate stands down, charges "
+            "nothing and adds nothing to the debt. A solve still earns credit."
+        )
     elif gate.state == "not-started" and full.in_force:
         lines.append(gate.reason)
 

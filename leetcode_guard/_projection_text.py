@@ -77,12 +77,17 @@ def _rules_line(projection: Projection) -> str:
     )
 
 
+def _sick_suffix(projection: Projection) -> str:
+    """``, 2 sick`` when sick days fall in range -- never folded into "free"."""
+    return f", {projection.sick_days} sick" if projection.sick_days else ""
+
+
 def projection_lines(projection: Projection, progress: Progress | None) -> list[str]:
     """The target, the working, and the position on that date."""
     span = (
         f"By {format_target(projection.target)}, counting from "
         f"{format_target(projection.first_day)}: {projection.gated_days} gated "
-        f"day(s), {projection.free_days} free."
+        f"day(s), {projection.free_days} free{_sick_suffix(projection)}."
     )
     working = (
         f"{projection.base_cost} (day prices) + {projection.debt} (debt) - "

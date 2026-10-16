@@ -30,12 +30,13 @@ rather than a time window:
 
 **Charge on use, owe the rest.** A charge is only ever written for a day the
 gate actually settled -- nothing is back-filled for days the PC was off. But
-from 2026-08-04 every past day with no charge that was not a declared free day
-is *owed* at its price, and each Mon/Fri/Sat/Sun costs one extra credit until
-the debt is gone (3 becomes 4, 4 becomes 5); Tue-Thu never carry it. Debt is
-derived from the calendar and the ledger every time and never stored; deleting the ledger makes every day since the epoch uncharged, so it
-grows the debt. Free days (`freedays mark`) must be declared in advance and
-are the only way to be away for free.
+from 2026-08-04 every past day with no charge that was neither a declared free
+day nor a sick day is *owed* at its price, and each Mon/Fri/Sat/Sun costs one
+extra credit until the debt is gone (3 becomes 4, 4 becomes 5); Tue-Thu never
+carry it. Debt is derived from the calendar and the ledger every time and never
+stored; deleting the ledger grows it. Free days (`freedays mark`) are declared
+in advance; a **sick day** (`sickdays add`, its own pool, today or later) stands
+the gate down and adds nothing to the debt.
 
 ## What counts
 

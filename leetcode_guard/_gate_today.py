@@ -1,9 +1,9 @@
-"""Today's verdict, with the two lookups :func:`decide` refuses to do itself.
+"""Today's verdict, with the lookups :func:`decide` refuses to do itself.
 
-``decide`` is pure: it takes the free-day flag and the debt position as
-arguments so it can be tested as a table. Every real caller -- the timer run,
-the poll loop, ``--status``, ``--check`` -- needs the same two lookups first,
-and this is the one place that does them.
+``decide`` is pure: it takes the free-day and sick-day flags and the debt
+position as arguments so it can be tested as a table. Every real caller --
+the timer run, the poll loop, ``--status``, ``--check`` -- needs the same
+lookups first, and this is the one place that does them.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import freedays
+import sickdays
 
 from leetcode_guard._debt import NO_DEBT, compute_debt
 from leetcode_guard._gate import GateDecision, decide
@@ -31,7 +32,7 @@ def decide_today(
     key_file: Path | None = None,
     demo: bool = False,
 ) -> GateDecision:
-    """Look up the free-day pool and the debt, then decide.
+    """Look up the free-day and sick-day pools and the debt, then decide.
 
     Args:
         ledger: The loaded ledger.
@@ -45,7 +46,14 @@ def decide_today(
         The decision. Nothing is written.
     """
     debt = (
-        NO_DEBT if demo else compute_debt(ledger, day=day, is_free=freedays.is_free_day)
+        NO_DEBT
+        if demo
+        else compute_debt(
+            ledger,
+            day=day,
+            is_free=freedays.is_free_day,
+            is_sick=sickdays.is_sick_day,
+        )
     )
     return decide(
         ledger,
@@ -55,4 +63,5 @@ def decide_today(
         free_day=freedays.is_free_day(day),
         debt=debt,
         workday_penalty=workday_penalty_for(day),
+        sick_day=sickdays.is_sick_day(day),
     )

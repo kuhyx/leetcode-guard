@@ -101,6 +101,8 @@ def _headline(decision: GateDecision) -> str:
         # left", which is technically true and tells the reader nothing about
         # why the gate is not doing anything.
         return "Not in force yet"
+    if decision.state is GateState.UNLOCKED_SICK_DAY:
+        return "Sick day -- the gate stands down"
     if not decision.locked:
         left = _remaining_after_today(decision)
         plural = "" if left == 1 else "s"

@@ -15,6 +15,7 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 import freedays
+import sickdays
 
 from leetcode_guard._constants import PROGRESS_CACHE_FILE
 from leetcode_guard._daycost import CURRENT_BASE, local_today, parse_day, what_if
@@ -152,6 +153,7 @@ def position_of(snapshot: StatusSnapshot) -> Position:
         charged_today=snapshot.charged_today,
         available=snapshot.available,
         debt_outstanding=snapshot.debt_outstanding,
+        is_sick=sickdays.is_sick_day,
     )
 
 
@@ -196,7 +198,7 @@ def _with_goal(
         return ProjectionReport(
             progress, projection, base_cost=price, goal_problem=GOAL_NEEDS_COUNTS
         )
-    scenario = build_scenario(price, goal, progress, projection, is_free=_is_free_day)
+    scenario = build_scenario(price, goal, progress, projection, is_free=_is_off_day)
     return ProjectionReport(
         progress, projection, base_cost=price, scenario=scenario, goal=goal
     )
@@ -205,6 +207,14 @@ def _with_goal(
 def _is_free_day(day: date) -> bool:
     """The shared free-day pool, positionally -- what ``project`` expects."""
     return freedays.is_free_day(day)
+
+
+def _is_off_day(day: date) -> bool:
+    """Free or sick: either way the day collects nothing.
+
+    That is all the what-if arithmetic needs to know.
+    """
+    return freedays.is_free_day(day) or sickdays.is_sick_day(day)
 
 
 def cached_progress() -> Progress | None:

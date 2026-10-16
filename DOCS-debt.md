@@ -7,7 +7,8 @@ cost nothing.
 ## The rule
 
 - Every past day from `DEBT_START_DATE` (= the gate start, 2026-08-04) that
-  carries **no charge** and was **not a declared free day** is *owed* at the
+  carries **no charge** and was **neither a declared free day nor a sick
+  day** is *owed* at the
   price it would have cost on that date: from 2026-10-07, 2 on Tue-Thu, 3 on
   Mon/Fri and 4 on Sat/Sun; from 2026-09-21, 1 on Tue-Thu and 2 on
   Mon/Fri/Sat/Sun; before that, 1 on a weekday and 2 on Saturday or Sunday.
@@ -17,6 +18,17 @@ cost nothing.
   repays nothing.
 - Repayment is one per surcharged day. No cap on the debt, permanent rule.
 - Free days pause the debt: no charge, no repayment.
+- **Sick days** (`sickdays`, a pool of their own -- never called free) do the
+  same: the gate stands down (`GateState.UNLOCKED_SICK_DAY`, `sick-day` in
+  `--status`/MCP), nothing is charged, and the day adds nothing to `owed`.
+  The undone work is not spread into the future. A wake-alarm
+  `workday_penalty.json` is ignored on a sick day. A charge that exists anyway
+  (settled before the day was marked, or by the escape hatch) is an ordinary
+  charge: it is never owed, and it repays by the same rule as on any other
+  day -- a `+1` surcharge on a sick Mon/Fri/Sat/Sun still counts, Tue-Thu
+  never carries one. Solves on a sick day credit normally. An unreadable
+  sick-day pool reads as "not sick" (`sickdays.is_sick_day` never raises), so
+  the normal rules apply.
 - An escape-hatch or outage settlement charges the *base* cost: that day is
   settled (not owed) but repays nothing.
 
@@ -26,7 +38,7 @@ On the day it shipped the live ledger owed **22 credits over 18 missed days**
 ## Why derived, never stored
 
 `_debt.compute_debt` walks the calendar `[epoch, today)` against the set of
-charged days and the free-day pool, and sums `amount - day_cost(day)` over
+charged days and the free-day and sick-day pools, and sums `amount - day_cost(day)` over
 charges as repayment. Nothing is written.
 
 - `rm ledger.json` makes every day since the epoch uncharged and *grows* the
@@ -36,7 +48,7 @@ charges as repayment. Nothing is written.
 - Back-filling `charge:<past-date>` for missed days is off the table: that is
   the exact key `decide` unlocks on, and it feeds `latest_charged_day` in the
   clock guard.
-- The free-day pool is consulted only for uncharged days, so the lookup cost
+- The free-day and sick-day pools are consulted only for uncharged days, so the lookup cost
   scales with days actually missed, not with the calendar.
 
 ## Why repayment follows the credit rule

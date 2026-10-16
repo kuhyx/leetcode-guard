@@ -54,7 +54,7 @@ verify_imports() {
     # interpreter systemd will launch, not for whatever is on $PATH now.
     log "verifying imports with $SYSTEM_PYTHON"
     "$SYSTEM_PYTHON" -c \
-        "import leetcode_guard, gatelock, crdt_sync, requests; print('imports OK')" \
+        "import leetcode_guard, gatelock, crdt_sync, sickdays, requests; print('imports OK')" \
         || fail "a runtime dependency is missing from the system python"
 }
 
@@ -125,7 +125,7 @@ main() {
     install_units
     install_tray
     "${REPO_DIR}/scripts/install_nudge_extension.sh"
-    # The MCP venv pins its own copies of gatelock/freedays; without a refresh
+    # The MCP venv pins its own copies of gatelock/freedays/sickdays; without a refresh
     # here a dependency bump leaves the server failing to import, which the
     # client reports only as "Connection closed" (2026-10-03: freedays 0.1.0).
     "${REPO_DIR}/scripts/setup_mcp.sh"

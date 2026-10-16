@@ -76,8 +76,11 @@ class Projection:
         target: The date asked about.
         first_day: The first day the sum counts (tomorrow when today is
             already settled).
-        gated_days: Days in ``first_day..target`` that are not free days.
+        gated_days: Days in ``first_day..target`` that are neither free nor
+            sick.
         free_days: Days in that range the shared pool marks free.
+        sick_days: Days in that range the sick-day pool marks sick -- priced
+            at nothing, like free days, but counted apart.
         base_cost: Sum of each gated day's base price.
         debt: Outstanding debt, counted in full.
         available: Credits already banked, which the sum is reduced by.
@@ -100,6 +103,7 @@ class Projection:
     rules_demand: int
     debt_left_by_rules: int
     projected: dict[str, int] | None
+    sick_days: int = 0
 
 
 def _fill_easy_first(progress: Progress, new_solves: int) -> dict[str, int]:
@@ -113,14 +117,24 @@ def _fill_easy_first(progress: Progress, new_solves: int) -> dict[str, int]:
     return projected
 
 
+def _never_sick(_day: date) -> bool:
+    """The default sick-day pool: empty."""
+    return False
+
+
 @dataclass(frozen=True)
 class Position:
-    """The ledger facts the projection starts from, lifted off the snapshot."""
+    """The facts the projection starts from, lifted off the snapshot.
+
+    ``is_sick`` is the sick-day pool, kept apart from the free-day predicate
+    ``project`` takes: both price a day at nothing, but a report must say which.
+    """
 
     today: date
     charged_today: bool
     available: int
     debt_outstanding: int
+    is_sick: Callable[[date], bool] = _never_sick
 
 
 def project(
@@ -140,11 +154,13 @@ def project(
     today, debt_outstanding = position.today, position.debt_outstanding
     available = position.available
     first_day = today + timedelta(days=1) if position.charged_today else today
-    gated = free = base_cost = surcharged = 0
+    gated = free = sick = base_cost = surcharged = 0
     cursor = first_day
     while cursor <= target:
         if is_free(cursor):
             free += 1
+        elif position.is_sick(cursor):
+            sick += 1
         else:
             gated += 1
             base_cost += cost_of(cursor)
@@ -158,6 +174,7 @@ def project(
         first_day=first_day,
         gated_days=gated,
         free_days=free,
+        sick_days=sick,
         base_cost=base_cost,
         debt=debt_outstanding,
         available=available,

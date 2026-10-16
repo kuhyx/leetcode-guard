@@ -27,8 +27,8 @@ being discarded would be a refund. Read the module docstring before touching it.
 `unlock`, ever. A credit exists only because LeetCode confirmed an accepted
 submission. `test_mcp.py` asserts the absence.
 
-**Debt is derived, never stored.** A past day with no charge that was not a
-free day is owed at its price, and every day costs one more until it is repaid
+**Debt is derived, never stored.** A past day with no charge that was neither
+free nor sick is owed at its price, and every day costs one more until it is repaid
 (`_debt.py`). No ledger form on purpose: `rm ledger.json` *grows* the debt, and
 back-filling `charge:<past-date>` would unlock those dates. `DOCS-debt.md` has
 the rest: why repayment follows the credit rule, and the test plumbing.

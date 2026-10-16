@@ -51,6 +51,10 @@ class GateState(enum.Enum):
     """Today is in the shared free-day pool. No lock, and no charge either --
     a day off is not paid for out of the credit balance."""
 
+    UNLOCKED_SICK_DAY = "sick-day"
+    """Today is in the shared *sick*-day pool (not the free-day pool): no lock,
+    no charge, nothing added to the debt."""
+
 
 @dataclass(frozen=True)
 class GateDecision:
@@ -84,6 +88,25 @@ class GateDecision:
 _ALREADY: Final = "today is already paid for"
 
 
+def _standing_down(
+    day: date, *, free_day: bool, sick_day: bool
+) -> tuple[GateState, str] | None:
+    """Why the gate does nothing today, when it does nothing.
+
+    Free and sick are separate pools and stay separate verdicts.
+    """
+    if free_day:
+        return GateState.UNLOCKED_FREE_DAY, "today is a free day"
+    if sick_day:
+        return GateState.UNLOCKED_SICK_DAY, "today is a sick day"
+    if day < GATE_START_DATE:
+        return (
+            GateState.UNLOCKED_NOT_STARTED,
+            f"the gate does not start until {GATE_START_DATE}",
+        )
+    return None
+
+
 def decide(
     ledger: Ledger,
     *,
@@ -93,6 +116,7 @@ def decide(
     free_day: bool = False,
     debt: Debt = NO_DEBT,
     workday_penalty: bool = False,
+    sick_day: bool = False,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
@@ -116,17 +140,34 @@ def decide(
         workday_penalty: Whether a missed wake-alarm ring on a prior
             Tue/Wed/Thu cost ``day`` its own Tue/Wed/Thu discount. Losing the
             discount, not an added surcharge -- a day already priced at the
-            penalty rate (Fri, from a Thursday miss) is unaffected.
+            penalty rate (Fri, from a Thursday miss) is unaffected. Ignored on
+            a sick day.
+        sick_day: Whether ``day`` is in the shared sick-day pool. Checked
+            after the clock, like ``free_day``. A charge already on the
+            ledger for the day repays exactly as on any other day.
 
     Returns:
         The decision. Nothing is written.
     """
     balance = compute_balance(ledger)
     pricing = pricing_for(day)
-    base_cost = pricing.penalised_cost(day) if workday_penalty else day_cost(day)
+    penalised = workday_penalty and not sick_day
+    base_cost = pricing.penalised_cost(day) if penalised else day_cost(day)
     surcharge = debt.surcharge_on(day)
     cost = base_cost + surcharge
     costs = cost_phrase(day, cost, debt)
+
+    def stand_down(state: GateState, reason: str) -> GateDecision:
+        return GateDecision(
+            state=state,
+            day=day,
+            cost=cost,
+            balance=balance,
+            debt=debt,
+            needed=0,
+            charge=None,
+            reason=reason,
+        )
 
     verdict = check_clock(ledger, day=day)
     if not verdict.trusted:
@@ -140,42 +181,10 @@ def decide(
             charge=None,
             reason=verdict.reason,
         )
-
-    if free_day:
-        return GateDecision(
-            state=GateState.UNLOCKED_FREE_DAY,
-            day=day,
-            cost=cost,
-            balance=balance,
-            debt=debt,
-            needed=0,
-            charge=None,
-            reason="today is a free day",
-        )
-
-    if day < GATE_START_DATE:
-        return GateDecision(
-            state=GateState.UNLOCKED_NOT_STARTED,
-            day=day,
-            cost=cost,
-            balance=balance,
-            debt=debt,
-            needed=0,
-            charge=None,
-            reason=f"the gate does not start until {GATE_START_DATE}",
-        )
-
+    if standing := _standing_down(day, free_day=free_day, sick_day=sick_day):
+        return stand_down(*standing)
     if ledger.has(f"charge:{day_key(day)}"):
-        return GateDecision(
-            state=GateState.UNLOCKED_ALREADY_CHARGED,
-            day=day,
-            cost=cost,
-            balance=balance,
-            debt=debt,
-            needed=0,
-            charge=None,
-            reason=_ALREADY,
-        )
+        return stand_down(GateState.UNLOCKED_ALREADY_CHARGED, _ALREADY)
 
     if balance.available >= cost:
         return GateDecision(

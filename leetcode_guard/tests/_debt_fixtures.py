@@ -8,8 +8,26 @@ from __future__ import annotations
 
 from datetime import date
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def _no_sick_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Never let the gate read the developer's real sick-day pool.
+
+    The twin of ``_no_free_days_by_default``: a real sick day marked on this
+    machine would silently stand the gate down in every scenario below.
+    """
+    import sickdays
+    import sickdays._api
+
+    isolated = sickdays.Paths.under(tmp_path / "sickdays")
+    monkeypatch.setattr(sickdays._api, "resolve_paths", lambda paths: paths or isolated)
 
 
 @pytest.fixture(autouse=True)

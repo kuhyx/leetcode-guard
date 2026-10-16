@@ -54,7 +54,7 @@ class Debt:
     """The position on missed days, all in credits.
 
     Attributes:
-        owed: What every uncharged, non-free day since the epoch would have
+        owed: What every uncharged, non-free, non-sick day since the epoch would have
             cost, summed.
         repaid: The surcharges already paid on trusted charges.
         missed_days: How many calendar days make up ``owed``.
@@ -92,6 +92,7 @@ def compute_debt(
     *,
     day: date,
     is_free: Callable[[date], bool],
+    is_sick: Callable[[date], bool] = lambda _day: False,
     start: date | None = None,
 ) -> Debt:
     """Derive the debt as of ``day``.
@@ -107,6 +108,9 @@ def compute_debt(
         ledger: The loaded ledger, verification attached.
         day: Today's local date.
         is_free: Whether a given day was in the shared free-day pool.
+        is_sick: Whether a given day was in the shared sick-day pool. A sick
+            day, like a free one, adds nothing to ``owed``; a charge on one
+            is an ordinary charge and repays by the ordinary rule.
         start: The epoch. Defaults to :data:`DEBT_START_DATE`; injectable so
             tests can place it inside the fixture week.
 
@@ -133,7 +137,11 @@ def compute_debt(
     missed_days = 0
     cursor = epoch
     while cursor < day:
-        if day_key(cursor) not in charged_days and not is_free(cursor):
+        if (
+            day_key(cursor) not in charged_days
+            and not is_free(cursor)
+            and not is_sick(cursor)
+        ):
             owed += day_cost(cursor)
             missed_days += 1
         cursor += timedelta(days=1)
