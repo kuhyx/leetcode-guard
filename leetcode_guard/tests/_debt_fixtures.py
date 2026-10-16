@@ -24,14 +24,14 @@ def _no_sick_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     machine would silently stand the gate down in every scenario below.
     """
     import sickdays
-    import sickdays._api
-    import sickdays._keep_api
 
     isolated = sickdays.Paths.under(tmp_path / "sickdays")
-    # Reads (is_sick_day, stands_down, kept_lockers) go through _api.load;
-    # set_kept_lockers binds its own resolve_paths in _keep_api.
-    for module in (sickdays._api, sickdays._keep_api):
-        monkeypatch.setattr(module, "resolve_paths", lambda paths: paths or isolated)
+    # Every sickdays module binds its own ``resolve_paths`` by name (_api,
+    # _keep_api for set_kept_lockers, _audit, _sync, _conflict), so patching
+    # one leaves the others writing the real pool. Redirect all of them.
+    for name, module in list(sys.modules.items()):
+        if name.startswith("sickdays.") and hasattr(module, "resolve_paths"):
+            monkeypatch.setattr(module, "resolve_paths", lambda p: p or isolated)
 
 
 @pytest.fixture(autouse=True)

@@ -182,3 +182,12 @@ def test_status_says_a_kept_sick_day_is_ordinary(
     lines = explain_not_triggered(full_for(data_dir, hmac_key))
 
     assert any("keeps leetcode" in line for line in lines) is said
+
+
+def test_a_keep_edit_never_reaches_the_real_pool(tmp_path: Path):
+    today = date.today()
+    sickdays.add_sick_day(today, is_free=lambda _day: False)
+    sickdays.set_kept_lockers(today, KEEP_LEETCODE)
+
+    assert (tmp_path / "sickdays").is_dir()
+    assert sickdays.kept_lockers(today) == KEEP_LEETCODE
