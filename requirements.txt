@@ -19,5 +19,5 @@ pytest-randomly==5.0.0
 pytest-xdist==3.8.0
 requests==2.34.2
 ruff==0.17.1
-sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.2.0#subdirectory=sickdays
+sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.3.0#subdirectory=sickdays
 types-requests==2.33.0.20261006
