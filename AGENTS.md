@@ -75,10 +75,10 @@ browser nudge: read `DOCS-scroll-and-nudge.md` before touching either.
 timer's `Persistent=true` catch-up fires one second into a boot, before X
 exists, and systemd stamps the slot as done whether or not a window followed
 (`DOCS-incident-2026-09-13.md`). So the unit is `WantedBy=graphical-session.target`
-too, and `_run_lock` calls `gatelock.wait_for_x_server` -- no deadline, no
-X means no usable machine -- before its first fetch. Every clear writes
-`charge:<today>`, so an extra run on a settled day exits without a window. Do
-not wait on the *network* before arming; that is the unplug-the-cable bypass.
+too, and `cmd_lock` waits on `gatelock.wait_for_x_server` (no deadline) BEFORE
+the instance lock: a held lock stalls the harvest all night lockdown (2026-10-17,
+`test_night_lockdown.py`). Every clear writes `charge:<today>`, so an extra run
+on a settled day exits windowless. Never wait on the *network*: cable bypass.
 
 **The morning session defers an arming run, never settles a day.** After the
 X wait, `_run_lock` reads wake-alarm's signed `morning_session.json`

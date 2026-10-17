@@ -61,6 +61,20 @@ def cmd_lock(*, demo_mode: bool) -> int:
     paint path would mean no window when the network is down, and no window is
     the bypass this whole tool exists to close.
     """
+    if not demo_mode:
+        # The unit is started by the login target *and* by a Persistent=true
+        # timer catch-up that fires one second after the user manager, before
+        # X exists. Wait for the server -- for as long as it takes, no clock --
+        # before the first fetch, so the pool is not resolved against a network
+        # that is also still coming up, and so a missing display is a wait
+        # rather than an exit-1 that burns the day's timer stamp (2026-09-13).
+        #
+        # And wait *before* taking the instance lock. Night lockdown stops
+        # lightdm, the restarted unit waits here for a display that returns
+        # only once a credit lands, and a holder makes the one-minute harvest
+        # stand aside: no solve could ever be credited (2026-10-17). A waiter
+        # has loaded no ledger, so holding nothing here costs no invariant.
+        wait_for_x_server()
     instance = acquire_instance(INSTANCE_LOCK_FILE)
     if instance is None:
         # The afternoon retry firing while the morning run is still queued
@@ -82,15 +96,6 @@ def _run_lock(*, demo_mode: bool) -> int:
         # lock can always be shown.
         print(f"gate not active until {GATE_START_DATE}; nothing to do")
         return EXIT_OK
-
-    if not demo_mode:
-        # The unit is started by the login target *and* by a Persistent=true
-        # timer catch-up that fires one second after the user manager, before
-        # X exists. Wait for the server -- for as long as it takes, no clock --
-        # before the first fetch, so the pool is not resolved against a network
-        # that is also still coming up, and so a missing display is a wait
-        # rather than an exit-1 that burns the day's timer stamp (2026-09-13).
-        wait_for_x_server()
 
     now = datetime.now().astimezone()
     if not demo_mode and (why := defer_for_morning_session(now, wait=True)) is not None:
