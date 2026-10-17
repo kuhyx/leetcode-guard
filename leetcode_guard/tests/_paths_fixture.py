@@ -61,6 +61,9 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # The workday-stick penalty: a test must never price a day off the
         # developer's real penalty state.
         "WORKDAY_PENALTY_FILE": data / "workday_penalty.json",
+        # night-lockdown's stamp is world-readable: a test must never skip
+        # arming because the real evening lockdown already fired tonight.
+        "NIGHT_LOCKDOWN_STAMP": data / "locked_at_epoch",
     }
     for name, value in overrides.items():
         monkeypatch.setattr(_constants, name, value, raising=True)

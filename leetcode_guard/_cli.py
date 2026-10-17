@@ -47,6 +47,7 @@ from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._morning_session import defer_for_morning_session
+from leetcode_guard._night_lockdown import defer_for_evening_lockdown
 from leetcode_guard._nudge_server import NUDGE_PORT
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import refresh_progress
@@ -124,6 +125,12 @@ def _run_lock(*, demo_mode: bool) -> int:
         # looking, in hindsight, like one the gate never ran on.
         apply_decision(ledger, decision, ledger_path)
         print(f"already unlocked: {decision.reason}")
+        return EXIT_OK
+    if not demo_mode and (why := defer_for_evening_lockdown(now)) is not None:
+        # Tonight's lockdown already fired (a late credit may have lifted it):
+        # do not lock a finished solve out. After the decision, so a day paid
+        # from the bank is still settled; nothing is written here.
+        print(f"deferred: {why}; not arming this run")
         return EXIT_OK
 
     probe = fetch_recent_ac(client.post, client.username)

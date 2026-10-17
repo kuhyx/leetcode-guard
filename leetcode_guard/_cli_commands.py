@@ -27,6 +27,7 @@ from leetcode_guard._harvest import harvest, needs_seeding
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._login import login
 from leetcode_guard._morning_session import defer_for_morning_session
+from leetcode_guard._night_lockdown import defer_for_evening_lockdown
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
@@ -155,6 +156,7 @@ def cmd_check() -> int:
     print(f"ledger     {len(ledger.entries)} entries from {LEDGER_FILE}")
     print(f"integrity  {'on' if ledger.integrity_ok else 'OFF (key unreadable)'}")
     print(f"morning    {defer_for_morning_session(now) or 'no exemption in force'}")
+    print(f"evening    {defer_for_evening_lockdown(now) or 'no lockdown yet tonight'}")
 
     probe = fetch_recent_ac(client.post, client.username)
     print(f"probe      {probe.status.value} -- {probe.reason}")
