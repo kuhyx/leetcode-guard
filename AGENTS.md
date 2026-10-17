@@ -90,6 +90,10 @@ the cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
 with no window: standing down would let "start the workout lock" skip the grind.
 
+**The one-minute harvester (`_harvest_run`) is not a lock.** It only peeks at the
+instance lock (holding it stands `cmd_lock` down), never writes while a lock is
+up, never seeds, and settles only in a run that minted a credit.
+
 ## Traps that have already cost time
 
 **`questionList` caps a page at 100 rows** regardless of `limit` — no error, no
@@ -194,14 +198,10 @@ Tests and lint are necessary but not sufficient. The demo lock must be run on
 matches the shell running it); the script kills by PID.
 
 **One `import -window root` is not a screenshot.** Fired before the surfaces
-paint it returns the `overrideredirect` backdrop: a uniformly charcoal image
-that looks exactly like a lock screen that rendered and happens to be empty,
-which is indistinguishable from a real failure. Two of the three captures on
-2026-08-09 were blank this way, and `-window <id>` does not help — the surface
-reports its full 1600x1200 geometry before it has drawn anything. The script
-samples the whole window and keeps the largest file, and fails below 10 KB: a
-blank frame is ~400 bytes, a painted one ~90 KB, and anything in the hundreds
-of bytes means you photographed the backdrop, whatever the window id said.
+paint it returns the `overrideredirect` backdrop, a uniformly charcoal image
+that looks like an empty lock screen (2 of 3 captures on 2026-08-09 were blank).
+`-window <id>` does not help: the surface reports its geometry before it has
+drawn. The script keeps the largest of several samples; under 10 KB fails.
 
 **Fixtures asserting LeetCode's behaviour need a live check.** A mock can only
 repeat what its author believed, so a wrong belief produces a green suite and a

@@ -131,6 +131,8 @@ unfixable = []
 # an auto-fixable T201 under --unsafe-fixes deletes a diagnostic's entire
 # output and still exits 0, so this moves with the code, in the same commit.
 "leetcode_guard/_cli_commands.py" = ["T201"]
+# The out-of-lock harvest's one print is its whole journal line; same reason.
+"leetcode_guard/_harvest_run.py" = ["T201"]
 # --login IS a prompt: the "paste this" lines, the REFUSED verdict and the
 # reason LeetCode gave are the entire interface, and a silent credential
 # command is worse than none -- the user cannot tell a stored cookie from a

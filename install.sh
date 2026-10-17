@@ -80,6 +80,8 @@ install_units() {
     install -m 644 "$REPO_DIR/leetcode-guard.service" "$UNIT_DIR/"
     install -m 644 "$REPO_DIR/leetcode-guard.timer" "$UNIT_DIR/"
     install -m 644 "$REPO_DIR/leetcode-guard-web.service" "$UNIT_DIR/"
+    install -m 644 "$REPO_DIR/leetcode-guard-harvest.service" "$UNIT_DIR/"
+    install -m 644 "$REPO_DIR/leetcode-guard-harvest.timer" "$UNIT_DIR/"
     systemctl --user daemon-reload
     systemctl --user enable --now leetcode-guard.timer
     # Enabled, not started: the service arms on the next login (and on every
@@ -89,8 +91,11 @@ install_units() {
     # The status API is what steam-backlog-enforcer falls back to when it
     # cannot read the ledger directly; it must be up whenever the user is.
     systemctl --user enable --now leetcode-guard-web.service
+    # Credits solves made while no lock window is up (the lock's own poll loop
+    # only runs inside a window). Timer only: the service is a oneshot.
+    systemctl --user enable --now leetcode-guard-harvest.timer
     log "service enabled at login; timer enabled; next timer run:"
-    systemctl --user list-timers leetcode-guard.timer --no-pager || true
+    systemctl --user list-timers leetcode-guard.timer leetcode-guard-harvest.timer --no-pager || true
     systemctl --user --no-pager --lines=0 status leetcode-guard-web.service || true
 }
 

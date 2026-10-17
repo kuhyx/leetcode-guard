@@ -30,6 +30,9 @@ workout flag, so the two repos cannot disagree about what an earned day is.
 desktop notification, because a silently missing hour looks exactly like an
 unearned one.
 
-Note the staleness this inherits: credits are only ever written by the lock
-window's poll loop, so a *voluntary extra* solve made after the day is settled
-never reaches the ledger and earns nothing.
+Staleness: credits are minted by the lock window's poll loop **and**, since
+2026-10-17, by `leetcode-guard-harvest.timer`, which runs `_harvest_run` every
+minute with no window up. A solve made on a sick day, a settled day or after the
+last slot is therefore credited within about a minute (an extra solve on a
+settled day now banks). While a lock is up the harvester stands aside, since the
+lock's own loop harvests.

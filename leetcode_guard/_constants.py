@@ -25,14 +25,9 @@ trusted when HMAC verification is unavailable -- see the integrity table in
 RANK_LEETCODE_GUARD: Final = 150
 """Arbiter priority: below screen_locker (200), above diet_guard (100).
 
-A literal rather than a ``gatelock.RANK_*`` constant on purpose. Adding it
-upstream would bump gatelock's version and force a re-pin across three live
-consumers (screen-locker, diet-guard, wake-alarm) for a number only this repo
-uses. ``Arbiter`` takes a bare int, so nothing is lost.
-
-The ladder this slots into is gatelock's own: wake up, then work out, then
-grind, then eat.
-"""
+A literal on purpose: a ``gatelock.RANK_*`` constant would bump gatelock and force
+a re-pin across three live consumers for a number only this repo uses.
+The ladder is gatelock's own: wake up, work out, grind, eat."""
 
 GATE_START_DATE: Final = date(2026, 8, 4)
 """The first day the gate is allowed to lock. Before this it exits instantly.
@@ -112,6 +107,9 @@ SYNC_TOKEN_FILE: Final = CONFIG_DIR / "sync_token"
 INSTANCE_LOCK_FILE: Final = DATA_DIR / "instance.lock"
 """Held for the process lifetime so the afternoon retry cannot stack a second
 waiter behind the morning run."""
+
+HARVEST_LOCK_FILE: Final = DATA_DIR / "harvest.lock"
+"""Serialises ``_harvest_run``; never INSTANCE_LOCK_FILE (a lock would stand down)."""
 
 # --------------------------------------------------------------------------
 # Network

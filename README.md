@@ -137,8 +137,8 @@ writes neither reward. Details, the endpoint and the staleness caveat:
 ## Install
 
 ```bash
-./install.sh                 # system python, the systemd user timer, and the
-                             # loopback status API (leetcode-guard-web.service)
+./install.sh                 # system python, user timers (lock + one-minute
+                             # harvest), loopback status API (-web.service)
 bash scripts/setup_mcp.sh    # optional: the read-only MCP server
 ```
 
@@ -246,5 +246,5 @@ python3 -m pytest              # 561 tests, 100% branch coverage enforced
 pre-commit run --all-files     # ruff ALL / mypy strict / pylint all / bandit
 ```
 
-`# noqa` and `# type: ignore` are banned repo-wide, files are capped at 400
+`# noqa` and `# type: ignore` are banned repo-wide, files are capped at 250
 lines, and every swallowed exception must log why.

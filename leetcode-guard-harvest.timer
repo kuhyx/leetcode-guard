@@ -1,0 +1,16 @@
+[Unit]
+Description=Harvest LeetCode solves every minute
+
+[Timer]
+# One minute because the done condition is "credited within 60 s of an
+# Accepted, from the PC or the phone". The lock itself polls every 30 s, so this
+# is half that load, and it is one request against LeetCode's recent-AC feed.
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=1s
+# No Persistent=: a missed minute is made up by the next one, and a catch-up
+# firing one second into a boot (before the network exists) buys nothing.
+Unit=leetcode-guard-harvest.service
+
+[Install]
+WantedBy=timers.target
