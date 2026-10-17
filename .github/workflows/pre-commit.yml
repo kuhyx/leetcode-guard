@@ -61,8 +61,8 @@ jobs:
           cache-dependency-glob: requirements.txt
           cache-suffix: ${{ matrix.group }}
 
-      # The `ci-mirror` hook is pre-push only, so it does not run here --
-      # which is deliberate. It builds its own venv and runs the whole suite;
+      # The `ci-*` mirror hooks are manual-stage only, so they do not run here
+      # -- which is deliberate. They build their own venv and run the suite;
       # letting it fire inside CI would nest a second install of everything.
       - name: Install dependencies (${{ matrix.group }})
         run: uv pip install --system ${{ matrix.install }}

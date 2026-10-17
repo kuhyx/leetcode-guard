@@ -148,9 +148,38 @@ repos:
 
   - repo: local
     hooks:
-      - id: ci-mirror
-        name: CI mirror (clean-venv pytest + pre-commit --all-files)
-        entry: bash scripts/ci_mirror.sh
+      # The CI mirror, one hook per stage of scripts/ci_mirror.sh so no single
+      # call outlives the 60 s action cap (the old single `ci-mirror` hook took
+      # 100+ s). ci-venv runs first so a requirements.txt change pays for the
+      # rebuild in its own call; ci-pytest and ci-render re-check the hash and
+      # would rebuild themselves if run alone.
+      - id: ci-venv
+        name: CI mirror - clean venv from requirements.txt
+        entry: bash scripts/ci_mirror.sh venv
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-precommit
+        name: CI mirror - pre-commit run --all-files
+        entry: bash scripts/ci_mirror.sh precommit
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-pytest
+        name: CI mirror - pytest -n auto in the clean venv
+        entry: bash scripts/ci_mirror.sh pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-render
+        name: CI mirror - real-Tk renders under Xvfb (concurrent)
+        entry: bash scripts/ci_mirror.sh render
         language: system
         pass_filenames: false
         always_run: true
