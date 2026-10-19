@@ -172,6 +172,9 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
         if stopped is not None:
             return stopped
 
+        # Claim.grab_held goes false FIRST (fail closed): leisure-watch must
+        # never read "held" for a grab that is already gone.
+        self._lock.report_grab_held(held=False)
         try:
             self._lock.root.grab_release()
         except tk.TclError as exc:

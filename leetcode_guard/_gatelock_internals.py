@@ -65,6 +65,9 @@ class SuspendableLock(Protocol):
     def detector(self) -> Any:
         """The output-change watcher, stopped alongside the loop."""
 
+    def report_grab_held(self, *, held: bool) -> None:
+        """Publish ``Claim.grab_held`` (gatelock 0.11, public API)."""
+
 
 def stop_recovery(lock: SuspendableLock) -> None:
     """Stop the loop that would otherwise re-take the grab within a tick."""

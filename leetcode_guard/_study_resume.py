@@ -153,6 +153,7 @@ class ResumeMixin:
         except tk.TclError:
             _logger.warning("the global grab is not available yet", exc_info=True)
             return False
+        self._lock.report_grab_held(held=True)
         return True
 
     def _start_watchers(self, steps: list[str]) -> None:

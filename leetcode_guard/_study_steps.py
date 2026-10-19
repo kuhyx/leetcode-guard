@@ -128,8 +128,10 @@ class SuspendStepsMixin:
         """Undo a suspend that failed at the grab.
 
         Nothing has been hidden yet, so putting the watchers back is the whole
-        rollback. The caller has already logged the exception.
+        rollback. The caller has already logged the exception. The grab never
+        left, so ``grab_held`` (cleared just before the attempt) is restored.
         """
+        self._lock.report_grab_held(held=True)
         self._start_watchers([])
         return SuspendOutcome(
             ok=False,
