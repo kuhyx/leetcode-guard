@@ -10,7 +10,6 @@ from leetcode_guard._progress import write_progress_cache
 from leetcode_guard._projection import Position, project
 from leetcode_guard._projection_text import (
     UNKNOWN_PROGRESS,
-    is_count_line,
     progress_lines,
     projection_lines,
 )
@@ -19,10 +18,12 @@ from leetcode_guard._status_projection import (
     PAST_TARGET,
     UNREADABLE_TARGET,
     ProjectionInputs,
+    bad_goal,
     build_report,
     cached_progress,
     fetch_live_progress,
     position_of,
+    unknown_difficulty,
 )
 from leetcode_guard.tests._guard_factories import SIGNED_OUT
 from leetcode_guard.tests.test_projection import SAT, never_free, position, progress
@@ -41,7 +42,6 @@ def test_progress_lines_are_aligned_and_dated():
     assert lines[0] == "Easy      55 / 965   (  5.7 %)   910 left"
     assert lines[3] == "All       55 / 4055  (  1.4 %)  4000 left"
     assert lines[4].startswith("LeetCode profile figures, as of ")
-    assert [is_count_line(line) for line in lines] == [True] * 4 + [False]
 
 
 def test_projection_lines_show_the_working_and_the_counts():
@@ -192,3 +192,15 @@ def test_a_failed_live_fetch_with_no_mirror_is_none_and_logged(
         assert fetch_live_progress() is None
 
     assert "no solve progress available" in caplog.text
+
+
+def test_goal_entries_parse_or_complain():
+    """``--goal`` hands arbitrary ``NAME=COUNT`` text straight to these."""
+
+    def goal_of(texts: dict[str, str]) -> object:
+        return ProjectionInputs("31.12.2999", goal_texts=texts).goal()
+
+    assert goal_of({"Easy": " "}) is None
+    assert goal_of({"Bogus": "3"}) == unknown_difficulty("Bogus")
+    assert goal_of({"Easy": "x"}) == bad_goal("Easy")
+    assert goal_of({"Easy": "5", "Hard": ""}) is not None

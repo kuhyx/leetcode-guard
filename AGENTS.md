@@ -183,7 +183,7 @@ lockers — invisibly. `preserve_editable_gatelock` puts it back; do not remove
 it.
 
 **The status view is the fourth thing ruff's `--unsafe-fixes` has silently
-gutted.** `status_view.py` and `_cli.py` both need the `T201` per-file ignore
+gutted.** `status_cli.py` and `_cli.py` both need the `T201` per-file ignore
 or the fixer deletes the prints that *are* their interface. `_login.py` is the
 fifth, and the worst: it lost every print on the first pre-commit run after
 being written, leaving a credential command that stores or refuses a cookie

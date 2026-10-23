@@ -26,10 +26,9 @@ dependencies = [
 ]
 
 [project.scripts]
-# The GUI window, matching screen-locker's screen-locker-status. Its
-# --summary/--state flags are what the tray icon polls. The plain-text
-# version is still `python -m leetcode_guard --status`.
-leetcode-guard-status = "leetcode_guard.status_view:main"
+# The tray's one-line CLIs (--summary/--state). The window is the status app
+# in app/ now; the plain-text table is still `python -m leetcode_guard --status`.
+leetcode-guard-status = "leetcode_guard.status_cli:main"
 
 # Optional extras. The `mcp` group is ONLY needed by the read-only MCP server
 # (leetcode_guard._mcp), which Claude Code spawns via a dedicated venv (see
@@ -190,7 +189,7 @@ unfixable = []
 # Same trap as _cli.py: T201 is auto-fixable and the ruff hook runs with
 # --unsafe-fixes, so without this the fixer deletes the two prints that
 # ARE this module's tray interface, leaving --state and --summary silent.
-"leetcode_guard/status_view.py" = ["T201"]
+"leetcode_guard/status_cli.py" = ["T201"]
 "leetcode_guard/_leetcode.py" = ["PLR0911"]
 "leetcode_guard/_pool_cache.py" = ["PLR0911"]
 # The /leetcode coach (moved from ~/.claude/skills/leetcode, 2026-10-23). Every

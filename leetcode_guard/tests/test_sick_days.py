@@ -28,7 +28,7 @@ from leetcode_guard.tests._ledger_fixtures import (
     ledger_with_credits,
 )
 from leetcode_guard.tests.test_projection import SAT, never_free, position, progress
-from leetcode_guard.tests.test_status_view import full_for
+from leetcode_guard.tests.test_status_gather import full_for
 from leetcode_guard.tests.test_viewmodel import (
     CHECKED_AT,
     OK_PROBE,

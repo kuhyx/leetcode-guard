@@ -24,7 +24,7 @@ from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._workday_penalty import workday_penalty_for
 from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW, TUESDAY, WEDNESDAY
 from leetcode_guard.tests.test_projection import SAT
-from leetcode_guard.tests.test_status_view import full_for
+from leetcode_guard.tests.test_status_gather import full_for
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

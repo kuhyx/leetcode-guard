@@ -77,6 +77,29 @@ decimal (what the window shows) so they do not change every minute; a
 profile refetch (`fetched_at`, at most every 15 min) still counts as a
 change. Upload drops from ~46 MB/day to roughly 3-4 MB/day.
 
+**Status hash (phone polling).** `leetcode-guard/status_hash` is a JSON
+string leaf holding the SHA-256 hex digest of the snapshot's content (the
+same hash `_snapshot_dedup.content_hash` dedups on: everything except
+`generated_at`, canonical JSON). It is written in the same push as every full
+`status` write, *after* it: status, then status_hash, then heartbeat, and the
+push is recorded locally only once the hash landed, so a failed hash write
+re-sends both next minute. The phone polls `heartbeat` + `status_hash` (well
+under 100 bytes) every minute, keeps the hash it last downloaded beside the
+decoded status, and GETs the ~49 KB `status` only when the hash differs. It
+must not try to recompute the hash in Dart (no canonical JSON there); it
+only compares strings. A missing (`null`) `status_hash` means "download
+`status`": the node first appears with the first content change after the
+exporter that writes it is deployed.
+
+**Local file (desktop, no Firebase).** Every push attempt, offline ones
+included, first writes the full snapshot (same schema, `generated_at`
+included) atomically to `~/.local/share/leetcode_guard/snapshot.json`
+(`_snapshot_local`, via `_atomic_json.write_json`). The desktop app reads
+that file; since it is rewritten every minute even when the content is
+unchanged, its own `generated_at` is the desktop's "as of" and stale signal
+(no heartbeat locally). Display-only: no deciding module may read it
+(`test_push_trigger.py::test_no_deciding_module_names_the_local_snapshot_file`).
+
 ```json
 {
   "schema": 1,

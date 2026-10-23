@@ -1,10 +1,10 @@
-"""The snapshot's ``status`` block: the tkinter window's sections as data.
+"""The snapshot's ``status`` block: the old tkinter window's sections as data.
 
-One function per section, in the window's order, each lifting exactly what
-``_status_sections.py`` / ``_status_health.py`` draw. Wording that encodes a
+One function per section, in the order the (now deleted) window drew them,
+each lifting exactly what its sections showed. Wording that encodes a
 rule -- why the lock did not trigger, the debt summary, the pricing caption --
 is rendered *here*, by the Python that owns the rule, and shipped as text, so
-the app never re-derives a rule. Imports nothing from the tk modules.
+the app never re-derives a rule.
 """
 
 from __future__ import annotations

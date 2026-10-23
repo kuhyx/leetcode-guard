@@ -29,8 +29,8 @@ it exactly. These are gatelock's own modules, and the same reasoning applies
 for the same reason ``_gatelock_fixtures`` already patches
 ``gatelock._surfaces.tk.Toplevel`` -- patching ``tk`` inside *this* package is
 not enough once a shared library builds the buttons and the scroll viewport.
-Without them, ``tk_mock.Button``/``tk_mock.Label`` never see the widgets the
-status panel is made of.
+Without them, ``tk_mock.Button``/``tk_mock.Label`` never see the widgets
+gatelock builds for this app.
 """
 
 # Sizes for the mocked viewport. Content must be *shorter* than the canvas:
@@ -73,13 +73,10 @@ TK_MODULES = (
     "leetcode_guard._view_problems",
     "leetcode_guard._view_scroll",
     "leetcode_guard._escape_form",
-    "leetcode_guard._status_progress",
-    "leetcode_guard._status_sections",
     "leetcode_guard._study",
     "leetcode_guard._study_resume",
     "leetcode_guard._study_steps",
     "leetcode_guard._study_strip",
-    "leetcode_guard.status_view",
 )
 """Every module that does ``import tkinter as tk``.
 

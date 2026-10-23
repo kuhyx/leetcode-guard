@@ -1,6 +1,6 @@
 """Read-only view of the gate's state.
 
-Backs ``--status``, the ``leetcode-guard-status`` console script and the MCP
+Backs ``--status``, ``python3 -m leetcode_guard._status`` and the MCP
 server. Offline by default: the ledger and the pool cache answer every question
 here, and neither the status command nor an MCP tool should ever be able to
 trigger a network fetch.
@@ -196,7 +196,7 @@ def format_status(snapshot: StatusSnapshot) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for the ``leetcode-guard-status`` console script."""
+    """Entry point for ``python3 -m leetcode_guard._status``."""
     configure_logging(verbose=bool(argv and "--verbose" in argv))
     snapshot = gather_status()
     print(format_status(snapshot))

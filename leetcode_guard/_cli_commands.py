@@ -100,7 +100,7 @@ def cmd_status(
 
     Without ``--by``, ``--price`` or ``--goal`` this never touches the network.
     With any of them, the profile's solved counts are fetched (one public
-    query) and the lines the status window would show for those inputs are
+    query) and the projection lines for those inputs are
     printed after the position.
     """
     snapshot = gather_status()
