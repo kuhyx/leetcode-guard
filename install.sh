@@ -54,7 +54,7 @@ verify_imports() {
     # interpreter systemd will launch, not for whatever is on $PATH now.
     log "verifying imports with $SYSTEM_PYTHON"
     "$SYSTEM_PYTHON" -c \
-        "import leetcode_guard, gatelock, crdt_sync, sickdays, requests; print('imports OK')" \
+        "import leetcode_guard, leetcode_coach, gatelock, crdt_sync, sickdays, requests, genanki; print('imports OK')" \
         || fail "a runtime dependency is missing from the system python"
 }
 
@@ -126,6 +126,10 @@ main() {
     install_package
     preserve_editable_gatelock
     verify_imports
+    # The /leetcode skill and the `leetcode` command now live in leetcode_coach/;
+    # after verify_imports, because the Stop-hook shim in ~/.claude/hooks runs
+    # `/usr/bin/python3 -P -m leetcode_coach.stop_gate` and needs the import.
+    "${REPO_DIR}/scripts/link_leetcode_coach.sh"
     ensure_hmac_key
     install_units
     install_tray

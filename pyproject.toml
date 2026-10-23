@@ -13,12 +13,16 @@ requires-python = ">=3.14"
 # sickdays: the separate sick-day pool (never merged into freedays).
 # requests: the only network dependency; the LeetCode client is ~40 lines on
 # top of it, deliberately not a third-party LeetCode SDK.
+# genanki: the /leetcode coach's card builder (leetcode_coach.make_cards)
+# writes .apkg decks with it. It used to arrive through a `uv run --script`
+# header; the system python now runs the builder, so it is declared here.
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.11.0#subdirectory=gatelock",
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.9.2#subdirectory=crdt-sync",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays",
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.3.0#subdirectory=sickdays",
     "requests==2.34.2",
+    "genanki==0.13.1",
 ]
 
 [project.scripts]
@@ -44,12 +48,23 @@ build-backend = "setuptools.build_meta"
 # repo root also holds scripts/, and a future non-Python sibling directory
 # would otherwise make the build fail to guess the installable package. The
 # same omission silently staled an installed console script in wake-alarm.
-include = ["leetcode_guard*"]
+include = ["leetcode_guard*", "leetcode_coach*"]
+
+[tool.setuptools.package-data]
+# The skill body and the launcher are read/executed from the package dir.
+leetcode_coach = ["SKILL.md", "leetcode"]
 
 [tool.ruff]
 target-version = "py314"
 include = ["*.py", "**/*.py"]
-exclude = [".git", ".venv", ".ci-mirror-venv", "__pycache__", "build", "dist", ".eggs"]
+# leetcode_coach/hook_shims holds the <=3-line files installed into
+# ~/.claude/hooks: a docstring, an import and a one-line guarded exec. Three
+# lines cannot satisfy ruff ALL (or the formatter, which would split the exec
+# into five), and the shims carry no logic -- test_stop_gate.py runs the real
+# one end to end. force-exclude makes the exclusion hold for the explicit file
+# lists pre-commit passes.
+exclude = [".git", ".venv", ".ci-mirror-venv", "__pycache__", "build", "dist", ".eggs", "leetcode_coach/hook_shims"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -171,6 +186,27 @@ unfixable = []
 "leetcode_guard/status_view.py" = ["T201"]
 "leetcode_guard/_leetcode.py" = ["PLR0911"]
 "leetcode_guard/_pool_cache.py" = ["PLR0911"]
+# The /leetcode coach (moved from ~/.claude/skills/leetcode, 2026-10-23). Every
+# one of these modules is a command line or a hook whose printed text IS its
+# interface: the REPL session, the offline session, the card builder's table,
+# the statement fetcher, the eval verdict table, and the Stop hook's one JSON
+# decision line. T201 is auto-fixable under --unsafe-fixes, so without these
+# entries the fixer deletes those prints and still exits 0 -- the trap that
+# gutted cmd_probe and _login.py. Their tests assert on stdout.
+"leetcode_coach/leetcode_repl.py" = ["T201"]
+"leetcode_coach/local_session.py" = ["T201"]
+"leetcode_coach/make_cards.py" = ["T201"]
+"leetcode_coach/fetch_problem.py" = ["S310", "T201"]
+"leetcode_coach/eval_local.py" = ["T201"]
+"leetcode_coach/stop_gate.py" = ["T201"]
+# S310 (urlopen scheme audit): all three open a fixed literal URL --
+# AnkiConnect on 127.0.0.1, LeetCode's https GraphQL endpoint, and Ollama on
+# localhost, where http_json additionally refuses any URL off OLLAMA_URL. They
+# stay on stdlib urllib on purpose: fetch_problem runs by path with no install.
+# ANN401: AnkiConnect's `result` is untyped JSON whose shape depends on the
+# action, so `_call` returns Any and each caller indexes what its action sends.
+"leetcode_coach/anki_connect.py" = ["ANN401", "S310"]
+"leetcode_coach/local_backend.py" = ["S310"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -178,7 +214,7 @@ convention = "google"
 [tool.ruff.lint.isort]
 force-single-line = false
 force-sort-within-sections = true
-known-first-party = ["leetcode_guard"]
+known-first-party = ["leetcode_guard", "leetcode_coach"]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
@@ -217,7 +253,7 @@ extra_checks = true
 ignore_missing_imports = true
 show_error_codes = true
 color_output = true
-exclude = [".venv/", ".ci-mirror-venv/"]
+exclude = [".venv/", ".ci-mirror-venv/", "leetcode_coach/hook_shims/"]
 
 [tool.pylint.main]
 # The repo root on the path, so a file outside the package (scripts/) can be
@@ -238,7 +274,8 @@ ignore = [".venv", ".ci-mirror-venv", "__pycache__"]
 # to be `ignore-paths`, not `ignore = ["tests"]`: `ignore` only matches the
 # basename of what pylint is *given*, and pre-commit hands it explicit file
 # paths, so a directory name in `ignore` never fires under the hook.
-ignore-paths = ["^(.*/)?tests/.*$"]
+# hook_shims: see the ruff exclude above.
+ignore-paths = ["^(.*/)?tests/.*$", "^(.*/)?hook_shims/.*$"]
 ignore-patterns = [".*\\.pyi$"]
 
 [tool.pylint.basic]
@@ -288,7 +325,7 @@ generated-members = [
 exclude_dirs = ["tests", ".venv", ".ci-mirror-venv"]
 
 [tool.pytest.ini_options]
-testpaths = ["leetcode_guard/tests"]
+testpaths = ["leetcode_guard/tests", "leetcode_coach/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -298,6 +335,7 @@ addopts = [
     "--strict-config",
     "-ra",
     "--cov=leetcode_guard",
+    "--cov=leetcode_coach",
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-report=lcov",
@@ -318,9 +356,12 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["leetcode_guard"]
+source = ["leetcode_guard", "leetcode_coach"]
 branch = true
 omit = [
+    # Exec'd into a fresh interpreter, so coverage cannot see them; the stop
+    # gate's shim is run end to end by test_stop_gate.py instead.
+    "*/hook_shims/*",
     "*/__pycache__/*",
     "*/tests/*",
     "*/.venv/*",
