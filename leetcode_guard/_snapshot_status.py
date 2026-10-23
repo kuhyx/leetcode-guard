@@ -100,7 +100,9 @@ def _cache(cache: CacheStatus) -> dict[str, Any]:
         "name": cache.name,
         "exists": cache.exists,
         "entries": cache.entries,
-        "age_days": cache.age_days,
+        # Rounded to what the window shows: the raw float changes every
+        # minute, which would defeat the push's unchanged-content check.
+        "age_days": None if cache.age_days is None else round(cache.age_days, 1),
         "summary": cache.summary,
     }
 

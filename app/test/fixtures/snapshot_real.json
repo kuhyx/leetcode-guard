@@ -1,0 +1,2173 @@
+{
+  "coach": null,
+  "generated_at": "2026-10-23T15:13:26+02:00",
+  "profile": {
+    "acceptance_rate": 25.2,
+    "calendar": {
+      "2026-05-17": 17,
+      "2026-05-18": 171,
+      "2026-05-19": 101,
+      "2026-08-12": 2,
+      "2026-08-14": 12,
+      "2026-08-15": 9,
+      "2026-08-16": 9,
+      "2026-08-17": 2,
+      "2026-08-18": 2,
+      "2026-08-19": 4,
+      "2026-08-20": 2,
+      "2026-08-21": 2,
+      "2026-08-22": 8,
+      "2026-08-23": 6,
+      "2026-08-24": 7,
+      "2026-08-25": 1,
+      "2026-08-26": 2,
+      "2026-08-28": 9,
+      "2026-08-29": 6,
+      "2026-08-30": 11,
+      "2026-08-31": 1,
+      "2026-09-01": 1,
+      "2026-09-02": 1,
+      "2026-09-11": 2,
+      "2026-09-12": 11,
+      "2026-09-13": 12,
+      "2026-09-14": 25,
+      "2026-09-15": 9,
+      "2026-09-16": 19,
+      "2026-09-17": 13,
+      "2026-09-18": 14,
+      "2026-09-19": 6,
+      "2026-09-20": 8,
+      "2026-09-21": 24,
+      "2026-09-22": 15,
+      "2026-09-23": 4,
+      "2026-09-24": 9,
+      "2026-09-25": 13,
+      "2026-09-26": 9,
+      "2026-09-27": 6,
+      "2026-09-28": 12,
+      "2026-09-29": 3,
+      "2026-10-01": 4,
+      "2026-10-02": 24,
+      "2026-10-03": 6,
+      "2026-10-04": 10,
+      "2026-10-05": 21,
+      "2026-10-06": 6,
+      "2026-10-07": 2,
+      "2026-10-08": 8,
+      "2026-10-09": 4,
+      "2026-10-10": 8,
+      "2026-10-11": 19,
+      "2026-10-12": 18,
+      "2026-10-13": 7,
+      "2026-10-14": 13,
+      "2026-10-15": 7,
+      "2026-10-17": 19,
+      "2026-10-18": 17,
+      "2026-10-19": 16,
+      "2026-10-20": 3,
+      "2026-10-21": 1,
+      "2026-10-22": 31
+    },
+    "difficulty": {
+      "easy": [
+        142,
+        972
+      ],
+      "hard": [
+        0,
+        984
+      ],
+      "medium": [
+        0,
+        2131
+      ]
+    },
+    "fetched_at": "2026-10-23T15:01:37+02:00",
+    "streak_current": 6,
+    "streak_longest": 19
+  },
+  "progress": {
+    "fetched_at": "2026-10-23T15:01:37+02:00",
+    "solved": {
+      "Easy": 142,
+      "Hard": 0,
+      "Medium": 0
+    },
+    "solved_all": 142,
+    "total": {
+      "Easy": 972,
+      "Hard": 984,
+      "Medium": 2131
+    },
+    "total_all": 4087
+  },
+  "projection_price": 2,
+  "projections": {
+    "2026-10-23": {
+      "available": 0,
+      "base_cost": 0,
+      "debt": 1,
+      "debt_left_by_rules": 1,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 0,
+      "projected": {
+        "Easy": 143,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 1,
+      "rules_demand": 0,
+      "sick_days": 0,
+      "target": "2026-10-23"
+    },
+    "2026-10-24": {
+      "available": 0,
+      "base_cost": 4,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 1,
+      "projected": {
+        "Easy": 147,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 5,
+      "rules_demand": 5,
+      "sick_days": 0,
+      "target": "2026-10-24"
+    },
+    "2026-10-25": {
+      "available": 0,
+      "base_cost": 8,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 2,
+      "projected": {
+        "Easy": 151,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 9,
+      "rules_demand": 9,
+      "sick_days": 0,
+      "target": "2026-10-25"
+    },
+    "2026-10-26": {
+      "available": 0,
+      "base_cost": 11,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 3,
+      "projected": {
+        "Easy": 154,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 12,
+      "rules_demand": 12,
+      "sick_days": 0,
+      "target": "2026-10-26"
+    },
+    "2026-10-27": {
+      "available": 0,
+      "base_cost": 13,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 4,
+      "projected": {
+        "Easy": 156,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 14,
+      "rules_demand": 14,
+      "sick_days": 0,
+      "target": "2026-10-27"
+    },
+    "2026-10-28": {
+      "available": 0,
+      "base_cost": 15,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 5,
+      "projected": {
+        "Easy": 158,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 16,
+      "rules_demand": 16,
+      "sick_days": 0,
+      "target": "2026-10-28"
+    },
+    "2026-10-29": {
+      "available": 0,
+      "base_cost": 17,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 6,
+      "projected": {
+        "Easy": 160,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 18,
+      "rules_demand": 18,
+      "sick_days": 0,
+      "target": "2026-10-29"
+    },
+    "2026-10-30": {
+      "available": 0,
+      "base_cost": 20,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 7,
+      "projected": {
+        "Easy": 163,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 21,
+      "rules_demand": 21,
+      "sick_days": 0,
+      "target": "2026-10-30"
+    },
+    "2026-10-31": {
+      "available": 0,
+      "base_cost": 24,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 8,
+      "projected": {
+        "Easy": 167,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 25,
+      "rules_demand": 25,
+      "sick_days": 0,
+      "target": "2026-10-31"
+    },
+    "2026-11-01": {
+      "available": 0,
+      "base_cost": 28,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 9,
+      "projected": {
+        "Easy": 171,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 29,
+      "rules_demand": 29,
+      "sick_days": 0,
+      "target": "2026-11-01"
+    },
+    "2026-11-02": {
+      "available": 0,
+      "base_cost": 31,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 10,
+      "projected": {
+        "Easy": 174,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 32,
+      "rules_demand": 32,
+      "sick_days": 0,
+      "target": "2026-11-02"
+    },
+    "2026-11-03": {
+      "available": 0,
+      "base_cost": 33,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 11,
+      "projected": {
+        "Easy": 176,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 34,
+      "rules_demand": 34,
+      "sick_days": 0,
+      "target": "2026-11-03"
+    },
+    "2026-11-04": {
+      "available": 0,
+      "base_cost": 35,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 12,
+      "projected": {
+        "Easy": 178,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 36,
+      "rules_demand": 36,
+      "sick_days": 0,
+      "target": "2026-11-04"
+    },
+    "2026-11-05": {
+      "available": 0,
+      "base_cost": 37,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 13,
+      "projected": {
+        "Easy": 180,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 38,
+      "rules_demand": 38,
+      "sick_days": 0,
+      "target": "2026-11-05"
+    },
+    "2026-11-06": {
+      "available": 0,
+      "base_cost": 40,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 14,
+      "projected": {
+        "Easy": 183,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 41,
+      "rules_demand": 41,
+      "sick_days": 0,
+      "target": "2026-11-06"
+    },
+    "2026-11-07": {
+      "available": 0,
+      "base_cost": 44,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 15,
+      "projected": {
+        "Easy": 187,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 45,
+      "rules_demand": 45,
+      "sick_days": 0,
+      "target": "2026-11-07"
+    },
+    "2026-11-08": {
+      "available": 0,
+      "base_cost": 48,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 16,
+      "projected": {
+        "Easy": 191,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 49,
+      "rules_demand": 49,
+      "sick_days": 0,
+      "target": "2026-11-08"
+    },
+    "2026-11-09": {
+      "available": 0,
+      "base_cost": 51,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 17,
+      "projected": {
+        "Easy": 194,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 52,
+      "rules_demand": 52,
+      "sick_days": 0,
+      "target": "2026-11-09"
+    },
+    "2026-11-10": {
+      "available": 0,
+      "base_cost": 53,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 18,
+      "projected": {
+        "Easy": 196,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 54,
+      "rules_demand": 54,
+      "sick_days": 0,
+      "target": "2026-11-10"
+    },
+    "2026-11-11": {
+      "available": 0,
+      "base_cost": 55,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 19,
+      "projected": {
+        "Easy": 198,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 56,
+      "rules_demand": 56,
+      "sick_days": 0,
+      "target": "2026-11-11"
+    },
+    "2026-11-12": {
+      "available": 0,
+      "base_cost": 57,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 20,
+      "projected": {
+        "Easy": 200,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 58,
+      "rules_demand": 58,
+      "sick_days": 0,
+      "target": "2026-11-12"
+    },
+    "2026-11-13": {
+      "available": 0,
+      "base_cost": 60,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 21,
+      "projected": {
+        "Easy": 203,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 61,
+      "rules_demand": 61,
+      "sick_days": 0,
+      "target": "2026-11-13"
+    },
+    "2026-11-14": {
+      "available": 0,
+      "base_cost": 64,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 22,
+      "projected": {
+        "Easy": 207,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 65,
+      "rules_demand": 65,
+      "sick_days": 0,
+      "target": "2026-11-14"
+    },
+    "2026-11-15": {
+      "available": 0,
+      "base_cost": 68,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 23,
+      "projected": {
+        "Easy": 211,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 69,
+      "rules_demand": 69,
+      "sick_days": 0,
+      "target": "2026-11-15"
+    },
+    "2026-11-16": {
+      "available": 0,
+      "base_cost": 71,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 24,
+      "projected": {
+        "Easy": 214,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 72,
+      "rules_demand": 72,
+      "sick_days": 0,
+      "target": "2026-11-16"
+    },
+    "2026-11-17": {
+      "available": 0,
+      "base_cost": 73,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 25,
+      "projected": {
+        "Easy": 216,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 74,
+      "rules_demand": 74,
+      "sick_days": 0,
+      "target": "2026-11-17"
+    },
+    "2026-11-18": {
+      "available": 0,
+      "base_cost": 75,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 26,
+      "projected": {
+        "Easy": 218,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 76,
+      "rules_demand": 76,
+      "sick_days": 0,
+      "target": "2026-11-18"
+    },
+    "2026-11-19": {
+      "available": 0,
+      "base_cost": 77,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 27,
+      "projected": {
+        "Easy": 220,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 78,
+      "rules_demand": 78,
+      "sick_days": 0,
+      "target": "2026-11-19"
+    },
+    "2026-11-20": {
+      "available": 0,
+      "base_cost": 80,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 28,
+      "projected": {
+        "Easy": 223,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 81,
+      "rules_demand": 81,
+      "sick_days": 0,
+      "target": "2026-11-20"
+    },
+    "2026-11-21": {
+      "available": 0,
+      "base_cost": 84,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 29,
+      "projected": {
+        "Easy": 227,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 85,
+      "rules_demand": 85,
+      "sick_days": 0,
+      "target": "2026-11-21"
+    },
+    "2026-11-22": {
+      "available": 0,
+      "base_cost": 88,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 30,
+      "projected": {
+        "Easy": 231,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 89,
+      "rules_demand": 89,
+      "sick_days": 0,
+      "target": "2026-11-22"
+    },
+    "2026-11-23": {
+      "available": 0,
+      "base_cost": 91,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 31,
+      "projected": {
+        "Easy": 234,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 92,
+      "rules_demand": 92,
+      "sick_days": 0,
+      "target": "2026-11-23"
+    },
+    "2026-11-24": {
+      "available": 0,
+      "base_cost": 93,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 32,
+      "projected": {
+        "Easy": 236,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 94,
+      "rules_demand": 94,
+      "sick_days": 0,
+      "target": "2026-11-24"
+    },
+    "2026-11-25": {
+      "available": 0,
+      "base_cost": 95,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 33,
+      "projected": {
+        "Easy": 238,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 96,
+      "rules_demand": 96,
+      "sick_days": 0,
+      "target": "2026-11-25"
+    },
+    "2026-11-26": {
+      "available": 0,
+      "base_cost": 97,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 34,
+      "projected": {
+        "Easy": 240,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 98,
+      "rules_demand": 98,
+      "sick_days": 0,
+      "target": "2026-11-26"
+    },
+    "2026-11-27": {
+      "available": 0,
+      "base_cost": 100,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 35,
+      "projected": {
+        "Easy": 243,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 101,
+      "rules_demand": 101,
+      "sick_days": 0,
+      "target": "2026-11-27"
+    },
+    "2026-11-28": {
+      "available": 0,
+      "base_cost": 104,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 36,
+      "projected": {
+        "Easy": 247,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 105,
+      "rules_demand": 105,
+      "sick_days": 0,
+      "target": "2026-11-28"
+    },
+    "2026-11-29": {
+      "available": 0,
+      "base_cost": 108,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 37,
+      "projected": {
+        "Easy": 251,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 109,
+      "rules_demand": 109,
+      "sick_days": 0,
+      "target": "2026-11-29"
+    },
+    "2026-11-30": {
+      "available": 0,
+      "base_cost": 111,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 38,
+      "projected": {
+        "Easy": 254,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 112,
+      "rules_demand": 112,
+      "sick_days": 0,
+      "target": "2026-11-30"
+    },
+    "2026-12-01": {
+      "available": 0,
+      "base_cost": 113,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 39,
+      "projected": {
+        "Easy": 256,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 114,
+      "rules_demand": 114,
+      "sick_days": 0,
+      "target": "2026-12-01"
+    },
+    "2026-12-02": {
+      "available": 0,
+      "base_cost": 115,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 40,
+      "projected": {
+        "Easy": 258,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 116,
+      "rules_demand": 116,
+      "sick_days": 0,
+      "target": "2026-12-02"
+    },
+    "2026-12-03": {
+      "available": 0,
+      "base_cost": 117,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 41,
+      "projected": {
+        "Easy": 260,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 118,
+      "rules_demand": 118,
+      "sick_days": 0,
+      "target": "2026-12-03"
+    },
+    "2026-12-04": {
+      "available": 0,
+      "base_cost": 120,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 42,
+      "projected": {
+        "Easy": 263,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 121,
+      "rules_demand": 121,
+      "sick_days": 0,
+      "target": "2026-12-04"
+    },
+    "2026-12-05": {
+      "available": 0,
+      "base_cost": 124,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 43,
+      "projected": {
+        "Easy": 267,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 125,
+      "rules_demand": 125,
+      "sick_days": 0,
+      "target": "2026-12-05"
+    },
+    "2026-12-06": {
+      "available": 0,
+      "base_cost": 128,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 44,
+      "projected": {
+        "Easy": 271,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 129,
+      "rules_demand": 129,
+      "sick_days": 0,
+      "target": "2026-12-06"
+    },
+    "2026-12-07": {
+      "available": 0,
+      "base_cost": 131,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 45,
+      "projected": {
+        "Easy": 274,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 132,
+      "rules_demand": 132,
+      "sick_days": 0,
+      "target": "2026-12-07"
+    },
+    "2026-12-08": {
+      "available": 0,
+      "base_cost": 133,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 46,
+      "projected": {
+        "Easy": 276,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 134,
+      "rules_demand": 134,
+      "sick_days": 0,
+      "target": "2026-12-08"
+    },
+    "2026-12-09": {
+      "available": 0,
+      "base_cost": 135,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 47,
+      "projected": {
+        "Easy": 278,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 136,
+      "rules_demand": 136,
+      "sick_days": 0,
+      "target": "2026-12-09"
+    },
+    "2026-12-10": {
+      "available": 0,
+      "base_cost": 137,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 48,
+      "projected": {
+        "Easy": 280,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 138,
+      "rules_demand": 138,
+      "sick_days": 0,
+      "target": "2026-12-10"
+    },
+    "2026-12-11": {
+      "available": 0,
+      "base_cost": 140,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 49,
+      "projected": {
+        "Easy": 283,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 141,
+      "rules_demand": 141,
+      "sick_days": 0,
+      "target": "2026-12-11"
+    },
+    "2026-12-12": {
+      "available": 0,
+      "base_cost": 144,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 50,
+      "projected": {
+        "Easy": 287,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 145,
+      "rules_demand": 145,
+      "sick_days": 0,
+      "target": "2026-12-12"
+    },
+    "2026-12-13": {
+      "available": 0,
+      "base_cost": 148,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 51,
+      "projected": {
+        "Easy": 291,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 149,
+      "rules_demand": 149,
+      "sick_days": 0,
+      "target": "2026-12-13"
+    },
+    "2026-12-14": {
+      "available": 0,
+      "base_cost": 151,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 52,
+      "projected": {
+        "Easy": 294,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 152,
+      "rules_demand": 152,
+      "sick_days": 0,
+      "target": "2026-12-14"
+    },
+    "2026-12-15": {
+      "available": 0,
+      "base_cost": 153,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 53,
+      "projected": {
+        "Easy": 296,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 154,
+      "rules_demand": 154,
+      "sick_days": 0,
+      "target": "2026-12-15"
+    },
+    "2026-12-16": {
+      "available": 0,
+      "base_cost": 155,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 54,
+      "projected": {
+        "Easy": 298,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 156,
+      "rules_demand": 156,
+      "sick_days": 0,
+      "target": "2026-12-16"
+    },
+    "2026-12-17": {
+      "available": 0,
+      "base_cost": 157,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 55,
+      "projected": {
+        "Easy": 300,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 158,
+      "rules_demand": 158,
+      "sick_days": 0,
+      "target": "2026-12-17"
+    },
+    "2026-12-18": {
+      "available": 0,
+      "base_cost": 160,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 56,
+      "projected": {
+        "Easy": 303,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 161,
+      "rules_demand": 161,
+      "sick_days": 0,
+      "target": "2026-12-18"
+    },
+    "2026-12-19": {
+      "available": 0,
+      "base_cost": 164,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 57,
+      "projected": {
+        "Easy": 307,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 165,
+      "rules_demand": 165,
+      "sick_days": 0,
+      "target": "2026-12-19"
+    },
+    "2026-12-20": {
+      "available": 0,
+      "base_cost": 168,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 58,
+      "projected": {
+        "Easy": 311,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 169,
+      "rules_demand": 169,
+      "sick_days": 0,
+      "target": "2026-12-20"
+    },
+    "2026-12-21": {
+      "available": 0,
+      "base_cost": 171,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 59,
+      "projected": {
+        "Easy": 314,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 172,
+      "rules_demand": 172,
+      "sick_days": 0,
+      "target": "2026-12-21"
+    },
+    "2026-12-22": {
+      "available": 0,
+      "base_cost": 173,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 60,
+      "projected": {
+        "Easy": 316,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 174,
+      "rules_demand": 174,
+      "sick_days": 0,
+      "target": "2026-12-22"
+    },
+    "2026-12-23": {
+      "available": 0,
+      "base_cost": 175,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 61,
+      "projected": {
+        "Easy": 318,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 176,
+      "rules_demand": 176,
+      "sick_days": 0,
+      "target": "2026-12-23"
+    },
+    "2026-12-24": {
+      "available": 0,
+      "base_cost": 177,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 62,
+      "projected": {
+        "Easy": 320,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 178,
+      "rules_demand": 178,
+      "sick_days": 0,
+      "target": "2026-12-24"
+    },
+    "2026-12-25": {
+      "available": 0,
+      "base_cost": 180,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 63,
+      "projected": {
+        "Easy": 323,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 181,
+      "rules_demand": 181,
+      "sick_days": 0,
+      "target": "2026-12-25"
+    },
+    "2026-12-26": {
+      "available": 0,
+      "base_cost": 184,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 64,
+      "projected": {
+        "Easy": 327,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 185,
+      "rules_demand": 185,
+      "sick_days": 0,
+      "target": "2026-12-26"
+    },
+    "2026-12-27": {
+      "available": 0,
+      "base_cost": 188,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 65,
+      "projected": {
+        "Easy": 331,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 189,
+      "rules_demand": 189,
+      "sick_days": 0,
+      "target": "2026-12-27"
+    },
+    "2026-12-28": {
+      "available": 0,
+      "base_cost": 191,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 66,
+      "projected": {
+        "Easy": 334,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 192,
+      "rules_demand": 192,
+      "sick_days": 0,
+      "target": "2026-12-28"
+    },
+    "2026-12-29": {
+      "available": 0,
+      "base_cost": 193,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 67,
+      "projected": {
+        "Easy": 336,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 194,
+      "rules_demand": 194,
+      "sick_days": 0,
+      "target": "2026-12-29"
+    },
+    "2026-12-30": {
+      "available": 0,
+      "base_cost": 195,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 68,
+      "projected": {
+        "Easy": 338,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 196,
+      "rules_demand": 196,
+      "sick_days": 0,
+      "target": "2026-12-30"
+    },
+    "2026-12-31": {
+      "available": 0,
+      "base_cost": 197,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 69,
+      "projected": {
+        "Easy": 340,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 198,
+      "rules_demand": 198,
+      "sick_days": 0,
+      "target": "2026-12-31"
+    },
+    "2027-01-01": {
+      "available": 0,
+      "base_cost": 200,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 70,
+      "projected": {
+        "Easy": 343,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 201,
+      "rules_demand": 201,
+      "sick_days": 0,
+      "target": "2027-01-01"
+    },
+    "2027-01-02": {
+      "available": 0,
+      "base_cost": 204,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 71,
+      "projected": {
+        "Easy": 347,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 205,
+      "rules_demand": 205,
+      "sick_days": 0,
+      "target": "2027-01-02"
+    },
+    "2027-01-03": {
+      "available": 0,
+      "base_cost": 208,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 72,
+      "projected": {
+        "Easy": 351,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 209,
+      "rules_demand": 209,
+      "sick_days": 0,
+      "target": "2027-01-03"
+    },
+    "2027-01-04": {
+      "available": 0,
+      "base_cost": 211,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 73,
+      "projected": {
+        "Easy": 354,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 212,
+      "rules_demand": 212,
+      "sick_days": 0,
+      "target": "2027-01-04"
+    },
+    "2027-01-05": {
+      "available": 0,
+      "base_cost": 213,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 74,
+      "projected": {
+        "Easy": 356,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 214,
+      "rules_demand": 214,
+      "sick_days": 0,
+      "target": "2027-01-05"
+    },
+    "2027-01-06": {
+      "available": 0,
+      "base_cost": 215,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 75,
+      "projected": {
+        "Easy": 358,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 216,
+      "rules_demand": 216,
+      "sick_days": 0,
+      "target": "2027-01-06"
+    },
+    "2027-01-07": {
+      "available": 0,
+      "base_cost": 217,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 76,
+      "projected": {
+        "Easy": 360,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 218,
+      "rules_demand": 218,
+      "sick_days": 0,
+      "target": "2027-01-07"
+    },
+    "2027-01-08": {
+      "available": 0,
+      "base_cost": 220,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 77,
+      "projected": {
+        "Easy": 363,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 221,
+      "rules_demand": 221,
+      "sick_days": 0,
+      "target": "2027-01-08"
+    },
+    "2027-01-09": {
+      "available": 0,
+      "base_cost": 224,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 78,
+      "projected": {
+        "Easy": 367,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 225,
+      "rules_demand": 225,
+      "sick_days": 0,
+      "target": "2027-01-09"
+    },
+    "2027-01-10": {
+      "available": 0,
+      "base_cost": 228,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 79,
+      "projected": {
+        "Easy": 371,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 229,
+      "rules_demand": 229,
+      "sick_days": 0,
+      "target": "2027-01-10"
+    },
+    "2027-01-11": {
+      "available": 0,
+      "base_cost": 231,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 80,
+      "projected": {
+        "Easy": 374,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 232,
+      "rules_demand": 232,
+      "sick_days": 0,
+      "target": "2027-01-11"
+    },
+    "2027-01-12": {
+      "available": 0,
+      "base_cost": 233,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 81,
+      "projected": {
+        "Easy": 376,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 234,
+      "rules_demand": 234,
+      "sick_days": 0,
+      "target": "2027-01-12"
+    },
+    "2027-01-13": {
+      "available": 0,
+      "base_cost": 235,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 82,
+      "projected": {
+        "Easy": 378,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 236,
+      "rules_demand": 236,
+      "sick_days": 0,
+      "target": "2027-01-13"
+    },
+    "2027-01-14": {
+      "available": 0,
+      "base_cost": 237,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 83,
+      "projected": {
+        "Easy": 380,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 238,
+      "rules_demand": 238,
+      "sick_days": 0,
+      "target": "2027-01-14"
+    },
+    "2027-01-15": {
+      "available": 0,
+      "base_cost": 240,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 84,
+      "projected": {
+        "Easy": 383,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 241,
+      "rules_demand": 241,
+      "sick_days": 0,
+      "target": "2027-01-15"
+    },
+    "2027-01-16": {
+      "available": 0,
+      "base_cost": 244,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 85,
+      "projected": {
+        "Easy": 387,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 245,
+      "rules_demand": 245,
+      "sick_days": 0,
+      "target": "2027-01-16"
+    },
+    "2027-01-17": {
+      "available": 0,
+      "base_cost": 248,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 86,
+      "projected": {
+        "Easy": 391,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 249,
+      "rules_demand": 249,
+      "sick_days": 0,
+      "target": "2027-01-17"
+    },
+    "2027-01-18": {
+      "available": 0,
+      "base_cost": 251,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 87,
+      "projected": {
+        "Easy": 394,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 252,
+      "rules_demand": 252,
+      "sick_days": 0,
+      "target": "2027-01-18"
+    },
+    "2027-01-19": {
+      "available": 0,
+      "base_cost": 253,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 88,
+      "projected": {
+        "Easy": 396,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 254,
+      "rules_demand": 254,
+      "sick_days": 0,
+      "target": "2027-01-19"
+    },
+    "2027-01-20": {
+      "available": 0,
+      "base_cost": 255,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 89,
+      "projected": {
+        "Easy": 398,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 256,
+      "rules_demand": 256,
+      "sick_days": 0,
+      "target": "2027-01-20"
+    },
+    "2027-01-31": {
+      "available": 0,
+      "base_cost": 288,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 100,
+      "projected": {
+        "Easy": 431,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 289,
+      "rules_demand": 289,
+      "sick_days": 0,
+      "target": "2027-01-31"
+    },
+    "2027-02-28": {
+      "available": 0,
+      "base_cost": 368,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 128,
+      "projected": {
+        "Easy": 511,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 369,
+      "rules_demand": 369,
+      "sick_days": 0,
+      "target": "2027-02-28"
+    },
+    "2027-03-31": {
+      "available": 0,
+      "base_cost": 455,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 159,
+      "projected": {
+        "Easy": 598,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 456,
+      "rules_demand": 456,
+      "sick_days": 0,
+      "target": "2027-03-31"
+    },
+    "2027-04-30": {
+      "available": 0,
+      "base_cost": 540,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 189,
+      "projected": {
+        "Easy": 683,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 541,
+      "rules_demand": 541,
+      "sick_days": 0,
+      "target": "2027-04-30"
+    },
+    "2027-05-31": {
+      "available": 0,
+      "base_cost": 631,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 220,
+      "projected": {
+        "Easy": 774,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 632,
+      "rules_demand": 632,
+      "sick_days": 0,
+      "target": "2027-05-31"
+    },
+    "2027-06-30": {
+      "available": 0,
+      "base_cost": 715,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 250,
+      "projected": {
+        "Easy": 858,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 716,
+      "rules_demand": 716,
+      "sick_days": 0,
+      "target": "2027-06-30"
+    },
+    "2027-07-31": {
+      "available": 0,
+      "base_cost": 804,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 281,
+      "projected": {
+        "Easy": 947,
+        "Hard": 0,
+        "Medium": 0
+      },
+      "required": 805,
+      "rules_demand": 805,
+      "sick_days": 0,
+      "target": "2027-07-31"
+    },
+    "2027-08-31": {
+      "available": 0,
+      "base_cost": 893,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 312,
+      "projected": {
+        "Easy": 972,
+        "Hard": 0,
+        "Medium": 64
+      },
+      "required": 894,
+      "rules_demand": 894,
+      "sick_days": 0,
+      "target": "2027-08-31"
+    },
+    "2027-09-30": {
+      "available": 0,
+      "base_cost": 977,
+      "debt": 1,
+      "debt_left_by_rules": 0,
+      "first_day": "2026-10-24",
+      "free_days": 0,
+      "gated_days": 342,
+      "projected": {
+        "Easy": 972,
+        "Hard": 0,
+        "Medium": 148
+      },
+      "required": 978,
+      "rules_demand": 978,
+      "sick_days": 0,
+      "target": "2027-09-30"
+    }
+  },
+  "schema": 1,
+  "status": {
+    "available": 0,
+    "budgets": {
+      "escape": {
+        "exhausted": false,
+        "label": "Escape hatch",
+        "limit_30": 3,
+        "limit_7": 1,
+        "limit_90": 10,
+        "next_wait_seconds": 120,
+        "summary": "Escape hatch: 0/1 per 7d, 0/3 per 30d, 0/10 per 90d",
+        "used_30": 0,
+        "used_7": 0,
+        "used_90": 0
+      },
+      "incidents": {
+        "exhausted": false,
+        "label": "Network incidents",
+        "limit_30": 99,
+        "limit_7": 99,
+        "limit_90": 99,
+        "next_wait_seconds": 300,
+        "summary": "Network incidents: 0/99 per 7d, 0/99 per 30d, 0/99 per 90d",
+        "used_30": 0,
+        "used_7": 0,
+        "used_90": 0
+      }
+    },
+    "charged": 133,
+    "charged_today": true,
+    "cost": 4,
+    "credits": 133,
+    "day": "2026-10-23",
+    "days": {
+      "charged": [
+        "2026-10-23",
+        "2026-10-22",
+        "2026-10-20",
+        "2026-10-19",
+        "2026-10-18",
+        "2026-10-17",
+        "2026-10-15",
+        "2026-10-14",
+        "2026-10-13",
+        "2026-10-12",
+        "2026-10-11",
+        "2026-10-10",
+        "2026-10-09",
+        "2026-10-08",
+        "2026-10-07"
+      ],
+      "in_force": true,
+      "start_date": "2026-08-04"
+    },
+    "debt": {
+      "missed_days": 21,
+      "outstanding": 1,
+      "owed": 28,
+      "repaid": 27,
+      "summary": "1 credits outstanding (21 missed days owed 28, 27 repaid)"
+    },
+    "earned_all_time": 133,
+    "environment": {
+      "auth_note": "Cookies loaded -- LeetCode's own solved-filter applies only while it still accepts them.",
+      "auth_present": true,
+      "clock_trusted": true,
+      "cookies_configured": true,
+      "pool_cache": {
+        "age_days": 2.1759982946763436,
+        "entries": 4087,
+        "exists": true,
+        "name": "Problem pool",
+        "summary": "Problem pool: 4087 entries, 2.2 days old"
+      },
+      "pool_notes": [
+        "Cookies loaded -- LeetCode's own solved-filter applies only while it still accepts them.",
+        "Hiding at least 142 problems already solved on this device, from the local ledger."
+      ],
+      "pool_source": "cache",
+      "statement_cache": {
+        "age_days": 88.05143536281254,
+        "entries": 50,
+        "exists": true,
+        "name": "Offline statements",
+        "summary": "Offline statements: 50 entries, 88.1 days old"
+      },
+      "sync_configured": false,
+      "timer": {
+        "detail": "enabled",
+        "enabled": true,
+        "next_fire": "Sat 2026-10-24 09:00:00 CEST"
+      }
+    },
+    "explanation": [
+      "Today was already settled by an earlier run, so a second run is a no-op. That is what makes the afternoon retry free."
+    ],
+    "integrity": {
+      "bootstrapped": true,
+      "clock_trusted": true,
+      "discounted": 0,
+      "ledger_path": "/home/kuhy/.local/share/leetcode_guard/ledger.json",
+      "ok": true,
+      "tampered": 0,
+      "total_entries": 206,
+      "unparsable": 0
+    },
+    "locked": false,
+    "needed": 0,
+    "pricing_note": "Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4, plus 1 on Mon/Fri/Sat/Sun while any debt is outstanding (before 07.10.2026: Tue/Wed/Thu cost 1, Mon/Fri/Sat/Sun cost 2). A missed day is owed at its price. Credits never expire and are not capped.",
+    "reason": "today is already paid for",
+    "solves": {
+      "last_7_days": 22,
+      "recent": [
+        {
+          "day": "2026-10-22",
+          "lang": "typescript",
+          "title_slug": "missing-number"
+        },
+        {
+          "day": "2026-10-22",
+          "lang": "postgresql",
+          "title_slug": "combine-two-tables"
+        },
+        {
+          "day": "2026-10-22",
+          "lang": "postgresql",
+          "title_slug": "duplicate-emails"
+        },
+        {
+          "day": "2026-10-22",
+          "lang": "postgresql",
+          "title_slug": "employees-earning-more-than-their-managers"
+        },
+        {
+          "day": "2026-10-22",
+          "lang": "postgresql",
+          "title_slug": "customers-who-never-order"
+        },
+        {
+          "day": "2026-10-21",
+          "lang": "typescript",
+          "title_slug": "number-of-1-bits"
+        },
+        {
+          "day": "2026-10-20",
+          "lang": "typescript",
+          "title_slug": "single-number"
+        },
+        {
+          "day": "2026-10-20",
+          "lang": "typescript",
+          "title_slug": "majority-element"
+        },
+        {
+          "day": "2026-10-19",
+          "lang": "typescript",
+          "title_slug": "length-of-last-word"
+        },
+        {
+          "day": "2026-10-19",
+          "lang": "typescript",
+          "title_slug": "plus-one"
+        },
+        {
+          "day": "2026-10-19",
+          "lang": "typescript",
+          "title_slug": "sqrtx"
+        },
+        {
+          "day": "2026-10-19",
+          "lang": "typescript",
+          "title_slug": "valid-palindrome"
+        },
+        {
+          "day": "2026-10-18",
+          "lang": "typescript",
+          "title_slug": "two-sum"
+        },
+        {
+          "day": "2026-10-18",
+          "lang": "typescript",
+          "title_slug": "palindrome-number"
+        },
+        {
+          "day": "2026-10-18",
+          "lang": "typescript",
+          "title_slug": "roman-to-integer"
+        }
+      ],
+      "today": 0,
+      "total_credited": 133
+    },
+    "spent_all_time": 133,
+    "state": "already-charged",
+    "suggestions": [
+      {
+        "ac_rate": 87.96668687241387,
+        "difficulty": "Easy",
+        "title": "Subarrays Distinct Element Sum of Squares I",
+        "url": "https://leetcode.com/problems/subarrays-distinct-element-sum-of-squares-i/"
+      },
+      {
+        "ac_rate": 87.12560507157993,
+        "difficulty": "Easy",
+        "title": "Minimum Number of Moves to Seat Everyone",
+        "url": "https://leetcode.com/problems/minimum-number-of-moves-to-seat-everyone/"
+      },
+      {
+        "ac_rate": 85.91195899865906,
+        "difficulty": "Easy",
+        "title": "Sum of Values at Indices With K Set Bits",
+        "url": "https://leetcode.com/problems/sum-of-values-at-indices-with-k-set-bits/"
+      },
+      {
+        "ac_rate": 85.87501143053545,
+        "difficulty": "Easy",
+        "title": "Find a Corresponding Node of a Binary Tree in a Clone of That Tree",
+        "url": "https://leetcode.com/problems/find-a-corresponding-node-of-a-binary-tree-in-a-clone-of-that-tree/"
+      },
+      {
+        "ac_rate": 85.22340044194583,
+        "difficulty": "Easy",
+        "title": "Root Equals Sum of Children",
+        "url": "https://leetcode.com/problems/root-equals-sum-of-children/"
+      },
+      {
+        "ac_rate": 85.14037783941825,
+        "difficulty": "Easy",
+        "title": "Interval Cancellation",
+        "url": "https://leetcode.com/problems/interval-cancellation/"
+      },
+      {
+        "ac_rate": 84.98952058948936,
+        "difficulty": "Easy",
+        "title": "Construct the Minimum Bitwise Array I",
+        "url": "https://leetcode.com/problems/construct-the-minimum-bitwise-array-i/"
+      },
+      {
+        "ac_rate": 84.89220122438115,
+        "difficulty": "Easy",
+        "title": "Bitwise OR of Even Numbers in an Array",
+        "url": "https://leetcode.com/problems/bitwise-or-of-even-numbers-in-an-array/"
+      },
+      {
+        "ac_rate": 84.85720398545146,
+        "difficulty": "Easy",
+        "title": "Minimum Time Visiting All Points",
+        "url": "https://leetcode.com/problems/minimum-time-visiting-all-points/"
+      },
+      {
+        "ac_rate": 84.69746742006639,
+        "difficulty": "Easy",
+        "title": "Matrix Diagonal Sum",
+        "url": "https://leetcode.com/problems/matrix-diagonal-sum/"
+      },
+      {
+        "ac_rate": 84.32680808207968,
+        "difficulty": "Easy",
+        "title": "Elevator Requests I",
+        "url": "https://leetcode.com/problems/elevator-requests-i/"
+      },
+      {
+        "ac_rate": 84.25628576267697,
+        "difficulty": "Easy",
+        "title": "Sorting the Sentence",
+        "url": "https://leetcode.com/problems/sorting-the-sentence/"
+      },
+      {
+        "ac_rate": 84.25584406067564,
+        "difficulty": "Easy",
+        "title": "Sum of All Odd Length Subarrays",
+        "url": "https://leetcode.com/problems/sum-of-all-odd-length-subarrays/"
+      },
+      {
+        "ac_rate": 84.20412210387151,
+        "difficulty": "Easy",
+        "title": "Reverse Words in a String III",
+        "url": "https://leetcode.com/problems/reverse-words-in-a-string-iii/"
+      }
+    ],
+    "surcharge": 1,
+    "weekday": "Friday"
+  }
+}

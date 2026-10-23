@@ -60,8 +60,22 @@ not an object tree: a tree would
 silently drop every `null` and `[]`, i.e. exactly the "unknown" sections.
 The app reads the node and `jsonDecode`s the string once. Auth: the shared
 `~/.config/crdt-sync/` account; the existing root rule already grants this
-uid read/write, so no rule change. Pushed after every `_harvest_run` minute
-(the heartbeat) and on every write of the production ledger.
+uid read/write, so no rule change. A push runs after every `_harvest_run`
+minute and on every write of the production ledger.
+
+**Heartbeat (staleness, decision 3).** `leetcode-guard/heartbeat` is a JSON
+string leaf holding the ISO time of the last successful push (~27 bytes,
+written every minute with `print=silent`). The full `status` node is written
+only when the snapshot's content -- everything except `generated_at` --
+differs from the last successful write (SHA-256 kept in
+`~/.local/share/leetcode_guard/snapshot_push_state.json`), so its
+`generated_at` is "when the content last changed", NOT "how fresh it is".
+The app's "as of HH:MM" and the >10 min stale banner read the
+**heartbeat**. A failed snapshot write skips the heartbeat, so a fresh
+heartbeat never sits over stale content. Cache `age_days` are rounded to one
+decimal (what the window shows) so they do not change every minute; a
+profile refetch (`fetched_at`, at most every 15 min) still counts as a
+change. Upload drops from ~46 MB/day to roughly 3-4 MB/day.
 
 ```json
 {

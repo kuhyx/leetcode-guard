@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-23T14:05:00+02:00",
+  "status": {
+    "day": "2026-10-23", "weekday": "Thursday", "state": "settled",
+    "locked": false, "reason": "today is already paid for",
+    "explanation": ["Today was already settled by an earlier run."],
+    "cost": 2, "surcharge": 0, "credits": 41, "charged": 39,
+    "available": 2, "needed": 0, "charged_today": true,
+    "earned_all_time": 43, "spent_all_time": 39,
+    "debt": {"owed": 3, "repaid": 1, "outstanding": 2, "missed_days": 1,
+             "summary": "2 credits outstanding (1 missed days owed 3, 1 repaid)"},
+    "pricing_note": "Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4.",
+    "solves": {"today": 1, "last_7_days": 9, "total_credited": 41,
+               "recent": [
+                 {"day": "2026-10-22", "title_slug": "two-sum", "lang": "javascript"},
+                 {"day": "2026-10-21", "title_slug": "valid-anagram", "lang": null}
+               ]},
+    "days": {"charged": ["2026-10-22", "2026-10-21"],
+             "start_date": "2026-08-04", "in_force": true},
+    "budgets": {
+      "escape": {"label": "Escape hatch", "used_7": 1, "limit_7": 3,
+                 "summary": "Escape hatch: 1 of 3 used this week",
+                 "exhausted": false, "next_wait_seconds": 600},
+      "incidents": {"label": "Network incidents",
+                    "summary": "Network incidents: 3 of 3 used",
+                    "exhausted": true, "next_wait_seconds": 3600}
+    },
+    "integrity": {"ok": true, "tampered": 0, "discounted": 1, "unparsable": 0,
+                  "clock_trusted": true, "total_entries": 206,
+                  "bootstrapped": true,
+                  "ledger_path": "/home/u/.local/share/leetcode_guard/ledger.json"},
+    "environment": {"clock_trusted": true, "auth_present": true,
+                    "auth_note": "cookie valid until 2026-11-02",
+                    "pool_source": "live pool (4003 problems)",
+                    "pool_notes": ["statement cache warm"],
+                    "cookies_configured": true, "sync_configured": false,
+                    "timer": {"enabled": true,
+                              "next_fire": "Sat 2026-10-24 09:00:00 CEST",
+                              "detail": "enabled"},
+                    "pool_cache": {"name": "Problem pool", "exists": true,
+                                   "entries": 4087, "age_days": 2.17,
+                                   "summary": "Problem pool: 4087 entries, 2.2 days old"},
+                    "statement_cache": {"summary": "Offline statements: 50 entries"}},
+    "suggestions": [
+      {"title": "Missing Number", "difficulty": "Easy", "ac_rate": 70.4,
+       "url": "https://leetcode.com/problems/missing-number/"},
+      {"title": "Single Number III", "difficulty": "Medium", "ac_rate": 52,
+       "url": "https://leetcode.com/problems/single-number-iii/"}
+    ]
+  },
+  "progress": {"solved": {"Easy": 120, "Medium": 150, "Hard": 42},
+               "total": {"Easy": 900, "Medium": 2300, "Hard": 855},
+               "solved_all": 312, "total_all": 4055,
+               "fetched_at": "2026-10-23T14:01:37+02:00"},
+  "projection_price": 2,
+  "projections": {
+    "2026-10-24": {"target": "2026-10-24", "first_day": "2026-10-24",
+                   "gated_days": 1, "free_days": 0,
+                   "base_cost": 2, "debt": 0, "available": 2, "required": 2,
+                   "rules_demand": 2, "debt_left_by_rules": 0, "sick_days": 0,
+                   "projected": {"Easy": 121, "Medium": 150, "Hard": 42}},
+    "2026-10-31": {"target": "2026-10-31", "first_day": "2026-10-24",
+                   "gated_days": 8, "free_days": 0,
+                   "base_cost": 21, "debt": 2, "available": 2, "required": 21,
+                   "rules_demand": 23, "debt_left_by_rules": 0, "sick_days": 0,
+                   "projected": {"Easy": 141, "Medium": 150, "Hard": 42}},
+    "2026-11-30": {"target": "2026-11-30", "first_day": "2026-10-24",
+                   "gated_days": 38, "free_days": 1,
+                   "base_cost": 101, "debt": 2, "available": 2,
+                   "required": 101, "rules_demand": 103,
+                   "debt_left_by_rules": 0, "sick_days": 0,
+                   "projected": {"Easy": 221, "Medium": 150, "Hard": 42}}
+  },
+  "profile": {
+    "difficulty": {"easy": [120, 900], "medium": [150, 1900],
+                   "hard": [42, 850]},
+    "streak_current": 5, "streak_longest": 30,
+    "calendar": {"2026-10-22": 2, "2026-10-21": 1, "1760918400": 4},
+    "acceptance_rate": 61.2,
+    "fetched_at": "2026-10-23T14:01:37+02:00"
+  },
+  "coach": {
+    "problems": [
+      {"slug": "missing-number", "cluster": "bit-cancellation",
+       "req_before_code": true, "max_rung": "H1", "revealed": false,
+       "req_check": "pass", "day": "2026-10-23"},
+      {"slug": "single-number-iii", "cluster": "bit-cancellation",
+       "req_before_code": false, "max_rung": "H3", "revealed": true,
+       "req_check": "incomplete", "day": "2026-10-22"}
+    ],
+    "retests_due": [{"slug": "missing-number", "due": "2026-10-26"}],
+    "clusters": {"bit-cancellation": {"done": 1, "total": 4}}
+  }
+}
