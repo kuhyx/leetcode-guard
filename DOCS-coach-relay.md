@@ -112,8 +112,9 @@ result or the log.
 (`claude_cli.ask` gains `env`); P builds `PhaseGate(log, ...)` directly, never `PhaseGate.open` (it writes global
 `os.environ`). Usage limit -> continue per turn on the local model with the history, as `run_claude` hands over. Grades
 reach the coach as a prefix on its next turn (`[app: step 1 graded pass on try 2; step 2 open]`, no extra model call)
-and show in chat at once as a `system` message. Code in `chat` before step 2 is passed or forced is refused by
-`PhaseGate.screen` -> `phase_locked` + a `system` / `refused` chat line. Message kinds
+and show in chat at once as a `system` message. Code in `chat` (or `run_code`) is refused while the relay's own step-2 status
+is not `passed`/`forced`, checked BEFORE `PhaseGate.screen` (whose 3-`incomplete` auto-open must not skip kuhy's
+choice to force) -> `phase_locked` + a `system` / `refused` chat line. Message kinds
 `chat|hint|reveal|grade|accepted|refused|run`; roles `kuhy|coach|system`.
 
 **Run code** (decision 8): allowed once step 2 is passed or forced; logs `code` with `via:"run"`. `node` with a fixed
@@ -139,9 +140,10 @@ No session yet: `session` and `step` are `null`, `steps` is `[]`. `end_reason`: 
 present only while step 3 is open (every entry's name + properties, never which are correct). `rev` (=
 `heartbeat.state_rev`) moves on every change; F then refetches `state`, and `chat` after its last key.
 
-**Accepted (step 4).** While step 4 is open the relay calls `_submissions.fetch_recent_ac` (`post` from
-`_settings.build_client`: the harvester's read-only probe) at most **once a minute**, since LeetCode answers a rate
-limit like a dead session. `probe` is three-valued: `accepted` (a row for the slug with timestamp >= `session.started`:
+**Accepted (step 4).** While step 4 is open the relay calls `fetch_recent_ac(client.post, client.username)` with
+`client = _settings.build_client()` (the harvester's read-only probe) at most **once a minute**, since LeetCode answers
+a rate limit like a dead session. `probe` is three-valued: `accepted` (a row for the slug with
+`timestamp` (unix **seconds**) `* 1000 >= session.started`:
 log a step-4 `grade` `pass` `via:"accepted"`, add a `system` / `accepted` chat line, open step 5, bump `rev`; the UI sees
 it within one heartbeat poll), `not_yet`, or `unknown` (probe unusable: F shows "could not check", never "not yet").
 The probe mints nothing; crediting stays the harvester's job.
@@ -184,7 +186,7 @@ reader".
 | `chat` | `role` kuhy/coach, `kind` chat/hint/reveal, `text` | `role` in set |
 | `session_end` | `reason` done/reveal/ended | `reason` in set |
 
-Existing events are unchanged, plus `sid`: `req` + `req_check` (step 2, via `PhaseGate`), `code` (chat code,
+Existing events are unchanged (no `sid`; sessions split at `session_start`): `req` + `req_check` (step 2, via `PhaseGate`), `code` (chat code,
 `run_code`), `rung` (the coach's marker, incl. a Hint's reply), `reveal`, `postmortem` (the card builder). The file
 stays `<date>-<slug>.jsonl`, dated at `session_start`, so one file can hold several sessions.
 
