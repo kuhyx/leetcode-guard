@@ -16,7 +16,7 @@ path, query, body <= 16 KiB) and nothing else; relay unreachable -> it answers
 
 | RTDB node | Shape | Writer |
 |---|---|---|
-| `heartbeat` | object `{"beat":{".sv":"timestamp"},"started":ms,"state_rev":n,"busy":rid?,"version":1}` (`busy` absent = idle) | relay, every 30 s and on every `state_rev` move |
+| `heartbeat` | object `{"beat":{".sv":"timestamp"},"started":ms,"state_rev":n,"busy":rid?,"version":1}` (`busy` absent = idle) | relay, every 30 s and on every `state_rev` or `busy` change |
 | `state` | JSON **string** leaf: the §3 state | relay, on change |
 | `chat/{m0001}` | object `{"role","kind","text","at"}`, no empty fields | relay, append-only; cleared at `session_start` |
 | `requests/{rid}/req` | object (below) | phone only |
@@ -51,7 +51,8 @@ re-runs it). `retry:true` errors are resent by the user as a NEW rid.
 backoff, fresh token on `auth_revoked`, `cancel` fatal); rescans every 60 s and at startup. Done-map
 `~/.local/share/leetcode-coach/relay/requests_done.jsonl` (30 d): a rid found there gets its stored result re-PUT.
 Cleanup: DELETE `requests/{rid}` 24 h after its result (desktop results: forgotten after 24 h). Caps: coach turn
-(`claude -p`) 240 s; grader 50 s on haiku, then Ollama; whole request 280 s, then `model_error`.
+(`claude -p`) 240 s; grader 50 s on haiku, then 200 s on Ollama; whole request 280 s, then `model_error` (a coach turn
+gets what is left of the 280 s, at most 240 s).
 
 **PC offline.** The phone polls `heartbeat` every 5 s while the Coach tab is visible with a live session, every 30 s
 while visible otherwise, never in the background. Offline = `phone_now - beat > 120 s` (spec: 2 min): F greys the
@@ -82,44 +83,52 @@ or forced; `note` = the phase gate's line); `model_error` (`retry:true`); `claud
 `resets_at`); `worker_error` (traceback in the journal only). `chat` text exactly `reveal` / `hint` is that kind.
 
 **State machine.** Steps 1 constraint, 2 requirements, 3 toolbox, 4 implement, 5 postmortem; each
-`locked -> open -> passed | forced`. `session_start` opens step 1; passing or forcing step n opens n+1. A `partial` /
-`fail` keeps the step open and adds 1 to `attempts` (retries unlimited); at `attempts >= 3` with no pass `can_force`
-is true, and forcing logs `grade` with `forced:true`. **Step 4 is never graded or forced**: it passes only on a
-detected Accepted (§3); its other exits are `reveal` and `session_end`. A step-5 pass builds the cards and ends the
-session (`done`). An ended session stays in `state` (read-only, `ended` set) until the next `session_start`; every
-other kind then answers `not_live`. One live session at a time.
+`locked -> open -> passed | forced`, derived from the log's `grade` events (`relay/steps.py`). `session_start` opens
+step 1; passing or forcing step n opens n+1. A `partial` / `fail` keeps the step open and adds 1 to `attempts`; at
+`attempts >= 3` with no pass `can_force` is true. A force is its own `grade` event: `forced:true`, `grade`/`via` of the
+last try, `attempt` = tries so far, `feedback:""`. `next_step` = the step open after this request (`n` again after a
+`partial`/`fail`, `null` once the session ended). **Step 4 is never graded or forced**: it passes only on a detected
+Accepted (§3). A step-5 pass builds the cards and ends the session (`done`); forcing step 5 ends it `done` without
+cards. An ended session stays in `state` (read-only, `ended` set, `step:null`) until the next `session_start`; every
+other kind then answers `not_live`. One live session at a time. A `reveal` whose coach turn fails leaves it live.
 
-**Grading.**
+**Grading.** Every graded try, any step, is one `grade` event (`at` in ms rides along on `grade` and `chat`).
 1. Constraint: haiku -> Ollama, against `answer_key.json` `design_rule`.
-2. Requirements: the relay prefixes `req:` if missing and runs `PhaseGate.screen`, which logs `req` + `req_check` as
-   the CLI does. `pass` -> pass; `incomplete` -> partial (feedback = missing properties); `unverified` -> pass,
-   `via:"unverified"` (fail open, as `req_state`). `fail` = the text reads as code (`regex_verdict`) or names a toolbox
-   entry (`leak.leaked_names`), logged as `grade` only, never `req_check`. Attempts = `req_state().tries` + step-2
-   `fail` grades, so CLI and app count one file alike. `phase.req_state` must treat a step-2 `grade` with
-   `forced:true` as open, or a forced step 2 still refuses code.
-3. Toolbox: mechanical, no model. Key entries `K`, picks `P`: pass = `K ⊆ P` and `|P \ K| <= 1`; partial = `P ∩ K`
-   non-empty; fail otherwise. Feedback = properties of `K` no pick has, never an entry name.
-5. Postmortem: haiku -> Ollama, against `design_rule` + `key_requirements`. A pass runs the existing card builder
-   (logs `postmortem`); a card failure only fills `cards.error`.
+2. Requirements: `fail` = the text (minus a `req:` prefix) reads as code (`regex_verdict`) or names a toolbox entry
+   (`leak.leaked_names`): no model, `via:"toolbox"`, no `req_check`. Otherwise the relay prefixes `req:` if missing and
+   runs `PhaseGate.screen` (logs `req` + `req_check` as the CLI does): `pass` -> pass; `incomplete` -> partial
+   (feedback = missing properties); `unverified` -> pass, `via:"unverified"`. Attempts = `req_state().tries` + step-2
+   `fail` grades, so CLI and app count one file alike; `phase.req_state` treats a forced step-2 `grade` as open.
+3. Toolbox: mechanical, `via:"toolbox"`. Key entries `K`, alternatives `A` (`also_accepted`), picks `P`; a pick that is
+   no toolbox name or alias is `bad_request`. A key entry counts when picked, or when it is a combined `x + y` entry
+   and every part is picked (a part resolves by name/alias, ignoring case and a plural `s`: "prefix sum" -> "prefix
+   sums"; a part naming no entry, like "merge", means only the combined entry counts). Each alternative picked stands
+   in for one key entry not covered. pass = every key entry covered or stood in for, and at most one pick outside
+   `K`, its parts and `A`; partial = some key entry, part or alternative picked; fail otherwise. Feedback = properties
+   of the uncovered key entries no pick has (`phase.property_line`), never an entry name.
+5. Postmortem: haiku -> Ollama, against `design_rule` + `key_requirements`. A pass builds the property cards for the
+   key's entries in-process (`toolbox_cards` -> `card_rules` -> `make_cards.deliver`; the relay logs `postmortem`
+   itself, since `make_cards.main` finds the log through `os.environ`); a card failure only fills `cards.error`.
 
 Grader down -> `pass`, `via:"unverified"` (F shows "not checked"); `via` is `haiku|ollama|unverified|toolbox|accepted`.
-Until the first `code` event (the coach replies' rule), feedback passes `leak.leaked_names(feedback, kuhy's texts,
-toolbox)`; a leaking one becomes the plain missing-property list. The answer key never appears in `state`, `chat`, a
-result or the log.
+Model feedback naming a toolbox entry kuhy has not (until the first `code`, `leak.leaked_names`) or repeating 5
+words of the key becomes the plain missing-property line. The key never appears in `state`, `chat`, a result or a log.
 
 **Chat.** `session_start` sends `/leetcode <slug>` first, as the REPL does, so `stop_gate` arms; then
 `claude -p --resume` on sonnet. Every call gets an explicit env `LEETCODE_COACH_LOG=<this session's log>`
-(`claude_cli.ask` gains `env`); P builds `PhaseGate(log, ...)` directly, never `PhaseGate.open` (it writes global
-`os.environ`). Usage limit -> continue per turn on the local model with the history, as `run_claude` hands over. Grades
-reach the coach as a prefix on its next turn (`[app: step 1 graded pass on try 2; step 2 open]`, no extra model call)
-and show in chat at once as a `system` message. Code in `chat` (or `run_code`) is refused while the relay's own step-2 status
-is not `passed`/`forced`, checked BEFORE `PhaseGate.screen` (whose 3-`incomplete` auto-open must not skip kuhy's
-choice to force) -> `phase_locked` + a `system` / `refused` chat line. Message kinds
+(`claude_cli.ask` gains `env`); P builds `PhaseGate(log, ...)` directly, never `PhaseGate.open`. The statement is
+fetched in-process (`fetch_problem.fetch`), never by a subprocess. Usage limit -> the session continues on the local
+model with the history and stays there, as `run_claude` hands over. Grades reach the coach as a prefix on its next
+turn (`[app: step 1 graded pass on try 2; step 2 open]`, no extra model call) and show in chat at once as a `system`
+message; `reveal` goes out bare (the Stop gate lifts only on a message that is exactly `reveal`). Code in `chat` (or
+`run_code`) is refused while the relay's own step-2 status is not `passed`/`forced`, checked BEFORE `PhaseGate.screen`
+-> `phase_locked` + a `system` / `refused` chat line (kuhy's line still shows). Message kinds
 `chat|hint|reveal|grade|accepted|refused|run`; roles `kuhy|coach|system`.
 
 **Run code** (decision 8): allowed once step 2 is passed or forced; logs `code` with `via:"run"`. `node` with a fixed
-argv, never a shell: `--permission` (read access to its temp dir only), `--max-old-space-size=128`, 5 s and 64 KiB
-output per run, against the statement's examples. `got` / `expected` are printed values, never stack traces.
+argv, never a shell: `--permission --allow-fs-read=<tmp>` (its temp dir only), `--max-old-space-size=128`, one run of
+5 s and 64 KiB for all examples, against the examples above the statement's first `## ` heading. `got` / `expected` are
+canonical JSON; a throw shows `error: <ErrorName>`, never a message or stack trace.
 
 ## 3. State (`GET /coach/state` = decoded RTDB `state`)
 
@@ -181,7 +190,7 @@ reader".
 
 | event | fields (all also carry `sid`; `cluster` passed explicitly, never via `os.environ`) | well-formed when |
 |---|---|---|
-| `session_start` | `source:"app"`, `transport:"desktop"\|"phone"`, `dev` | always |
+| `session_start` | `source:"app"`, `transport:"desktop"\|"phone"`, `dev`, `slug`, `at` | always |
 | `grade` | `step` 1-5, `grade` pass/partial/fail, `attempt`, `forced`, `via`, `feedback` | `step` int in 1..5, `grade` in set |
 | `chat` | `role` kuhy/coach, `kind` chat/hint/reveal, `text` | `role` in set |
 | `session_end` | `reason` done/reveal/ended | `reason` in set |
@@ -192,7 +201,7 @@ stays `<date>-<slug>.jsonl`, dated at `session_start`, so one file can hold seve
 
 **Snapshot.** Each `coach.problems[]` row gains two optional fields (F parses missing or `null` as unknown, never 0):
 `grades`, from the file's **latest** `session_start` onward, keyed `constraint`, `requirements`, `toolbox`,
-`postmortem`, each `{"grade","attempts","forced","via"}|null` (last grade event of that step, count, any forced); and
+`postmortem`, each `{"grade","attempts","forced","via"}|null` (last try's grade/via, tries, any forced); and
 `accepted` (step 4 passed in that session). A CLI-only file (no `session_start`) has `grades: null`,
 `accepted: null`. `max_rung`, `revealed`, `req_check` keep their meaning for the history.
 
@@ -219,26 +228,23 @@ RestartSec=5s
 WantedBy=default.target
 ```
 
-`install.sh` checks `/usr/bin/python3 -c 'import leetcode_coach.relay'`, then `systemctl --user enable --now`. The
+`install.sh` checks `/usr/bin/python3 -c 'import leetcode_coach.relay'`, then `enable` + `restart` (new code on reinstall). The
 live-session pointer (sid, log path, claude session id) is `~/.local/share/leetcode-coach/relay/live.json`; a restart
 rebuilds state from the log.
 
 ## 7. Test seams and ownership
 
-Seams: `LEETCODE_CLAUDE_BIN` (fake claude), `LEETCODE_COACH_RTDB_URL` (in-process fake RTDB, REST + SSE),
-`LEETCODE_COACH_RELAY_PORT`, an injectable Accepted probe and clock: enough for the spec's scripted E2E on both paths.
+Seams: `LEETCODE_CLAUDE_BIN`, `LEETCODE_COACH_RTDB_URL` (fake RTDB), `LEETCODE_COACH_RELAY_PORT` / `_DIR`,
+`LEETCODE_NODE_BIN`, `LEETCODE_COACH_CARDS_DRY_RUN=1`, an injectable Accepted probe and clocks (`relay.coach.Deps`).
 **P** owns `leetcode_coach/`, `leetcode_guard/_coach_log.py` + snapshot fields, the unit, `install.sh`. **F** owns
 `app/lib/desktop/wrapper_server.dart` (the proxy) and in `app/lib/src/` the `coach.dart` grades, the coach client
 (RTDB + wrapper), and the Coach tab session UI with its offline and stalled states.
 
 ## 8. Deviations from tutor
 
-1. **Desktop uses loopback HTTP, not RTDB.** The desktop never holds a Firebase credential (`sources.dart`).
-2. **No claims, leases or ETags.** One relay per account means no race to settle; "working" comes from
-   `heartbeat.busy`.
-3. **One paced lane**, capped at 5 queued, instead of tutor's two lanes.
-4. **Clients poll instead of streaming.** This app has no SSE code, and a result poll costs about 4 bytes.
-5. **`state` and `result` are string leaves**, this repo's null-safe convention.
-6. **PC offline compares `beat` with the phone clock at 2 min.** That is the spec's rule, and the status heartbeat
-   already does the same at 10 min. Tutor uses 75 s of monotonic silence.
-7. **Unknown kinds get `bad_request`.** "Dropped" means never run; the client is still told, so it stops waiting.
+1. **Desktop uses loopback HTTP, not RTDB**: it never holds a Firebase credential (`sources.dart`). 2. **No claims,
+leases or ETags**: one relay per account settles no race; "working" is `heartbeat.busy`. 3. **One paced lane**, capped
+at 5 queued, not two lanes. 4. **Clients poll** (no SSE code in the app; a result poll costs ~4 bytes). 5. **`state`
+and `result` are string leaves**, this repo's null-safe convention. 6. **PC offline = phone clock minus `beat` > 2 min**
+(the spec's rule; the status heartbeat does the same at 10 min; tutor uses 75 s of monotonic silence). 7. **Unknown
+kinds get `bad_request`**: "dropped" means never run, but the client is told, so it stops waiting.

@@ -99,6 +99,22 @@ install_units() {
     systemctl --user --no-pager --lines=0 status leetcode-guard-web.service || true
 }
 
+install_coach_relay() {
+    # The app's guided coaching (DOCS-coach-relay.md): the desktop reaches it
+    # on 127.0.0.1:8777, the phone through RTDB. Import-checked with the
+    # interpreter the unit runs, for the same reason as verify_imports.
+    log "installing the coach relay (leetcode-coach-relay.service)"
+    "$SYSTEM_PYTHON" -c 'import leetcode_coach.relay' \
+        || fail "leetcode_coach.relay does not import with $SYSTEM_PYTHON"
+    mkdir -p "$UNIT_DIR"
+    install -m 644 "$REPO_DIR/leetcode-coach-relay.service" "$UNIT_DIR/"
+    systemctl --user daemon-reload
+    # restart, not just start: an already-running relay must pick up new code.
+    systemctl --user enable leetcode-coach-relay.service
+    systemctl --user restart leetcode-coach-relay.service
+    systemctl --user --no-pager --lines=0 status leetcode-coach-relay.service || true
+}
+
 install_tray() {
     # i3 launches the tray from ~/.config/i3/scripts (screen-locker's lives
     # there too). Copied rather than symlinked, matching how the sibling
@@ -132,6 +148,7 @@ main() {
     "${REPO_DIR}/scripts/link_leetcode_coach.sh"
     ensure_hmac_key
     install_units
+    install_coach_relay
     install_tray
     "${REPO_DIR}/scripts/install_nudge_extension.sh"
     # The MCP venv pins its own copies of gatelock/freedays/sickdays; without a refresh

@@ -1,0 +1,19 @@
+[Unit]
+Description=LeetCode coach relay: app desktop (loopback :8777) + phone (RTDB)
+Documentation=file://%h/src/leetcode-guard/DOCS-coach-relay.md
+
+[Service]
+Type=simple
+# System python + user site-packages; no WorkingDirectory/PYTHONPATH/venv (CLAUDE.md).
+# A user unit's PATH lacks ~/.local/bin: without it `claude` is missing, every turn an "outage".
+# /usr/bin holds the `node` that run-code uses (not an nvm one, which this PATH never sees).
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/python3 -m leetcode_coach.relay
+# SIGTERM to the relay only (it drains the running request); spares the claude child (tutor).
+KillMode=mixed
+Restart=always
+RestartSec=5s
+
+[Install]
+# Up from login (from boot under linger), like leetcode-guard-web.service; needs no X.
+WantedBy=default.target

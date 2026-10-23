@@ -42,6 +42,7 @@ DECIDING = (
 """Every module that decides, charges or credits."""
 
 SNAPSHOT_SIDE = (
+    "_coach_grades",
     "_coach_log",
     "_coach_view",
     "_profile",

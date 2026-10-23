@@ -78,6 +78,9 @@ def test_a_full_session_is_summarised(tmp_path: Path):
             "revealed": False,
             "req_check": "pass",
             "day": "2026-10-23",
+            # A CLI-only file: no app session, so its grades are unknown.
+            "grades": None,
+            "accepted": None,
         }
     ]
 

@@ -2,13 +2,17 @@
 
 The log is TODO-coach.md decision 8: one JSONL file per problem at
 ``~/.local/share/leetcode-coach/sessions/<date>-<slug>.jsonl``, events ``req``,
-``req_check``, ``code``, ``rung``, ``reveal``, ``postmortem``, ``retest``. It
+``req_check``, ``code``, ``rung``, ``reveal``, ``postmortem``, ``retest``, and
+the app's ``session_start``, ``grade``, ``chat``, ``session_end``
+(DOCS-coach-relay.md section 5; per-step grades in ``_coach_grades``). It
 was being written in parallel with this reader, so **every field-name
 assumption lives in the constants below** and nothing else guesses:
 
 * each line is a JSON object whose ``event`` key names the event;
 * ``req_check`` carries ``verdict``: ``pass`` / ``incomplete`` / ``unverified``;
 * ``rung`` carries ``rung``: ``H0`` .. ``H3``;
+* ``grade`` carries ``step`` (int 1-5) and ``grade`` (pass/partial/fail),
+  ``chat`` a ``role`` (kuhy/coach), ``session_end`` a ``reason``;
 * any event may carry ``cluster``; the first non-blank one wins.
 
 Tolerant by contract: a JSON line that is not one of those shapes is skipped
@@ -32,6 +36,7 @@ from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Any, Final
 
+from leetcode_guard._coach_grades import grades
 from leetcode_guard._coach_view import clusters_view, how_to_view, retests_view
 from leetcode_guard._daycost import parse_day
 
@@ -54,9 +59,21 @@ REQ_CHECK: Final = "req_check"
 CODE: Final = "code"
 RUNG: Final = "rung"
 REVEAL: Final = "reveal"
-EVENTS: Final = frozenset({REQ, REQ_CHECK, CODE, RUNG, REVEAL, "postmortem", "retest"})
+GRADE: Final = "grade"
+CHAT: Final = "chat"
+SESSION_END: Final = "session_end"
+EVENTS: Final = frozenset(
+    {
+        *(REQ, REQ_CHECK, CODE, RUNG, REVEAL, "postmortem", "retest"),
+        *("session_start", GRADE, CHAT, SESSION_END),
+    }
+)
 VERDICTS: Final = frozenset({"pass", "incomplete", "unverified"})
 RUNGS: Final = ("H0", "H1", "H2", "H3")
+GRADES: Final = frozenset({"pass", "partial", "fail"})
+STEPS: Final = range(1, 6)
+ROLES: Final = frozenset({"kuhy", "coach"})
+END_REASONS: Final = frozenset({"done", "reveal", "ended"})
 
 _DATED_NAME: Final = re.compile(r"(?P<day>\d{4}-\d{2}-\d{2})-(?P<slug>.+)")
 """Pre-checked by shape so an undated name never logs a parse warning."""
@@ -77,6 +94,8 @@ class CoachProblem:
     revealed: bool
     req_check: str | None
     day: str | None
+    grades: dict[str, Any] | None = None
+    accepted: bool | None = None
 
 
 def _name_parts(stem: str) -> tuple[str, str | None]:
@@ -108,15 +127,27 @@ def _events(lines: list[str]) -> tuple[list[dict[str, Any]], int]:
     return events, skipped
 
 
+def _graded(event: dict[str, Any]) -> bool:
+    step = event.get("step")
+    whole = isinstance(step, int) and not isinstance(step, bool)
+    return whole and step in STEPS and event.get(GRADE) in GRADES
+
+
+_SHAPES: Final[dict[str, Callable[[dict[str, Any]], bool]]] = {
+    REQ_CHECK: lambda e: e.get(VERDICT_KEY) in VERDICTS,
+    RUNG: lambda e: e.get(RUNG_KEY) in RUNGS,
+    GRADE: _graded,
+    CHAT: lambda e: e.get("role") in ROLES,
+    SESSION_END: lambda e: e.get("reason") in END_REASONS,
+}
+"""Each event that carries a fact the reader relies on, and its shape rule."""
+
+
 def _well_formed(event: object) -> bool:
     if not isinstance(event, dict) or event.get(EVENT_KEY) not in EVENTS:
         return False
-    kind = event[EVENT_KEY]
-    if kind == REQ_CHECK:
-        return event.get(VERDICT_KEY) in VERDICTS
-    if kind == RUNG:
-        return event.get(RUNG_KEY) in RUNGS
-    return True
+    shape = _SHAPES.get(event[EVENT_KEY])
+    return shape is None or shape(event)
 
 
 def _summarise(
@@ -140,6 +171,7 @@ def _summarise(
             rungs.append(RUNGS.index(event[RUNG_KEY]))
         elif kind == REQ_CHECK:
             verdict = event[VERDICT_KEY]
+    by_step, accepted = grades(events)
     return CoachProblem(
         slug=slug,
         cluster=cluster,
@@ -148,6 +180,8 @@ def _summarise(
         revealed=any(event[EVENT_KEY] == REVEAL for event in events),
         req_check=verdict,
         day=day,
+        grades=by_step,
+        accepted=accepted,
     )
 
 
