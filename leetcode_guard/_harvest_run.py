@@ -48,6 +48,7 @@ from leetcode_guard._instance import acquire
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._settings import build_client
+from leetcode_guard._snapshot_push import push_quietly
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 
 if TYPE_CHECKING:
@@ -122,6 +123,10 @@ def main(*, key_file: Path | None = None) -> int:
     """Entry point for the timer unit."""
     configure_logging()
     print(run_harvest(key_file=key_file))
+    # Every run, after the harvest lock is released and whatever it found:
+    # the snapshot's generated_at is the status app's heartbeat. In-process
+    # on purpose -- a detached child would die with this oneshot's cgroup.
+    print(f"snapshot: {push_quietly().reason}")
     return EXIT_OK
 
 

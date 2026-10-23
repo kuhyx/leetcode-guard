@@ -4,10 +4,12 @@ Subcommand-free by design, matching the sibling lockers: bare invocation opens
 a demo lock, ``--production`` opens the real one, and the remaining flags are
 diagnostics that never open a window.
 
-Those diagnostics write nothing, with two deliberate exceptions:
-``--cache-statements`` mirrors problem text, and ``--login`` stores a verified
-cookie pair. Both write only their own file and neither touches the ledger --
-no flag here can move the balance or settle a day.
+Those diagnostics write nothing, with three deliberate exceptions:
+``--cache-statements`` mirrors problem text, ``--login`` stores a verified
+cookie pair, and ``--push-snapshot`` publishes the status app's display-only
+snapshot (refreshing the profile mirror). Each writes only its own file or
+node and none touches the ledger -- no flag here can move the balance or
+settle a day.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ from leetcode_guard._nudge_server import NUDGE_PORT
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
+from leetcode_guard._snapshot_push import cmd_push_snapshot
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 
 
@@ -214,4 +217,6 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_sync()
     if args.cache_statements:
         return cmd_cache_statements()
+    if args.push_snapshot:
+        return cmd_push_snapshot()
     return cmd_lock(demo_mode=not args.production)
