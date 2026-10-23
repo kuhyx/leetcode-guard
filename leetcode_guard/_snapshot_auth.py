@@ -35,7 +35,7 @@ from crdt_sync import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from crdt_sync import RemoteStore
+    from crdt_sync import FirebaseSyncClient
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -108,10 +108,10 @@ def connect(
     app_name: str,
     *,
     timeout_seconds: float,
-    client_for: Callable[..., RemoteStore] | None = None,
+    client_for: Callable[..., FirebaseSyncClient] | None = None,
     config_root: Path | None = None,
     mint: Callable[[str], FirebaseCredentials] | None = None,
-) -> RemoteStore:
+) -> FirebaseSyncClient:
     """A signed-in RTDB client for ``app_name``, healing a dead session once.
 
     Raises:

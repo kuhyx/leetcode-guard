@@ -55,7 +55,8 @@ Built by `leetcode_guard/_snapshot*.py` (exporter landed 2026-10-23); the
 example below is trimmed from a real read-back of the RTDB node.
 
 **Transport.** RTDB path `leetcode-guard/status` holds ONE JSON **string**
-leaf (crdt_sync `put_file_text`, ~32 KB), not an object tree: a tree would
+leaf (crdt_sync's text-leaf convention, PUT with `print=silent`, ~32 KB),
+not an object tree: a tree would
 silently drop every `null` and `[]`, i.e. exactly the "unknown" sections.
 The app reads the node and `jsonDecode`s the string once. Auth: the shared
 `~/.config/crdt-sync/` account; the existing root rule already grants this

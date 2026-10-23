@@ -5,10 +5,11 @@ written after every harvest run and on every ledger change, read by nothing
 but the app. Firebase only, through the shared ``~/.config/crdt-sync/``
 credential via crdt_sync -- no GitHub transport.
 
-**Stored as one JSON text leaf** (crdt_sync's ``put_file_text``), not an RTDB
-object tree. RTDB silently drops ``null`` values and empty lists from a tree,
-which would erase exactly the "unknown" sections the schema promises to
-carry; a string leaf arrives byte for byte. The app decodes it once.
+**Stored as one JSON text leaf** (crdt_sync's convention, written by
+``_snapshot_rtdb`` with the echo switched off), not an RTDB object tree.
+RTDB silently drops ``null`` values and empty lists from a tree, which would
+erase exactly the "unknown" sections the schema promises to carry; a string
+leaf arrives byte for byte. The app decodes it once.
 
 **A push never affects the gate.** Every failure is a warning and a
 :class:`PushResult`; :func:`push_quietly` additionally catches anything else,
@@ -30,14 +31,15 @@ from leetcode_guard._daycost import local_now
 from leetcode_guard._profile_cache import refresh_profile
 from leetcode_guard._progress import read_progress_cache
 from leetcode_guard._snapshot import build_snapshot
-from leetcode_guard._snapshot_auth import connect
+from leetcode_guard._snapshot_auth import connect as sign_in
+from leetcode_guard._snapshot_rtdb import silent_store_for
 from leetcode_guard._status_full import gather_full
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import datetime
 
-    from crdt_sync import RemoteStore
+    from leetcode_guard._snapshot_rtdb import TextStore
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -63,9 +65,10 @@ class PushResult:
     size: int
 
 
-def _firebase_client() -> RemoteStore:
+def _firebase_client() -> TextStore:
     """A signed-in RTDB client; raises crdt_sync's errors on any failure."""
-    return connect(FIREBASE_APP, timeout_seconds=PUSH_TIMEOUT_SECONDS)
+    client = sign_in(FIREBASE_APP, timeout_seconds=PUSH_TIMEOUT_SECONDS)
+    return silent_store_for(client, timeout_seconds=PUSH_TIMEOUT_SECONDS)
 
 
 def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
@@ -89,7 +92,7 @@ def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
 
 
 def push_snapshot(
-    snapshot: dict[str, Any], *, connect: Callable[[], RemoteStore] | None = None
+    snapshot: dict[str, Any], *, connect: Callable[[], TextStore] | None = None
 ) -> PushResult:
     """Write ``snapshot`` to :data:`SNAPSHOT_PATH`. Never raises crdt_sync errors."""
     text = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
@@ -107,7 +110,7 @@ def push_snapshot(
 
 
 def push_quietly(
-    *, now: datetime | None = None, connect: Callable[[], RemoteStore] | None = None
+    *, now: datetime | None = None, connect: Callable[[], TextStore] | None = None
 ) -> PushResult:
     """Gather and push, letting nothing escape -- the harvest timer calls this."""
     try:

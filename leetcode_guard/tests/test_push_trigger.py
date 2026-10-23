@@ -32,7 +32,9 @@ DECIDING = (
     "_ledger",
     "_ledger_entries",
     "_ledger_io",
+    "_lock",
     "_lock_poll",
+    "_lock_release",
     "_sick",
     "_submissions",
     "_workday_penalty",
@@ -48,6 +50,7 @@ SNAPSHOT_SIDE = (
     "_snapshot_auth",
     "_snapshot_projection",
     "_snapshot_push",
+    "_snapshot_rtdb",
     "_snapshot_status",
 )
 
