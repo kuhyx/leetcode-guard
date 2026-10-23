@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from leetcode_guard import _coach_log
+from leetcode_guard import _coach_log, _coach_view
 from leetcode_guard._coach_log import read_coach, read_session
 
 if TYPE_CHECKING:
@@ -30,13 +30,19 @@ def write_log(directory: Path, name: str, *lines: object) -> Path:
     return path
 
 
-def test_a_missing_directory_is_unknown(tmp_path: Path):
-    assert read_coach(tmp_path / "absent") is None
+def test_a_missing_directory_is_a_known_empty_coach(tmp_path: Path):
+    coach = read_coach(tmp_path / "absent")
+
+    assert coach is not None
+    assert coach["problems"] == []
+    assert coach["retests_due"] == []
 
 
 def test_the_default_directory_is_redirected(tmp_path: Path):
     assert _coach_log.COACH_SESSIONS_DIR.is_relative_to(tmp_path)
-    assert read_coach() is None
+    coach = read_coach()
+    assert coach is not None
+    assert coach["problems"] == []
 
 
 def test_a_full_session_is_summarised(tmp_path: Path):
@@ -55,7 +61,8 @@ def test_a_full_session_is_summarised(tmp_path: Path):
     coach = read_coach(tmp_path)
 
     assert coach is not None
-    assert coach["clusters"]["bit-cancellation"] == {
+    bit = coach["clusters"]["bit-cancellation"]
+    assert {k: bit[k] for k in ("total", "started", "solved", "next")} == {
         "total": 4,
         "started": 1,
         "solved": 1,
@@ -199,7 +206,7 @@ def test_a_failing_coach_derivation_is_unknown_with_a_warning(
         raise ValueError(message)
 
     tmp_path.mkdir(exist_ok=True)
-    monkeypatch.setattr(_coach_log.coach_progress, "cluster_progress", boom)
+    monkeypatch.setattr(_coach_view.coach_progress, "cluster_progress", boom)
 
     coach = read_coach(tmp_path)
 

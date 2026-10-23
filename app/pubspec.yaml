@@ -51,6 +51,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    # The Coach tab's command boxes. The desktop build is Flutter web, which
+    # cannot reach a system monospace font, so one ships with the app
+    # (DejaVu Sans Mono, free license in assets/fonts).
+    - family: DejaVuSansMono
+      fonts:
+        - asset: assets/fonts/DejaVuSansMono.ttf
 
 # The shared icon family (python_pkg/app_icons in testsAndMisc, key
 # leetcode_guard): charcoal field, </> glyph in the family accent.

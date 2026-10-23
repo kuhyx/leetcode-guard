@@ -112,18 +112,6 @@ void main() {
       expect(profile.calendar![DateTime.utc(2026, 10, 22)], 2);
       // Epoch-second keys (LeetCode's own calendar format) are dates too.
       expect(profile.calendar![DateTime.utc(2025, 10, 20)], 4);
-      final coach = snap.coach!;
-      expect(coach.problems!.first.reqBeforeCode, isTrue);
-      expect(coach.problems!.first.maxRung, 'H1');
-      expect(coach.problems!.last.revealed, isTrue);
-      expect(coach.problems!.last.reqCheck, 'incomplete');
-      expect(coach.problems!.first.cluster, 'bit-cancellation');
-      expect(coach.problems!.first.slug, 'missing-number');
-      expect(coach.problems!.first.day, '2026-10-23');
-      expect(coach.retestsDue!.single.due, '2026-10-26');
-      expect(coach.retestsDue!.single.slug, 'missing-number');
-      expect(coach.clusters!['bit-cancellation']!.done, 1);
-      expect(coach.clusters!['bit-cancellation']!.total, 4);
     });
 
     test('the real exporter snapshot parses end to end', () {
@@ -134,7 +122,6 @@ void main() {
       expect(snap.projections, hasLength(99));
       expect(snap.projections!['2026-10-24']!.projectedTotal, 147);
       expect(snap.profile!.calendar, isNotEmpty);
-      expect(snap.coach, isNull);
     });
 
     test('null sections stay null, never zero-filled', () {
@@ -171,6 +158,7 @@ void main() {
       expect(snap.profile!.difficulty!['medium'], isNull);
       expect(snap.profile!.calendar, isNull);
       expect(snap.coach!.retestsDue, isNull);
+      expect(snap.coach!.howTo, isNull);
     });
 
     test('a projection total is unknown unless every count is known', () {

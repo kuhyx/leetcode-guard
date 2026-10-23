@@ -14,11 +14,13 @@ assumption lives in the constants below** and nothing else guesses:
 Tolerant by contract: a JSON line that is not one of those shapes is skipped
 and counted, with **one** warning per file per read -- the push runs every
 minute, so a warning per line would bury the journal. A line that is not JSON
-at all (a torn write) gets its own warning. ``retests_due`` and
-``clusters`` come from the coach itself (``leetcode_coach.progress``,
-decisions 10 and 12): deriving them here would be a second copy of its rules.
-Either is ``None`` (unknown) if the coach raises -- logged, never propagated,
-because this runs inside the every-minute push.
+at all (a torn write) gets its own warning. ``retests_due``, ``clusters`` and
+``how_to`` come from the coach itself (``_coach_view``, over
+``leetcode_coach.progress`` and ``how_to``, decisions 10 and 12): deriving them
+here would be a second copy of its rules. Any is ``None`` (unknown) if the
+coach raises -- logged, never propagated, because this runs inside the
+every-minute push. No session logs yet is not a failure: it exports empty
+lists and every cluster at zero, so the Coach tab can say how to start.
 """
 
 from __future__ import annotations
@@ -30,7 +32,7 @@ from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Any, Final
 
-from leetcode_coach import progress as coach_progress
+from leetcode_guard._coach_view import clusters_view, how_to_view, retests_view
 from leetcode_guard._daycost import parse_day
 
 if TYPE_CHECKING:
@@ -164,19 +166,28 @@ def read_session(path: Path) -> CoachProblem | None:
 
 
 def read_coach(directory: Path | None = None) -> dict[str, Any] | None:
-    """The Coach tab's data, or ``None`` when the coach has never run."""
+    """The Coach tab's data; ``None`` only when reading it failed.
+
+    No sessions yet (the directory is missing or holds no logs) is a *known*
+    state: no problems, no re-tests due, every cluster at zero. ``None`` means
+    "could not be read" -- logged, never propagated, because this runs inside
+    the every-minute push.
+    """
     folder = COACH_SESSIONS_DIR if directory is None else directory
-    if not folder.is_dir():
+    try:
+        problems = [
+            problem
+            for path in sorted(folder.glob("*.jsonl"))
+            if (problem := read_session(path)) is not None
+        ]
+    except Exception:  # pylint: disable=broad-exception-caught
+        _logger.exception("coach sessions in %s could not be read", folder)
         return None
-    problems = [
-        problem
-        for path in sorted(folder.glob("*.jsonl"))
-        if (problem := read_session(path)) is not None
-    ]
     return {
         "problems": [asdict(problem) for problem in problems],
-        "retests_due": _from_coach(coach_progress.due_retests, folder),
-        "clusters": _from_coach(coach_progress.cluster_progress, folder),
+        "retests_due": _from_coach(retests_view, folder),
+        "clusters": _from_coach(clusters_view, folder),
+        "how_to": _from_coach(how_to_view, folder),
     }
 
 

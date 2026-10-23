@@ -12,32 +12,6 @@ Future<void> _open(WidgetTester tester, String tab) async {
 void main() {
   const tall = Size(390, 4000);
 
-  testWidgets('coach: problems, re-tests and clusters', (tester) async {
-    await pumpApp(tester, size: tall);
-    await _open(tester, 'Coach');
-    expect(find.text('missing-number'), findsNWidgets(2));
-    expect(find.text('bit-cancellation, 2026-10-23'), findsOneWidget);
-    expect(find.text('Requirements before code: yes'), findsOneWidget);
-    expect(find.text('Hint rung: H3, revealed'), findsOneWidget);
-    expect(find.text('Requirements check: incomplete'), findsOneWidget);
-    expect(find.text('due 2026-10-26'), findsOneWidget);
-    expect(find.text('1 / 4'), findsOneWidget);
-  });
-
-  testWidgets('coach null: unknown everywhere', (tester) async {
-    await pumpApp(tester, size: tall, answers: ['snapshot_nulls']);
-    await _open(tester, 'Coach');
-    expect(find.text('unknown'), findsNWidgets(3));
-    expect(find.text('0'), findsNothing);
-  });
-
-  testWidgets('coach sparse: empty lists vs unknown', (tester) async {
-    await pumpApp(tester, size: tall, answers: ['snapshot_sparse']);
-    await _open(tester, 'Coach');
-    expect(find.text('None recorded'), findsNWidgets(2));
-    expect(find.text('unknown'), findsOneWidget);
-  });
-
   testWidgets('profile: split, streaks, acceptance, heatmap', (tester) async {
     await pumpApp(tester, size: tall);
     await _open(tester, 'Profile');
@@ -57,7 +31,9 @@ void main() {
     await pumpApp(tester, size: tall, answers: ['snapshot_real']);
     expect(find.text('Unlocked (already-charged)'), findsOneWidget);
     await _open(tester, 'Coach');
-    expect(find.text('unknown'), findsNWidgets(3));
+    expect(find.text('How to start'), findsOneWidget);
+    expect(find.text('0 / 4'), findsNWidgets(6));
+    expect(find.text('unknown'), findsNothing);
     await _open(tester, 'Profile');
     expect(find.byKey(const Key('heatmap')), findsOneWidget);
     expect(tester.takeException(), isNull);

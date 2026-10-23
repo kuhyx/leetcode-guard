@@ -1,0 +1,252 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-23T14:05:00+02:00",
+  "status": null,
+  "progress": null,
+  "projections": null,
+  "profile": null,
+  "coach": {
+    "problems": [],
+    "retests_due": [],
+    "clusters": {
+      "bit-cancellation": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "missing-number",
+        "order": 0,
+        "problems": [
+          {
+            "slug": "missing-number",
+            "number": 268,
+            "title": "Missing Number",
+            "url": "https://leetcode.com/problems/missing-number/"
+          },
+          {
+            "slug": "single-number-iii",
+            "number": 260,
+            "title": "Single Number III",
+            "url": "https://leetcode.com/problems/single-number-iii/"
+          },
+          {
+            "slug": "majority-element",
+            "number": 169,
+            "title": "Majority Element",
+            "url": "https://leetcode.com/problems/majority-element/"
+          },
+          {
+            "slug": "single-number-ii",
+            "number": 137,
+            "title": "Single Number II",
+            "url": "https://leetcode.com/problems/single-number-ii/"
+          }
+        ]
+      },
+      "two-pointers": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "two-sum-ii-input-array-is-sorted",
+        "order": 1,
+        "problems": [
+          {
+            "slug": "two-sum-ii-input-array-is-sorted",
+            "number": 167,
+            "title": "Two Sum II - Input Array Is Sorted",
+            "url": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/"
+          },
+          {
+            "slug": "3sum",
+            "number": 15,
+            "title": "3Sum",
+            "url": "https://leetcode.com/problems/3sum/"
+          },
+          {
+            "slug": "container-with-most-water",
+            "number": 11,
+            "title": "Container With Most Water",
+            "url": "https://leetcode.com/problems/container-with-most-water/"
+          },
+          {
+            "slug": "trapping-rain-water",
+            "number": 42,
+            "title": "Trapping Rain Water",
+            "url": "https://leetcode.com/problems/trapping-rain-water/"
+          }
+        ]
+      },
+      "sliding-window": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "longest-substring-without-repeating-characters",
+        "order": 2,
+        "problems": [
+          {
+            "slug": "longest-substring-without-repeating-characters",
+            "number": 3,
+            "title": "Longest Substring Without Repeating Characters",
+            "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+          },
+          {
+            "slug": "longest-repeating-character-replacement",
+            "number": 424,
+            "title": "Longest Repeating Character Replacement",
+            "url": "https://leetcode.com/problems/longest-repeating-character-replacement/"
+          },
+          {
+            "slug": "permutation-in-string",
+            "number": 567,
+            "title": "Permutation in String",
+            "url": "https://leetcode.com/problems/permutation-in-string/"
+          },
+          {
+            "slug": "minimum-window-substring",
+            "number": 76,
+            "title": "Minimum Window Substring",
+            "url": "https://leetcode.com/problems/minimum-window-substring/"
+          }
+        ]
+      },
+      "prefix-sum-hash": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "subarray-sum-equals-k",
+        "order": 3,
+        "problems": [
+          {
+            "slug": "subarray-sum-equals-k",
+            "number": 560,
+            "title": "Subarray Sum Equals K",
+            "url": "https://leetcode.com/problems/subarray-sum-equals-k/"
+          },
+          {
+            "slug": "continuous-subarray-sum",
+            "number": 523,
+            "title": "Continuous Subarray Sum",
+            "url": "https://leetcode.com/problems/continuous-subarray-sum/"
+          },
+          {
+            "slug": "subarray-sums-divisible-by-k",
+            "number": 974,
+            "title": "Subarray Sums Divisible by K",
+            "url": "https://leetcode.com/problems/subarray-sums-divisible-by-k/"
+          },
+          {
+            "slug": "contiguous-array",
+            "number": 525,
+            "title": "Contiguous Array",
+            "url": "https://leetcode.com/problems/contiguous-array/"
+          }
+        ]
+      },
+      "monotonic-stack": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "daily-temperatures",
+        "order": 4,
+        "problems": [
+          {
+            "slug": "daily-temperatures",
+            "number": 739,
+            "title": "Daily Temperatures",
+            "url": "https://leetcode.com/problems/daily-temperatures/"
+          },
+          {
+            "slug": "next-greater-element-i",
+            "number": 496,
+            "title": "Next Greater Element I",
+            "url": "https://leetcode.com/problems/next-greater-element-i/"
+          },
+          {
+            "slug": "next-greater-element-ii",
+            "number": 503,
+            "title": "Next Greater Element II",
+            "url": "https://leetcode.com/problems/next-greater-element-ii/"
+          },
+          {
+            "slug": "largest-rectangle-in-histogram",
+            "number": 84,
+            "title": "Largest Rectangle in Histogram",
+            "url": "https://leetcode.com/problems/largest-rectangle-in-histogram/"
+          }
+        ]
+      },
+      "intervals": {
+        "total": 4,
+        "started": 0,
+        "solved": 0,
+        "next": "merge-intervals",
+        "order": 5,
+        "problems": [
+          {
+            "slug": "merge-intervals",
+            "number": 56,
+            "title": "Merge Intervals",
+            "url": "https://leetcode.com/problems/merge-intervals/"
+          },
+          {
+            "slug": "insert-interval",
+            "number": 57,
+            "title": "Insert Interval",
+            "url": "https://leetcode.com/problems/insert-interval/"
+          },
+          {
+            "slug": "non-overlapping-intervals",
+            "number": 435,
+            "title": "Non-overlapping Intervals",
+            "url": "https://leetcode.com/problems/non-overlapping-intervals/"
+          },
+          {
+            "slug": "minimum-number-of-arrows-to-burst-balloons",
+            "number": 452,
+            "title": "Minimum Number of Arrows to Burst Balloons",
+            "url": "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/"
+          }
+        ]
+      }
+    },
+    "how_to": {
+      "commands": [
+        {
+          "command": "leetcode --cluster <name>",
+          "meaning": "Serve the next problem of a concept cluster (a due re-test comes first)."
+        },
+        {
+          "command": "leetcode <url>",
+          "meaning": "Coach one problem, from its LeetCode URL or slug."
+        },
+        {
+          "command": "leetcode due",
+          "meaning": "List the cold re-tests that are due."
+        },
+        {
+          "command": "leetcode report",
+          "meaning": "One row per session: requirements before code, hint rung, reveal."
+        }
+      ],
+      "steps": [
+        {
+          "name": "Constraint",
+          "text": "Turn the hard constraint into a rule for the design."
+        },
+        {
+          "name": "Requirements",
+          "text": "List what the operation must do, as properties, never by name."
+        },
+        {
+          "name": "Toolbox",
+          "text": "Search the toolbox for an operation with those properties."
+        },
+        {
+          "name": "Post-mortem",
+          "text": "Say which hint gave which requirement, then make the cards."
+        }
+      ],
+      "next_note": "The command skips problems LeetCode already shows as Accepted, so it may serve a later one than listed here.",
+      "first_command": "leetcode --cluster bit-cancellation"
+    }
+  }
+}
