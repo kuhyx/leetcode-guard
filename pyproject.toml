@@ -216,6 +216,14 @@ unfixable = []
 # ANN401: AnkiConnect's `result` is untyped JSON whose shape depends on the
 # action, so `_call` returns Any and each caller indexes what its action sends.
 "leetcode_coach/anki_connect.py" = ["ANN401", "S310"]
+# The coach relay's lane, assembly, phone link and feedback check take one
+# keyword argument per independently injectable seam (clock, pace, timings,
+# what the feedback may not say), the same trade as _gate.py's: the E2E tests
+# run the real threads at test speed through exactly these arguments.
+"leetcode_coach/relay/lane.py" = ["PLR0913"]
+"leetcode_coach/relay/app.py" = ["PLR0913"]
+"leetcode_coach/relay/phone.py" = ["PLR0913"]
+"leetcode_coach/relay/graders.py" = ["PLR0913"]
 "leetcode_coach/local_backend.py" = ["S310"]
 
 [tool.ruff.lint.pydocstyle]
