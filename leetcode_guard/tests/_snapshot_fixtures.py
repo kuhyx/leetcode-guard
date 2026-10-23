@@ -36,10 +36,10 @@ def _isolate_snapshot(
     """Redirect the snapshot's own files and block both of its side effects."""
     from leetcode_guard import (
         _coach_log,
-        _harvest_run,
         _profile_cache,
         _push_trigger,
         _snapshot_auth,
+        _snapshot_dedup,
         _snapshot_push,
     )
 
@@ -48,7 +48,7 @@ def _isolate_snapshot(
     monkeypatch.setattr(_snapshot_auth, "firebase_client_for", _refuse_firebase)
     monkeypatch.setattr(_snapshot_auth, "CONFIG_ROOT", tmp_path / "config-root")
     monkeypatch.setattr(
-        _harvest_run,
+        _snapshot_push,
         "push_quietly",
         lambda: _snapshot_push.PushResult(
             pushed=False, reason="push stubbed in tests", size=0
@@ -56,6 +56,9 @@ def _isolate_snapshot(
     )
     monkeypatch.setattr(
         _profile_cache, "PROFILE_CACHE_FILE", tmp_path / "data" / "profile_cache.json"
+    )
+    monkeypatch.setattr(
+        _snapshot_dedup, "PUSH_STATE_FILE", tmp_path / "data" / "push_state.json"
     )
     monkeypatch.setattr(
         _coach_log, "COACH_SESSIONS_DIR", tmp_path / "coach" / "sessions"

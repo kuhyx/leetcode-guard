@@ -33,6 +33,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+BEAT = {"schema": 1, "generated_at": "2026-10-23T15:00:00+02:00"}
+
+
 class FakeStore:
     """Records ``put_file_text`` calls, or fails them."""
 
@@ -65,11 +68,17 @@ def offline_profile(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_push_writes_one_text_leaf():
     store = FakeStore()
 
-    result = push_snapshot({"schema": 1, "profile": None}, connect=lambda: store)
+    result = push_snapshot(
+        {"schema": 1, "profile": None, "generated_at": "t"}, connect=lambda: store
+    )
 
     assert result.pushed
     assert store.writes[0][0] == SNAPSHOT_PATH == "leetcode-guard/status"
-    assert json.loads(store.writes[0][1]) == {"schema": 1, "profile": None}
+    assert json.loads(store.writes[0][1]) == {
+        "schema": 1,
+        "profile": None,
+        "generated_at": "t",
+    }
     assert str(len(store.writes[0][1])) in result.reason
 
 
@@ -80,7 +89,7 @@ def test_a_push_writes_one_text_leaf():
 def test_a_failed_push_is_a_warning_not_a_raise(
     error: Exception, caplog: pytest.LogCaptureFixture
 ):
-    result = push_snapshot({"schema": 1}, connect=lambda: FakeStore(error))
+    result = push_snapshot(BEAT, connect=lambda: FakeStore(error))
 
     assert not result.pushed
     assert "snapshot push failed" in caplog.text
@@ -91,13 +100,13 @@ def test_a_failed_connect_is_a_warning_not_a_raise(caplog: pytest.LogCaptureFixt
         msg = "missing firebase.json"
         raise ConfigError(msg)
 
-    assert not push_snapshot({"schema": 1}, connect=connect).pushed
+    assert not push_snapshot(BEAT, connect=connect).pushed
     assert "missing firebase.json" in caplog.text
 
 
 def test_the_default_connect_is_blocked_in_tests():
     with pytest.raises(AssertionError, match="Firebase"):
-        push_snapshot({"schema": 1})
+        push_snapshot(BEAT)
 
 
 def test_gather_reads_everything_and_writes_no_ledger(
@@ -178,7 +187,7 @@ def test_every_harvest_run_pushes_even_when_it_does_nothing(
         calls.append("push")
         return PushResult(pushed=True, reason="pushed 3 bytes", size=3)
 
-    monkeypatch.setattr(_harvest_run, "push_quietly", fake_push)
+    monkeypatch.setattr(_snapshot_push, "push_quietly", fake_push)
 
     assert _harvest_run.main() == 0
     out = capsys.readouterr().out

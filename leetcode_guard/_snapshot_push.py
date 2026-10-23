@@ -1,8 +1,10 @@
 """Publish the status snapshot to Firebase RTDB for the status app.
 
-TODO-status-app.md decisions 1 and 2: one node, ``leetcode-guard/status``,
-written after every harvest run and on every ledger change, read by nothing
-but the app. Firebase only, through the shared ``~/.config/crdt-sync/``
+TODO-status-app.md decisions 1 and 2: ``leetcode-guard/status`` holds the
+snapshot and ``leetcode-guard/heartbeat`` the time of the last push. Every
+harvest run and every ledger change pushes; the ~32 KB snapshot is written
+only when its content changed (``_snapshot_dedup``), the heartbeat always.
+Read by nothing but the app. Firebase only, through the shared ``~/.config/crdt-sync/``
 credential via crdt_sync -- no GitHub transport.
 
 **Stored as one JSON text leaf** (crdt_sync's convention, written by
@@ -32,6 +34,12 @@ from leetcode_guard._profile_cache import refresh_profile
 from leetcode_guard._progress import read_progress_cache
 from leetcode_guard._snapshot import build_snapshot
 from leetcode_guard._snapshot_auth import connect as sign_in
+from leetcode_guard._snapshot_dedup import (
+    VOLATILE_KEY,
+    content_hash,
+    read_pushed_hash,
+    write_pushed_hash,
+)
 from leetcode_guard._snapshot_rtdb import silent_store_for
 from leetcode_guard._status_full import gather_full
 
@@ -44,6 +52,9 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 SNAPSHOT_PATH: Final = "leetcode-guard/status"
+
+HEARTBEAT_PATH: Final = "leetcode-guard/heartbeat"
+"""A JSON string leaf: the ISO time of the last push, written every minute."""
 
 FIREBASE_APP: Final = "leetcode_guard_status"
 """Names the credential cache. Not ``_sync.py``'s ``leetcode_guard``: a
@@ -94,18 +105,33 @@ def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
 def push_snapshot(
     snapshot: dict[str, Any], *, connect: Callable[[], TextStore] | None = None
 ) -> PushResult:
-    """Write ``snapshot`` to :data:`SNAPSHOT_PATH`. Never raises crdt_sync errors."""
+    """Write the heartbeat, and the snapshot too if its content changed.
+
+    The heartbeat follows a *successful* snapshot write and is skipped after
+    a failed one: a fresh heartbeat over stale content would tell the app
+    everything is current. Never raises crdt_sync errors.
+    """
+    digest = content_hash(snapshot)
+    changed = digest != read_pushed_hash()
     text = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
+    beat = str(snapshot[VOLATILE_KEY])
     try:
         client = (_firebase_client if connect is None else connect)()
-        client.put_file_text(SNAPSHOT_PATH, text, message="leetcode-guard: status")
+        if changed:
+            client.put_file_text(SNAPSHOT_PATH, text, message="leetcode-guard: status")
+            write_pushed_hash(digest)
+        client.put_file_text(HEARTBEAT_PATH, beat, message="leetcode-guard: beat")
     except (ConfigError, FirebaseAuthError, RemoteSyncError, OSError) as exc:
         _logger.warning("snapshot push failed: %s", exc)
         return PushResult(pushed=False, reason=f"snapshot push failed: {exc}", size=0)
+    if not changed:
+        return PushResult(
+            pushed=True, reason=f"unchanged; heartbeat {beat}", size=len(beat)
+        )
     return PushResult(
         pushed=True,
-        reason=f"pushed {len(text)} bytes to {SNAPSHOT_PATH}",
-        size=len(text),
+        reason=f"pushed {len(text)} bytes to {SNAPSHOT_PATH} + heartbeat",
+        size=len(text) + len(beat),
     )
 
 

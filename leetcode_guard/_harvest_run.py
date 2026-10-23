@@ -48,7 +48,6 @@ from leetcode_guard._instance import acquire
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._settings import build_client
-from leetcode_guard._snapshot_push import push_quietly
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 
 if TYPE_CHECKING:
@@ -124,10 +123,29 @@ def main(*, key_file: Path | None = None) -> int:
     configure_logging()
     print(run_harvest(key_file=key_file))
     # Every run, after the harvest lock is released and whatever it found:
-    # the snapshot's generated_at is the status app's heartbeat. In-process
-    # on purpose -- a detached child would die with this oneshot's cgroup.
-    print(f"snapshot: {push_quietly().reason}")
+    # the heartbeat is the status app's freshness signal. In-process on
+    # purpose -- a detached child would die with this oneshot's cgroup.
+    print(f"snapshot: {_push_line()}")
     return EXIT_OK
+
+
+def _push_line() -> str:
+    """Push the status snapshot; nothing it does can stop a harvest.
+
+    Imported here, not at the top: the harvest mints credits, the snapshot is
+    display-only, and a snapshot-only breakage -- a crdt_sync bump dropping a
+    name only the push uses, a bug in a snapshot module -- must cost the push,
+    never the process start (``test_harvest_isolation.py``).
+    """
+    try:
+        from leetcode_guard._snapshot_push import (  # pylint: disable=import-outside-toplevel
+            push_quietly,
+        )
+
+        return push_quietly().reason
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        _logger.warning("snapshot push unavailable: %s", exc, exc_info=True)
+        return f"push unavailable: {exc}"
 
 
 if __name__ == "__main__":

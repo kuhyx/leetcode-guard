@@ -147,7 +147,11 @@ unfixable = []
 # output and still exits 0, so this moves with the code, in the same commit.
 "leetcode_guard/_cli_commands.py" = ["T201"]
 # The out-of-lock harvest's one print is its whole journal line; same reason.
-"leetcode_guard/_harvest_run.py" = ["T201"]
+# PLC0415 + BLE001: the snapshot push is imported lazily and fenced with a
+# broad except (logged at warning, with the traceback) on purpose -- display
+# code must never stop the credit-minting harvest from starting or running
+# (test_harvest_isolation.py).
+"leetcode_guard/_harvest_run.py" = ["T201", "PLC0415", "BLE001"]
 # --push-snapshot's one printed line is its whole outcome (pushed N bytes, or
 # why not); same auto-fix trap, same commit as the print.
 "leetcode_guard/_snapshot_push.py" = ["T201"]

@@ -48,6 +48,7 @@ SNAPSHOT_SIDE = (
     "_profile_query",
     "_snapshot",
     "_snapshot_auth",
+    "_snapshot_dedup",
     "_snapshot_projection",
     "_snapshot_push",
     "_snapshot_rtdb",
