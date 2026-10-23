@@ -11,6 +11,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
+import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/tabs.dart';
@@ -18,10 +19,6 @@ import 'package:leetcode_guard/src/ui/tabs.dart';
 /// Width at which the bottom bar becomes a side rail (M3's medium/expanded
 /// breakpoint).
 const kRailBreakpoint = 840.0;
-
-/// Content never stretches wider than this, so a wide desktop window keeps
-/// a readable line length instead of rows spanning the screen.
-const kMaxContentWidth = 720.0;
 
 /// The root widget.
 class LeetGuardApp extends StatelessWidget {
@@ -112,7 +109,8 @@ class _ShellState extends State<_Shell> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= kRailBreakpoint;
+    final width = MediaQuery.sizeOf(context).width;
+    final wide = width >= kRailBreakpoint;
     final settings = widget.app.settingsBuilder;
     final content = Column(
       children: [
@@ -121,7 +119,9 @@ class _ShellState extends State<_Shell> {
           child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
+              constraints: BoxConstraints(
+                maxWidth: contentMaxWidth(gridColumns(width)),
+              ),
               child: _body(),
             ),
           ),

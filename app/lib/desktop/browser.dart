@@ -3,6 +3,7 @@ library;
 
 import 'dart:io';
 
+import 'package:leetcode_guard/desktop/display_scale.dart';
 import 'package:leetcode_guard/desktop/wrapper_server.dart';
 import 'package:path/path.dart' as p;
 
@@ -45,9 +46,16 @@ const kLoopbackOnly =
     '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, '
     'EXCLUDE 127.0.0.1';
 
-/// Arguments for the app window.
-List<String> browserArgs(String home, {int port = kWrapperPort}) => [
+/// Arguments for the app window, rendered at device [scale]
+/// (`display_scale.dart`).
+List<String> browserArgs(
+  String home, {
+  int port = kWrapperPort,
+  double scale = 1,
+}) => [
   '--app=http://localhost:$port',
+  // Fixed per launch; Ctrl+= / Ctrl+- zoom on top of it, kept per origin.
+  scaleFlag(scale),
   kLoopbackOnly,
   // A configured proxy resolves names itself, past the rules above.
   '--no-proxy-server',

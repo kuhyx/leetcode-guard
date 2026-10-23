@@ -18,10 +18,11 @@ void main() {
     expect(find.text('Right now'), findsOneWidget);
   });
 
-  testWidgets('desktop: navigation rail and capped content width', (
+  testWidgets('narrow desktop: navigation rail and capped content width', (
     tester,
   ) async {
-    await pumpApp(tester, size: kDesktop);
+    // Rail, but below the grid breakpoint: one column, still capped.
+    await pumpApp(tester, size: const Size(1000, 900));
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     final list = tester.getSize(find.byKey(const Key('status-list')));

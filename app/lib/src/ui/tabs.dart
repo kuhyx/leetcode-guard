@@ -5,6 +5,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
+import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/projection_section.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/status_sections.dart';
@@ -24,10 +25,9 @@ class StatusTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = snapshot?.status;
-    return ListView(
-      key: const Key('status-list'),
-      padding: kGutter,
-      children: [
+    return CardGrid(
+      listKey: const Key('status-list'),
+      cards: [
         verdictSection(context, s),
         creditsSection(context, s),
         ProjectionSection(
@@ -58,9 +58,8 @@ class CoachTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = coach;
-    return ListView(
-      padding: kGutter,
-      children: c == null
+    return CardGrid(
+      cards: c == null
           ? const [
               SectionCard.unknown(title: 'Problems'),
               SectionCard.unknown(title: 'Re-tests due'),

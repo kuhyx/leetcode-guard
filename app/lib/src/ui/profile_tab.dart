@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
+import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/heatmap.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
@@ -33,22 +34,20 @@ class ProfileTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = profile;
     if (p == null) {
-      return ListView(
-        padding: kGutter,
-        children: const [
+      return const CardGrid(
+        cards: [
           SectionCard.unknown(title: 'Difficulty split'),
           SectionCard.unknown(title: 'Streaks'),
           SectionCard.unknown(title: 'Acceptance rate'),
-          SectionCard.unknown(title: 'Submission calendar'),
         ],
+        footer: [SectionCard.unknown(title: 'Submission calendar')],
       );
     }
     final calendar = p.calendar;
-    return ListView(
-      padding: kGutter,
-      children: [
-        // The PC serves a dated mirror when a refresh fails, so say how old.
-        Muted('Profile ${asOfDated(p.fetchedAt, now)}'),
+    return CardGrid(
+      // The PC serves a dated mirror when a refresh fails, so say how old.
+      header: [Muted('Profile ${asOfDated(p.fetchedAt, now)}')],
+      cards: [
         SectionCard(
           title: 'Difficulty split',
           children: [
@@ -70,6 +69,9 @@ class ProfileTab extends StatelessWidget {
           title: 'Acceptance rate',
           children: [InfoRow('Accepted', percent(p.acceptanceRate))],
         ),
+      ],
+      // The heatmap is 52 weeks wide: it gets the whole row, not a column.
+      footer: [
         if (calendar == null)
           const SectionCard.unknown(title: 'Submission calendar')
         else

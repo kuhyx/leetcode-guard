@@ -13,6 +13,10 @@
 ///
 /// Dev: `dart run bin/leetcode_guard_desktop.dart --fixture f.json` serves
 /// that snapshot instead; add `--serve-only` to skip the window.
+///
+/// The window opens at a device scale read from the screen (2 on a 2160p
+/// output, `lib/desktop/display_scale.dart`); `LEETCODE_GUARD_SCALE=1.5`
+/// fixes it instead. Ctrl+= / Ctrl+- / Ctrl+0 zoom on top, kept per origin.
 library;
 
 import 'dart:io';

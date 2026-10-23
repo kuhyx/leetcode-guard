@@ -135,6 +135,7 @@ void main() {
     List<String> args, {
     String browser = '/b',
     bool busy = false,
+    List<String>? opened,
   }) async {
     final log = <String>[];
     final err = StringBuffer();
@@ -148,7 +149,9 @@ void main() {
         if (busy) throw const SocketException('in use');
       },
       browserFinder: () => browser,
+      scaleFinder: () async => 2,
       startProcess: (exe, a) async {
+        opened?.addAll(a);
         log.add('open $exe');
         return _FakeProcess();
       },
@@ -179,6 +182,12 @@ void main() {
 
   test('--window-only opens a window onto the running wrapper', () async {
     expect(await run(['--window-only']), ['open /b']);
+  });
+
+  test('the window opens at the detected device scale', () async {
+    final opened = <String>[];
+    await run(['--window-only'], opened: opened);
+    expect(opened, contains('--force-device-scale-factor=2'));
   });
 
   test('xdgOpen hands the URL over detached, as one argument', () async {

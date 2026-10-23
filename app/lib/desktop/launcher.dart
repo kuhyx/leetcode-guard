@@ -8,6 +8,7 @@ library;
 import 'dart:io';
 
 import 'package:leetcode_guard/desktop/browser.dart';
+import 'package:leetcode_guard/desktop/display_scale.dart';
 import 'package:leetcode_guard/desktop/sources.dart';
 import 'package:leetcode_guard/desktop/wrapper_server.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
@@ -65,6 +66,7 @@ Future<void> runDesktop(
   required String cwd,
   ServerStarter startServer = _serve,
   String Function() browserFinder = findBrowser,
+  Future<double> Function() scaleFinder = detectScale,
   ProcessStarter startProcess = Process.start,
   Future<void> Function() hold = _keepServing,
   void Function(String line) err = _stderr,
@@ -92,7 +94,10 @@ Future<void> runDesktop(
     );
     return;
   }
-  final process = await startProcess(browser, browserArgs(home));
+  final process = await startProcess(
+    browser,
+    browserArgs(home, scale: await scaleFinder()),
+  );
   await process.exitCode;
   if (serving) await hold();
 }
