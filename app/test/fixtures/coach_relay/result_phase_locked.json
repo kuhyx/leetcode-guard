@@ -1,0 +1,8 @@
+{
+  "ok": false,
+  "at": 1792784397272,
+  "code": "phase_locked",
+  "error": "Code waits until step 2 (requirements) is passed or forced.",
+  "retry": false,
+  "note": "[code held back: write the requirement list first -- one message starting with req: that lists the properties the operation must have, without naming an operation or structure]"
+}

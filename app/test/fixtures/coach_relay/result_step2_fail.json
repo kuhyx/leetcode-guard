@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "at": 1792784398772,
+  "state_rev": 10,
+  "data": {
+    "step": 2,
+    "grade": "fail",
+    "feedback": "This names an operation or a structure. List the properties it must have instead, without naming it.",
+    "attempt": 3,
+    "can_force": true,
+    "via": "toolbox",
+    "next_step": 2
+  }
+}

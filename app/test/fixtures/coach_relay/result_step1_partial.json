@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "at": 1792784395822,
+  "state_rev": 3,
+  "data": {
+    "step": 1,
+    "grade": "partial",
+    "feedback": "Say what the space bound rules out.",
+    "attempt": 1,
+    "can_force": false,
+    "via": "haiku",
+    "next_step": 1
+  }
+}

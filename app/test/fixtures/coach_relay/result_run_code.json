@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "at": 1792784401289,
+  "state_rev": 14,
+  "data": {
+    "examples": [
+      {
+        "n": 1,
+        "ok": true,
+        "expected": "2",
+        "got": "2"
+      },
+      {
+        "n": 2,
+        "ok": true,
+        "expected": "2",
+        "got": "2"
+      },
+      {
+        "n": 3,
+        "ok": true,
+        "expected": "8",
+        "got": "8"
+      }
+    ],
+    "error": null
+  }
+}

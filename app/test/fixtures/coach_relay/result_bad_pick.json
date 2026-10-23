@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "at": 1792784399772,
+  "code": "bad_request",
+  "error": "Not in the toolbox: not a tool",
+  "retry": false
+}
