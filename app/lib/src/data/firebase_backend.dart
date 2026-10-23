@@ -5,21 +5,25 @@
 // covered there; the snapshot read is FirebaseSnapshotSource, covered here.
 
 /// The phone's Firebase wiring, copied from home-guard's
-/// `firebase_backend.dart` minus Google sign-in (a new package id has no
-/// OAuth client, and registering one has no API).
+/// `firebase_backend.dart`: Google sign-in first (the sync account is
+/// Google-only), the password path kept as home-guard keeps it.
 ///
 /// * [kProject] holds the Web API key and database URL: public identifiers
 ///   that ship inside every APK; the security rules protect the data.
-/// * The account email and password are entered once per device on the
-///   shared Sync settings screen and kept in the OS keystore.
+/// * The session (refresh token) and account marker live in the OS
+///   keystore, written by the shared Sync settings screen.
 ///
 /// Nothing here reads `~/.config/crdt-sync/`; on Android there is no such
 /// file. The desktop never reads Firebase at all: its wrapper serves the
 /// exporter's local file (`lib/desktop/sources.dart`).
 library;
 
+import 'dart:developer';
+
 import 'package:crdt_sync/crdt_sync.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
 
 /// The shared `kuhy-syncs` project. `databaseUrl` is the **regional** host:
 /// the plain `*.firebaseio.com` form answers 404 with a `correctUrl` body,
@@ -60,17 +64,65 @@ Future<void> clearAccount() async {
   await credentialStore().clear();
 }
 
-/// Whether a refresh token is stored: that, not the account marker, is
-/// what signs requests.
+/// Reads the account from the keystore only, with no fallback, so a value
+/// just written can be read back as itself.
+Future<FirebaseAccount?> storedAccount() async =>
+    FirebaseAccount.tryParse(await _secure.read(key: kFirebaseAccountKey));
+
+/// Whether this device can authenticate: a stored refresh token is what
+/// signs requests, so it decides, not the account marker.
+///
+/// A marker with no session behind it cannot sign a single request: drop
+/// just the marker so the settings screen offers a sign-in instead of a dead
+/// banner (home-guard's fix for the same state).
 Future<bool> isFirebaseConfigured() async {
   try {
-    return await FirebaseTokenProvider(
+    final auth = FirebaseTokenProvider(
       apiKey: kProject.apiKey,
       store: credentialStore(),
-    ).hasSession();
-  } on Object {
+    );
+    if (await auth.hasSession()) return true;
+    if (await storedAccount() == null) return false;
+    await _secure.delete(key: kFirebaseAccountKey);
+    return false;
+  } on Object catch (error, stackTrace) {
+    log(
+      'session probe failed; reporting this device as not configured',
+      level: 1000,
+      error: error,
+      stackTrace: stackTrace,
+    );
     return false;
   }
+}
+
+/// Signs in with Google alone, for a device with no account stored yet.
+///
+/// Returns null when the picker is dismissed; throws [FirebaseAuthError]
+/// when Google resolves to a uid other than [kSyncUid], which would
+/// otherwise authenticate fine and be denied every read.
+Future<FirebaseRestClient?> openFirebaseWithGoogle({
+  Future<String?> Function()? tokenFetcher,
+  Future<void> Function(FirebaseAccount)? accountSaver,
+  http.Client? httpClient,
+}) async {
+  final token = await (tokenFetcher ?? googleIdToken)();
+  if (token == null) return null;
+  final auth = FirebaseTokenProvider(
+    apiKey: kProject.apiKey,
+    store: credentialStore(),
+    httpClient: httpClient,
+  );
+  final email = await auth.signInWithGoogle(
+    idToken: token,
+    expectedUid: kSyncUid,
+  );
+  // Saved unconditionally: `signInWithIdp` omits `email` when the account
+  // hides it, and the refresh token (already stored) is the credential.
+  await (accountSaver ?? saveAccount)(
+    FirebaseAccount(email: email ?? '', password: ''),
+  );
+  return FirebaseRestClient(databaseUrl: kProject.databaseUrl, auth: auth);
 }
 
 /// A signed-in client, or null when this phone has no account yet.

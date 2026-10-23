@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
 import 'package:leetcode_guard/src/data/hash_gated_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
@@ -41,12 +42,14 @@ void main() {
           : (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
       settingsBuilder: kIsWeb
           ? null
-          : (_) => const SyncSettingsScreen(
+          : (_) => SyncSettingsScreen(
               accountLoader: loadAccount,
               accountSaver: saveAccount,
               accountClearer: clearAccount,
               sessionProbe: isFirebaseConfigured,
               firebaseFactory: openFirebase,
+              googleFirebaseFactory: openFirebaseWithGoogle,
+              googleAvailable: googleSignInSupported,
             ),
     ),
   );

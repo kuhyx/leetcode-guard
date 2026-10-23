@@ -23,15 +23,18 @@ dependencies:
       path: design_system
   flutter:
     sdk: flutter
-  # The sync account password on the phone: OS keystore, never prefs.
+  # The sync session on the phone: OS keystore, never prefs.
   flutter_secure_storage: 11.2.0
+  # One-tap sign-in for the sync account (Google-only since its password
+  # died). App-side only: crdt_sync stays pure Dart and receives a token.
+  google_sign_in: 7.2.0
   http: 1.6.0
   path: 1.9.1
   # The last good snapshot, so an offline launch shows it (stale) rather
   # than a screen of "unknown". Display data only; no credential.
   shared_preferences: 2.5.6
-  # Shared Firebase sign-in screen, password only (no Google client exists
-  # for this package id).
+  # Shared Firebase sign-in screen: Google first, password kept as the
+  # fallback (as in home-guard).
   sync_settings_ui:
     git:
       url: https://github.com/kuhyx/utils
