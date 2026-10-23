@@ -157,13 +157,26 @@ unchanged, its own `generated_at` is the desktop's "as of" and stale signal
   "coach": {"problems": [{"slug": "missing-number", "cluster": "bit-cancellation",
             "req_before_code": true, "max_rung": "H1", "revealed": false,
             "req_check": "pass|incomplete|unverified", "day": "2026-10-23"}],
-            "retests_due": null,
-            "clusters": null}
+            "retests_due": [{"slug": "missing-number", "cluster": "bit-cancellation",
+                             "stage": 1, "due": "2026-10-26", "solved": "2026-10-23",
+                             "command": "leetcode --retest missing-number"}],
+            "clusters": {"bit-cancellation": {
+                "total": 4, "started": 1, "solved": 1, "order": 0,
+                "next": "single-number-iii",
+                "problems": [{"slug": "missing-number", "number": 268,
+                              "title": "Missing Number",
+                              "url": "https://leetcode.com/problems/missing-number/"}]}},
+            "how_to": {"commands": [{"command": "leetcode --cluster <name>",
+                                     "meaning": "Serve the next problem of a ..."}],
+                       "steps": [{"name": "Constraint",
+                                  "text": "Turn the hard constraint into a rule ..."}],
+                       "next_note": "The command skips problems LeetCode already ...",
+                       "first_command": "leetcode --cluster bit-cancellation"}}
 }
 ```
 
-Any section may be `null` = unknown (fetch failed / coach not built yet); the
-app renders "unknown" for a null section, never zeros. Inner nulls too:
+Any section may be `null` = unknown (fetch failed / coach derivation raised);
+the app renders "unknown" for a null section, never zeros. Inner nulls too:
 `projected` (no solved counts yet), `streak_*`/`calendar` (calendar
 unreadable), `acceptance_rate` (no submissions), `req_before_code` (no code
 yet), `max_rung`/`req_check` (no such event yet). Field names mirror the
@@ -192,8 +205,31 @@ Deltas from the first draft of this block (exporter, 2026-10-23):
   UTC (LeetCode's keys are UTC midnights); `streak_current` may end yesterday;
   `streak_longest` is over LeetCode's rolling year (matched its own `streak`
   field, 19, on 2026-10-23).
-- `coach.retests_due` and `coach.clusters` are `null` until the coach exposes
-  them: their rules (decisions 10, 12) belong to the coach, not the exporter.
+- **`coach` is a known state before the first session** (2026-10-23).
+  A missing or empty sessions dir exports `problems: []`, `retests_due: []`,
+  every cluster at `solved 0` / `total N` with its problem list, and `how_to`;
+  the app shows "How to start" instead of "unknown". `coach: null` now means
+  only that reading the logs raised (warning in the journal), and the app
+  adds a line on why. `retests_due`, `clusters` and `how_to` are each `null`
+  if their own derivation raised, independently.
+- `coach.clusters.<name>` is the coach's own `progress.cluster_progress`
+  (`total`, `started` = has a `code` event, `solved` = code + post-mortem,
+  `next` = first problem not started) plus `order` and `problems`. The key is
+  `solved`, not `done`: the first app draft read `done`, which no exporter
+  ever wrote. `order` is the curriculum position, because the snapshot is
+  serialised with sorted keys and the dict order does not survive. `problems`
+  rows are `{slug, number, title, url}`; `title` comes from
+  `leetcode_coach/clusters.json`.
+- `next` ignores LeetCode's Accepted list (that needs the network, never in
+  the per-minute push), while `leetcode --cluster` skips Accepted problems and
+  serves a due re-test first, so it can serve a later problem than `next`.
+  `how_to.next_note` says so on screen.
+- `coach.how_to` is written once in `leetcode_coach/how_to.py`; DOCS-how-to.md
+  quotes it and `test_how_to.py` fails if they differ. `first_command` is
+  `leetcode --cluster <first cluster>`. `retests_due[].command` is
+  `how_to.retest_command(slug)`, the same string `leetcode due` prints.
+- `app/test/fixtures/snapshot_coach_empty.json` is the exporter's output for
+  that state; `test_coach_empty.py` fails if the exporter drifts from it.
 
 ## Commit
 

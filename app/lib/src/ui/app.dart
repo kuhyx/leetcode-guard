@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
+import 'package:leetcode_guard/src/ui/coach_tab.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/tabs.dart';
@@ -98,7 +99,7 @@ class _ShellState extends State<_Shell> {
     final generated = (snap?.generatedAt ?? _c.now()).toUtc();
     return switch (_tab) {
       0 => StatusTab(snapshot: snap, openUrl: widget.app.openUrl),
-      1 => CoachTab(coach: snap?.coach),
+      1 => CoachTab(coach: snap?.coach, openUrl: widget.app.openUrl),
       _ => ProfileTab(
         profile: snap?.profile,
         today: DateTime.utc(generated.year, generated.month, generated.day),

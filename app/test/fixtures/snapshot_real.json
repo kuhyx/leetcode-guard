@@ -1,5 +1,248 @@
 {
-  "coach": null,
+  "coach": {
+    "clusters": {
+      "bit-cancellation": {
+        "next": "missing-number",
+        "order": 0,
+        "problems": [
+          {
+            "number": 268,
+            "slug": "missing-number",
+            "title": "Missing Number",
+            "url": "https://leetcode.com/problems/missing-number/"
+          },
+          {
+            "number": 260,
+            "slug": "single-number-iii",
+            "title": "Single Number III",
+            "url": "https://leetcode.com/problems/single-number-iii/"
+          },
+          {
+            "number": 169,
+            "slug": "majority-element",
+            "title": "Majority Element",
+            "url": "https://leetcode.com/problems/majority-element/"
+          },
+          {
+            "number": 137,
+            "slug": "single-number-ii",
+            "title": "Single Number II",
+            "url": "https://leetcode.com/problems/single-number-ii/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      },
+      "intervals": {
+        "next": "merge-intervals",
+        "order": 5,
+        "problems": [
+          {
+            "number": 56,
+            "slug": "merge-intervals",
+            "title": "Merge Intervals",
+            "url": "https://leetcode.com/problems/merge-intervals/"
+          },
+          {
+            "number": 57,
+            "slug": "insert-interval",
+            "title": "Insert Interval",
+            "url": "https://leetcode.com/problems/insert-interval/"
+          },
+          {
+            "number": 435,
+            "slug": "non-overlapping-intervals",
+            "title": "Non-overlapping Intervals",
+            "url": "https://leetcode.com/problems/non-overlapping-intervals/"
+          },
+          {
+            "number": 452,
+            "slug": "minimum-number-of-arrows-to-burst-balloons",
+            "title": "Minimum Number of Arrows to Burst Balloons",
+            "url": "https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      },
+      "monotonic-stack": {
+        "next": "daily-temperatures",
+        "order": 4,
+        "problems": [
+          {
+            "number": 739,
+            "slug": "daily-temperatures",
+            "title": "Daily Temperatures",
+            "url": "https://leetcode.com/problems/daily-temperatures/"
+          },
+          {
+            "number": 496,
+            "slug": "next-greater-element-i",
+            "title": "Next Greater Element I",
+            "url": "https://leetcode.com/problems/next-greater-element-i/"
+          },
+          {
+            "number": 503,
+            "slug": "next-greater-element-ii",
+            "title": "Next Greater Element II",
+            "url": "https://leetcode.com/problems/next-greater-element-ii/"
+          },
+          {
+            "number": 84,
+            "slug": "largest-rectangle-in-histogram",
+            "title": "Largest Rectangle in Histogram",
+            "url": "https://leetcode.com/problems/largest-rectangle-in-histogram/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      },
+      "prefix-sum-hash": {
+        "next": "subarray-sum-equals-k",
+        "order": 3,
+        "problems": [
+          {
+            "number": 560,
+            "slug": "subarray-sum-equals-k",
+            "title": "Subarray Sum Equals K",
+            "url": "https://leetcode.com/problems/subarray-sum-equals-k/"
+          },
+          {
+            "number": 523,
+            "slug": "continuous-subarray-sum",
+            "title": "Continuous Subarray Sum",
+            "url": "https://leetcode.com/problems/continuous-subarray-sum/"
+          },
+          {
+            "number": 974,
+            "slug": "subarray-sums-divisible-by-k",
+            "title": "Subarray Sums Divisible by K",
+            "url": "https://leetcode.com/problems/subarray-sums-divisible-by-k/"
+          },
+          {
+            "number": 525,
+            "slug": "contiguous-array",
+            "title": "Contiguous Array",
+            "url": "https://leetcode.com/problems/contiguous-array/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      },
+      "sliding-window": {
+        "next": "longest-substring-without-repeating-characters",
+        "order": 2,
+        "problems": [
+          {
+            "number": 3,
+            "slug": "longest-substring-without-repeating-characters",
+            "title": "Longest Substring Without Repeating Characters",
+            "url": "https://leetcode.com/problems/longest-substring-without-repeating-characters/"
+          },
+          {
+            "number": 424,
+            "slug": "longest-repeating-character-replacement",
+            "title": "Longest Repeating Character Replacement",
+            "url": "https://leetcode.com/problems/longest-repeating-character-replacement/"
+          },
+          {
+            "number": 567,
+            "slug": "permutation-in-string",
+            "title": "Permutation in String",
+            "url": "https://leetcode.com/problems/permutation-in-string/"
+          },
+          {
+            "number": 76,
+            "slug": "minimum-window-substring",
+            "title": "Minimum Window Substring",
+            "url": "https://leetcode.com/problems/minimum-window-substring/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      },
+      "two-pointers": {
+        "next": "two-sum-ii-input-array-is-sorted",
+        "order": 1,
+        "problems": [
+          {
+            "number": 167,
+            "slug": "two-sum-ii-input-array-is-sorted",
+            "title": "Two Sum II - Input Array Is Sorted",
+            "url": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/"
+          },
+          {
+            "number": 15,
+            "slug": "3sum",
+            "title": "3Sum",
+            "url": "https://leetcode.com/problems/3sum/"
+          },
+          {
+            "number": 11,
+            "slug": "container-with-most-water",
+            "title": "Container With Most Water",
+            "url": "https://leetcode.com/problems/container-with-most-water/"
+          },
+          {
+            "number": 42,
+            "slug": "trapping-rain-water",
+            "title": "Trapping Rain Water",
+            "url": "https://leetcode.com/problems/trapping-rain-water/"
+          }
+        ],
+        "solved": 0,
+        "started": 0,
+        "total": 4
+      }
+    },
+    "how_to": {
+      "commands": [
+        {
+          "command": "leetcode --cluster <name>",
+          "meaning": "Serve the next problem of a concept cluster (a due re-test comes first)."
+        },
+        {
+          "command": "leetcode <url>",
+          "meaning": "Coach one problem, from its LeetCode URL or slug."
+        },
+        {
+          "command": "leetcode due",
+          "meaning": "List the cold re-tests that are due."
+        },
+        {
+          "command": "leetcode report",
+          "meaning": "One row per session: requirements before code, hint rung, reveal."
+        }
+      ],
+      "first_command": "leetcode --cluster bit-cancellation",
+      "next_note": "The command skips problems LeetCode already shows as Accepted, so it may serve a later one than listed here.",
+      "steps": [
+        {
+          "name": "Constraint",
+          "text": "Turn the hard constraint into a rule for the design."
+        },
+        {
+          "name": "Requirements",
+          "text": "List what the operation must do, as properties, never by name."
+        },
+        {
+          "name": "Toolbox",
+          "text": "Search the toolbox for an operation with those properties."
+        },
+        {
+          "name": "Post-mortem",
+          "text": "Say which hint gave which requirement, then make the cards."
+        }
+      ]
+    },
+    "problems": [],
+    "retests_due": []
+  },
   "generated_at": "2026-10-23T15:13:26+02:00",
   "profile": {
     "acceptance_rate": 25.2,

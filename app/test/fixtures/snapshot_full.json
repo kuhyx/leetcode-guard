@@ -89,7 +89,39 @@
        "req_before_code": false, "max_rung": "H3", "revealed": true,
        "req_check": "incomplete", "day": "2026-10-22"}
     ],
-    "retests_due": [{"slug": "missing-number", "due": "2026-10-26"}],
-    "clusters": {"bit-cancellation": {"done": 1, "total": 4}}
+    "retests_due": [{"slug": "missing-number", "due": "2026-10-26",
+                     "stage": 1, "cluster": "bit-cancellation",
+                     "command": "leetcode --retest missing-number"}],
+    "clusters": {
+      "two-pointers": {"total": 2, "started": 0, "solved": 0, "order": 1,
+                       "next": "3sum",
+                       "problems": [
+                         {"slug": "3sum", "number": 15, "title": "3Sum",
+                          "url": "https://leetcode.com/problems/3sum/"},
+                         {"slug": "container-with-most-water", "number": 11,
+                          "title": null,
+                          "url": "https://example.com/not-a-problem"}]},
+      "bit-cancellation": {"total": 4, "started": 2, "solved": 1, "order": 0,
+                           "next": "majority-element",
+                           "problems": [
+                             {"slug": "missing-number", "number": 268,
+                              "title": "Missing Number",
+                              "url": "https://leetcode.com/problems/missing-number/"},
+                             {"slug": "single-number-iii", "number": 260,
+                              "title": "Single Number III",
+                              "url": "https://leetcode.com/problems/single-number-iii/"},
+                             {"slug": "majority-element", "number": 169,
+                              "title": "Majority Element",
+                              "url": "https://leetcode.com/problems/majority-element/"}]},
+      "intervals": {"total": 4, "started": 0, "solved": 0},
+      "sliding-window": null
+    },
+    "how_to": {
+      "commands": [{"command": "leetcode due",
+                    "meaning": "List the cold re-tests that are due."}],
+      "steps": [{"name": "Constraint", "text": "Turn it into a rule."}],
+      "next_note": "It may serve a later one.",
+      "first_command": "leetcode --cluster bit-cancellation"
+    }
   }
 }

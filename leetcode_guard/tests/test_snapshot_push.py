@@ -120,7 +120,8 @@ def test_gather_reads_everything_and_writes_no_ledger(
     assert snap["status"]["day"] == "2026-08-10"
     assert snap["profile"] is None
     assert snap["progress"] is None
-    assert snap["coach"] is None
+    assert snap["coach"]["problems"] == []
+    assert snap["coach"]["how_to"]["first_command"].startswith("leetcode --cluster ")
     assert not (data_dir / "ledger.json").exists()
 
 
