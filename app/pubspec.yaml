@@ -1,0 +1,69 @@
+name: leetcode_guard
+description: "leetcode-guard status: read-only view of the PC's gate snapshot."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+# Exact pins, newest stable (dependency-freshness gate).
+dependencies:
+  # Firebase REST client + the per-device account blob. Phone only: the
+  # desktop wrapper does the Firebase read itself, so the browser never
+  # holds a credential.
+  crdt_sync:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: crdt_sync_dart-v0.11.1
+      path: crdt_sync_dart
+  design_system:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: design_system-v0.2.1
+      path: design_system
+  flutter:
+    sdk: flutter
+  # The sync account password on the phone: OS keystore, never prefs.
+  flutter_secure_storage: 11.2.0
+  http: 1.6.0
+  path: 1.9.1
+  # The last good snapshot, so an offline launch shows it (stale) rather
+  # than a screen of "unknown". Display data only; no credential.
+  shared_preferences: 2.5.6
+  # Shared Firebase sign-in screen, password only (no Google client exists
+  # for this package id).
+  sync_settings_ui:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: sync_settings_ui-v0.4.1
+      path: sync_settings_ui
+  # Opens a suggestion's problem page in the browser: the app's one action.
+  url_launcher: 6.3.3
+
+dev_dependencies:
+  flutter_launcher_icons: 0.14.4
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+
+# The shared icon family (python_pkg/app_icons in testsAndMisc, key
+# leetcode_guard): charcoal field, </> glyph in the family accent.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#211D1B"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icon/icon_monochrome.png"
+  min_sdk_android: 24
+  # The desktop build is web-in-Chrome: favicon + manifest icons are what
+  # the app window and the taskbar show.
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#211D1B"
+    theme_color: "#211D1B"

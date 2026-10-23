@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-23T14:05:00+02:00",
+  "status": {"day": "2026-10-23", "locked": true, "debt": null,
+             "integrity": {"ok": false}, "environment": {"timer": null},
+             "suggestions": [], "solves": {"recent": []}, "days": {"charged": []},
+             "budgets": {"escape": {"used": 1}, "incidents": null}},
+  "progress": {"solved": null, "total_all": 4055},
+  "projections": {},
+  "profile": {"difficulty": {"easy": [null, 900], "medium": "bad"},
+              "calendar": null},
+  "coach": {"problems": [], "retests_due": null, "clusters": {}}
+}

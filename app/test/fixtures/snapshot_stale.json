@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-23T13:40:00+02:00",
+  "status": {"day": "2026-10-23", "weekday": "Thursday", "state": "open",
+             "locked": true, "reason": "no credit banked for today",
+             "cost": 2, "available": 0, "needed": 2},
+  "progress": {"solved": 312, "total": 4055},
+  "projections": null,
+  "profile": null,
+  "coach": null
+}
