@@ -112,9 +112,12 @@ class _Composer extends StatelessWidget {
                 maxLines: 6,
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
-                  hintText: live
-                      ? 'Ask the coach, or paste JavaScript (Ctrl+Enter sends)'
-                      : 'The session has ended',
+                  hintText: !live
+                      ? 'The session has ended'
+                      // A phone has no Ctrl key to speak of.
+                      : c.transport.phone
+                      ? 'Ask the coach, or paste JavaScript'
+                      : 'Ask the coach, or paste JavaScript (Ctrl+Enter sends)',
                   errorText: limitError(text),
                 ),
               ),
