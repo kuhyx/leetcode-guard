@@ -112,8 +112,8 @@ install_tray() {
     local exec_line="exec --no-startup-id /usr/bin/python3 $dest/leetcode_guard_tray.py"
     if [[ -f "$i3_config" ]] && ! grep -qF "leetcode_guard_tray.py" "$i3_config"; then
         {
-            printf '\n# leetcode-guard status tray. Left-click TOGGLES the status window\n'
-            printf '# (open/close); right-click gives refresh and quit.\n'
+            printf '\n# leetcode-guard status tray. Left-click opens the status app\n'
+            printf '# (app/tool/leetcode_guard_app.sh); right-click gives refresh and quit.\n'
             printf '%s\n' "$exec_line"
         } >> "$i3_config"
         log "added the tray to $i3_config -- reload i3 (\$mod+Shift+r) to start it"

@@ -1,4 +1,4 @@
-"""Assemble a projection from the gate snapshot, for the CLI and the window.
+"""Assemble a projection from the gate snapshot, for the CLI and the exporter.
 
 The one place that knows how to go from "what is on disk" plus the typed
 inputs -- a date, a base price, per-difficulty goals -- to the lines both
@@ -225,7 +225,7 @@ def cached_progress() -> Progress | None:
 def fetch_live_progress() -> Progress | None:
     """The one network call: refresh the mirror, falling back to it on failure.
 
-    Builds its own client because the callers -- the status window and
+    Builds its own client because the callers -- ``--sync`` and
     ``--status --by`` -- are the surfaces that otherwise never touch the
     network, so none of them has one to hand.
     """
