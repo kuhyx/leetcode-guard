@@ -140,6 +140,16 @@ void main() {
     expect(find.byKey(const Key('failure')), findsNothing);
   });
 
+  testWidgets('Start beside "Next" starts the next problem', (tester) async {
+    final rig = await pumpCoach(tester);
+    await openCoachTab(tester);
+    await tapKey(tester, 'start-next-bit-cancellation');
+    await settle(tester, rig);
+    expect(rig.transport.relay.done.values.single['code'], 'no_answer_key');
+    expect(rig.transport.sent.single.$2['body'], {'slug': 'majority-element'});
+    expect(find.text('No answer key for that problem'), findsOneWidget);
+  });
+
   testWidgets('no network: the Coach tab says so and why', (tester) async {
     await pumpCoach(
       tester,
