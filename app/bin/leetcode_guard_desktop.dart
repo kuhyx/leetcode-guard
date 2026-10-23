@@ -2,6 +2,11 @@
 ///
 /// Only wiring: every decision lives in `lib/desktop/launcher.dart`.
 ///
+/// Build the page it serves with
+/// `flutter build web --release --no-web-resources-cdn`: without the flag
+/// CanvasKit loads from a CDN, and an offline launch renders a blank window
+/// instead of the cached snapshot under the stale banner.
+///
 /// Dev: `dart run bin/leetcode_guard_desktop.dart --fixture f.json` serves
 /// that snapshot instead of Firebase; add `--serve-only` to skip the window.
 library;
