@@ -1,17 +1,19 @@
 /// The app shell: three tabs, the as-of time and the stale banner.
 ///
-/// Read-only by design. The only control that leaves the app is a
-/// suggestion's link; there is no unlock, credit or solve action anywhere,
-/// because a credit exists only once LeetCode confirms an accepted solve.
+/// Nothing here can unlock, credit or solve: a credit exists only once
+/// LeetCode confirms an accepted solve. The Coach tab's guided sessions
+/// write coaching logs on the PC through its relay, and nothing else.
 library;
 
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
+import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/coach_tab.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
@@ -28,6 +30,7 @@ class LeetGuardApp extends StatelessWidget {
     required this.controller,
     required this.openUrl,
     this.settingsBuilder,
+    this.coach,
     super.key,
   });
 
@@ -39,6 +42,9 @@ class LeetGuardApp extends StatelessWidget {
 
   /// The sync-account screen; null where the wrapper holds the credential.
   final WidgetBuilder? settingsBuilder;
+
+  /// The guided coaching session; null leaves the Coach tab view-only.
+  final CoachController? coach;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -99,7 +105,14 @@ class _ShellState extends State<_Shell> {
     final generated = (snap?.generatedAt ?? _c.now()).toUtc();
     return switch (_tab) {
       0 => StatusTab(snapshot: snap, openUrl: widget.app.openUrl),
-      1 => CoachTab(coach: snap?.coach, openUrl: widget.app.openUrl),
+      1 => CoachTab(
+        coach: snap?.coach,
+        openUrl: widget.app.openUrl,
+        session: switch (widget.app.coach) {
+          final CoachController c => CoachSessionLink(c, widget.app.openUrl),
+          null => null,
+        },
+      ),
       _ => ProfileTab(
         profile: snap?.profile,
         today: DateTime.utc(generated.year, generated.month, generated.day),

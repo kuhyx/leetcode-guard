@@ -1,5 +1,6 @@
 /// The Coach tab's cluster cards: one per cluster, with progress, the next
-/// problem and every problem as a link to its LeetCode page.
+/// problem and every problem as a link to its LeetCode page; with a coach
+/// relay, each problem and the next one also get a Start.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/problem_url.dart';
+import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
@@ -25,8 +27,9 @@ List<MapEntry<String, ClusterProgress?>> _ordered(
 /// with its problems as links; or one card saying why there are none.
 List<Widget> clusterCards(
   Map<String, ClusterProgress?>? clusters,
-  UrlOpener openUrl,
-) {
+  UrlOpener openUrl, [
+  CoachSessionLink? link,
+]) {
   if (clusters == null) return const [SectionCard.unknown(title: 'Clusters')];
   if (clusters.isEmpty) {
     return const [
@@ -34,16 +37,17 @@ List<Widget> clusterCards(
     ];
   }
   return [
-    for (final e in _ordered(clusters)) _Cluster(e.key, e.value, openUrl),
+    for (final e in _ordered(clusters)) _Cluster(e.key, e.value, openUrl, link),
   ];
 }
 
 class _Cluster extends StatelessWidget {
-  const new(this.name, this.progress, this.openUrl);
+  const new(this.name, this.progress, this.openUrl, this.link);
 
   final String name;
   final ClusterProgress? progress;
   final UrlOpener openUrl;
+  final CoachSessionLink? link;
 
   /// The title of the problem the coach would serve next.
   String? get _next {
@@ -59,23 +63,33 @@ class _Cluster extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = progress;
     final next = _next;
+    final nextSlug = p?.next;
+    final link = this.link;
     return SectionCard(
       title: name,
       children: [
         InfoRow('Solved', fraction(p?.solved, p?.total), key: Key('row-$name')),
-        if (next != null) Muted('Next: $next'),
+        if (next != null)
+          Row(
+            children: [
+              Expanded(child: Muted('Next: $next')),
+              if (link != null && nextSlug != null)
+                StartButton(link, nextSlug, keyName: 'start-next-$name'),
+            ],
+          ),
         for (final problem in p?.problems ?? const <ClusterProblem>[])
-          _ClusterProblemTile(problem, openUrl),
+          _ClusterProblemTile(problem, openUrl, link),
       ],
     );
   }
 }
 
 class _ClusterProblemTile extends StatelessWidget {
-  const new(this.problem, this.openUrl);
+  const new(this.problem, this.openUrl, this.link);
 
   final ClusterProblem problem;
   final UrlOpener openUrl;
+  final CoachSessionLink? link;
 
   /// Only a LeetCode problem page opens: the desktop wrapper refuses
   /// anything else, and the URL arrives over the network.
@@ -88,7 +102,9 @@ class _ClusterProblemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final target = _target;
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
+    final link = this.link;
+    final slug = problem.slug;
+    final tile = InkWell(
       key: Key('problem-${problem.slug}'),
       borderRadius: BorderRadius.circular(AppRadius.sm),
       onTap: target == null ? null : () => openUrl(target),
@@ -114,6 +130,14 @@ class _ClusterProblemTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (link == null || slug == null) return tile;
+    return Row(
+      children: [
+        Expanded(child: tile),
+        const SizedBox(width: AppSpacing.sm),
+        StartButton(link, slug),
+      ],
     );
   }
 }

@@ -5,11 +5,13 @@
 /// reads a file on this machine (the exporter's copy, or a `--fixture`), so
 /// the browser holds no credential and nothing here reads Firebase.
 /// `POST /open` hands a problem page to the system browser (`open_route`).
+/// `/coach/*` goes to the coach relay on loopback (`coach_proxy`).
 /// Bound to loopback only.
 library;
 
 import 'dart:io';
 
+import 'package:leetcode_guard/desktop/coach_proxy.dart';
 import 'package:leetcode_guard/desktop/open_route.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
@@ -25,9 +27,16 @@ const kWrapperPort = 8776;
 /// Serves [webRoot], [kSnapshotPath] and [kHeartbeatPath] from [source],
 /// and [kOpenPath] through [open].
 class WrapperServer {
-  /// Creates a server; [open] defaults to [xdgOpen].
-  new({required this.webRoot, required this.source, UrlLauncher? open})
-    : open = open ?? xdgOpen;
+  /// Creates a server; [open] defaults to [xdgOpen], [relay] to the coach
+  /// relay on [kRelayPort].
+  new({
+    required this.webRoot,
+    required this.source,
+    UrlLauncher? open,
+    Uri? relay,
+    this.relayTimeout = kRelayTimeout,
+  }) : open = open ?? xdgOpen,
+       relay = relay ?? Uri.parse('http://127.0.0.1:$kRelayPort');
 
   /// The Flutter web build.
   final String webRoot;
@@ -37,6 +46,12 @@ class WrapperServer {
 
   /// Opens a vetted problem URL in the system browser.
   final UrlLauncher open;
+
+  /// The coach relay's loopback origin.
+  final Uri relay;
+
+  /// How long the relay gets per forwarded call.
+  final Duration relayTimeout;
   HttpServer? _server;
 
   /// Starts listening on loopback [port] (0 = any, for tests).
@@ -56,6 +71,13 @@ class WrapperServer {
       final path = request.uri.path;
       if (path == kOpenPath) {
         await handleOpen(request, open);
+      } else if (path.startsWith('/coach/')) {
+        await proxyCoach(
+          request,
+          relay: relay,
+          ownPort: _server!.port,
+          timeout: relayTimeout,
+        );
       } else if (path == kSnapshotPath || path == kHeartbeatPath) {
         await _passThrough(
           response,

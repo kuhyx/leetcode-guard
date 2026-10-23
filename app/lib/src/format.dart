@@ -64,3 +64,10 @@ String isoDate(DateTime day) =>
     '${day.year}-${_two(day.month)}-${_two(day.day)}';
 
 String _two(int n) => n.toString().padLeft(2, '0');
+
+/// Unix-ms [ms] as local "HH:MM", with the date in front unless it is
+/// [now]'s day (the relay's times are all unix ms).
+String timeOfMs(int ms, DateTime now) => asOfDated(
+  DateTime.fromMillisecondsSinceEpoch(ms),
+  now,
+).substring('as of '.length);

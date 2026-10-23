@@ -8,6 +8,7 @@ library;
 import 'dart:io';
 
 import 'package:leetcode_guard/desktop/browser.dart';
+import 'package:leetcode_guard/desktop/coach_proxy.dart';
 import 'package:leetcode_guard/desktop/display_scale.dart';
 import 'package:leetcode_guard/desktop/sources.dart';
 import 'package:leetcode_guard/desktop/wrapper_server.dart';
@@ -26,13 +27,15 @@ typedef ProcessStarter = Future<Process> Function(
   List<String> args,
 );
 
-/// The real starter: a [WrapperServer] on [port] (0 = any, for tests).
+/// The real starter: a [WrapperServer] on [port] (0 = any, for tests),
+/// forwarding `/coach/*` to [relay] (default: the relay on 8777).
 Future<WrapperServer> startWrapper(
   String webRoot,
   SnapshotSource source, {
   int port = kWrapperPort,
+  Uri? relay,
 }) async {
-  final server = WrapperServer(webRoot: webRoot, source: source);
+  final server = WrapperServer(webRoot: webRoot, source: source, relay: relay);
   await server.start(port: port);
   return server;
 }
@@ -106,8 +109,11 @@ Future<void> runDesktop(
 // Production defaults that tests always replace: binding the fixed port (a
 // test must not take it; startWrapper is covered on port 0), waiting a year
 // so the wrapper keeps serving a handed-off window, and writing to stderr.
-Future<void> _serve(String root, SnapshotSource source) =>
-    startWrapper(root, source).then((_) {});
+Future<void> _serve(String root, SnapshotSource source) => startWrapper(
+  root,
+  source,
+  relay: relayFromEnv(Platform.environment),
+).then((_) {});
 
 Future<void> _keepServing() => Future<void>.delayed(const Duration(days: 365));
 

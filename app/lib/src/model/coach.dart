@@ -16,7 +16,9 @@ class CoachProblem {
       maxRung = readString(json['max_rung']),
       revealed = readBool(json['revealed']),
       reqCheck = readString(json['req_check']),
-      day = readString(json['day']);
+      day = readString(json['day']),
+      grades = readObjectMap(json['grades'], StepGradeSummary.fromJson),
+      accepted = readBool(json['accepted']);
 
   /// The problem slug.
   final String? slug;
@@ -38,6 +40,39 @@ class CoachProblem {
 
   /// The session day.
   final String? day;
+
+  /// The latest app session's grades by step name (`constraint`,
+  /// `requirements`, `toolbox`, `postmortem`); null when unknown (a
+  /// CLI-only session), a null entry when that step was never graded.
+  final Map<String, StepGradeSummary?>? grades;
+
+  /// Whether step 4 saw an Accepted in that session; null when unknown.
+  final bool? accepted;
+}
+
+/// One step's grades in a past session (`coach.problems[].grades.*`).
+class StepGradeSummary {
+  /// Parses a summary.
+  new fromJson(Json json)
+    : grade = switch (json['grade']) {
+        final String g when const {'pass', 'partial', 'fail'}.contains(g) => g,
+        _ => null,
+      },
+      attempts = readInt(json['attempts']),
+      forced = readBool(json['forced']),
+      via = readString(json['via']);
+
+  /// The last grade: pass / partial / fail.
+  final String? grade;
+
+  /// How many times the step was graded.
+  final int? attempts;
+
+  /// Whether kuhy continued past it.
+  final bool? forced;
+
+  /// Which grader; `unverified` means it was not checked.
+  final String? via;
 }
 
 /// A re-test that falls due.

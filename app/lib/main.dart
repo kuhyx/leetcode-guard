@@ -4,6 +4,10 @@
 // Everything it wires is tested through LeetGuardApp's injected seams.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:leetcode_guard/src/coach/controller.dart';
+import 'package:leetcode_guard/src/coach/device_id.dart';
+import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
+import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
@@ -34,9 +38,21 @@ void main() {
             databaseUrl: kProject.databaseUrl,
           ),
         );
+  // The coach relay: the wrapper's /coach/* on the desktop, RTDB on the
+  // phone (DOCS-coach-relay.md).
+  final coach = CoachController(
+    transport: kIsWeb
+        ? WrapperCoachTransport(base: Uri.base)
+        : RtdbCoachTransport(
+            open: openFirebase,
+            databaseUrl: kProject.databaseUrl,
+          ),
+    devices: PrefsDeviceId(),
+  );
   runApp(
     LeetGuardApp(
       controller: StatusController(source: source, cache: PrefsSnapshotCache()),
+      coach: coach,
       openUrl: kIsWeb
           ? WrapperUrlOpener(base: Uri.base).call
           : (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
