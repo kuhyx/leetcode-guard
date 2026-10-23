@@ -57,6 +57,7 @@ class _BlockedSession:
 pytest_plugins = [
     "leetcode_guard.tests._debt_fixtures",
     "leetcode_guard.tests._paths_fixture",
+    "leetcode_guard.tests._snapshot_fixtures",
 ]
 
 

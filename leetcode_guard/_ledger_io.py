@@ -27,6 +27,7 @@ from leetcode_guard._ledger import (
     to_json,
     verify,
 )
+from leetcode_guard._push_trigger import request_push
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -172,6 +173,10 @@ def save_ledger(path: Path, ledger: Ledger) -> bool:
     except OSError:
         _logger.exception("could not write the ledger to %s", path)
         return False
+    # Every ledger change republishes the status app's snapshot. A detached
+    # request that cannot wait or raise -- and that imports nothing of the
+    # snapshot, so nothing on this path can ever read it.
+    request_push(path)
     return True
 
 

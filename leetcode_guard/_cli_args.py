@@ -88,6 +88,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Push the ledger to the sync repo and merge other devices in.",
     )
     parser.add_argument(
+        "--push-snapshot",
+        action="store_true",
+        help=(
+            "Publish the status app's snapshot to Firebase once and print the "
+            "outcome. Display only: refreshes the profile mirror at most every "
+            "15 min, never touches the ledger."
+        ),
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Log at DEBUG.",
