@@ -14,7 +14,10 @@ Three things here are easy to get wrong and are pinned deliberately.
 zero, and a ``charge`` proves only that the day was *settled* -- which happens
 from banked credit, from the escape hatch, and from a classified outage.
 ``detail["source"]`` does not discriminate those either, so a charge can never
-stand in for a solve.
+stand in for a solve. It earns ``settled_by_credit`` instead: a ``leetcode``
+charge is written only when verified credits cover the day, so a day paid
+ahead is published beside the solve fact (kuhy, 2026-10-23: working ahead
+must not forfeit the bonus). Escape and outage charges carry other sources.
 
 **The solve time is ``detail["submitted_at"]``, not ``day``.** ``day`` is
 stamped from the *harvesting* run's today (``_ledger_entries.credit_entry``),
@@ -41,7 +44,7 @@ from gatelock.log_integrity import DEFAULT_HMAC_KEY_FILE, verify_entry_hmac
 
 from leetcode_guard._constants import LEDGER_FILE
 from leetcode_guard._daycost import local_now, local_today, parse_day
-from leetcode_guard._ledger import CREDIT
+from leetcode_guard._ledger import CHARGE, CREDIT, SOURCE_LEETCODE
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,12 +63,15 @@ class SolvedToday:
         solved: Whether at least one accepted submission landed today.
         count: How many accepted submissions landed today.
         reason: A human-readable account, for logs and the status payload.
+        settled_by_credit: Whether today's charge was paid from verified
+            credits, which earns the bonus like a solve.
     """
 
     checked: bool
     solved: bool
     count: int
     reason: str
+    settled_by_credit: bool = False
 
 
 def _unchecked(reason: str) -> SolvedToday:
@@ -181,20 +187,28 @@ def solved_today(
 
     count = 0
     forged = 0
+    settled = False
     for row in rows:
-        if not isinstance(row, dict) or row.get("kind") != CREDIT:
+        if not isinstance(row, dict) or row.get("kind") not in {CREDIT, CHARGE}:
             continue
         if not verify_entry_hmac(row, key_file=target_key):
             forged += 1
             continue
-        if _landed_today(row, window=(window_start, window_end), today_key=today_key):
+        if row["kind"] == CHARGE:
+            detail = row.get("detail")
+            settled = settled or (
+                row.get("day") == today_key
+                and isinstance(detail, dict)
+                and detail.get("source") == SOURCE_LEETCODE
+            )
+        elif _landed_today(row, window=(window_start, window_end), today_key=today_key):
             count += 1
 
     if forged:
-        # Loud, but not fatal: a forged credit is simply not counted, exactly
+        # Loud, but not fatal: a forged row is simply not counted, exactly
         # as the balance table treats it.
         _logger.error(
-            "%d ledger credit(s) failed their signature check and were ignored",
+            "%d ledger row(s) failed their signature check and were ignored",
             forged,
         )
 
@@ -208,6 +222,7 @@ def solved_today(
             if count
             else "no accepted submission recorded today"
         ),
+        settled_by_credit=settled,
     )
 
 

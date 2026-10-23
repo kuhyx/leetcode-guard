@@ -89,6 +89,7 @@ class TestPayloads:
                 "solved_today": True,
                 "solves_today": 2,
                 "checked": True,
+                "settled_by_credit": False,
                 "reason": "2 today",
             }
         }

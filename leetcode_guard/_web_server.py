@@ -53,6 +53,7 @@ def build_status_payload() -> dict[str, Any]:
             "solved_today": answer.solved,
             "solves_today": answer.count,
             "checked": answer.checked,
+            "settled_by_credit": answer.settled_by_credit,
             "reason": answer.reason,
         },
     }
