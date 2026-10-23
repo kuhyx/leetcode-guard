@@ -18,8 +18,15 @@ loopback endpoint served by `leetcode-guard-web.service`:
 
 ```bash
 curl -s http://127.0.0.1:8771/api/status | jq .leetcode
-# {"solved_today": true, "solves_today": 2, "checked": true, "reason": "..."}
+# {"solved_today": true, "solves_today": 2, "checked": true,
+#  "settled_by_credit": true, "reason": "..."}
 ```
+
+**A day paid ahead earns too** (2026-10-23). `settled_by_credit` is true when
+today's charge is signed and sourced `leetcode`, which `_gate.decide` writes
+only when verified credits cover the day; escape and outage charges carry
+other sources. Every consumer pays the bonus on `solved_today` *or*
+`settled_by_credit` (`earned_time` >= 0.17.0 reads the charge row itself).
 
 Read-only, loopback-only, and it publishes a *fact* — never a number of hours.
 The enforcer owns the hour values, the same split `screen-locker` uses for the
