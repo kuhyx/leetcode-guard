@@ -10,8 +10,7 @@ environment:
 # Exact pins, newest stable (dependency-freshness gate).
 dependencies:
   # Firebase REST client + the per-device account blob. Phone only: the
-  # desktop wrapper does the Firebase read itself, so the browser never
-  # holds a credential.
+  # desktop reads the exporter's local file and never touches Firebase.
   crdt_sync:
     git:
       url: https://github.com/kuhyx/utils

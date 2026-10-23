@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=LeetCode Guard
+GenericName=LeetCode gate status
+Comment=Read-only view of the leetcode-guard gate, coach and profile
+Exec=@LAUNCHER@
+Icon=@ICON@
+Terminal=false
+Categories=Utility;
+StartupNotify=true
+StartupWMClass=leetcode-guard-app

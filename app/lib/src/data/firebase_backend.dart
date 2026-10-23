@@ -13,8 +13,9 @@
 /// * The account email and password are entered once per device on the
 ///   shared Sync settings screen and kept in the OS keystore.
 ///
-/// Nothing here reads `~/.config/crdt-sync/`: that is the desktop wrapper's
-/// half (`lib/desktop/sources.dart`). On Android there is no such file.
+/// Nothing here reads `~/.config/crdt-sync/`; on Android there is no such
+/// file. The desktop never reads Firebase at all: its wrapper serves the
+/// exporter's local file (`lib/desktop/sources.dart`).
 library;
 
 import 'package:crdt_sync/crdt_sync.dart';

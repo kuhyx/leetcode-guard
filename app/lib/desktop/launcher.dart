@@ -37,7 +37,7 @@ Future<WrapperServer> startWrapper(
 }
 
 /// The file after `--fixture`, or null. Dev only: serves that snapshot
-/// instead of Firebase, for screenshots and offline checks.
+/// instead of the exporter's file, for screenshots and offline checks.
 String? fixtureArg(List<String> args) {
   final at = args.indexOf('--fixture');
   return at >= 0 && at + 1 < args.length ? args[at + 1] : null;
@@ -54,7 +54,10 @@ String resolveWebRoot({required String exeDir, required String cwd}) {
 
 /// Runs the desktop app: serve, then open the app window and stay alive.
 ///
-/// `--serve-only` skips the window; `--fixture <file>` swaps the source.
+/// `--serve-only` skips the window; `--window-only` skips serving (the
+/// launcher script started the wrapper already); `--fixture <file>` swaps
+/// the source. Only a process that is serving stays alive after its
+/// window closes: one that found the port taken has nothing to keep up.
 Future<void> runDesktop(
   List<String> args, {
   required String home,
@@ -66,16 +69,19 @@ Future<void> runDesktop(
   Future<void> Function() hold = _keepServing,
   void Function(String line) err = _stderr,
 }) async {
-  final webRoot = resolveWebRoot(exeDir: exeDir, cwd: cwd);
-  final fixture = fixtureArg(args);
-  final source = fixture == null
-      ? crdtSyncSource(home)
-      : FileSnapshotSource(File(fixture));
-  try {
-    await startServer(webRoot, source);
-  } on SocketException {
-    // Already serving: just open another window onto it.
-    err('leetcode-guard app: already running on :$kWrapperPort');
+  var serving = false;
+  if (!args.contains('--window-only')) {
+    final fixture = fixtureArg(args);
+    final source = fixture == null
+        ? LocalSnapshotSource(localSnapshotFile(home))
+        : FileSnapshotSource(File(fixture));
+    try {
+      await startServer(resolveWebRoot(exeDir: exeDir, cwd: cwd), source);
+      serving = true;
+    } on SocketException {
+      // Already serving: just open another window onto it.
+      err('leetcode-guard app: already running on :$kWrapperPort');
+    }
   }
   if (args.contains('--serve-only')) return;
   final browser = browserFinder();
@@ -88,7 +94,7 @@ Future<void> runDesktop(
   }
   final process = await startProcess(browser, browserArgs(home));
   await process.exitCode;
-  await hold();
+  if (serving) await hold();
 }
 
 // coverage:ignore-start

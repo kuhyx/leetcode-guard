@@ -1,13 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:leetcode_guard/desktop/browser.dart';
 import 'package:leetcode_guard/desktop/launcher.dart';
+import 'package:leetcode_guard/desktop/open_route.dart';
 import 'package:leetcode_guard/desktop/sources.dart';
 import 'package:leetcode_guard/desktop/wrapper_server.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
+import 'package:leetcode_guard/src/model/snapshot.dart';
 
 class _FakeProcess implements Process {
   @override
@@ -41,45 +42,38 @@ void main() {
     expect(await source.heartbeat(), isNull);
   });
 
-  test('the live source reads the shared crdt-sync credential', () async {
-    final dir = Directory('${tmp.path}/.config/crdt-sync')
-      ..createSync(recursive: true);
-    File('${dir.path}/firebase.json').writeAsStringSync(
-      '{"apiKey": "k", "databaseUrl": "https://db.example", '
-      '"projectId": "p", "uid": "u", "email": "e@x"}',
+  test('the live source is the exporter file under ~/.local/share', () {
+    expect(
+      localSnapshotFile('/home/k').path,
+      '/home/k/.local/share/leetcode_guard/snapshot.json',
     );
-    File('${dir.path}/password').writeAsStringSync('pw\n');
-    final asked = <String>[];
-    final source = crdtSyncSource(
-      tmp.path,
-      httpClient: MockClient((r) async {
-        asked.add(r.url.path);
-        if (r.url.host == 'identitytoolkit.googleapis.com') {
-          expect(r.body, contains('pw'));
-          return http.Response(
-            '{"idToken": "t", "refreshToken": "r", "expiresIn": "3600", '
-            '"localId": "u"}',
-            200,
-          );
-        }
-        return http.Response('{"schema": 1}', 200);
-      }),
-    );
-    expect(await source.fetch(), '{"schema": 1}');
-    expect(asked.last, '/leetcode-guard/status.json');
-    expect(await source.heartbeat(), '{"schema": 1}');
-    expect(asked.last, '/leetcode-guard/heartbeat.json');
   });
 
-  test('a missing credential is unavailable, naming the file', () async {
-    final source = crdtSyncSource(tmp.path);
+  test('the local source reads the file and beats with its mtime', () async {
+    final file = File('${tmp.path}/snapshot.json');
+    final source = LocalSnapshotSource(file);
+    // Not exported yet: nothing published, no heartbeat.
+    expect(await source.fetch(), isNull);
+    expect(await source.heartbeat(), isNull);
+    file.writeAsStringSync('{"schema": 1}');
+    final written = DateTime.utc(2026, 10, 23, 12, 5, 7);
+    file.setLastModifiedSync(written);
+    expect(await source.fetch(), '{"schema": 1}');
+    final beat = await source.heartbeat();
+    expect(parseHeartbeat(beat), written);
+    expect(jsonDecode(beat!), isA<String>());
+  });
+
+  test('an unreadable local file is unavailable, naming it', () async {
+    final dir = Directory('${tmp.path}/snapshot.json')..createSync();
+    final source = LocalSnapshotSource(File(dir.path));
     await expectLater(
       source.fetch(),
       throwsA(
         isA<SnapshotUnavailable>().having(
           (e) => e.message,
           'message',
-          contains('crdt-sync'),
+          contains('snapshot.json'),
         ),
       ),
     );
@@ -104,6 +98,25 @@ void main() {
     );
     expect(findBrowser(override: '', exists: (_) => false), '');
     expect(findBrowser(exists: (_) => false), '');
+  });
+
+  test('the window resolves loopback only and uses no proxy', () {
+    final args = browserArgs('/home/k');
+    // One argv element, no shell quotes: Process.start passes it verbatim.
+    // `localhost` must be excluded by name: `MAP *` matches it before the
+    // 127.0.0.1 exclusion is consulted, and the app's origin is localhost.
+    expect(
+      args,
+      contains(
+        '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, '
+        'EXCLUDE 127.0.0.1',
+      ),
+    );
+    expect(args, contains('--no-proxy-server'));
+    // Chrome flags the resolver rules as "unsupported" with an infobar
+    // across the top of the window on every launch; --test-type hides it.
+    expect(args, contains('--test-type'));
+    expect(args.where((a) => a.contains('"') || a.contains("'")), isEmpty);
   });
 
   test('browserArgs pin the profile, origin and WM_CLASS', () {
@@ -146,7 +159,7 @@ void main() {
   }
 
   test('runDesktop serves, opens the window and holds', () async {
-    expect(await run([]), ['serve LiveSnapshotSource', 'open /b', 'hold']);
+    expect(await run([]), ['serve LocalSnapshotSource', 'open /b', 'hold']);
   });
 
   test('--fixture serves the file instead of Firebase', () async {
@@ -159,7 +172,26 @@ void main() {
   test('an already running wrapper just opens another window', () async {
     final log = await run([], busy: true);
     expect(log, contains('open /b'));
+    // Not ours to keep alive: the running wrapper does the serving.
+    expect(log, isNot(contains('hold')));
     expect(log.last, contains('already running'));
+  });
+
+  test('--window-only opens a window onto the running wrapper', () async {
+    expect(await run(['--window-only']), ['open /b']);
+  });
+
+  test('xdgOpen hands the URL over detached, as one argument', () async {
+    final calls = <String>[];
+    await xdgOpen(
+      'https://leetcode.com/problems/two-sum/',
+      start: (exe, args, {mode = ProcessStartMode.normal}) async {
+        calls.add('$exe ${args.length} ${args.join('|')} $mode');
+        return _FakeProcess();
+      },
+    );
+    const url = 'https://leetcode.com/problems/two-sum/';
+    expect(calls, ['xdg-open 1 $url ${ProcessStartMode.detached}']);
   });
 
   test('no browser: says where to point one', () async {

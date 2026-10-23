@@ -1,14 +1,19 @@
-/// The desktop half of the app: serves the web build and the snapshot.
+/// The desktop half of the app: serves the web build, the snapshot and the
+/// one action the page needs a hand with.
 ///
-/// `/snapshot.json` is answered by a [SnapshotSource] running here, in the
-/// wrapper, so the browser never holds the Firebase credential. Bound to
-/// loopback only.
+/// `/snapshot.json` and `/heartbeat.json` come from a [SnapshotSource] that
+/// reads a file on this machine (the exporter's copy, or a `--fixture`), so
+/// the browser holds no credential and nothing here reads Firebase.
+/// `POST /open` hands a problem page to the system browser (`open_route`).
+/// Bound to loopback only.
 library;
 
 import 'dart:io';
 
+import 'package:leetcode_guard/desktop/open_route.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:path/path.dart' as p;
 
 /// Fixed on purpose: the origin keys the Chrome profile's localStorage (the
@@ -17,16 +22,21 @@ import 'package:path/path.dart' as p;
 /// (screen-locker workout-poke).
 const kWrapperPort = 8776;
 
-/// Serves [webRoot], [kSnapshotPath] and [kHeartbeatPath] from [source].
+/// Serves [webRoot], [kSnapshotPath] and [kHeartbeatPath] from [source],
+/// and [kOpenPath] through [open].
 class WrapperServer {
-  /// Creates a server.
-  new({required this.webRoot, required this.source});
+  /// Creates a server; [open] defaults to [xdgOpen].
+  new({required this.webRoot, required this.source, UrlLauncher? open})
+    : open = open ?? xdgOpen;
 
   /// The Flutter web build.
   final String webRoot;
 
-  /// Where the snapshot comes from (Firebase, or a `--fixture` file).
+  /// Where the snapshot comes from (the local file, or a `--fixture`).
   final SnapshotSource source;
+
+  /// Opens a vetted problem URL in the system browser.
+  final UrlLauncher open;
   HttpServer? _server;
 
   /// Starts listening on loopback [port] (0 = any, for tests).
@@ -44,7 +54,9 @@ class WrapperServer {
     final response = request.response;
     try {
       final path = request.uri.path;
-      if (path == kSnapshotPath || path == kHeartbeatPath) {
+      if (path == kOpenPath) {
+        await handleOpen(request, open);
+      } else if (path == kSnapshotPath || path == kHeartbeatPath) {
         await _passThrough(
           response,
           path == kSnapshotPath ? source.fetch : source.heartbeat,
