@@ -195,10 +195,11 @@ unfixable = []
 # The /leetcode coach (moved from ~/.claude/skills/leetcode, 2026-10-23). Every
 # one of these modules is a command line or a hook whose printed text IS its
 # interface: the REPL session, the offline session, the card builder's table,
-# the statement fetcher, the eval verdict table, and the Stop hook's one JSON
-# decision line. T201 is auto-fixable under --unsafe-fixes, so without these
-# entries the fixer deletes those prints and still exits 0 -- the trap that
-# gutted cmd_probe and _login.py. Their tests assert on stdout.
+# the statement fetcher, the eval verdict table, `leetcode report`'s rows,
+# and the Stop hook's one JSON decision line. T201 is auto-fixable under
+# --unsafe-fixes, so without these entries the fixer deletes those prints
+# and still exits 0 -- the trap that gutted cmd_probe and _login.py. Their
+# tests assert on stdout.
 "leetcode_coach/leetcode_repl.py" = ["T201"]
 "leetcode_coach/local_session.py" = ["T201"]
 "leetcode_coach/make_cards.py" = ["T201"]
@@ -207,6 +208,7 @@ unfixable = []
 "leetcode_coach/stop_gate.py" = ["T201"]
 "leetcode_coach/cluster_cli.py" = ["T201"]
 "leetcode_coach/toolbox_cards.py" = ["T201"]
+"leetcode_coach/report.py" = ["T201"]
 # S310 (urlopen scheme audit): all three open a fixed literal URL --
 # AnkiConnect on 127.0.0.1, LeetCode's https GraphQL endpoint, and Ollama on
 # localhost, where http_json additionally refuses any URL off OLLAMA_URL. They

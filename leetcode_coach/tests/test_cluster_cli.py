@@ -235,7 +235,7 @@ def test_repl_main_dispatches_cluster_commands(
 
     handed: list[str] = []
 
-    def fake_local(slug: str, *_rest: object) -> int:
+    def fake_local(slug: str, *_rest: object, **_kw: object) -> int:
         handed.append(slug)
         return 0
 
