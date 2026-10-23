@@ -52,7 +52,7 @@ include = ["leetcode_guard*", "leetcode_coach*"]
 
 [tool.setuptools.package-data]
 # The skill body and the launcher are read/executed from the package dir.
-leetcode_coach = ["SKILL.md", "leetcode"]
+leetcode_coach = ["SKILL.md", "leetcode", "*.json"]
 
 [tool.ruff]
 target-version = "py314"
@@ -202,6 +202,8 @@ unfixable = []
 "leetcode_coach/fetch_problem.py" = ["S310", "T201"]
 "leetcode_coach/eval_local.py" = ["T201"]
 "leetcode_coach/stop_gate.py" = ["T201"]
+"leetcode_coach/cluster_cli.py" = ["T201"]
+"leetcode_coach/toolbox_cards.py" = ["T201"]
 # S310 (urlopen scheme audit): all three open a fixed literal URL --
 # AnkiConnect on 127.0.0.1, LeetCode's https GraphQL endpoint, and Ollama on
 # localhost, where http_json additionally refuses any URL off OLLAMA_URL. They
