@@ -111,6 +111,14 @@ class WrapperCoachTransport implements CoachTransport {
     }
   }
 
+  static Object? _decodeOrNull(String body) {
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+  }
+
   static CoachUnavailable _unreadable() => const CoachUnavailable(
     CoachOutage.network,
     'Unreadable reply from the coach relay',
@@ -122,9 +130,14 @@ class WrapperCoachTransport implements CoachTransport {
       return const CoachUnavailable(CoachOutage.relayDown, kRelayDownText);
     }
     if (code == 400 || code == 413 || code == 415) {
+      // The relay words its refusal; the wrapper's own 413 has no body.
+      final why = switch (_decodeOrNull(res.body)) {
+        {'error': final String error} => ': $error',
+        _ => ' (HTTP $code)',
+      };
       return CoachUnavailable(
         CoachOutage.rejected,
-        'The relay refused the request (HTTP $code)',
+        'The relay refused the request$why',
       );
     }
     return CoachUnavailable(CoachOutage.network, 'Coach relay HTTP $code');

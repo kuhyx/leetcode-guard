@@ -17,8 +17,14 @@ const kRelayPort = 8777;
 /// A coach request body larger than this is refused unread.
 const int kMaxCoachBody = 16 * 1024;
 
-/// How long the relay gets to answer one forwarded call.
-const kRelayTimeout = Duration(seconds: 30);
+/// How long the relay gets to answer one forwarded call: the relay's own
+/// cap on a whole request (280 s, `DOCS-coach-relay.md` §1). No `/coach/*`
+/// route waits on a coach turn today (a POST answers 202 at once, the GETs
+/// read published copies; `tool/coach_live_check.sh slow` checks it), so
+/// this is headroom: a route that ever did wait must not be cut off while
+/// the relay is still working. The cost: a relay that accepts and never
+/// answers holds one poll this long before the 504.
+const kRelayTimeout = Duration(seconds: 280);
 
 /// The contract's answer when the relay is not listening.
 const kRelayDownBody =
@@ -69,26 +75,34 @@ Future<void> proxyCoach(
   );
   final client = HttpClient()..connectionTimeout = timeout;
   try {
-    final out = await client.openUrl(request.method, target);
-    if (request.headers.contentType case final ContentType type) {
-      out.headers.contentType = type;
+    final HttpClientResponse answer;
+    try {
+      final out = await client.openUrl(request.method, target);
+      if (request.headers.contentType case final ContentType type) {
+        out.headers.contentType = type;
+      }
+      out
+        ..contentLength = body.length
+        ..add(body);
+      answer = await out.close().timeout(timeout);
+    } on IOException {
+      // Refused (not listening) or dropped before its headers (restarting):
+      // either way the service is not there, and the page says how to start
+      // it. Nothing has been written yet, so the status can still be set.
+      response
+        ..statusCode = HttpStatus.badGateway
+        ..headers.contentType = ContentType.json
+        ..write(kRelayDownBody);
+      return;
+    } on TimeoutException {
+      response.statusCode = HttpStatus.gatewayTimeout;
+      return;
     }
-    out
-      ..contentLength = body.length
-      ..add(body);
-    final answer = await out.close().timeout(timeout);
     response.statusCode = answer.statusCode;
     if (answer.headers.contentType case final ContentType type) {
       response.headers.contentType = type;
     }
     await response.addStream(answer);
-  } on SocketException {
-    response
-      ..statusCode = HttpStatus.badGateway
-      ..headers.contentType = ContentType.json
-      ..write(kRelayDownBody);
-  } on TimeoutException {
-    response.statusCode = HttpStatus.gatewayTimeout;
   } finally {
     client.close(force: true);
   }

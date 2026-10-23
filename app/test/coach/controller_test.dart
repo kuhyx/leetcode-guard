@@ -198,11 +198,26 @@ void main() {
     expect(c.gradeText(1, ''), isFalse);
     expect(c.gradePicks(const []), isFalse);
     expect(c.gradePicks(List.filled(kMaxPicks + 1, 'a')), isFalse);
-    expect(c.runCode('m0001', '   '), isFalse);
+    expect(c.runCode('   '), isFalse);
     expect(c.endSession(), isTrue);
     await settle();
     expect(c.state!.session!.endReason, 'ended');
     expect(c.sid, isNull);
+  });
+
+  test('step 3 sends only names the toolbox offers: a stale pick has no '
+      'checkbox to clear, so it would be refused forever', () async {
+    await start();
+    expect(c.gradeText(1, 'O(1) extra space'), isTrue);
+    await settle();
+    expect(c.gradeText(2, 'pairs cancel\nindices 0..n'), isTrue);
+    await settle();
+    expect(c.state!.step, 3);
+    expect(c.gradePicks(const ['renamed tool']), isFalse);
+    expect(c.gradePicks(const ['renamed tool', 'XOR']), isTrue);
+    await settle();
+    expect(transport.relay.ran.last.$2['picks'], ['XOR']);
+    expect(c.failure, isNull);
   });
 
   test('code helpers', () {

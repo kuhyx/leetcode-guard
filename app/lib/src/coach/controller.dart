@@ -79,7 +79,6 @@ class CoachController extends ChangeNotifier {
   RelayFailure? failure;
 
   final Map<int, Json> _grades = {};
-  final Map<String, RunReport> _runs = {};
   String? _dev;
   bool _beatRead = false;
   DateTime? _cooldownUntil;
@@ -120,9 +119,6 @@ class CoachController extends ChangeNotifier {
 
   /// The data of step [n]'s last grade this session (cards for step 5).
   Json? gradeData(int n) => _grades[n];
-
-  /// The `run_code` report for chat message [key].
-  RunReport? runReport(String key) => _runs[key];
 
   /// A coach screen became visible: poll while at least one is.
   void attach() {
@@ -212,7 +208,6 @@ class CoachController extends ChangeNotifier {
       final next = await transport.state();
       if (next?.session?.id != state?.session?.id) {
         messages.clear();
-        _runs.clear();
         _grades.removeWhere((_, data) => data['session'] != next?.session?.id);
       }
       state = next;

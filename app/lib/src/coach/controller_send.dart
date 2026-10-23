@@ -20,15 +20,9 @@ const kBeatIdle = Duration(seconds: 30);
 extension CoachSending on CoachController {
   /// Sends request [kind] with [body] under a fresh rid; false when an
   /// action is not allowed right now.
-  bool send(String kind, Json body, {String? runKey}) {
+  bool send(String kind, Json body) {
     if (!canAct) return false;
-    final p = PendingRequest(
-      _ulid.next(),
-      kind,
-      body,
-      sentAt: now(),
-      runKey: runKey,
-    );
+    final p = PendingRequest(_ulid.next(), kind, body, sentAt: now());
     pending = p;
     failure = null;
     _changed();
@@ -101,8 +95,6 @@ extension CoachSending on CoachController {
     } else if (p.kind == 'grade_step') {
       final n = readInt(r.data['step']) ?? readInt(p.body['step']) ?? 0;
       _grades[n] = {...r.data, 'session': p.body['session']};
-    } else if (p.runKey case final String key) {
-      _runs[key] = RunReport.fromJson(r.data);
     }
     await _sync();
     _changed();

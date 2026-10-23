@@ -46,7 +46,6 @@ class MessageBubble extends StatelessWidget {
     }
     final mine = m.role == 'kuhy';
     final code = looksLikeCode(m.text);
-    final report = controller.runReport(m.key);
     final c = controller;
     final canRun = c.canAct && c.sid != null && (c.state?.codeOpen ?? false);
     return Align(
@@ -71,44 +70,14 @@ class MessageBubble extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               TextButton.icon(
                 key: Key('run-${m.key}'),
-                onPressed: canRun ? () => c.runCode(m.key, m.text) : null,
+                onPressed: canRun ? () => c.runCode(m.text) : null,
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('Run code'),
               ),
             ],
-            if (report != null) _RunLines(report),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _RunLines extends StatelessWidget {
-  const new(this.report);
-
-  final RunReport report;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = statusColors(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final e in report.examples)
-          Row(
-            children: [
-              Icon(
-                e.ok ? Icons.check : Icons.close,
-                size: 20,
-                color: e.ok ? colors.success : colors.danger,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(e.line)),
-            ],
-          ),
-        if (report.errorText case final String error) Line(error),
-      ],
     );
   }
 }

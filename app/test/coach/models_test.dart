@@ -46,24 +46,6 @@ void main() {
     expect(r.data, isEmpty);
   });
 
-  test('run reports: the line, and every error in words', () {
-    final r = RunReport.fromJson({
-      'examples': [
-        {'n': 1, 'ok': true, 'got': '3', 'expected': '3'},
-        <String, Object?>{},
-      ],
-    });
-    expect(r.examples.first.line, 'example 1: got 3, expected 3');
-    expect(r.examples.last.line, 'example ?: got ?, expected ?');
-    expect(r.errorText, isNull);
-    String? text(String code) => RunReport.fromJson({'error': code}).errorText;
-    expect(text('timeout'), contains('timed out'));
-    expect(text('node_missing'), contains('node'));
-    expect(text('no_examples'), contains('no examples'));
-    expect(text('syntax'), contains('parse'));
-    expect(text('boom'), 'The run failed: boom');
-  });
-
   test('a pending request words each phase', () {
     final p = PendingRequest('r', 'chat', const {}, sentAt: DateTime(2026));
     expect(p.text, contains('Queued'));

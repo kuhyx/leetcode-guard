@@ -4,8 +4,11 @@
 /// forwards `/coach/*` to an in-process fake relay (the tests' own
 /// `FakeRelay`, spoken over the contract's HTTP API). The relay is seeded
 /// mid-session on Missing Number: step 1 passed on the second try, step 2
-/// passed, step 3 open with one partial grade, and a chat with a hint and a
-/// pasted code message. Never touches 8776 / 8777 or any real data.
+/// passed, step 3 open with one partial grade (an alternative plus two
+/// extras, partial under the real toolbox rules), and a chat with a hint
+/// and a pasted code message. The HTTP side answers as `relay/http_api.py`
+/// does: 202 or the stored result on POST, 404 for a rid it never saw.
+/// Never touches 8776 / 8777 or any real data.
 ///
 /// Usage: `dart run tool/coach_screenshot_server.dart [port-file]`
 /// (prints, and writes to port-file, the wrapper port; serves until killed).
@@ -43,7 +46,7 @@ FakeRelay _seeded() {
   run('chat', {'text': _code});
   run('grade_step', {
     'step': 3,
-    'picks': ['XOR self-cancellation', 'Gauss sum', 'Hash set'],
+    'picks': ['sum / difference', 'hash set', 'sorting'],
   });
   return relay;
 }
@@ -64,12 +67,22 @@ Future<HttpServer> _serveRelay(FakeRelay relay) async {
     if (req.method == 'POST' && path == '/coach/requests') {
       final r = jsonDecode(await utf8.decoder.bind(req).join()) as Map;
       final rid = r['rid'] as String;
+      if (relay.done[rid] case final Map<String, Object?> done) {
+        return await _answer(req, done);
+      }
       queued[rid] = r.cast<String, Object?>();
       return await _answer(req, {'rid': rid}, status: 202);
     }
     if (path.startsWith('/coach/requests/')) {
       final rid = path.substring('/coach/requests/'.length);
       final r = queued.remove(rid);
+      if (r == null && !relay.done.containsKey(rid)) {
+        return await _answer(req, {
+          'ok': false,
+          'code': 'unknown_rid',
+          'error': 'no such request',
+        }, status: 404);
+      }
       final done = r == null
           ? relay.done[rid]
           : relay.handle(rid, r['kind']! as String, (r['body']! as Map).cast());
