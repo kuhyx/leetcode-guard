@@ -51,8 +51,8 @@ re-runs it). `retry:true` errors are resent by the user as a NEW rid.
 backoff, fresh token on `auth_revoked`, `cancel` fatal); rescans every 60 s and at startup. Done-map
 `~/.local/share/leetcode-coach/relay/requests_done.jsonl` (30 d): a rid found there gets its stored result re-PUT.
 Cleanup: DELETE `requests/{rid}` 24 h after its result (desktop results: forgotten after 24 h). Caps: coach turn
-(`claude -p`) 240 s, its local fallback 240 s; grader 50 s on haiku, then 200 s on Ollama. These per-call caps are the
-only ones (no 280 s watchdog: a request is never abandoned mid-model-call); a failed turn answers `model_error`.
+(`claude -p`) 240 s; grader 50 s on haiku, then 200 s on Ollama; whole request 280 s, then `model_error` (a coach turn
+gets what is left of the 280 s, at most 240 s).
 
 **PC offline.** The phone polls `heartbeat` every 5 s while the Coach tab is visible with a live session, every 30 s
 while visible otherwise, never in the background. Offline = `phone_now - beat > 120 s` (spec: 2 min): F greys the
