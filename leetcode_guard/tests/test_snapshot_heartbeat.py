@@ -19,10 +19,19 @@ from leetcode_guard._snapshot_dedup import (
     read_pushed_hash,
     write_pushed_hash,
 )
-from leetcode_guard._snapshot_push import HEARTBEAT_PATH, SNAPSHOT_PATH, push_snapshot
+from leetcode_guard._snapshot_push import (
+    HEARTBEAT_PATH,
+    SNAPSHOT_PATH,
+    STATUS_HASH_PATH,
+    push_snapshot,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+FULL_WRITE = [SNAPSHOT_PATH, STATUS_HASH_PATH, HEARTBEAT_PATH]
+"""The order of a content-changing push: status, its hash, then the beat."""
 
 
 class FakeStore:
@@ -57,10 +66,10 @@ def test_first_push_writes_the_snapshot_then_the_heartbeat(data_dir: Path):
 
     result = push_snapshot(snap(1), connect=lambda: store)
 
-    assert [path for path, _ in store.writes] == [SNAPSHOT_PATH, HEARTBEAT_PATH]
+    assert [path for path, _ in store.writes] == FULL_WRITE
     assert HEARTBEAT_PATH == "leetcode-guard/heartbeat"
     assert json.loads(store.writes[0][1])["generated_at"].endswith("15:01:00+02:00")
-    assert store.writes[1][1] == "2026-10-23T15:01:00+02:00"
+    assert store.writes[2][1] == "2026-10-23T15:01:00+02:00"
     assert result.pushed
     assert "heartbeat" in result.reason
 
@@ -82,7 +91,7 @@ def test_changed_content_writes_the_snapshot_again(data_dir: Path):
 
     push_snapshot(snap(2, credits_=5), connect=lambda: store)
 
-    assert [path for path, _ in store.writes] == [SNAPSHOT_PATH, HEARTBEAT_PATH]
+    assert [path for path, _ in store.writes] == FULL_WRITE
 
 
 def test_a_failed_snapshot_write_records_nothing_and_beats_nothing(data_dir: Path):
@@ -96,7 +105,7 @@ def test_a_failed_snapshot_write_records_nothing_and_beats_nothing(data_dir: Pat
     assert read_pushed_hash() is None
     retry = FakeStore()
     push_snapshot(snap(2), connect=lambda: retry)
-    assert [path for path, _ in retry.writes] == [SNAPSHOT_PATH, HEARTBEAT_PATH]
+    assert [path for path, _ in retry.writes] == FULL_WRITE
 
 
 def test_a_failed_heartbeat_is_reported(

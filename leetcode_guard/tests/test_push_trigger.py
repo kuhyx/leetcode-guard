@@ -49,6 +49,7 @@ SNAPSHOT_SIDE = (
     "_snapshot",
     "_snapshot_auth",
     "_snapshot_dedup",
+    "_snapshot_local",
     "_snapshot_projection",
     "_snapshot_push",
     "_snapshot_rtdb",
@@ -103,6 +104,21 @@ def test_every_snapshot_module_is_named_in_the_boundary():
     }
 
     assert on_disk == set(SNAPSHOT_SIDE)
+
+
+def test_no_deciding_module_names_the_local_snapshot_file():
+    """The desktop app's file is display-only, like ``progress_cache.json``.
+
+    The import walk above cannot see a module that rebuilds the path from
+    ``DATA_DIR`` itself, so the sources of everything a decider reaches are
+    searched for the file name and the constant too.
+    """
+    from leetcode_guard._snapshot_local import LOCAL_SNAPSHOT_FILE
+
+    for name in _closure(DECIDING):
+        source = (PACKAGE / f"{name}.py").read_text(encoding="utf-8")
+        assert LOCAL_SNAPSHOT_FILE.name not in source, name
+        assert "LOCAL_SNAPSHOT_FILE" not in source, name
 
 
 def test_the_trigger_imports_only_constants():

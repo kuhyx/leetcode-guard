@@ -69,17 +69,14 @@ def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _no_live_progress(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stub the status surfaces' one network call to "nothing known".
+    """Stub the CLI's one live progress fetch to "nothing known".
 
-    The window starts it on a worker thread, where the network rail above
-    would only surface as a logged exception; ``--sync`` and ``--status --by``
-    make it inline. Tests about the fetch itself rebind these explicitly.
+    ``--sync`` and ``--status --by`` make it inline. Tests about the fetch
+    itself rebind it explicitly.
     """
     import leetcode_guard._cli_commands as cli_commands
-    import leetcode_guard._status_fetch as status_fetch
 
-    for module in (cli_commands, status_fetch):
-        monkeypatch.setattr(module, "fetch_live_progress", lambda: None)
+    monkeypatch.setattr(cli_commands, "fetch_live_progress", lambda: None)
 
 
 @pytest.fixture(autouse=True)

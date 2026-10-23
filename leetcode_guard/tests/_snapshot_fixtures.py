@@ -40,6 +40,7 @@ def _isolate_snapshot(
         _push_trigger,
         _snapshot_auth,
         _snapshot_dedup,
+        _snapshot_local,
         _snapshot_push,
     )
 
@@ -59,6 +60,9 @@ def _isolate_snapshot(
     )
     monkeypatch.setattr(
         _snapshot_dedup, "PUSH_STATE_FILE", tmp_path / "data" / "push_state.json"
+    )
+    monkeypatch.setattr(
+        _snapshot_local, "LOCAL_SNAPSHOT_FILE", tmp_path / "data" / "snapshot.json"
     )
     monkeypatch.setattr(
         _coach_log, "COACH_SESSIONS_DIR", tmp_path / "coach" / "sessions"

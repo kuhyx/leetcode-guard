@@ -1,7 +1,7 @@
-"""The projection as lines of text, shared by the CLI and the status window.
+"""The projection as lines of text, for ``--status --by``.
 
-One formatter so ``--status --by`` and the window can never disagree about a
-number: the window draws these lines one label each, the CLI prints them.
+The tkinter window that once drew these too is gone; the status app gets the
+projection as data from ``_snapshot_projection`` instead.
 """
 
 from __future__ import annotations
@@ -24,15 +24,6 @@ monospace caption."""
 UNKNOWN_PROGRESS: Final = (
     "Solved counts unknown -- LeetCode could not be reached and nothing is cached."
 )
-
-
-def is_count_line(line: str) -> bool:
-    """Whether ``line`` is one of the aligned count rows.
-
-    The window sets those in a monospace face so the columns line up; the
-    CLI does not care.
-    """
-    return line.startswith((*DIFFICULTIES, _ALL))
 
 
 def _count_line(label: str, solved: int, total: int) -> str:

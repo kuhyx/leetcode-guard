@@ -1,6 +1,6 @@
 """Whether a LeetCode problem was solved today, for other programs to read.
 
-Public on purpose: this is a cross-repo contract, like :mod:`status_view`.
+Public on purpose: this is a cross-repo contract, like :mod:`status_cli`.
 ``steam-backlog-enforcer`` grants an extra hour of gaming budget on a day with
 a solve, and asks this question through the endpoint in
 :mod:`leetcode_guard._web_server`. ``screen-locker`` pushes the machine's

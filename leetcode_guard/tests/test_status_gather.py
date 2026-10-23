@@ -1,9 +1,7 @@
-"""Tests for the status window, its data, and the tray CLIs.
+"""Tests for the data the status snapshot and the tray CLIs are built from.
 
-Tk is a MagicMock throughout, so these assert on *what was asked of Tk* and on
-the text produced. The pixel check is the Xvfb screenshot -- which is how the
-clipped-text bug was found, since no assertion could see a wraplength wider
-than its own window.
+The tkinter window that used to render it is gone (the status app replaced
+it); ``_status_full`` and friends now feed ``_snapshot`` and ``status_cli``.
 """
 
 from __future__ import annotations
@@ -34,13 +32,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 MONDAY_NOON = datetime(2026, 8, 10, 12, 0, tzinfo=UTC)
-
-
-def a_root(tk_mock, width: int = 980):
-    """A mock root that answers ``winfo_width`` like real Tk does."""
-    root = tk_mock.Tk()
-    root.winfo_width.return_value = width
-    return root
 
 
 def full_for(data_dir: Path, hmac_key: Path, ledger=None):

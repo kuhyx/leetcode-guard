@@ -160,43 +160,27 @@ shown.
 
 A tray icon in the i3 bar, mirroring screen-locker's workout-status:
 
-* **left-click toggles** the window — click to open, click again to close;
+* **left-click opens the status app** (`app/`, via
+  `app/tool/leetcode_guard_app.sh`); if that launcher is missing the click
+  logs a warning and shows the `--summary` line as a desktop notification;
 * the icon is a red/amber/green **speech bubble** — deliberately a different
   silhouette from screen-locker's shields, because two shields side by side
   in the same tray are indistinguishable at 24px;
 * the tooltip is a one-line summary, refreshed every 60s;
 * right-click gives Refresh and "Quit tray icon".
 
-The window shows everything the project knows: the verdict and **why the lock
-did not trigger**, credits available/earned/spent, solves today and this week
-with the recent list, which days are settled, both escape budgets, ledger
-integrity and clock trust, timer state and next fire, cache freshness, and the
-suggested problems.
+The status app (Flutter; phone and a desktop Chrome `--app` window) replaced
+the tkinter window. It reads the display-only snapshot the exporter publishes
+every minute: from Firebase RTDB on the phone (`leetcode-guard/status`,
+`status_hash`, `heartbeat`) and from `~/.local/share/leetcode_guard/snapshot.json`
+on the desktop. `TODO-status-app.md` has the schema. The gate never reads
+either.
 
-It also carries **Progress & projection**: solved / total per difficulty as
-your LeetCode profile reports them (premium problems included in the total),
-and one row of what-if controls: the Tue-Thu price (Mon/Fri are that plus 1, Sat/Sun
-twice it; past days never re-price), absolute goals per difficulty, and a date. It
-assumes every gated day up to then is fed at that price *and* the debt is
-cleared in full, minus what is banked. With a goal set it also says when that
-price lands the goal (or how far short it falls) and the exact fractional
-price — plus its whole-number ceiling — that lands it on the date. Future solves are assumed Easy →
-Medium → Hard, the suggestion order, one new problem per credit. The line
-"the rules alone would demand N" is the honest smaller number: the mechanism
-repays at most one debt credit per gated day. The counts come from one public
-query, fetched on a background thread when the window opens or Refresh is
-pressed, and mirrored to `progress_cache.json` by every lock run and `--sync`.
-The gate never reads that file. Same table from the shell:
+The projection table is also available from the shell:
 `leetcode-guard --status --by 31.12.2027 --price 1 --goal Easy=837`.
 
-It never writes ledger state and its one fetch never blocks — safe to open at
-any moment, including while the lock is up, and Escape works mid-fetch. It
-closes four ways: the Close button, Escape, the window manager's close box,
-and clicking the tray icon again.
-
 ```bash
-leetcode-guard-status              # the window
-leetcode-guard-status --summary    # one line (tray tooltip)
+leetcode-guard-status --summary    # one line (tray tooltip); also the default
 leetcode-guard-status --state      # ok | warn | lock (tray icon colour)
 ```
 
