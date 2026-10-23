@@ -8,6 +8,7 @@ import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 InMemoryCredentialStore _signedIn() {
@@ -151,6 +152,59 @@ void main() {
       );
       expect(await source.heartbeat(), '"2026-10-23T14:05:00+02:00"');
       expect(asked!.path, '/leetcode-guard/heartbeat.json');
+    });
+  });
+
+  test('statusHash reads its own tiny node; missing is null', () async {
+    final asked = <String>[];
+    var body = '"abc"';
+    final source = _source(
+      MockClient((r) async {
+        asked.add(r.url.path);
+        return http.Response(body, 200);
+      }),
+    );
+    expect(await source.statusHash(), '"abc"');
+    body = 'null';
+    expect(await source.statusHash(), isNull);
+    expect(asked, everyElement('/leetcode-guard/status_hash.json'));
+  });
+
+  group('WrapperUrlOpener', () {
+    final base = Uri.parse('http://localhost:8776/');
+    const url = 'https://leetcode.com/problems/two-sum/';
+
+    test('POSTs the URL to the wrapper as JSON', () async {
+      http.Request? sent;
+      final open = WrapperUrlOpener(
+        base: base,
+        client: MockClient((r) async {
+          sent = r;
+          return http.Response('', 204);
+        }),
+      );
+      expect(await open(Uri.parse(url)), isTrue);
+      expect(sent!.method, 'POST');
+      expect(sent!.url, Uri.parse('http://localhost:8776/open'));
+      expect(sent!.headers['content-type'], startsWith('application/json'));
+      expect(sent!.body, '{"url":"$url"}');
+    });
+
+    test('a refusal or a dead wrapper is false, not a crash', () async {
+      final refused = WrapperUrlOpener(
+        base: base,
+        client: MockClient((_) async => http.Response('', 400)),
+      );
+      expect(await refused(Uri.parse(url)), isFalse);
+      final dead = WrapperUrlOpener(
+        base: base,
+        client: MockClient((_) async => throw http.ClientException('down')),
+      );
+      expect(await dead(Uri.parse(url)), isFalse);
+    });
+
+    test('defaults to a real HTTP client', () {
+      expect(WrapperUrlOpener(base: base).base, base);
     });
   });
 

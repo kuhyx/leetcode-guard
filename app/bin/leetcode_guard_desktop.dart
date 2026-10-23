@@ -7,8 +7,12 @@
 /// CanvasKit loads from a CDN, and an offline launch renders a blank window
 /// instead of the cached snapshot under the stale banner.
 ///
+/// It serves `~/.local/share/leetcode_guard/snapshot.json`, the exporter's
+/// local copy; nothing here reads Firebase. `tool/leetcode_guard_app.sh` is
+/// the launcher (build if missing, start the wrapper, open the window).
+///
 /// Dev: `dart run bin/leetcode_guard_desktop.dart --fixture f.json` serves
-/// that snapshot instead of Firebase; add `--serve-only` to skip the window.
+/// that snapshot instead; add `--serve-only` to skip the window.
 library;
 
 import 'dart:io';

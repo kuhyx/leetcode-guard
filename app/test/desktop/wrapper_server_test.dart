@@ -20,12 +20,37 @@ void main() {
     return (response.statusCode, body, response.headers.contentType?.mimeType);
   }
 
-  Future<void> serve(List<Object?> answers) async {
-    server = WrapperServer(webRoot: root.path, source: FakeSource(answers));
+  final opened = <String>[];
+
+  Future<void> serve(
+    List<Object?> answers, {
+    Future<void> Function(String url)? open,
+  }) async {
+    server = WrapperServer(
+      webRoot: root.path,
+      source: FakeSource(answers),
+      open: open ?? (url) async => opened.add(url),
+    );
     port = await server.start(port: 0);
   }
 
+  Future<int> post(
+    String path,
+    String body, {
+    String contentType = 'application/json',
+    String method = 'POST',
+  }) async {
+    final request = await client.open(method, '127.0.0.1', port, path);
+    request.headers.set(HttpHeaders.contentTypeHeader, contentType);
+    // dart:io pins the content length of a GET to 0.
+    if (method != 'GET') request.write(body);
+    final response = await request.close();
+    await response.drain<void>();
+    return response.statusCode;
+  }
+
   setUp(() {
+    opened.clear();
     root = Directory.systemTemp.createTempSync('lg-web');
     File('${root.path}/index.html').writeAsStringSync('<html></html>');
     File('${root.path}/main.dart.wasm').writeAsStringSync('w');
@@ -99,5 +124,54 @@ void main() {
     expect(type('a.otf'), 'font/otf');
     expect(type('a.woff2'), 'font/woff2');
     expect(type('a.bin'), 'application/octet-stream');
+  });
+
+  group('POST /open', () {
+    const url = 'https://leetcode.com/problems/two-sum/';
+
+    test('hands a problem page to the opener', () async {
+      await serve([null]);
+      expect(await post('/open', jsonEncode({'url': url})), 204);
+      expect(opened, [url]);
+    });
+
+    test('rejects anything but a problem page, opening nothing', () async {
+      await serve([null]);
+      final bodies = [
+        jsonEncode({'url': 'https://example.com/'}),
+        jsonEncode({'url': 'https://leetcode.com.evil.com/problems/a/'}),
+        jsonEncode({'url': '$url\n'}),
+        jsonEncode({'url': 'file:///etc/passwd'}),
+        jsonEncode({'url': 42}),
+        jsonEncode({'href': url}),
+        jsonEncode([url]),
+        jsonEncode(url),
+        'not json',
+        '',
+      ];
+      for (final body in bodies) {
+        expect(await post('/open', body), 400, reason: body);
+      }
+      expect(opened, isEmpty);
+    });
+
+    test('only POST, only JSON, only small bodies', () async {
+      await serve([null]);
+      final body = jsonEncode({'url': url});
+      expect(await post('/open', body, method: 'GET'), 405);
+      expect(await post('/open', body, method: 'PUT'), 405);
+      expect(await post('/open', body, contentType: 'text/plain'), 415);
+      expect(
+        await post('/open', jsonEncode({'url': url, 'pad': 'x' * 5000})),
+        413,
+      );
+      expect(opened, isEmpty);
+    });
+
+    test('an opener that fails is a 500, and serving goes on', () async {
+      await serve([null], open: (_) async => throw const OSError('no xdg'));
+      expect(await post('/open', jsonEncode({'url': url})), 500);
+      expect((await get('/')).$1, 200);
+    });
   });
 }

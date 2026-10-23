@@ -1,9 +1,8 @@
 /// The desktop source: the local wrapper that served this page.
 ///
-/// The wrapper does the Firebase read itself with the shared
-/// `~/.config/crdt-sync/` credential, so the browser profile never holds a
-/// password or refresh token (a browser cannot reach the OS keyring, and
-/// web `flutter_secure_storage` keeps its wrap key beside the ciphertext).
+/// The wrapper reads the exporter's file on this machine
+/// (`~/.local/share/leetcode_guard/snapshot.json`); the desktop never reads
+/// Firebase, so the browser profile holds no password or refresh token.
 library;
 
 import 'package:http/http.dart' as http;

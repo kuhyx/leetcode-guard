@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/hash_gated_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
 import 'package:sync_settings_ui/sync_settings_ui.dart';
@@ -17,17 +19,26 @@ import 'package:url_launcher/url_launcher.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // Desktop is this web build in a Chrome window: the wrapper that served
-  // the page reads Firebase itself, so the browser holds no credential.
+  // the page reads the exporter's local file, so the desktop never touches
+  // Firebase or a credential. Its window resolves loopback only, so links
+  // go out through the wrapper to the system (filtered) browser.
+  //
+  // The phone polls Firebase, re-downloading the status only when its hash
+  // moves.
   final source = kIsWeb
       ? WrapperSnapshotSource(base: Uri.base)
-      : FirebaseSnapshotSource(
-          open: openFirebase,
-          databaseUrl: kProject.databaseUrl,
+      : HashGatedSource(
+          FirebaseSnapshotSource(
+            open: openFirebase,
+            databaseUrl: kProject.databaseUrl,
+          ),
         );
   runApp(
     LeetGuardApp(
       controller: StatusController(source: source, cache: PrefsSnapshotCache()),
-      openUrl: (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
+      openUrl: kIsWeb
+          ? WrapperUrlOpener(base: Uri.base).call
+          : (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
       settingsBuilder: kIsWeb
           ? null
           : (_) => const SyncSettingsScreen(

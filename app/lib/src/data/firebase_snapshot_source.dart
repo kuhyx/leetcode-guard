@@ -1,12 +1,15 @@
-/// Reads `leetcode-guard/status` and `leetcode-guard/heartbeat` from the
-/// shared Realtime Database.
+/// Reads `leetcode-guard/status`, `.../status_hash` and `.../heartbeat`
+/// from the shared Realtime Database.
 ///
-/// Used by the phone (client from the keystore) and by the desktop wrapper
-/// (client from `~/.config/crdt-sync/`). Pure Dart, so both can share it.
+/// The phone's source (client from the keystore), wrapped in a
+/// `HashGatedSource` so a poll only re-downloads the status when its hash
+/// moves. The desktop never reads Firebase: its wrapper serves the
+/// exporter's local file.
 library;
 
 import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
+import 'package:leetcode_guard/src/data/hash_gated_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
 /// Where the PC's exporter publishes the snapshot (one JSON string leaf).
@@ -15,15 +18,17 @@ const kStatusPath = 'leetcode-guard/status';
 /// The tiny freshness node, an ISO instant written every minute.
 const kHeartbeatNode = 'leetcode-guard/heartbeat';
 
+/// The status's content hash (a JSON string), written beside it.
+const kStatusHashNode = 'leetcode-guard/status_hash';
+
 /// Opens a signed-in client, or null when this device has no account.
 typedef FirebaseOpener = Future<FirebaseRestClient?> Function();
 
-/// Raw GETs of [kStatusPath] and [kHeartbeatNode].
+/// Raw GETs of [kStatusPath], [kStatusHashNode] and [kHeartbeatNode].
 ///
 /// Raw rather than `FirebaseRestClient.getFileText`, which would decode the
-/// leaf for us: the controller parses, so the desktop wrapper can pass the
-/// exact same body straight through to the browser.
-class FirebaseSnapshotSource implements SnapshotSource {
+/// leaf for us: the controller parses, the same way for every source.
+class FirebaseSnapshotSource implements HashedSnapshotSource {
   /// Creates a source over [open].
   new({
     required this.open,
@@ -46,6 +51,9 @@ class FirebaseSnapshotSource implements SnapshotSource {
 
   @override
   Future<String?> heartbeat() => _get(kHeartbeatNode);
+
+  @override
+  Future<String?> statusHash() => _get(kStatusHashNode);
 
   Future<String?> _get(String path) async {
     final client = await open();
