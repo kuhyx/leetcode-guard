@@ -54,21 +54,25 @@ def test_a_full_session_is_summarised(tmp_path: Path):
 
     coach = read_coach(tmp_path)
 
-    assert coach == {
-        "problems": [
-            {
-                "slug": "missing-number",
-                "cluster": "bit-cancellation",
-                "req_before_code": True,
-                "max_rung": "H1",
-                "revealed": False,
-                "req_check": "pass",
-                "day": "2026-10-23",
-            }
-        ],
-        "retests_due": None,
-        "clusters": None,
+    assert coach is not None
+    assert coach["clusters"]["bit-cancellation"] == {
+        "total": 4,
+        "started": 1,
+        "solved": 1,
+        "next": "single-number-iii",
     }
+    assert isinstance(coach["retests_due"], list)
+    assert coach["problems"] == [
+        {
+            "slug": "missing-number",
+            "cluster": "bit-cancellation",
+            "req_before_code": True,
+            "max_rung": "H1",
+            "revealed": False,
+            "req_check": "pass",
+            "day": "2026-10-23",
+        }
+    ]
 
 
 def test_code_before_any_req_is_recorded_as_such(tmp_path: Path):
@@ -163,9 +167,43 @@ def test_an_unreadable_file_is_skipped(
     path.mkdir(parents=True)
 
     assert read_session(path) is None
-    assert read_coach(tmp_path) == {
-        "problems": [],
-        "retests_due": None,
-        "clusters": None,
-    }
+    coach = read_coach(tmp_path)
+    assert coach is not None
+    assert coach["problems"] == []
+    assert coach["retests_due"] == []
+    assert coach["clusters"]["intervals"]["started"] == 0
     assert "unreadable" in caplog.text
+
+
+def test_due_retests_come_from_the_coach(tmp_path: Path):
+    write_log(
+        tmp_path,
+        "2026-01-02-missing-number.jsonl",
+        {"event": "code"},
+        {"event": "postmortem"},
+    )
+
+    coach = read_coach(tmp_path)
+
+    assert coach is not None
+    assert [(r["slug"], r["stage"], r["due"]) for r in coach["retests_due"]] == [
+        ("missing-number", 1, "2026-01-05")
+    ]
+
+
+def test_a_failing_coach_derivation_is_unknown_with_a_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    def boom(_folder: Path) -> object:
+        message = "clusters.json is broken"
+        raise ValueError(message)
+
+    tmp_path.mkdir(exist_ok=True)
+    monkeypatch.setattr(_coach_log.coach_progress, "cluster_progress", boom)
+
+    coach = read_coach(tmp_path)
+
+    assert coach is not None
+    assert coach["clusters"] is None
+    assert coach["retests_due"] == []
+    assert "clusters.json is broken" in caplog.text

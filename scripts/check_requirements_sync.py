@@ -96,14 +96,17 @@ def _top_level_imports(module: Path) -> set[str]:
 def _third_party_imports(package_dir: Path, package_name: str) -> set[str]:
     """Return third-party top-level imports across the whole package.
 
-    Standard-library modules (via ``sys.stdlib_module_names``) and the package's
-    own name are filtered out, leaving only external dependencies.
+    Standard-library modules (via ``sys.stdlib_module_names``), the package's
+    own name and its sibling packages in the same repo (``leetcode_coach``
+    reading ``leetcode_guard``: one checkout, one install) are filtered out,
+    leaving only external dependencies.
     """
     stdlib = sys.stdlib_module_names
     external: set[str] = set()
     for module in _iter_package_modules(package_dir):
         for name in _top_level_imports(module):
-            if name != package_name and name not in stdlib:
+            sibling = (package_dir.parent / name / "__init__.py").is_file()
+            if name != package_name and name not in stdlib and not sibling:
                 external.add(name)
     return external
 

@@ -15,9 +15,10 @@ Tolerant by contract: a JSON line that is not one of those shapes is skipped
 and counted, with **one** warning per file per read -- the push runs every
 minute, so a warning per line would bury the journal. A line that is not JSON
 at all (a torn write) gets its own warning. ``retests_due`` and
-``clusters`` are ``None`` (unknown): the due dates and the cluster totals
-belong to the coach (decisions 10 and 12), and deriving them here would be a
-second copy of its rules.
+``clusters`` come from the coach itself (``leetcode_coach.progress``,
+decisions 10 and 12): deriving them here would be a second copy of its rules.
+Either is ``None`` (unknown) if the coach raises -- logged, never propagated,
+because this runs inside the every-minute push.
 """
 
 from __future__ import annotations
@@ -27,9 +28,13 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
+from leetcode_coach import progress as coach_progress
 from leetcode_guard._daycost import parse_day
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -170,6 +175,15 @@ def read_coach(directory: Path | None = None) -> dict[str, Any] | None:
     ]
     return {
         "problems": [asdict(problem) for problem in problems],
-        "retests_due": None,
-        "clusters": None,
+        "retests_due": _from_coach(coach_progress.due_retests, folder),
+        "clusters": _from_coach(coach_progress.cluster_progress, folder),
     }
+
+
+def _from_coach(derive: Callable[[Path], object], folder: Path) -> object:
+    """The coach's own derivation over ``folder``, or ``None`` if it raises."""
+    try:
+        return derive(folder)
+    except Exception:  # pylint: disable=broad-exception-caught
+        _logger.exception("coach derivation %r failed", derive)
+        return None
