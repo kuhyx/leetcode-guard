@@ -23,6 +23,12 @@ String findBrowser({String? override, bool Function(String path)? exists}) {
     '/opt/google/chrome/chrome',
     '/opt/thorium-browser/thorium-browser',
     '/usr/bin/google-chrome-stable',
+    // The real binary, ahead of the /usr/bin launcher: that launcher reads
+    // ~/.config/chromium-flags.conf, whose --load-extension (the
+    // Claude-in-Chrome extension) opens a claude.ai tab beside the app.
+    // --disable-extensions alone does not beat it (see browserArgs), so the
+    // app skips the launcher instead of editing kuhy's flags file.
+    '/usr/lib/chromium/chromium',
     '/usr/bin/chromium',
     '/usr/bin/brave',
   ];
@@ -67,6 +73,15 @@ List<String> browserArgs(
   // WM_CLASS, matched by a .desktop entry's StartupWMClass.
   '--class=leetcode-guard-app',
   '--no-first-run',
+  '--no-default-browser-check',
+  // No extension loads in the app window: it is locked to loopback and needs
+  // none, and a forced one (flags file, wrapper) opens its own login tab.
+  '--disable-extensions',
+  // Nothing is restored on launch, so a second window never appears after
+  // a crash or an unclean exit.
+  '--disable-session-crashed-bubble',
+  '--hide-crash-restore-bubble',
+  '--disable-features=InfiniteSessionRestore,SessionRestoreBubble',
   // Keeps Chrome off the GNOME keyring: a locked keyring blocks the first
   // page load behind an unlock prompt on another workspace.
   '--password-store=basic',

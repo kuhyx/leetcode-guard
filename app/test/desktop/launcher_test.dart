@@ -131,6 +131,33 @@ void main() {
     expect(args, contains('--class=leetcode-guard-app'));
   });
 
+  test('the window loads no extension and opens nothing but itself', () {
+    final args = browserArgs('/home/k');
+    // The flags wrapper injects --load-extension (a claude.ai login tab);
+    // --disable-extensions must therefore ride along with every launch.
+    expect(args, contains('--disable-extensions'));
+    expect(args.where((a) => a.startsWith('--load-extension')), isEmpty);
+    expect(args, contains('--no-first-run'));
+    expect(args, contains('--no-default-browser-check'));
+    expect(args, contains('--disable-session-crashed-bubble'));
+    expect(args, contains('--hide-crash-restore-bubble'));
+    expect(
+      args.where((a) => a.startsWith('--disable-features=')),
+      hasLength(1),
+    );
+  });
+
+  test('the real binary is tried before the flags-injecting wrapper', () {
+    const real = '/usr/lib/chromium/chromium';
+    expect(
+      findBrowser(
+        override: '',
+        exists: (p) => p == real || p == '/usr/bin/chromium',
+      ),
+      real,
+    );
+  });
+
   Future<List<String>> run(
     List<String> args, {
     String browser = '/b',
