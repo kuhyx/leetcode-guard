@@ -28,6 +28,7 @@ from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._login import login
 from leetcode_guard._morning_session import defer_for_morning_session
 from leetcode_guard._night_lockdown import defer_for_evening_lockdown
+from leetcode_guard._phone_errors import status_lines as phone_error_lines
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
@@ -105,6 +106,8 @@ def cmd_status(
     """
     snapshot = gather_status()
     print(format_status(snapshot))
+    for line in phone_error_lines():
+        print(line)
     if by is None and price is None and goals is None:
         return EXIT_LOCKED if snapshot.locked else EXIT_OK
     inputs = projection_inputs(by, price, goals)

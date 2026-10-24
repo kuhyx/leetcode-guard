@@ -29,6 +29,11 @@ def _refuse_firebase(*_args: object, **_kwargs: object) -> object:
     raise AssertionError(message)
 
 
+def _refuse_notify(*_args: object, **_kwargs: object) -> bool:
+    message = "a test tried to show a desktop notification; pass notify="
+    raise AssertionError(message)
+
+
 @pytest.fixture(autouse=True)
 def _isolate_snapshot(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -36,6 +41,8 @@ def _isolate_snapshot(
     """Redirect the snapshot's own files and block both of its side effects."""
     from leetcode_guard import (
         _coach_log,
+        _phone_errors,
+        _phone_errors_sync,
         _profile_cache,
         _push_trigger,
         _snapshot_auth,
@@ -66,5 +73,13 @@ def _isolate_snapshot(
     )
     monkeypatch.setattr(
         _coach_log, "COACH_SESSIONS_DIR", tmp_path / "coach" / "sessions"
+    )
+    # The phone-error step: its mirror, and no real notification or fetch.
+    monkeypatch.setattr(
+        _phone_errors, "PHONE_ERRORS_FILE", tmp_path / "data" / "phone_errors.json"
+    )
+    monkeypatch.setattr(_phone_errors_sync, "send_notification", _refuse_notify)
+    monkeypatch.setattr(
+        _phone_errors_sync, "sync_quietly", lambda: "phone errors stubbed in tests"
     )
     return spawned
