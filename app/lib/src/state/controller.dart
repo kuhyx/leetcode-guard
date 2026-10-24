@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
+import 'package:leetcode_guard/src/data/app_error_report.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/format.dart';
@@ -17,14 +18,22 @@ const kPollEvery = Duration(minutes: 1);
 /// good copy: it sets [error], and staleness does the rest.
 class StatusController extends ChangeNotifier {
   /// Creates a controller over [source] and [cache].
-  new({required this.source, required this.cache, DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  new({
+    required this.source,
+    required this.cache,
+    this.reporter,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   /// Where snapshots come from.
   final SnapshotSource source;
 
   /// Where the last good one is kept.
   final SnapshotCache cache;
+
+  /// Keeps each failure and sends them on the next contact; null where
+  /// there is no Firebase (the desktop wrapper).
+  final ErrorReporter? reporter;
   final DateTime Function() _clock;
   Timer? _timer;
 
@@ -76,8 +85,9 @@ class StatusController extends ChangeNotifier {
     _timer = null;
   }
 
-  /// Reads the snapshot, then the heartbeat.
+  /// Reads the snapshot, then the heartbeat; tells [reporter] how it went.
   Future<void> refresh() async {
+    String? failure;
     try {
       final body = await source.fetch();
       final parsed = body == null ? null : Snapshot.tryParse(body);
@@ -92,12 +102,16 @@ class StatusController extends ChangeNotifier {
       }
       heartbeat = parseHeartbeat(await source.heartbeat());
     } on SnapshotUnavailable catch (e) {
-      error = e.message;
+      error = failure = e.message;
     } on Exception catch (e, stack) {
       log('snapshot refresh failed', level: 900, error: e, stackTrace: stack);
-      error = 'Refresh failed: $e';
+      // The type only: a message can carry a URL and its `?auth=` token.
+      error = failure = 'Refresh failed (${e.runtimeType})';
     }
     notifyListeners();
+    final r = reporter;
+    if (r == null) return;
+    await (failure == null ? r.reached() : r.failed(failure));
   }
 
   @override

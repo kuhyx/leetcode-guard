@@ -6,6 +6,7 @@
 library;
 
 import 'package:http/http.dart' as http;
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
 /// Wrapper route serving the snapshot.
@@ -35,7 +36,9 @@ class WrapperSnapshotSource implements SnapshotSource {
     try {
       res = await _client.get(base.resolve(path));
     } on http.ClientException catch (error) {
-      throw SnapshotUnavailable('Desktop wrapper not reachable: $error');
+      throw SnapshotUnavailable(
+        'Desktop wrapper not reachable: ${scrubSecrets(error.message)}',
+      );
     }
     if (res.statusCode == 404) return null;
     if (res.statusCode != 200) {

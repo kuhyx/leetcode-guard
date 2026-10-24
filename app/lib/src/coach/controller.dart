@@ -17,6 +17,7 @@ import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/coach/ids.dart';
 import 'package:leetcode_guard/src/coach/pending.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
+import 'package:leetcode_guard/src/data/app_error_report.dart';
 import 'package:leetcode_guard/src/model/coach_relay.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/model/json_read.dart';
@@ -47,6 +48,7 @@ class CoachController extends ChangeNotifier {
   new({
     required this.transport,
     required this.devices,
+    this.reporter,
     UlidGenerator? ulid,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now,
@@ -57,6 +59,9 @@ class CoachController extends ChangeNotifier {
 
   /// This install's `dev`.
   final DeviceIdStore devices;
+
+  /// Keeps outages for the desktop and sends them once a beat lands.
+  final ErrorReporter? reporter;
   final UlidGenerator _ulid;
   final DateTime Function() _clock;
 
@@ -182,7 +187,9 @@ class CoachController extends ChangeNotifier {
   };
 
   void _setOutage(CoachUnavailable e) {
-    if (_unreachable.contains(e.outage)) outage = e;
+    if (!_unreachable.contains(e.outage)) return;
+    outage = e;
+    unawaited(reporter?.failed(e.message));
   }
 
   Future<void> _beat() async {
@@ -191,6 +198,7 @@ class CoachController extends ChangeNotifier {
       final hb = await transport.heartbeat();
       heartbeat = hb;
       outage = null;
+      unawaited(reporter?.reached());
       _beatRead = true;
       final p = pending;
       if (p != null && p.phase == RequestPhase.queued && hb?.busy == p.rid) {

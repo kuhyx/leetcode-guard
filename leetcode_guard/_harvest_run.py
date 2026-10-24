@@ -126,6 +126,7 @@ def main(*, key_file: Path | None = None) -> int:
     # the heartbeat is the status app's freshness signal. In-process on
     # purpose -- a detached child would die with this oneshot's cgroup.
     print(f"snapshot: {_push_line()}")
+    print(f"phone errors: {_phone_errors_line()}")
     return EXIT_OK
 
 
@@ -146,6 +147,25 @@ def _push_line() -> str:
     except Exception as exc:  # pylint: disable=broad-exception-caught
         _logger.warning("snapshot push unavailable: %s", exc, exc_info=True)
         return f"push unavailable: {exc}"
+
+
+def _phone_errors_line() -> str:
+    """Notify about the status app's reported errors; isolated like the push.
+
+    Display only, and the phone can write the node: whatever it holds or
+    however this fails, the harvest above has already run.
+    """
+    try:
+        from leetcode_guard._phone_errors_sync import (  # pylint: disable=import-outside-toplevel
+            sync_quietly,
+        )
+
+        return sync_quietly()
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        # The type only, and no traceback: an RTDB failure's message can
+        # carry the request URL, ``?auth=<token>`` and all.
+        _logger.warning("phone errors unavailable: %s", type(exc).__name__)
+        return f"unavailable ({type(exc).__name__})"
 
 
 if __name__ == "__main__":

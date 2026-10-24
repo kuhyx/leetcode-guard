@@ -11,6 +11,7 @@ same leaf, same auth (the signed-in client's own token provider), a 204.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import TYPE_CHECKING, Final, Protocol
 
 from crdt_sync import CONFIG_FILE, FirebaseConfig, FirebaseSyncError
@@ -63,7 +64,9 @@ class SilentStore:
                 timeout=self.timeout_seconds,
             )
         except requests.RequestException as exc:
-            failure = f"network error writing {path}: {exc}"
+            # The type only: requests puts the URL, ``?auth=<token>`` and
+            # all, into the message, and this one reaches the journal.
+            failure = f"network error writing {path}: {type(exc).__name__}"
             raise FirebaseSyncError(failure) from exc
         if not response.ok:
             failure = (
@@ -71,6 +74,25 @@ class SilentStore:
                 f"{response.text.strip()}"
             )
             raise FirebaseSyncError(failure)
+
+    def get_json(self, path: str) -> object:
+        """The decoded JSON at ``path`` (``None`` when the node is empty).
+
+        Raises:
+            FirebaseSyncError: On any non-2xx response or network error.
+        """
+        url = f"{self.database_url.rstrip('/')}/{path}.json"
+        try:
+            response = requests.get(
+                url, params={"auth": self.id_token()}, timeout=self.timeout_seconds
+            )
+        except requests.RequestException as exc:
+            failure = f"network error reading {path}: {type(exc).__name__}"
+            raise FirebaseSyncError(failure) from exc
+        if not response.ok:
+            failure = f"reading {path} failed: HTTP {response.status_code}"
+            raise FirebaseSyncError(failure)
+        return json.loads(response.text)
 
 
 def silent_store_for(

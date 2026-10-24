@@ -99,3 +99,49 @@ def test_the_default_store_wraps_the_signed_in_client(
     assert isinstance(store, SilentStore)
     assert store.database_url == "https://db.example"
     assert store.id_token() == "tok"
+
+
+def test_get_json_reads_a_node(monkeypatch: pytest.MonkeyPatch):
+    seen: dict[str, object] = {}
+
+    def fake_get(url: str, **kwargs: object) -> FakeResponse:
+        seen["url"] = url
+        seen.update(kwargs)
+        return FakeResponse(200, '{"a": "x"}')
+
+    monkeypatch.setattr(_snapshot_rtdb.requests, "get", fake_get)
+    store = SilentStore("https://db.example/", lambda: "tok", 3.0)
+
+    assert store.get_json("leetcode-guard/app_errors") == {"a": "x"}
+    assert seen["url"] == "https://db.example/leetcode-guard/app_errors.json"
+    assert seen["params"] == {"auth": "tok"}
+
+
+@pytest.mark.parametrize("verb", ["get", "put"])
+def test_rtdb_failures_never_carry_the_token(
+    monkeypatch: pytest.MonkeyPatch, verb: str
+):
+    def refuse(url: str, **_k: object) -> FakeResponse:
+        message = f"Max retries exceeded with url: {url}?auth=SECRET"
+        raise requests.ConnectionError(message)
+
+    monkeypatch.setattr(_snapshot_rtdb.requests, verb, refuse)
+    store = SilentStore("https://db", lambda: "SECRET", 1.0)
+
+    call = (
+        (lambda: store.get_json("p"))
+        if verb == "get"
+        else (lambda: store.put_file_text("p", "{}", message="m"))
+    )
+    with pytest.raises(FirebaseSyncError) as caught:
+        call()
+    assert "SECRET" not in str(caught.value)
+    assert "ConnectionError" in str(caught.value)
+
+
+def test_a_rejected_read_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        _snapshot_rtdb.requests, "get", lambda *_a, **_k: FakeResponse(401, "no")
+    )
+    with pytest.raises(FirebaseSyncError, match="HTTP 401"):
+        SilentStore("https://db", lambda: "t", 1.0).get_json("p")

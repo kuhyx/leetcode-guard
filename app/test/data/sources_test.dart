@@ -4,11 +4,11 @@ import 'package:crdt_sync/crdt_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
-import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 InMemoryCredentialStore _signedIn() {
@@ -124,14 +124,20 @@ void main() {
       final source = _source(
         MockClient((_) async => http.Response('denied', 401)),
       );
-      await expectLater(source.fetch(), _unavailable('Firebase HTTP 401'));
+      await expectLater(
+        source.fetch(),
+        _unavailable('Firebase answered HTTP 401'),
+      );
     });
 
     test('network and auth failures are unavailable', () async {
       final offline = _source(
         MockClient((_) async => throw http.ClientException('offline')),
       );
-      await expectLater(offline.fetch(), _unavailable(contains('offline')));
+      await expectLater(
+        offline.fetch(),
+        _unavailable('Network error (ClientException)'),
+      );
       final unauthenticated = _source(
         MockClient((_) async => http.Response('{}', 200)),
         store: InMemoryCredentialStore(),
@@ -139,6 +145,25 @@ void main() {
       await expectLater(
         unauthenticated.fetch(),
         _unavailable(contains('sign-in failed')),
+      );
+    });
+
+    test('a DNS failure never carries the URL or the token', () async {
+      // The 2026-10-24 Pixel 6a banner: `ClientException.toString()` ends in
+      // `uri=...?auth=<ID token>`.
+      final source = _source(
+        MockClient(
+          (r) async => throw http.ClientException(
+            "SocketException: Failed host lookup: 'db.example'",
+            r.url,
+          ),
+        ),
+      );
+      await expectLater(
+        source.statusHash(),
+        _unavailable(
+          allOf(kOfflineText, isNot(contains('tok')), isNot(contains('auth'))),
+        ),
       );
     });
 
@@ -168,44 +193,6 @@ void main() {
     body = 'null';
     expect(await source.statusHash(), isNull);
     expect(asked, everyElement('/leetcode-guard/status_hash.json'));
-  });
-
-  group('WrapperUrlOpener', () {
-    final base = Uri.parse('http://localhost:8776/');
-    const url = 'https://leetcode.com/problems/two-sum/';
-
-    test('POSTs the URL to the wrapper as JSON', () async {
-      http.Request? sent;
-      final open = WrapperUrlOpener(
-        base: base,
-        client: MockClient((r) async {
-          sent = r;
-          return http.Response('', 204);
-        }),
-      );
-      expect(await open(Uri.parse(url)), isTrue);
-      expect(sent!.method, 'POST');
-      expect(sent!.url, Uri.parse('http://localhost:8776/open'));
-      expect(sent!.headers['content-type'], startsWith('application/json'));
-      expect(sent!.body, '{"url":"$url"}');
-    });
-
-    test('a refusal or a dead wrapper is false, not a crash', () async {
-      final refused = WrapperUrlOpener(
-        base: base,
-        client: MockClient((_) async => http.Response('', 400)),
-      );
-      expect(await refused(Uri.parse(url)), isFalse);
-      final dead = WrapperUrlOpener(
-        base: base,
-        client: MockClient((_) async => throw http.ClientException('down')),
-      );
-      expect(await dead(Uri.parse(url)), isFalse);
-    });
-
-    test('defaults to a real HTTP client', () {
-      expect(WrapperUrlOpener(base: base).base, base);
-    });
   });
 
   test('wrapper heartbeat reads /heartbeat.json; 404 is none', () async {

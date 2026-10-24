@@ -1,3 +1,5 @@
+import 'package:leetcode_guard/src/data/app_error_report.dart';
+import 'package:leetcode_guard/src/data/app_errors.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
@@ -35,4 +37,30 @@ class MemoryCache implements SnapshotCache {
 
   @override
   Future<void> write(String raw) async => value = raw;
+}
+
+/// A [TextSlot] in memory.
+class MemorySlot implements TextSlot {
+  String? value;
+
+  @override
+  Future<String?> read() async => value;
+
+  @override
+  Future<void> write(String text) async => value = text;
+}
+
+/// An [ErrorReporter] that only counts.
+class FakeReporter implements ErrorReporter {
+  final List<String> failures = [];
+  int reaches = 0;
+
+  @override
+  Future<void> failed(String message) async => failures.add(message);
+
+  @override
+  Future<bool> reached() async {
+    reaches++;
+    return false;
+  }
 }
