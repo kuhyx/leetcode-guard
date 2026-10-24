@@ -12,6 +12,7 @@ import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
 import 'package:leetcode_guard/src/coach/ids.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/model/coach_relay.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
@@ -144,18 +145,15 @@ class RtdbCoachTransport implements CoachTransport {
       }
       res = await http.Response.fromStream(await _http.send(request));
     } on http.ClientException catch (error) {
-      throw CoachUnavailable(CoachOutage.network, 'Network error: $error');
+      throw CoachUnavailable(CoachOutage.network, describeFailure(error));
     } on RemoteSyncError catch (error) {
       throw CoachUnavailable(
         CoachOutage.signedOut,
-        'Firebase sign-in failed: $error',
+        describeSignInFailure(error),
       );
     }
     if (res.statusCode != 200 && res.statusCode != 204) {
-      throw CoachUnavailable(
-        CoachOutage.network,
-        'Firebase HTTP ${res.statusCode}',
-      );
+      throw CoachUnavailable(CoachOutage.network, httpFailure(res.statusCode));
     }
     return res;
   }

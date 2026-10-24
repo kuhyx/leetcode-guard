@@ -9,6 +9,7 @@ library;
 
 import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/hash_gated_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
@@ -70,12 +71,12 @@ class FirebaseSnapshotSource implements HashedSnapshotSource {
             .replace(queryParameters: {'auth': token}),
       );
     } on http.ClientException catch (error) {
-      throw SnapshotUnavailable('Network error: $error');
+      throw SnapshotUnavailable(describeFailure(error));
     } on RemoteSyncError catch (error) {
-      throw SnapshotUnavailable('Firebase sign-in failed: $error');
+      throw SnapshotUnavailable(describeSignInFailure(error));
     }
     if (res.statusCode != 200) {
-      throw SnapshotUnavailable('Firebase HTTP ${res.statusCode}');
+      throw SnapshotUnavailable(httpFailure(res.statusCode));
     }
     return res.body.trim() == 'null' ? null : res.body;
   }

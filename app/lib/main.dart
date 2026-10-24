@@ -8,6 +8,8 @@ import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
 import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
+import 'package:leetcode_guard/src/data/app_error_report.dart';
+import 'package:leetcode_guard/src/data/app_errors.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
@@ -29,7 +31,17 @@ void main() {
   // go out through the wrapper to the system (filtered) browser.
   //
   // The phone polls Firebase, re-downloading the status only when its hash
-  // moves.
+  // moves. Its errors are kept and sent to leetcode-guard/app_errors/<dev>
+  // on the next contact, for the desktop to notify about.
+  final devices = PrefsDeviceId();
+  final reporter = kIsWeb
+      ? null
+      : RtdbErrorReporter(
+          log: AppErrorLog(),
+          devices: devices,
+          open: openFirebase,
+          databaseUrl: kProject.databaseUrl,
+        );
   final source = kIsWeb
       ? WrapperSnapshotSource(base: Uri.base)
       : HashGatedSource(
@@ -47,11 +59,16 @@ void main() {
             open: openFirebase,
             databaseUrl: kProject.databaseUrl,
           ),
-    devices: PrefsDeviceId(),
+    devices: devices,
+    reporter: reporter,
   );
   runApp(
     LeetGuardApp(
-      controller: StatusController(source: source, cache: PrefsSnapshotCache()),
+      controller: StatusController(
+        source: source,
+        cache: PrefsSnapshotCache(),
+        reporter: reporter,
+      ),
       coach: coach,
       openUrl: kIsWeb
           ? WrapperUrlOpener(base: Uri.base).call

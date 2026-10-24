@@ -16,6 +16,7 @@ import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/coach_tab.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
+import 'package:leetcode_guard/src/ui/stale_banner.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/tabs.dart';
 
@@ -128,7 +129,7 @@ class _ShellState extends State<_Shell> {
     final settings = widget.app.settingsBuilder;
     final content = Column(
       children: [
-        if (_c.stale) _StaleBanner(_c),
+        if (_c.stale) StaleBanner(_c),
         Expanded(
           child: Align(
             alignment: Alignment.topCenter,
@@ -194,32 +195,6 @@ class _ShellState extends State<_Shell> {
                   NavigationDestination(icon: Icon(icon), label: label),
               ],
             ),
-    );
-  }
-}
-
-class _StaleBanner extends StatelessWidget {
-  const new(this.c);
-
-  final StatusController c;
-
-  @override
-  Widget build(BuildContext context) {
-    final snap = c.snapshot;
-    final error = c.error;
-    final text = snap == null
-        ? 'No snapshot yet${error == null ? '' : ': $error'}'
-        : 'Stale: ${ageText(c.freshAt, c.now())}'
-              '${error == null ? '' : '. Could not refresh: $error'}';
-    return Container(
-      key: const Key('stale-banner'),
-      width: double.infinity,
-      color: AppPalette.warning,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Text(text, style: const TextStyle(color: AppPalette.onFill)),
     );
   }
 }

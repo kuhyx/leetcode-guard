@@ -56,11 +56,47 @@ void main() {
     c.dispose();
   });
 
-  test('an unexpected exception is reported, not thrown', () async {
-    final c = make([const FormatException('boom')]);
+  test('an unexpected exception is reported by type, not thrown', () async {
+    final c = make([const FormatException('boom ?auth=SECRET')]);
     await c.refresh();
-    expect(c.error, contains('boom'));
+    expect(c.error, 'Refresh failed (FormatException)');
     c.dispose();
+  });
+
+  group('error reporter', () {
+    StatusController reporting(List<Object?> answers, FakeReporter r) =>
+        StatusController(
+          source: FakeSource(answers),
+          cache: MemoryCache(),
+          clock: clockAfter(1),
+          reporter: r,
+        );
+
+    test('a failed refresh is kept; a working one sends', () async {
+      final r = FakeReporter();
+      final c = reporting([
+        const SnapshotUnavailable('offline'),
+        const FormatException('x'),
+        fixtureText('snapshot_full'),
+      ], r);
+      await c.refresh();
+      expect(r.failures, ['offline']);
+      expect(r.reaches, 0);
+      await c.refresh();
+      expect(r.failures, ['offline', 'Refresh failed (FormatException)']);
+      await c.refresh();
+      expect(r.reaches, 1);
+      c.dispose();
+    });
+
+    test('nothing published is a contact, not a failure', () async {
+      final r = FakeReporter();
+      final c = reporting([null], r);
+      await c.refresh();
+      expect(r.failures, isEmpty);
+      expect(r.reaches, 1);
+      c.dispose();
+    });
   });
 
   test('nothing published yet is an error, not an empty snapshot', () async {

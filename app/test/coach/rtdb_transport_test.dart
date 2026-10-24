@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
+import 'package:leetcode_guard/src/data/failure_text.dart';
 
 const _rid = '01JB2Z3Y4X5W6V7T8S9R0QPNMK';
 
@@ -128,11 +129,23 @@ void main() {
     );
     await expectLater(
       _rtdb((_) async => http.Response('denied', 401)).state(),
-      _outage(CoachOutage.network, 'Firebase HTTP 401'),
+      _outage(CoachOutage.network, 'Firebase answered HTTP 401'),
     );
     await expectLater(
       _rtdb((_) async => throw http.ClientException('offline')).state(),
-      _outage(CoachOutage.network, contains('offline')),
+      _outage(CoachOutage.network, 'Network error (ClientException)'),
+    );
+    await expectLater(
+      _rtdb(
+        (r) async => throw http.ClientException(
+          "SocketException: Failed host lookup: 'db.example'",
+          r.url,
+        ),
+      ).state(),
+      _outage(
+        CoachOutage.network,
+        allOf(kOfflineText, isNot(contains('tok')), isNot(contains('auth'))),
+      ),
     );
     await expectLater(
       _rtdb(
