@@ -158,4 +158,7 @@ main() {
     log "done. Try: python3 -m leetcode_guard --check"
 }
 
-main "$@"
+# Sourced by run.sh for the dependency steps alone; executed, it installs all.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

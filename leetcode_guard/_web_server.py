@@ -24,6 +24,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
+from leetcode_guard._daycost import local_today
+from leetcode_guard._gate_today import gate_off
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard.solved_today import solved_today
 
@@ -54,6 +56,8 @@ def build_status_payload() -> dict[str, Any]:
             "solves_today": answer.count,
             "checked": answer.checked,
             "settled_by_credit": answer.settled_by_credit,
+            # Live, never ledger state: on a stood-down day one solve earns.
+            "gate_off": gate_off(local_today()),
             "reason": answer.reason,
         },
     }

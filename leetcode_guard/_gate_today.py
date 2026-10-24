@@ -68,3 +68,14 @@ def decide_today(
         workday_penalty=workday_penalty_for(day),
         sick_day=leetcode_stands_down(day),
     )
+
+
+def gate_off(day: date) -> bool:
+    """Whether this gate stands down on ``day``: free, or sick without leetcode.
+
+    The same two flags :func:`decide_today` hands ``decide``, asked live. A
+    stood-down day has no price and no charge, so the bonus consumers let one
+    verified solve earn on it (earned_time 0.18.0 ``gate_off``); on every
+    other day only the charge that pays the full price does.
+    """
+    return freedays.is_free_day(day) or leetcode_stands_down(day)

@@ -18,6 +18,10 @@ stand in for a solve. It earns ``settled_by_credit`` instead: a ``leetcode``
 charge is written only when verified credits cover the day, so a day paid
 ahead is published beside the solve fact (kuhy, 2026-10-23: working ahead
 must not forfeit the bonus). Escape and outage charges carry other sources.
+Since 2026-10-24 ``settled_by_credit`` is the *only* fact that earns the
+bonus while the gate is on: one solve of a five-credit day does not
+(``DOCS-solved-today-consumers.md``). ``solved`` still answers the question
+it names, and earns only on a day ``_gate_today.gate_off`` says has no price.
 
 **The solve time is ``detail["submitted_at"]``, not ``day``.** ``day`` is
 stamped from the *harvesting* run's today (``_ledger_entries.credit_entry``),

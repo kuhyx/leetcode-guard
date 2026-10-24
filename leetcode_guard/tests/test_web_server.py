@@ -36,6 +36,13 @@ if TYPE_CHECKING:
 _PKG = "leetcode_guard._web_server"
 
 
+@pytest.fixture(autouse=True)
+def _gate_on() -> Iterator[None]:
+    """Never read the real free-day or sick-day pools (``test_gate_off``)."""
+    with patch(f"{_PKG}.gate_off", return_value=False):
+        yield
+
+
 def _get(port: int, path: str) -> tuple[int, bytes]:
     """Fetch a path from the live server.
 
@@ -90,6 +97,7 @@ class TestPayloads:
                 "solves_today": 2,
                 "checked": True,
                 "settled_by_credit": False,
+                "gate_off": False,
                 "reason": "2 today",
             }
         }

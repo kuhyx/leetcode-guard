@@ -19,14 +19,23 @@ loopback endpoint served by `leetcode-guard-web.service`:
 ```bash
 curl -s http://127.0.0.1:8771/api/status | jq .leetcode
 # {"solved_today": true, "solves_today": 2, "checked": true,
-#  "settled_by_credit": true, "reason": "..."}
+#  "settled_by_credit": true, "gate_off": false, "reason": "..."}
 ```
 
-**A day paid ahead earns too** (2026-10-23). `settled_by_credit` is true when
-today's charge is signed and sourced `leetcode`, which `_gate.decide` writes
-only when verified credits cover the day; escape and outage charges carry
-other sources. Every consumer pays the bonus on `solved_today` *or*
-`settled_by_credit` (`earned_time` >= 0.17.0 reads the charge row itself).
+**Only a fully paid day earns** (2026-10-24, `earned_time` 0.18.0). One solve
+on a Saturday costing 5 used to pay both hours. Now the bonus needs
+`settled_by_credit`: today's charge, signed and sourced `leetcode`, which
+`_gate.decide` writes only once verified credits cover the whole price (debt
+surcharge included) -- so a day paid ahead still earns. Escape and outage
+charges carry other sources and never earn.
+
+The one exception is a day the gate stands down (`gate_off`: a free day, or a
+sick day not keeping `leetcode`). There is no price and no charge, so one
+verified solve earns. `gate_off` is asked **live** (`_gate_today.gate_off`),
+never stored: a marker written during a two-minute sick claim would outlive
+the claim being cleared. screen-locker asks the pools itself
+(`_gate_off.py`); the root steam daemon has neither pool and reads `gate_off`
+from this endpoint, treating "unreachable" as "on" (no hour).
 
 Read-only, loopback-only, and it publishes a *fact* — never a number of hours.
 The enforcer owns the hour values, the same split `screen-locker` uses for the
