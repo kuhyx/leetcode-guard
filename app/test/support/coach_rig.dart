@@ -150,7 +150,7 @@ Future<void> passToStep4(WidgetTester tester, CoachRig rig) async {
   await typeInto(tester, 'property-1', 'indices 0..n');
   await tapKey(tester, 'submit-2');
   await settle(tester, rig);
-  await tapKey(tester, 'pick-XOR self-cancellation');
+  await tapKey(tester, 'pick-XOR');
   await tapKey(tester, 'submit-3');
   await settle(tester, rig);
 }

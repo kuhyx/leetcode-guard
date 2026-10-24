@@ -4,7 +4,9 @@
 ///
 /// Pure Dart (no Flutter) so `tool/coach_screenshot_server.dart` can serve
 /// the very same relay over HTTP behind the real wrapper. The grading
-/// rules are the fake's own, chosen so a test reads plainly.
+/// rules are the fake's own, chosen so a test reads plainly; the shapes,
+/// the order of checks and every relay-worded text follow the real relay
+/// (`fake_relay_script.dart` says where each comes from).
 library;
 
 import 'fake_relay_script.dart';
@@ -167,8 +169,8 @@ class FakeRelay {
   }
 
   Json _chat(String text) {
-    if (text == 'hint') return _hint();
-    if (text == 'reveal') return _reveal();
+    if (text.trim() == 'hint') return _hint();
+    if (text.trim() == 'reveal') return _reveal();
     say('kuhy', 'chat', text);
     if (looksLikeCode(text) && !_codeOpen) return _phaseLocked();
     final msg = say('coach', 'chat', kReply);
@@ -179,13 +181,16 @@ class FakeRelay {
   bool get _codeOpen =>
       _step(2)['status'] == 'passed' || _step(2)['status'] == 'forced';
 
+  /// `turns._refuse`: a `system` / `refused` line, then the error.
   Json _phaseLocked() {
-    say('system', 'refused', kRefused);
+    say('system', 'refused', '$kLocked\n$kRefusedNote');
     _bump();
-    return err('phase_locked', kRefused, extra: {'note': kRefused});
+    return err('phase_locked', kLocked, extra: {'note': kRefusedNote});
   }
 
+  /// Kuhy's own `hint` / `reveal` line comes first, as `turns.chat` logs it.
   Json _hint() {
+    say('kuhy', 'hint', 'hint');
     rung = nextRung(rung);
     final msg = say('coach', 'hint', 'Hint $rung: $kHint');
     _bump();
@@ -193,6 +198,7 @@ class FakeRelay {
   }
 
   Json _reveal() {
+    say('kuhy', 'reveal', 'reveal');
     revealed = true;
     final msg = say('coach', 'reveal', kReveal);
     return _end('reveal', {'msg': msg});
@@ -200,7 +206,7 @@ class FakeRelay {
 
   Json _runCode() {
     if (!_codeOpen) return _phaseLocked();
-    say('system', 'run', 'Ran 2 examples: 1 passed');
+    say('system', 'run', runLine(kRunData));
     _bump();
     return ok(kRunData);
   }

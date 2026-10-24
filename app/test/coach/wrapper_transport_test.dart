@@ -102,6 +102,19 @@ void main() {
         _outage(CoachOutage.rejected, contains('$code')),
       );
     }
+    // The relay words its refusal (`http_api._error`); show those words.
+    await expectLater(
+      _wrapper(
+        (_) async => http.Response(
+          '{"ok":false,"code":"bad_request","error":"the rid is not a ULID"}',
+          400,
+        ),
+      ).submit(_rid, const {}),
+      _outage(
+        CoachOutage.rejected,
+        'The relay refused the request: the rid is not a ULID',
+      ),
+    );
     await expectLater(
       _wrapper((_) async => http.Response('', 500)).state(),
       _outage(CoachOutage.network, 'Coach relay HTTP 500'),

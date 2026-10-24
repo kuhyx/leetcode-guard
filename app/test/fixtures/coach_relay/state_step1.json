@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "step": 1,
+  "rung": "H0",
+  "revealed": false,
+  "chat_count": 1,
+  "session": {
+    "id": "20261023-213954-e24f",
+    "slug": "missing-number",
+    "title": "Missing Number",
+    "cluster": "bit-cancellation",
+    "url": "https://leetcode.com/problems/missing-number/",
+    "started": 1792784394770,
+    "ended": null,
+    "end_reason": null
+  },
+  "steps": [
+    {
+      "n": 1,
+      "name": "constraint",
+      "status": "open",
+      "attempts": 0,
+      "can_force": false,
+      "last": null
+    },
+    {
+      "n": 2,
+      "name": "requirements",
+      "status": "locked",
+      "attempts": 0,
+      "can_force": false,
+      "last": null
+    },
+    {
+      "n": 3,
+      "name": "toolbox",
+      "status": "locked",
+      "attempts": 0,
+      "can_force": false,
+      "last": null
+    },
+    {
+      "n": 4,
+      "name": "implement",
+      "status": "locked",
+      "probe": null,
+      "probed_at": null
+    },
+    {
+      "n": 5,
+      "name": "postmortem",
+      "status": "locked",
+      "attempts": 0,
+      "can_force": false,
+      "last": null
+    }
+  ],
+  "rev": 2
+}

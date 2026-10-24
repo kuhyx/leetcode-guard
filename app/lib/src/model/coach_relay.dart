@@ -1,5 +1,6 @@
 /// The relay's other shapes (`DOCS-coach-relay.md` §1-2): the heartbeat,
-/// a chat message, a request's result and a `run_code` report.
+/// a chat message and a request's result. A `run_code` result is shown
+/// through the relay's own `system` / `run` chat line, so it is not parsed.
 library;
 
 import 'package:leetcode_guard/src/model/json_read.dart';
@@ -87,54 +88,4 @@ class RelayResult {
   /// Parses a decoded result, or null when it is not an object.
   static RelayResult? tryParse(Object? decoded) =>
       readSection(decoded, RelayResult.fromJson);
-}
-
-/// One example of a `run_code` report.
-class RunExample {
-  /// Parses an example.
-  new fromJson(Json json)
-    : n = readInt(json['n']),
-      ok = readBool(json['ok']) ?? false,
-      got = readString(json['got']),
-      expected = readString(json['expected']);
-
-  /// The statement's example number.
-  final int? n;
-
-  /// Whether it matched.
-  final bool ok;
-
-  /// The printed value.
-  final String? got;
-
-  /// The expected printed value.
-  final String? expected;
-
-  /// "example N: got X, expected Y" (decision 8's exact wording).
-  String get line =>
-      'example ${n ?? '?'}: got ${got ?? '?'}, expected ${expected ?? '?'}';
-}
-
-/// The data of a `run_code` result.
-class RunReport {
-  /// Parses `data`.
-  new fromJson(Json json)
-    : examples = readObjects(json['examples'], RunExample.fromJson) ?? const [],
-      error = readString(json['error']);
-
-  /// One line per example.
-  final List<RunExample> examples;
-
-  /// `timeout|node_missing|no_examples|syntax`, or null.
-  final String? error;
-
-  /// [error] in words, or null.
-  String? get errorText => switch (error) {
-    null => null,
-    'timeout' => 'The run timed out (5 s)',
-    'node_missing' => 'node is not installed on the PC',
-    'no_examples' => 'The statement has no examples to run',
-    'syntax' => 'The code does not parse',
-    final String other => 'The run failed: $other',
-  };
 }

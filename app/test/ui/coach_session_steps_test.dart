@@ -16,7 +16,7 @@ void main() {
     await tester.tap(find.byKey(const Key('step-3')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('answer-1')), findsOneWidget);
-    expect(find.byKey(const Key('pick-Gauss sum')), findsNothing);
+    expect(find.byKey(const Key('pick-hash set')), findsNothing);
 
     // Two fails and a partial: then, and only then, "Continue anyway".
     await typeInto(tester, 'answer-1', 'loop over it');
@@ -51,11 +51,11 @@ void main() {
     );
 
     // Step 3: pick from the toolbox, which shows each entry's properties.
-    expect(find.text('x ^ 0 = x'), findsOneWidget);
-    await tapKey(tester, 'pick-XOR self-cancellation');
+    expect(find.text('self-inverse'), findsOneWidget);
+    await tapKey(tester, 'pick-XOR');
     await tapKey(tester, 'submit-3');
     await settle(tester, rig);
-    expect(rig.transport.relay.ran.last.$2['picks'], ['XOR self-cancellation']);
+    expect(rig.transport.relay.ran.last.$2['picks'], ['XOR']);
 
     // Step 4: open the problem, then wait for an Accepted.
     await tapKey(tester, 'open-leetcode');
@@ -73,10 +73,7 @@ void main() {
     await wait(tester, rig, 5);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('answer-5')), findsOneWidget);
-    expect(
-      find.text('LeetCode shows an Accepted: step 5 is open'),
-      findsOneWidget,
-    );
+    expect(find.text(kAcceptedLine), findsOneWidget);
 
     // Step 5: the post-mortem ends the session and builds the cards.
     await gradeText(tester, rig, 5, 'XOR pairs each index with its value');

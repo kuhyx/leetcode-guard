@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leetcode_guard/src/ui/coach_chat_message.dart';
 
 import '../support/coach_rig.dart';
 import '../support/fake_relay.dart';
@@ -43,8 +44,8 @@ void main() {
 
     // Code before step 2: the relay refuses it and says why.
     await _say(tester, rig, _code);
-    expect(find.text(kRefused), findsWidgets);
-    final run = find.byKey(const Key('run-m0005'));
+    expect(find.textContaining(kLocked), findsWidgets);
+    final run = find.byKey(const Key('run-m0006'));
     expect(run, findsOneWidget);
     expect(tester.widget<ButtonStyleButton>(run).onPressed, isNull);
 
@@ -57,12 +58,33 @@ void main() {
     await tapKey(tester, 'submit-2');
     await settle(tester, rig);
     await _openChat(tester);
-    await tapKey(tester, 'run-m0005');
+    await tapKey(tester, 'run-m0006');
     await settle(tester, rig);
     expect(rig.transport.relay.ran.last.$1, 'run_code');
     expect(rig.transport.relay.ran.last.$2, {'session': kSid, 'code': _code});
-    expect(find.text('example 1: got 2, expected 2'), findsOneWidget);
-    expect(find.text('example 2: got 1, expected 2'), findsOneWidget);
+    // Once: the relay's own `run` chat line (both devices see it, and it
+    // survives a reload), never a second in-memory copy under the code.
+    final codeBubble = find.ancestor(
+      of: find.byKey(const Key('run-m0006')),
+      matching: find.byType(MessageBubble),
+    );
+    expect(
+      find.descendant(of: codeBubble, matching: find.textContaining('example')),
+      findsNothing,
+    );
+    // Tapping Run scrolled up to the code; the line is at the newest end.
+    await tester.scrollUntilVisible(
+      find.textContaining('example 2: got 1'),
+      -300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('chat-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.textContaining('example 1: got 2, expected 2'), findsOneWidget);
+    expect(find.textContaining('example 2: got 1, expected 2'), findsOneWidget);
   });
 
   testWidgets('Reveal asks first, and confirming ends the exercise', (

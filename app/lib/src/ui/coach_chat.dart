@@ -1,6 +1,6 @@
 /// The coach's chat: the messages (newest at the bottom), "Run code" on a
-/// pasted code message with its example lines, and the composer with Hint
-/// and Reveal.
+/// pasted code message (its example lines come back as the relay's own
+/// `run` line), and the composer with Hint and Reveal.
 library;
 
 import 'dart:async';

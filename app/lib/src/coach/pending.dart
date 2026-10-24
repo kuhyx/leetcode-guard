@@ -24,7 +24,7 @@ enum RequestPhase {
 /// relay's done-map re-answers a finished one instead of running it twice.
 class PendingRequest {
   /// Creates the request, first sent at [sentAt].
-  new(this.rid, this.kind, this.body, {required this.sentAt, this.runKey});
+  new(this.rid, this.kind, this.body, {required this.sentAt});
 
   /// The ULID.
   final String rid;
@@ -34,9 +34,6 @@ class PendingRequest {
 
   /// The kind's body.
   final Json body;
-
-  /// For `run_code`: the chat message whose code runs.
-  final String? runKey;
 
   /// When it was last (re)sent; the 300 s stall counts from here.
   DateTime sentAt;

@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/ids.dart';
+import 'package:leetcode_guard/src/model/coach_state.dart';
 
 /// Each text field (`text`, `answer`, `code`) is at most this many UTF-8
 /// bytes.
@@ -33,10 +34,10 @@ bool looksLikeCode(String text) {
 /// The requests a session screen sends. Each returns false (and sends
 /// nothing) when an action is not allowed now or the input is out of bounds.
 extension CoachRequests on CoachController {
-  bool _inSession(String kind, Map<String, Object?> body, {String? runKey}) {
+  bool _inSession(String kind, Map<String, Object?> body) {
     final id = sid;
     if (id == null) return false;
-    return send(kind, {'session': id, ...body}, runKey: runKey);
+    return send(kind, {'session': id, ...body});
   }
 
   /// `session_start`.
@@ -58,11 +59,18 @@ extension CoachRequests on CoachController {
       fitsLimit(answer) &&
       _inSession('grade_step', {'step': step, 'answer': answer});
 
-  /// `grade_step` for step 3.
-  bool gradePicks(List<String> picks) =>
-      picks.isNotEmpty &&
-      picks.length <= kMaxPicks &&
-      _inSession('grade_step', {'step': 3, 'picks': picks});
+  /// `grade_step` for step 3, with only the picks the toolbox still
+  /// offers: the relay answers any other name `bad_request`, and a pick
+  /// that is no longer listed has no checkbox to clear it with.
+  bool gradePicks(List<String> picks) {
+    final offered = {
+      for (final ToolboxEntry e in state?.toolbox ?? const []) e.name,
+    };
+    final sent = picks.where(offered.contains).toList();
+    return sent.isNotEmpty &&
+        sent.length <= kMaxPicks &&
+        _inSession('grade_step', {'step': 3, 'picks': sent});
+  }
 
   /// `grade_step` with `force` ("Continue anyway").
   bool force(int step) =>
@@ -74,11 +82,13 @@ extension CoachRequests on CoachController {
   /// `reveal`: ends the exercise (the screen confirms first).
   bool reveal() => _inSession('reveal', {});
 
-  /// `run_code` on chat message [key]'s code.
-  bool runCode(String key, String text) {
+  /// `run_code` on a chat message's code. Its result is shown once, as
+  /// the relay's own `system` / `run` chat line (`turns.run_code`), which
+  /// both devices see and a reload keeps.
+  bool runCode(String text) {
     final code = codeOf(text);
     return code.isNotEmpty &&
         fitsLimit(code) &&
-        _inSession('run_code', {'code': code}, runKey: key);
+        _inSession('run_code', {'code': code});
   }
 }

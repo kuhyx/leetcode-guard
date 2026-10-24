@@ -1,0 +1,86 @@
+{
+  "m0001": {
+    "role": "coach",
+    "kind": "chat",
+    "text": "Start with the constraint: what does it rule out?",
+    "at": 1792784394820
+  },
+  "m0002": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 1 (constraint): partial on try 1.\nSay what the space bound rules out.",
+    "at": 1792784395822
+  },
+  "m0003": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 1 (constraint): pass on try 2.",
+    "at": 1792784396321
+  },
+  "m0004": {
+    "role": "kuhy",
+    "kind": "chat",
+    "text": "Why would folding help here",
+    "at": 1792784396770
+  },
+  "m0005": {
+    "role": "coach",
+    "kind": "chat",
+    "text": "Which property lets a value undo itself?",
+    "at": 1792784396822
+  },
+  "m0006": {
+    "role": "kuhy",
+    "kind": "chat",
+    "text": "var missingNumber = function(nums) {\n  let x = nums.length;\n  nums.forEach((v, i) => { x ^= i ^ v; });\n  return x;\n};",
+    "at": 1792784397270
+  },
+  "m0007": {
+    "role": "system",
+    "kind": "refused",
+    "text": "Code waits until step 2 (requirements) is passed or forced.\n[code held back: write the requirement list first -- one message starting with req: that lists the properties the operation must have, without naming an operation or structure]",
+    "at": 1792784397271
+  },
+  "m0008": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 2 (requirements): fail on try 1.\nThis names an operation or a structure. List the properties it must have instead, without naming it.",
+    "at": 1792784397772
+  },
+  "m0009": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 2 (requirements): fail on try 2.\nThis names an operation or a structure. List the properties it must have instead, without naming it.",
+    "at": 1792784398272
+  },
+  "m0010": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 2 (requirements): fail on try 3.\nThis names an operation or a structure. List the properties it must have instead, without naming it.",
+    "at": 1792784398772
+  },
+  "m0011": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 2 (requirements): continued after 3 tries.",
+    "at": 1792784399271
+  },
+  "m0012": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 3 (toolbox): partial on try 1.\nThe operation you need also has these properties, which no pick has:\n- self-inverse: applying the same value twice undoes it: combine a with x, then with x again, and you are back at a\n- works per bit: each bit position is computed independently of the others\nFewer picks: more than one of these is not needed.",
+    "at": 1792784400272
+  },
+  "m0013": {
+    "role": "system",
+    "kind": "grade",
+    "text": "Step 3 (toolbox): pass on try 2.",
+    "at": 1792784400772
+  },
+  "m0014": {
+    "role": "system",
+    "kind": "run",
+    "text": "example 1: got 2, expected 2\nexample 2: got 2, expected 2\nexample 3: got 8, expected 8",
+    "at": 1792784401288
+  }
+}

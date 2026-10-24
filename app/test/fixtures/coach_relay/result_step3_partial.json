@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "at": 1792784400273,
+  "state_rev": 12,
+  "data": {
+    "step": 3,
+    "grade": "partial",
+    "feedback": "The operation you need also has these properties, which no pick has:\n- self-inverse: applying the same value twice undoes it: combine a with x, then with x again, and you are back at a\n- works per bit: each bit position is computed independently of the others\nFewer picks: more than one of these is not needed.",
+    "attempt": 1,
+    "can_force": false,
+    "via": "toolbox",
+    "next_step": 3
+  }
+}

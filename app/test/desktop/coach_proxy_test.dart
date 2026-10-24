@@ -145,6 +145,29 @@ void main() {
     },
   );
 
+  test('a relay that drops the connection (restarting) is relay_down too, '
+      'never a 500', () async {
+    final dropper = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(dropper.close);
+    dropper.listen((s) => s.destroy());
+    final w = WrapperServer(
+      webRoot: root.path,
+      source: FakeSource([null]),
+      relay: Uri.parse('http://127.0.0.1:${dropper.port}'),
+    );
+    final own = await w.start(port: 0);
+    addTearDown(w.close);
+    final req = await client.get('127.0.0.1', own, '/coach/heartbeat');
+    final res = await req.close();
+    expect(res.statusCode, 502);
+    expect(await utf8.decoder.bind(res).join(), kRelayDownBody);
+  });
+
+  test('the default per-call timeout outlasts a whole relay request '
+      '(280 s, DOCS-coach-relay.md §1)', () {
+    expect(kRelayTimeout, greaterThanOrEqualTo(const Duration(seconds: 280)));
+  });
+
   test('a relay that never answers times out as 504', () async {
     hang = true;
     expect((await call('GET', '/coach/state')).$1, 504);

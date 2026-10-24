@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "step": null,
+  "rung": "H0",
+  "revealed": false,
+  "chat_count": 14,
+  "session": {
+    "id": "20261023-213954-e24f",
+    "slug": "missing-number",
+    "title": "Missing Number",
+    "cluster": "bit-cancellation",
+    "url": "https://leetcode.com/problems/missing-number/",
+    "started": 1792784394770,
+    "ended": 1792784401772,
+    "end_reason": "ended"
+  },
+  "steps": [
+    {
+      "n": 1,
+      "name": "constraint",
+      "status": "passed",
+      "attempts": 1,
+      "can_force": false,
+      "last": {
+        "grade": "pass",
+        "feedback": "",
+        "via": "haiku",
+        "at": 1792784396321
+      }
+    },
+    {
+      "n": 2,
+      "name": "requirements",
+      "status": "forced",
+      "attempts": 3,
+      "can_force": false,
+      "last": {
+        "grade": "fail",
+        "feedback": "This names an operation or a structure. List the properties it must have instead, without naming it.",
+        "via": "toolbox",
+        "at": 1792784398772
+      }
+    },
+    {
+      "n": 3,
+      "name": "toolbox",
+      "status": "passed",
+      "attempts": 1,
+      "can_force": false,
+      "last": {
+        "grade": "pass",
+        "feedback": "",
+        "via": "toolbox",
+        "at": 1792784400772
+      }
+    },
+    {
+      "n": 4,
+      "name": "implement",
+      "status": "open",
+      "probe": null,
+      "probed_at": null
+    },
+    {
+      "n": 5,
+      "name": "postmortem",
+      "status": "locked",
+      "attempts": 0,
+      "can_force": false,
+      "last": null
+    }
+  ],
+  "rev": 15
+}

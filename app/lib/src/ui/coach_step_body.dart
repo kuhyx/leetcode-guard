@@ -62,7 +62,7 @@ class _StepBodyState extends State<StepBody> {
   /// The answer as it would be sent, or null when there is nothing to send.
   bool get _ready => switch (widget.n) {
     2 => _properties.isNotEmpty && fitsLimit(_properties),
-    3 => _d.picks.isNotEmpty,
+    3 => (_c.state?.toolbox ?? const []).any((e) => _d.picks.contains(e.name)),
     _ => switch (_d.text[widget.n]?.text) {
       final String t => t.trim().isNotEmpty && fitsLimit(t),
       null => false,
