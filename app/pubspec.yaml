@@ -14,7 +14,7 @@ dependencies:
   crdt_sync:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_dart-v0.11.1
+      ref: crdt_sync_dart-v0.11.2
       path: crdt_sync_dart
   design_system:
     git:
@@ -38,7 +38,7 @@ dependencies:
   sync_settings_ui:
     git:
       url: https://github.com/kuhyx/utils
-      ref: sync_settings_ui-v0.4.1
+      ref: sync_settings_ui-v0.4.2
       path: sync_settings_ui
   # Opens a suggestion's problem page in the browser: the app's one action.
   url_launcher: 6.3.3

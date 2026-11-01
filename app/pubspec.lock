@@ -85,11 +85,11 @@ packages:
     dependency: "direct main"
     description:
       path: crdt_sync_dart
-      ref: "crdt_sync_dart-v0.11.1"
-      resolved-ref: "978d32af3af66f0d6500c4c6c0c6df5370ebe9a2"
+      ref: "crdt_sync_dart-v0.11.2"
+      resolved-ref: "1b5515fd8b1192207896c409212483aeb09704ea"
       url: "https://github.com/kuhyx/utils"
     source: git
-    version: "0.11.1"
+    version: "0.11.2"
   crypto:
     dependency: transitive
     description:
@@ -587,11 +587,11 @@ packages:
     dependency: "direct main"
     description:
       path: sync_settings_ui
-      ref: "sync_settings_ui-v0.4.1"
-      resolved-ref: "51700aa89eaf1789ae98491aaa854c54d35b4170"
+      ref: "sync_settings_ui-v0.4.2"
+      resolved-ref: a4c7d29595bb9cf75f06877545249ed77d5560a9
       url: "https://github.com/kuhyx/utils"
     source: git
-    version: "0.4.1"
+    version: "0.4.2"
   term_glyph:
     dependency: transitive
     description:
