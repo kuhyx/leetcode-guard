@@ -19,6 +19,16 @@ Finder _date(String key) => find.descendant(
 String _text(WidgetTester tester, String label) =>
     tester.widget<Text>(_value(label)).data!;
 
+/// Reads a detail row, which sits behind the section's Details button.
+Future<String> _detail(WidgetTester tester, String label) async {
+  await tester.tap(find.byKey(const Key('show-all-Progress & projection')));
+  await tester.pumpAndSettle();
+  final text = _text(tester, label);
+  await tester.tapAt(const Offset(10, 10));
+  await tester.pumpAndSettle();
+  return text;
+}
+
 void main() {
   const tall = Size(390, 9000);
 
@@ -27,8 +37,8 @@ void main() {
     expect(find.text('312 / 4055'), findsOneWidget);
     expect(_date('2026-10-24'), findsOneWidget);
     expect(_text(tester, 'Projected solved'), '313');
-    expect(_text(tester, 'Gated days'), '1');
-    expect(_text(tester, 'Rules demand'), '2');
+    expect(await _detail(tester, 'Gated days'), '1');
+    expect(await _detail(tester, 'Rules demand'), '2');
   });
 
   testWidgets('arrows step through the published keys', (tester) async {
@@ -37,10 +47,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(_date('2026-10-31'), findsOneWidget);
     expect(_text(tester, 'Projected solved'), '333');
-    expect(_text(tester, 'Debt'), '2');
+    expect(await _detail(tester, 'Debt'), '2');
     await tester.tap(find.byTooltip('Later date'));
     await tester.pumpAndSettle();
-    expect(_text(tester, 'Free days'), '1');
+    expect(await _detail(tester, 'Free days'), '1');
     // The last key: "later" is disabled rather than wrapping around.
     await tester.tap(find.byTooltip('Later date'));
     await tester.pumpAndSettle();
@@ -98,7 +108,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_date('2026-12-31'), findsOneWidget);
     expect(_text(tester, 'Projected solved'), '500');
-    expect(_text(tester, 'Gated days'), 'unknown');
+    expect(await _detail(tester, 'Gated days'), 'unknown');
     expect(find.text('unknown'), findsWidgets);
   });
 

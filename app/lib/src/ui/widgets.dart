@@ -8,9 +8,15 @@ import 'package:leetcode_guard/src/format.dart';
 /// Outer gutter of every tab.
 const kGutter = EdgeInsets.all(AppSpacing.md);
 
+/// A section that names itself, so the phone layout can label its chip.
+abstract interface class Titled {
+  /// The chip label.
+  String get cardTitle;
+}
+
 /// One titled group of rows on a raised surface. No shadow: this is a dark
 /// UI, where depth comes from the lighter surface alone.
-class SectionCard extends StatelessWidget {
+class SectionCard extends StatelessWidget implements Titled {
   /// Creates a section titled [title] holding [children].
   const new({required this.title, required this.children, super.key});
 
@@ -20,6 +26,9 @@ class SectionCard extends StatelessWidget {
 
   /// The heading.
   final String title;
+
+  @override
+  String get cardTitle => title;
 
   /// The rows.
   final List<Widget> children;
@@ -52,7 +61,7 @@ class InfoRow extends StatelessWidget {
   /// Creates a row; the key `row-<label>` lets tests find its value. Rows
   /// in a list whose labels can repeat (two solves on one day) pass their
   /// own [key] instead.
-  new(this.label, this.value, {this.color, this.detail, Key? key})
+  new(this.label, this.value, {this.color, Key? key})
     : super(key: key ?? Key('row-$label'));
 
   /// What the value is.
@@ -63,9 +72,6 @@ class InfoRow extends StatelessWidget {
 
   /// Status colour for the value, if any.
   final Color? color;
-
-  /// A secondary note after the value.
-  final String? detail;
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +93,6 @@ class InfoRow extends StatelessWidget {
               style: TextStyle(color: value == kUnknown ? muted : color),
             ),
           ),
-          if (detail case final String d) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Text(d, style: TextStyle(color: muted)),
-          ],
         ],
       ),
     );

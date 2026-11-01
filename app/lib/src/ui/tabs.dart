@@ -32,12 +32,12 @@ class StatusTab extends StatelessWidget {
           projections: snapshot?.projections,
           price: snapshot?.projectionPrice,
         ),
-        solvesSection(s),
+        solvesSection(context, s),
         daysSection(s),
         budgetsSection(context, s),
         integritySection(context, s),
         environmentSection(context, s),
-        suggestionsSection(s, openUrl),
+        suggestionsSection(context, s, openUrl),
       ],
     );
   }

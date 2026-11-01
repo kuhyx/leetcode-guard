@@ -1,3 +1,4 @@
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
@@ -48,7 +49,8 @@ void main() {
   testWidgets('phone keeps one full-width list', (tester) async {
     await pumpApp(tester, size: const Size(412, 900));
     final list = tester.getSize(find.byKey(const Key('status-list')));
-    expect(list.width, 412);
+    // The window less the gutter on both sides.
+    expect(list.width, 412 - 2 * AppSpacing.md);
   });
 
   testWidgets('a wide window uses the width it has', (tester) async {

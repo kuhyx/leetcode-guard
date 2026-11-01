@@ -42,6 +42,10 @@ void main() {
   testWidgets('profile heatmap fits the phone width', (tester) async {
     await pumpApp(tester);
     await _open(tester, 'Profile');
+    final chip = find.widgetWithText(ChoiceChip, 'Submission calendar');
+    await tester.ensureVisible(chip);
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
     final size = tester.getSize(find.byKey(const Key('heatmap')));
     expect(size.width, lessThanOrEqualTo(390));
     expect(tester.takeException(), isNull);

@@ -10,6 +10,12 @@ Future<void> openCoach(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Taps the "Show all" style button labelled [label] and shows its sheet.
+Future<void> openSheet(WidgetTester tester, String label) async {
+  await tester.tap(find.text(label));
+  await tester.pumpAndSettle();
+}
+
 /// Records what the app writes to the clipboard.
 List<String> recordClipboard(WidgetTester tester) {
   final copied = <String>[];

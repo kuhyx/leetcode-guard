@@ -15,7 +15,8 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.text(asOf(kGeneratedAt)), findsOneWidget);
     expect(find.byKey(const Key('stale-banner')), findsNothing);
-    expect(find.text('Right now'), findsOneWidget);
+    // The first section's chip, and its heading.
+    expect(find.text('Right now'), findsNWidgets(2));
   });
 
   testWidgets('narrow desktop: navigation rail and capped content width', (
@@ -33,17 +34,17 @@ void main() {
     await pumpApp(tester);
     await tester.tap(find.text('Coach'));
     await tester.pumpAndSettle();
-    expect(find.text('Re-tests due'), findsOneWidget);
+    expect(find.text('Re-tests due'), findsWidgets);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('Difficulty split'), findsOneWidget);
+    expect(find.text('Difficulty split'), findsWidgets);
   });
 
   testWidgets('rail destinations switch tabs', (tester) async {
     await pumpApp(tester, size: kDesktop);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('Streaks'), findsOneWidget);
+    expect(find.text('Streaks'), findsWidgets);
   });
 
   testWidgets('older than ten minutes shows the stale banner', (tester) async {
@@ -60,6 +61,8 @@ void main() {
     await c.refresh();
     await tester.pumpAndSettle();
     expect(find.textContaining('network down'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Credits (tokens)'));
+    await tester.pumpAndSettle();
     expect(find.text('2 available'), findsOneWidget);
   });
 

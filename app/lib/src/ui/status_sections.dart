@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
+import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// "Right now": am I locked, and why.
@@ -38,8 +39,15 @@ Widget verdictSection(BuildContext context, StatusData? s) {
       InfoRow('Surcharge', show(s.surcharge)),
       InfoRow('Paid today', show(s.chargedToday)),
       if (explanation != null && explanation.isNotEmpty) ...[
-        const Line('Why the lock did not trigger'),
-        for (final (i, line) in explanation.indexed) Muted('${i + 1}. $line'),
+        showAllButton(
+          context,
+          label: 'Why the lock did not trigger',
+          title: title,
+          rows: [
+            for (final (i, line) in explanation.indexed)
+              Muted('${i + 1}. $line'),
+          ],
+        ),
       ],
     ],
   );
@@ -59,45 +67,55 @@ Widget creditsSection(BuildContext context, StatusData? s) {
         color: (s.available ?? 0) > 0 ? colors.success : colors.warning,
         strong: true,
       ),
-      InfoRow('Earned all-time', show(s.earnedAllTime)),
-      InfoRow('Spent all-time', show(s.spentAllTime)),
-      InfoRow('Needed today', show(s.needed)),
-      if (debt == null)
-        InfoRow('Debt', kUnknown)
-      else ...[
-        InfoRow(
-          'Debt outstanding',
-          show(debt.outstanding),
-          color: (debt.outstanding ?? 0) > 0 ? colors.warning : null,
+      ...pairRows([
+        InfoRow('Earned all-time', show(s.earnedAllTime)),
+        InfoRow('Spent all-time', show(s.spentAllTime)),
+        InfoRow('Needed today', show(s.needed)),
+        if (debt == null)
+          InfoRow('Debt', kUnknown)
+        else ...[
+          InfoRow(
+            'Debt outstanding',
+            show(debt.outstanding),
+            color: (debt.outstanding ?? 0) > 0 ? colors.warning : null,
+          ),
+          InfoRow('Debt owed', show(debt.owed)),
+          InfoRow('Debt repaid', show(debt.repaid)),
+          InfoRow('Missed days', show(debt.missedDays)),
+        ],
+      ]),
+      if (s.pricingNote case final String note)
+        showAllButton(
+          context,
+          label: 'Pricing rules',
+          title: title,
+          rows: [Muted(note)],
         ),
-        InfoRow('Debt owed', show(debt.owed)),
-        InfoRow('Debt repaid', show(debt.repaid)),
-        InfoRow('Missed days', show(debt.missedDays)),
-      ],
-      if (s.pricingNote case final String note) Muted(note),
     ],
   );
 }
 
 /// "Solves": what you actually solved.
-Widget solvesSection(StatusData? s) {
+Widget solvesSection(BuildContext context, StatusData? s) {
   const title = 'Solves';
   final solves = s?.solves;
   if (solves == null) return const SectionCard.unknown(title: title);
   return SectionCard(
     title: title,
     children: [
-      InfoRow('Today', show(solves.today)),
-      InfoRow('Last 7 days', show(solves.last7Days)),
-      InfoRow('Total credited', show(solves.totalCredited)),
-      ...listRows(solves.recent, (solve) {
+      ...pairRows([
+        InfoRow('Today', show(solves.today)),
+        InfoRow('Last 7 days', show(solves.last7Days)),
+        InfoRow('Total credited', show(solves.totalCredited)),
+      ]),
+      ...limitedRows(context, solves.recent, 3, (solve) {
         final lang = solve.lang == null ? '' : ' [${solve.lang}]';
         return InfoRow(
           show(solve.day),
           '${show(solve.titleSlug)}$lang',
           key: ObjectKey(solve),
         );
-      }),
+      }, title: 'Recent solves'),
     ],
   );
 }

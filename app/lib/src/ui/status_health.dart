@@ -6,6 +6,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
+import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// Opens [uri] outside the app.
@@ -49,38 +50,55 @@ Widget environmentSection(BuildContext context, StatusData? s) {
   return SectionCard(
     title: title,
     children: [
-      InfoRow(
-        'Clock trusted',
-        show(e.clockTrusted),
-        color: e.clockTrusted == false ? warning : null,
+      ...pairRows([
+        InfoRow(
+          'Clock trusted',
+          show(e.clockTrusted),
+          color: e.clockTrusted == false ? warning : null,
+        ),
+        InfoRow(
+          'LeetCode cookies loaded',
+          show(e.authPresent),
+          color: e.authPresent == false ? warning : null,
+        ),
+        InfoRow('Suggestions from', show(e.poolSource)),
+        InfoRow('Timer enabled', show(e.timer?.enabled)),
+        InfoRow('Next fire', show(e.timer?.nextFire)),
+      ]),
+      showAllButton(
+        context,
+        label: 'Details',
+        title: title,
+        rows: [
+          if (e.authNote case final String note) Muted(note),
+          InfoRow('Cookies configured', show(e.cookiesConfigured)),
+          InfoRow('Sync token configured', show(e.syncConfigured)),
+          InfoRow('Timer detail', show(e.timer?.detail)),
+          Muted(e.poolCacheSummary ?? 'Problem pool: $kUnknown'),
+          Muted(e.statementCacheSummary ?? 'Offline statements: $kUnknown'),
+          for (final note in e.poolNotes ?? const <String>[]) Muted(note),
+        ],
       ),
-      InfoRow(
-        'LeetCode cookies loaded',
-        show(e.authPresent),
-        color: e.authPresent == false ? warning : null,
-      ),
-      if (e.authNote case final String note) Muted(note),
-      InfoRow('Suggestions from', show(e.poolSource)),
-      InfoRow('Cookies configured', show(e.cookiesConfigured)),
-      InfoRow('Sync token configured', show(e.syncConfigured)),
-      InfoRow('Timer enabled', show(e.timer?.enabled), detail: e.timer?.detail),
-      InfoRow('Next fire', show(e.timer?.nextFire)),
-      Muted(e.poolCacheSummary ?? 'Problem pool: $kUnknown'),
-      Muted(e.statementCacheSummary ?? 'Offline statements: $kUnknown'),
-      for (final note in e.poolNotes ?? const <String>[]) Muted(note),
     ],
   );
 }
 
 /// "Suggested problems": tap one to open it in the browser.
-Widget suggestionsSection(StatusData? s, UrlOpener openUrl) {
+Widget suggestionsSection(
+  BuildContext context,
+  StatusData? s,
+  UrlOpener openUrl,
+) {
   const title = 'Suggested problems';
   if (s == null) return const SectionCard.unknown(title: title);
   return SectionCard(
     title: title,
-    children: listRows(
+    children: limitedRows(
+      context,
       s.suggestions,
+      3,
       (item) => _SuggestionTile(item: item, openUrl: openUrl),
+      title: title,
     ),
   );
 }

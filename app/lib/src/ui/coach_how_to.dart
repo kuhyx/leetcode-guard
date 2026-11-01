@@ -7,16 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
+import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// "How to start": the method, the first command and the other commands;
 /// "unknown" when [howTo] is null.
-class HowToCard extends StatelessWidget {
+class HowToCard extends StatelessWidget implements Titled {
   /// Creates the card over [howTo].
   const new(this.howTo, {super.key});
 
   /// The coach's `how_to` block, or null when unknown.
   final HowTo? howTo;
+
+  @override
+  String get cardTitle => 'How to start';
 
   @override
   Widget build(BuildContext context) {
@@ -28,15 +32,35 @@ class HowToCard extends StatelessWidget {
       title: title,
       children: [
         for (final (index, step) in (h.steps ?? const <HowToStep>[]).indexed)
-          _Step(index + 1, step),
+          Line('${index + 1}. ${show(step.name)}', strong: true),
         if (first != null) ...[
           const SizedBox(height: AppSpacing.sm),
           const Muted('First session:'),
           _CommandBox(first),
         ],
-        const SizedBox(height: AppSpacing.sm),
-        const Muted('Commands:'),
-        for (final c in h.commands ?? const <HowToCommand>[]) _CommandRow(c),
+        Wrap(
+          children: [
+            showAllButton(
+              context,
+              label: 'The method',
+              title: 'The method',
+              rows: [
+                for (final (i, step)
+                    in (h.steps ?? const <HowToStep>[]).indexed)
+                  _Step(i + 1, step),
+              ],
+            ),
+            showAllButton(
+              context,
+              label: 'All commands',
+              title: 'Commands',
+              rows: [
+                for (final c in h.commands ?? const <HowToCommand>[])
+                  _CommandRow(c),
+              ],
+            ),
+          ],
+        ),
       ],
     );
   }

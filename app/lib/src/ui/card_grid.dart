@@ -7,6 +7,7 @@ library;
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:leetcode_guard/src/ui/card_pages.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// A column never stretches wider than this, so a wide window keeps a
@@ -30,6 +31,10 @@ int gridColumns(double width) => width >= kThreeColumnBreakpoint
 /// the old 720 px cap, each further one adds a column and the gap before it.
 double contentMaxWidth(int columns) =>
     columns * kMaxContentWidth + (columns - 1) * AppSpacing.md;
+
+/// Window height (logical px) from which a one-column tab lists everything
+/// instead of switching sections: nothing a phone has is this tall.
+const kFitMaxHeight = 1400.0;
 
 /// A tab's cards: a list in one column, else [gridColumns] columns filled in
 /// reading order (card `i` goes to column `i % n`, of n columns).
@@ -57,7 +62,16 @@ class CardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = gridColumns(MediaQuery.sizeOf(context).width);
+    final size = MediaQuery.sizeOf(context);
+    final columns = gridColumns(size.width);
+    if (columns == 1 && size.height < kFitMaxHeight) {
+      return CardPages(
+        cards: cards,
+        header: header,
+        footer: footer,
+        listKey: listKey,
+      );
+    }
     return ListView(
       key: listKey,
       padding: kGutter,

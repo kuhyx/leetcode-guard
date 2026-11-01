@@ -41,13 +41,16 @@ List<Widget> clusterCards(
   ];
 }
 
-class _Cluster extends StatelessWidget {
+class _Cluster extends StatelessWidget implements Titled {
   const new(this.name, this.progress, this.openUrl, this.link);
 
   final String name;
   final ClusterProgress? progress;
   final UrlOpener openUrl;
   final CoachSessionLink? link;
+
+  @override
+  String get cardTitle => name;
 
   /// The title of the problem the coach would serve next.
   String? get _next {
@@ -109,12 +112,14 @@ class _ClusterProblemTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.sm),
       onTap: target == null ? null : () => openUrl(target),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 problem.title ?? show(problem.slug),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: target == null ? null : scheme.primary),
               ),
             ),

@@ -17,10 +17,6 @@ void main() {
       await openCoach(tester);
       expect(find.text('How to start'), findsOneWidget);
       expect(find.text('1. Constraint'), findsOneWidget);
-      expect(
-        find.text('Turn the hard constraint into a rule for the design.'),
-        findsOneWidget,
-      );
       expect(find.text('4. Post-mortem'), findsOneWidget);
       expect(find.byKey(const Key('command-box')), findsOneWidget);
       expect(
@@ -30,7 +26,6 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('leetcode report'), findsOneWidget);
       expect(find.text('0 / 4'), findsNWidgets(6));
       expect(find.text('Next: Missing Number'), findsOneWidget);
       expect(find.text('Missing Number'), findsOneWidget);
@@ -39,6 +34,27 @@ void main() {
       expect(find.text('Problems'), findsNothing);
       expect(find.text('Re-tests due'), findsNothing);
       expect(find.textContaining("hasn't published"), findsNothing);
+    });
+
+    testWidgets('the method and the commands sit behind their buttons', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        size: kTallCoach,
+        answers: ['snapshot_coach_empty'],
+      );
+      await openCoach(tester);
+      expect(find.text('leetcode report'), findsNothing);
+      await openSheet(tester, 'The method');
+      expect(
+        find.text('Turn the hard constraint into a rule for the design.'),
+        findsOneWidget,
+      );
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await openSheet(tester, 'All commands');
+      expect(find.text('leetcode report'), findsOneWidget);
     });
 
     testWidgets('the copy button puts the first command on the clipboard', (
@@ -160,6 +176,7 @@ void main() {
         ],
       );
       await openCoach(tester);
+      await openSheet(tester, 'All commands');
       expect(find.text('leetcode due'), findsOneWidget);
       expect(find.text('List them.'), findsOneWidget);
       expect(find.byKey(const Key('command-box')), findsNothing);

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:leetcode_guard/src/ui/widgets.dart';
+
 import '../support/pump.dart';
 
 const _headings = [
@@ -39,14 +41,53 @@ void main() {
     expect(find.text('valid-anagram'), findsOneWidget);
     expect(find.text('Escape hatch: 1 of 3 used this week'), findsOneWidget);
     expect(find.text('next use waits 60 min, EXHAUSTED'), findsOneWidget);
-    expect(find.text('statement cache warm'), findsOneWidget);
     expect(find.text('2026-10-22, 2026-10-21'), findsOneWidget);
+    expect(find.text('Sat 2026-10-24 09:00:00 CEST'), findsOneWidget);
+  });
+
+  testWidgets('a long list shows a few rows, the rest in a sheet', (
+    tester,
+  ) async {
+    await pumpApp(
+      tester,
+      answers: ['snapshot_real'],
+      size: const Size(390, 9000),
+    );
+    expect(find.text('Show all 15'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('show-all-Recent solves')));
+    await tester.pumpAndSettle();
+    final sheet = find.byKey(const Key('sheet-Recent solves'));
+    expect(
+      find.descendant(of: sheet, matching: find.byType(InfoRow)),
+      findsNWidgets(15),
+    );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('show-all-Suggested problems')));
+    await tester.pumpAndSettle();
+    final suggestions = find.byKey(const Key('sheet-Suggested problems'));
+    expect(
+      find.descendant(of: suggestions, matching: find.byType(InkWell)),
+      findsNWidgets(14),
+    );
+  });
+
+  testWidgets('the long text sits behind buttons, nothing dropped', (
+    tester,
+  ) async {
+    await pumpApp(tester, size: const Size(390, 9000));
+    await tester.tap(find.text('Why the lock did not trigger'));
+    await tester.pumpAndSettle();
     expect(
       find.text('1. Today was already settled by an earlier run.'),
       findsOneWidget,
     );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('show-all-Environment')));
+    await tester.pumpAndSettle();
+    expect(find.text('statement cache warm'), findsOneWidget);
     expect(find.text('Problem pool: 4087 entries, 2.2 days old'), findsOne);
-    expect(find.text('Sat 2026-10-24 09:00:00 CEST'), findsOneWidget);
   });
 
   testWidgets('locked verdict says how many to solve', (tester) async {

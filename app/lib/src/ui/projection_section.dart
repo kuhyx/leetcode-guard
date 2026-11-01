@@ -8,10 +8,13 @@ library;
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
+import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
+const _title = 'Progress & projection';
+
 /// The section, with its own selected-date state.
-class ProjectionSection extends StatefulWidget {
+class ProjectionSection extends StatefulWidget implements Titled {
   /// Creates the section over [progress] and [projections].
   const new({
     required this.progress,
@@ -30,11 +33,13 @@ class ProjectionSection extends StatefulWidget {
   final int? price;
 
   @override
+  String get cardTitle => _title;
+
+  @override
   State<ProjectionSection> createState() => _ProjectionSectionState();
 }
 
 class _ProjectionSectionState extends State<ProjectionSection> {
-  static const _title = 'Progress & projection';
   String? _chosen;
 
   List<String> get _keys => (widget.projections?.keys.toList() ?? [])..sort();
@@ -55,22 +60,32 @@ class _ProjectionSectionState extends State<ProjectionSection> {
     return SectionCard(
       title: _title,
       children: [
-        InfoRow('Solved', fraction(progress?.solvedAll, progress?.totalAll)),
-        if (progress != null)
-          for (final level in kLevels)
-            InfoRow(
-              level,
-              fraction(progress.solved?[level], progress.total?[level]),
-            ),
+        ...pairRows([
+          InfoRow('Solved', fraction(progress?.solvedAll, progress?.totalAll)),
+          if (progress != null)
+            for (final level in kLevels)
+              InfoRow(
+                level,
+                fraction(progress.solved?[level], progress.total?[level]),
+              ),
+        ]),
         if (projections == null)
           InfoRow('Projection', kUnknown)
         else if (projections.isEmpty)
           const Muted('No projection dates published')
         else ...[
           _dateControl(context),
-          ..._rows(projections[_selected]!),
-          if (widget.price case final int price)
-            Muted('Computed at a Tue-Thu price of $price credit(s)'),
+          ...pairRows(_rows(projections[_selected]!)),
+          showAllButton(
+            context,
+            label: 'Details',
+            title: _title,
+            rows: [
+              ..._detailRows(projections[_selected]!),
+              if (widget.price case final int price)
+                Muted('Computed at a Tue-Thu price of $price credit(s)'),
+            ],
+          ),
         ],
       ],
     );
@@ -124,17 +139,20 @@ class _ProjectionSectionState extends State<ProjectionSection> {
     if (picked != null) setState(() => _chosen = isoDate(picked));
   }
 
-  List<Widget> _rows(Projection p) => [
+  List<InfoRow> _rows(Projection p) => [
     InfoRow('Projected solved', show(p.projectedTotal)),
     for (final level in kLevels)
       InfoRow('Projected $level', show(p.projected?[level])),
+    InfoRow('Available now', show(p.available)),
+  ];
+
+  List<Widget> _detailRows(Projection p) => [
     InfoRow('First day counted', show(p.firstDay)),
     InfoRow('Gated days', show(p.gatedDays)),
     InfoRow('Free days', show(p.freeDays)),
     InfoRow('Sick days', show(p.sickDays)),
     InfoRow('Base cost', show(p.baseCost)),
     InfoRow('Debt', show(p.debt)),
-    InfoRow('Available now', show(p.available)),
     InfoRow('Required', show(p.required)),
     InfoRow('Rules demand', show(p.rulesDemand)),
     InfoRow('Debt left by rules', show(p.debtLeftByRules)),

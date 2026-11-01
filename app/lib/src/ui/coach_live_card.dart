@@ -41,12 +41,15 @@ class CoachSessionLink {
 }
 
 /// "Guided session": where the PC stands, and the live session if any.
-class LiveSessionCard extends StatelessWidget {
+class LiveSessionCard extends StatelessWidget implements Titled {
   /// Creates the card for [link].
   const new(this.link, {super.key});
 
   /// The session and opener.
   final CoachSessionLink link;
+
+  @override
+  String get cardTitle => 'Guided session';
 
   @override
   Widget build(BuildContext context) {

@@ -28,12 +28,16 @@ class CoachRig {
 Future<CoachRig> pumpCoach(
   WidgetTester tester, {
   Size size = kDesktopCoach,
+  double devicePixelRatio = 1,
+  FakeViewPadding padding = FakeViewPadding.zero,
   bool phone = false,
   String snapshot = 'snapshot_full',
   void Function(FakeCoachTransport)? before,
 }) async {
   tester.view.physicalSize = size;
-  tester.view.devicePixelRatio = 1;
+  tester.view.devicePixelRatio = devicePixelRatio;
+  tester.view.padding = padding;
+  tester.view.viewPadding = padding;
   addTearDown(tester.view.reset);
   final clock = TestClock();
   final transport = FakeCoachTransport(clock, phone: phone);
@@ -80,8 +84,21 @@ Future<void> settle(WidgetTester tester, CoachRig rig) async {
   await tester.pumpAndSettle();
 }
 
-/// Scrolls the first downward list until [finder] is built, then into view.
+/// On a phone the sections are chips: opens the one holding [finder], if any.
+Future<void> _openSectionWith(WidgetTester tester, Finder finder) async {
+  final chips = find.byType(ChoiceChip);
+  for (var i = 0; i < chips.evaluate().length; i++) {
+    if (finder.evaluate().isNotEmpty) return;
+    await tester.ensureVisible(chips.at(i));
+    await tester.tap(chips.at(i));
+    await tester.pumpAndSettle();
+  }
+}
+
+/// Opens the phone section holding [finder], else scrolls the first
+/// downward list until it is built, then brings it into view.
 Future<void> bring(WidgetTester tester, Finder finder) async {
+  await _openSectionWith(tester, finder);
   if (finder.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
       finder,

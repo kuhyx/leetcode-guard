@@ -17,12 +17,16 @@ Future<StatusController> pumpApp(
   WidgetTester tester, {
   List<Object?> answers = const ['snapshot_full'],
   Size size = kPhone,
+  double devicePixelRatio = 1,
+  FakeViewPadding padding = FakeViewPadding.zero,
   int minutes = 1,
   List<Uri>? opened,
   WidgetBuilder? settingsBuilder,
 }) async {
   tester.view.physicalSize = size;
-  tester.view.devicePixelRatio = 1;
+  tester.view.devicePixelRatio = devicePixelRatio;
+  tester.view.padding = padding;
+  tester.view.viewPadding = padding;
   addTearDown(tester.view.reset);
   final controller = StatusController(
     source: FakeSource([
