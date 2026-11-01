@@ -1,4 +1,4 @@
-"""Tests for the status-app snapshot (TODO-status-app.md schema v1).
+"""Tests for the status-app snapshot (DOCS-status-snapshot.md schema v1).
 
 Every one of the tkinter window's nine sections must find its data here, and
 an unknown value must arrive as ``null`` -- never as a zero the app would

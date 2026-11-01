@@ -1,9 +1,7 @@
-REMOVE ME AFTER FINISH
+# Flutter status app and its snapshot contract (shipped)
 
-# TODO: Flutter status app replaces the tkinter status window
-
-Spec agreed 2026-10-23 (round 2 `override`, so every recommendation is the
-decision).
+Spec agreed 2026-10-23; shipped (tkinter window deleted, app on the phone).
+The decisions and the snapshot schema below are the record both sides build on.
 
 ## Goal
 
@@ -11,7 +9,7 @@ The tkinter status window (`leetcode_guard/status_view.py` + `_status_*`
 sections) becomes a mobile-friendly Flutter app with three tabs:
 **Status** (all 9 current sections: verdict, credits, progress/projection with
 date control, solves, days, budgets, integrity, environment, suggestions),
-**Coach** (from TODO-coach.md session logs: req-before-code, hint rungs,
+**Coach** (from DOCS-coach-spec.md session logs: req-before-code, hint rungs,
 re-tests due, cluster progress) and **Profile** (LeetCode difficulty split
 solved/total, current + longest streak, 52-week submission heatmap,
 acceptance rate).
@@ -230,8 +228,3 @@ Deltas from the first draft of this block (exporter, 2026-10-23):
   `how_to.retest_command(slug)`, the same string `leetcode due` prints.
 - `app/test/fixtures/snapshot_coach_empty.json` is the exporter's output for
   that state; `test_coach_empty.py` fails if the exporter drifts from it.
-
-## Commit
-
-`main` only, no feature branches. Check `git status` against own files first;
-concurrent sessions edit this tree.

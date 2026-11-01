@@ -173,7 +173,7 @@ The status app (Flutter; phone and a desktop Chrome `--app` window) replaced
 the tkinter window. It reads the display-only snapshot the exporter publishes
 every minute: from Firebase RTDB on the phone (`leetcode-guard/status`,
 `status_hash`, `heartbeat`) and from `~/.local/share/leetcode_guard/snapshot.json`
-on the desktop. `TODO-status-app.md` has the schema. The gate never reads
+on the desktop. `DOCS-status-snapshot.md` has the schema. The gate never reads
 either.
 
 The projection table is also available from the shell:

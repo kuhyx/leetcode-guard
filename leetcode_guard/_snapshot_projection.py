@@ -1,6 +1,6 @@
 """Precompute the projection for every date the app's date control offers.
 
-TODO-status-app.md decision 5: the pricing, free-day, sick-day and debt rules
+DOCS-status-snapshot.md decision 5: the pricing, free-day, sick-day and debt rules
 stay in Python, so the app never projects -- it picks one of these keys. Each
 key is :func:`~leetcode_guard._projection.project` at the live Tue-Thu price,
 exactly what the tkinter window's "Project" button computes with its defaults

@@ -1,6 +1,6 @@
 """Publish the status snapshot to Firebase RTDB for the status app.
 
-TODO-status-app.md decisions 1 and 2: ``leetcode-guard/status`` holds the
+DOCS-status-snapshot.md decisions 1 and 2: ``leetcode-guard/status`` holds the
 snapshot, ``leetcode-guard/status_hash`` its content hash and
 ``leetcode-guard/heartbeat`` the time of the last push. Every harvest run and
 every ledger change pushes; the snapshot and its hash are written only when

@@ -1,4 +1,4 @@
-"""The status app's snapshot: schema v1 of TODO-status-app.md, as one dict.
+"""The status app's snapshot: schema v1 of DOCS-status-snapshot.md, as one dict.
 
 **Display only, like** ``progress_cache.json``. The snapshot is assembled from
 the same read paths the tkinter window uses and published for a read-only
