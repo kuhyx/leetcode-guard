@@ -228,9 +228,9 @@ It runs as a `pre-push` hook. The load-bearing assertion is that the grab is
 *still* released after a recovery tick: a grab that comes back a second later is
 the original bug wearing the fix as a disguise.
 
-If a window must appear on the real display, put it on a **non-primary output**
-(`HDMI-0`), never DP-0, and never by moving the mouse. That rule governs
-*developer verification windows*. It does not apply to product UI: the study
+Developer verification windows never go on kuhy's live display: never open
+windows, send input or play sound on :0 unless he explicitly allows it for that
+task; use `xvfb-run -a` or headless CDP. Product UI is different: the study
 strip belongs on the primary output, because that is where the user is looking.
 
 ## Conventions
