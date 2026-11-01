@@ -1,4 +1,4 @@
-"""Tests for the coach session-log reader (TODO-coach.md decision 8).
+"""Tests for the coach session-log reader (DOCS-coach-spec.md decision 8).
 
 The log is being built in parallel, so the reader is tolerant by contract:
 an unknown or malformed line is skipped with one warning per file, never a

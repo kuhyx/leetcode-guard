@@ -2,7 +2,7 @@
 
 Binding for **P** (Python relay + backend: `leetcode_coach/relay/`, unit, `install.sh`, `session_log` / `_coach_log` /
 `phase` / snapshot changes) and **F** (Flutter: Coach tab UI, `coach.dart`, the RTDB client and the wrapper's `/coach/*`
-proxy in `app/lib/desktop/`). Spec: `TODO-coach-ui.md`. Modelled on `~/src/tutor/DOCS-contract.md` §4-5; deviations in
+proxy in `app/lib/desktop/`). Spec: `DOCS-coach-ui-spec.md`. Modelled on `~/src/tutor/DOCS-contract.md` §4-5; deviations in
 §8. Change this file first, then code. Times are unix **ms**.
 
 ## 1. Transport

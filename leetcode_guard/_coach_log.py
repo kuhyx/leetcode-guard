@@ -1,6 +1,6 @@
 """Read the coach's session logs for the status app's Coach tab.
 
-The log is TODO-coach.md decision 8: one JSONL file per problem at
+The log is DOCS-coach-spec.md decision 8: one JSONL file per problem at
 ``~/.local/share/leetcode-coach/sessions/<date>-<slug>.jsonl``, events ``req``,
 ``req_check``, ``code``, ``rung``, ``reveal``, ``postmortem``, ``retest``, and
 the app's ``session_start``, ``grade``, ``chat``, ``session_end``
