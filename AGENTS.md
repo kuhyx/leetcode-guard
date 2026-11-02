@@ -33,6 +33,13 @@ free nor sick is owed at its price, and every day costs one more until it is rep
 back-filling `charge:<past-date>` would unlock those dates. `DOCS-debt.md` has
 the rest: why repayment follows the credit rule, and the test plumbing.
 
+**Credit weight is derived and signed (2026-11-02).** Easy 1 / Medium 2 / Hard 4
+per accepted submission, priced at read time from `difficulty.json`'s signed rows
+(`_difficulty.py`); ledger rows stay `amount: 1`, never rewritten. A missing,
+edited or foreign row weighs 1 (never raises), logged once per balance. The
+unsigned pool/statement caches only *write* rows; both harvesters price a
+credit BEFORE `decide_today`. `--backfill-difficulty` is resumable.
+
 **The progress mirror is display-only.** `progress_cache.json` holds the
 profile's solved/total counts for the status window's projection and nothing
 else. Nothing that decides, charges or credits may read it: the moment the gate
@@ -42,8 +49,7 @@ healthy `allQuestionsCount` and `matchedUser: null`, so a good denominator says
 nothing about the numerator (`_progress.parse_progress`).
 
 **Seeding is not optional.** Without it the first run harvests ~20 recent
-submissions as credits — three weeks of free unlocks — and the gate never once
-gates. Marking the whole feed already-seen leaves a gate satisfiable only by a
+submissions as credits (three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by a
 solve that has not happened yet — the state that armed on 2026-08-05 — so the
 run that *creates* the ledger returns without arming (`cmd_lock`).
 
@@ -53,18 +59,15 @@ reverted: it wrote `charge:<today>`, the exact key `decide` unlocks on, so
 nothing behind — delete the ledger and you skip one run, you do not earn a day.
 `test_the_run_that_creates_the_ledger_does_not_arm` pins it.
 
-**The lock must always offer a way to do the thing it demands.** This is the
-2026-08-05 rule and it outranks the strength of the lock. Three things
-implement it and none may be quietly removed: an `Open` button per problem, the
-escape hatch offered from t=0, and the break-glass command printed on the
-surface. `test_scenarios.py::test_a_freshly_seeded_lock_offers_a_way_out_at_t0`
-is the executable form; it failed against the code that shipped that morning.
+**The lock must always offer a way to do the thing it demands** (the 2026-08-05
+rule; it outranks lock strength). Never remove: an `Open` button per problem, the
+escape hatch from t=0, the break-glass command on the surface.
+`test_scenarios.py::test_a_freshly_seeded_lock_offers_a_way_out_at_t0` pins it.
 
 **Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases
-the X global grab so a browser can receive keystrokes (the grab is on the root).
-No timeout: the machine stays open until a solve lands or "Back to lock" is
-pressed (`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab
-drops; no unit test can, because a mocked root reports success either way.
+the X global grab so a browser gets keystrokes; no timeout, until a solve lands
+or "Back to lock" (`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves
+the grab drops; a mocked root reports success either way.
 
 **The suggestion list repaints live, and scrolls.** A solve mid-lock frees its
 slot and the next *pre-verified* candidate moves up; rows are reconfigured,
@@ -88,11 +91,12 @@ file cannot mint an unlocked day. The 09:30/11:00 slots re-decide. Never re-deri
 the cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
 
 **Never exit because another lock is running.** `_queue.wait_for_turn` waits
-with no window: standing down would let "start the workout lock" skip the grind.
+windowless; standing down would let "start the workout lock" skip the grind.
 
 **The one-minute harvester (`_harvest_run`) is not a lock.** It only peeks at the
 instance lock (holding it stands `cmd_lock` down), never writes while a lock is
-up, never seeds, and settles only in a run that minted a credit.
+up, never seeds, settles only in a run that minted a credit, and records credits
+on focus/sick days too (only charges and locks stand down).
 
 ## Traps that have already cost time
 
@@ -150,8 +154,7 @@ on the machine that wrote it and fails the first clean checkout. Scripts share
 code by duplicating the few lines they need, or by importing from
 `leetcode_guard/`. Reproduce a CI mypy failure with `rm -rf .mypy_cache` first.
 
-**`# noqa` and `# type: ignore` are banned by a pygrep hook** — including
-inside docstrings. Mentioning the literal string trips it.
+**`# noqa` / `# type: ignore` are banned by a pygrep hook**, even in docstrings.
 
 **Any module that does `import tkinter as tk` must be added to `TK_MODULES` in
 `leetcode_guard/tests/_tk_stub.py` in the same commit.** Miss one and the suite
@@ -182,13 +185,10 @@ over the top of `~/src/utils/gatelock`, breaking live editing across all four
 lockers — invisibly. `preserve_editable_gatelock` puts it back; do not remove
 it.
 
-**The status view is the fourth thing ruff's `--unsafe-fixes` has silently
-gutted.** `status_cli.py` and `_cli.py` both need the `T201` per-file ignore
-or the fixer deletes the prints that *are* their interface. `_login.py` is the
-fifth, and the worst: it lost every print on the first pre-commit run after
-being written, leaving a credential command that stores or refuses a cookie
-without saying which. Its tests assert on behaviour, not stdout, so they stayed
-green — add the `T201` entry in the same commit as any new print-driven module.
+**Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py`
+(the worst: a credential command that stored or refused a cookie silently).**
+Add a `T201` per-file ignore in the same commit as any new print-driven module
+(`_cli_difficulty.py` has one) and assert on stdout, not exit codes.
 
 ## Verifying
 

@@ -11,12 +11,22 @@ A **derived-balance ledger**, never a stored counter.
 
 | | |
 |---|---|
-| One accepted LeetCode submission | **+1 credit** |
+| One accepted **Easy** submission | **+1 credit** |
+| One accepted **Medium** submission | **+2 credits** |
+| One accepted **Hard** submission | **+4 credits** |
 | Tuesday, Wednesday or Thursday | **costs 1 credit** |
 | Monday, Friday, Saturday or Sunday | **costs 2 credits** (always twice the base) |
 | A day the gate never charged | **owed** at that price -- debt |
 | Any day while debt is outstanding | **costs 1 more**, and that credit repays 1 |
 | Balance | `sum(credits) - sum(charges)`, recomputed every time |
+
+Weights apply to **every** past solve too (kuhy, 2026-11-02): the signed ledger
+rows still say `amount: 1`, and the weight is derived from the problem's
+difficulty each time, like the balance and the debt. Difficulty comes from
+`difficulty.json`, signed rows written from the pool cache or one LeetCode
+query per problem (`--backfill-difficulty`, resumable); a problem with no
+trusted row counts as Easy and is logged once per run. `--status` shows the
+split (`priced     Easy x1: .., Medium x2: .., Hard x4: ..`).
 
 Credits are uncapped and fungible. Each day keeps its era's price: weekdays 1,
 Sat/Sun 2 to 2026-09-20; Tue-Thu 1, rest 2 to 2026-10-06; **from 2026-10-07
@@ -41,7 +51,7 @@ the gate down and adds nothing to the debt, unless it keeps `leetcode`.
 ## What counts
 
 **Any** accepted submission, on **any** problem, in **any** language —
-including premium problems. The list the lock shows is a *suggestion*: every
+including premium problems -- weighted by its difficulty (above). The list the lock shows is a *suggestion*: every
 non-premium problem, easiest first, then highest acceptance rate. Solve
 something harder or entirely off-list and it still credits.
 
@@ -196,6 +206,7 @@ python3 -m leetcode_guard --status --by 31.12.2027 --price 1 --goal Easy=837  # 
 python3 -m leetcode_guard --probe      # live API data
 python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync
+python3 -m leetcode_guard --backfill-difficulty [--max-fetch 25]  # price solved problems
 ```
 
 `--check` is the one to reach for. It does everything an armed gate would, right
@@ -226,7 +237,7 @@ the cheapest bypass of all.
 ## Development
 
 ```bash
-python3 -m pytest              # 561 tests, 100% branch coverage enforced
+python3 -m pytest              # 1765 tests, 100% branch coverage enforced
 pre-commit run --all-files     # ruff ALL / mypy strict / pylint all / bandit
 ```
 

@@ -95,3 +95,15 @@ with its credit). Fixed in its own commit, test first:
 test, so the suite defaults to zero debt. `debt_starts(MONDAY)` switches it on.
 The demo passes `demo=True` to `decide_today` and shows no debt, because it
 deletes its ledger every run.
+
+## Credits are difficulty-weighted (2026-11-02)
+
+Easy 1, Medium 2, Hard 4 credits per accepted submission, retroactive. Debt is
+untouched in structure: it is still derived from charges and the calendar, and
+repayment is still one per surcharged day -- only the *credit* side of the
+balance changed, so a Medium solve covers a 2-credit day alone. Weights are read
+from signed rows in `difficulty.json` (`_difficulty.py`), never stored in the
+credit rows; an unknown problem counts as Easy. `--status --by ... --goal`
+prices a goal's shortfall at the same weights (`Goal.needed`), and the
+projection spends credits Easy first at 1 / 2 / 4 each. The replay on the live
+ledger (154 credits, 153 problems, all Easy) left balance and debt unchanged.
