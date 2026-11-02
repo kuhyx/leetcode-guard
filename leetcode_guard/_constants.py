@@ -87,9 +87,9 @@ POOL_CACHE_FILE: Final = DATA_DIR / "pool_cache.json"
 STATEMENTS_CACHE_FILE: Final = DATA_DIR / "statements_cache.json"
 DIFFICULTY_FILE: Final = DATA_DIR / "difficulty.json"
 """Signed ``slug -> difficulty`` rows; unlike its neighbours it DECIDES."""
+DIFFICULTY_UNRESOLVED_FILE: Final = DATA_DIR / "difficulty_unresolved.json"
 PROGRESS_CACHE_FILE: Final = DATA_DIR / "progress_cache.json"
-"""Solved/total per difficulty, as LeetCode's profile reports it. Display
-only: nothing that decides, charges or credits may read it."""
+"""Solved/total per difficulty. Display only: nothing that decides may read it."""
 
 ESCAPE_HISTORY_FILE: Final = DATA_DIR / "escape_history.json"
 DEMO_ESCAPE_HISTORY_FILE: Final = DATA_DIR / "escape_history_demo.json"

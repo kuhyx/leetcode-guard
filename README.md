@@ -25,7 +25,9 @@ rows still say `amount: 1`, and the weight is derived from the problem's
 difficulty each time, like the balance and the debt. Difficulty comes from
 `difficulty.json`, signed rows written from the pool cache or one LeetCode
 query per problem (`--backfill-difficulty`, resumable); a problem with no
-trusted row counts as Easy and is logged once per run. `--status` shows the
+trusted row counts as Easy and is logged once per run. A problem LeetCode
+answers with `question: null` (deleted) is asked about once per 24 h
+(`difficulty_unresolved.json`, unsigned, schedules only). `--status` shows the
 split (`priced     Easy x1: .., Medium x2: .., Hard x4: ..`).
 
 Credits are uncapped and fungible. Each day keeps its era's price: weekdays 1,

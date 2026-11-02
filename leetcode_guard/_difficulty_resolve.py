@@ -13,6 +13,11 @@ from typing import TYPE_CHECKING, Final
 
 from leetcode_guard import _constants
 from leetcode_guard._difficulty import difficulty_row, trusted_levels
+from leetcode_guard._difficulty_negative import (
+    is_backed_off,
+    load_unresolved,
+    save_unresolved,
+)
 from leetcode_guard._ledger_io import load_ledger, save_ledger
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._progress import DIFFICULTY_WEIGHTS
@@ -57,10 +62,17 @@ class ResolveResult:
     failed: int = 0
     deferred: int = 0
     """Slugs left for a later call because ``max_fetch`` was reached."""
+    backed_off: int = 0
+    """Slugs LeetCode answered unresolved less than a day ago; not asked again."""
 
 
-def _fetch_level(post: PostFn, slug: str) -> str | None:
-    """Ask LeetCode for one problem's difficulty; ``None`` (logged) on failure."""
+def _fetch_level(post: PostFn, slug: str) -> tuple[str | None, bool]:
+    """Ask LeetCode for one problem's difficulty: ``(level, unresolved)``.
+
+    ``unresolved`` is True only when LeetCode *answered* without a usable
+    difficulty (deleted problem, ``question: null``); a transport or GraphQL
+    failure says nothing about the problem and is retried on the next call.
+    """
     result = post(DIFFICULTY_QUERY, {"titleSlug": slug})
     if not result.ok:
         _logger.warning(
@@ -68,13 +80,13 @@ def _fetch_level(post: PostFn, slug: str) -> str | None:
             slug,
             result.transport_error or "; ".join(result.errors) or "no data",
         )
-        return None
+        return None, False
     question = question_of(result.data)
     level = None if question is None else question.get("difficulty")
     if level not in DIFFICULTY_WEIGHTS:
         _logger.warning("no usable difficulty for %s: %r", slug, level)
-        return None
-    return str(level)
+        return None, True
+    return str(level), False
 
 
 def _pool_levels() -> dict[str, str]:
@@ -97,7 +109,9 @@ def resolve_difficulties(
 
     The pool cache answers first (no request); the rest are asked of LeetCode,
     at most ``max_fetch`` per call. Failures are logged and leave no row, so the
-    credit prices as Easy until a later call succeeds. Safe to repeat.
+    credit prices as Easy until a later call succeeds. A slug LeetCode answers
+    without a usable difficulty is not asked again for a day (see
+    :mod:`leetcode_guard._difficulty_negative`). Safe to repeat.
     """
     ledger = load_ledger(_constants.DIFFICULTY_FILE, key_file=key_file)
     have = trusted_levels(ledger)
@@ -105,19 +119,29 @@ def resolve_difficulties(
     wanted = [slug for slug in unique if slug not in have]
     already = len(unique) - len(wanted)
     pool = _pool_levels() if wanted else {}
+    marks = load_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE) if wanted else {}
+    marks_before = dict(marks)
+    epoch = now.timestamp()
     rows: list[LedgerEntry] = []
-    fetched = failed = deferred = 0
+    fetched = failed = deferred = backed_off = 0
     for slug in wanted:
         level, source = pool.get(slug), "pool"
         if level not in DIFFICULTY_WEIGHTS:
+            if is_backed_off(marks, slug, now=epoch):
+                backed_off += 1
+                continue
             if fetched >= max_fetch:
                 deferred += 1
                 continue
             fetched += 1
-            level, source = _fetch_level(post, slug), "graphql"
+            level, unresolved = _fetch_level(post, slug)
+            source = "graphql"
+            if unresolved:
+                marks[slug] = epoch
         if level is None:
             failed += 1
             continue
+        marks.pop(slug, None)
         rows.append(
             difficulty_row(slug, level, now=now, key_file=key_file, source=source)
         )
@@ -125,12 +149,15 @@ def resolve_difficulties(
         # Replace, never append: a forged row under the same id must be overwritten.
         ledger.entries[row.entry_id] = row
     saved = bool(rows) and save_ledger(_constants.DIFFICULTY_FILE, ledger)
+    if marks != marks_before:
+        save_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE, marks)
     return ResolveResult(
         resolved=len(rows) if saved else 0,
         fetched=fetched,
         already=already,
         failed=failed + (0 if saved or not rows else len(rows)),
         deferred=deferred,
+        backed_off=backed_off,
     )
 
 

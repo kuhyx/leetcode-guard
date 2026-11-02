@@ -31,7 +31,8 @@ def cmd_backfill_difficulty(*, max_fetch: int) -> int:
     print(
         f"difficulty {len(slugs)} credited problems: {result.already} already known, "
         f"{result.resolved} resolved now ({result.fetched} from LeetCode), "
-        f"{result.failed} failed, {result.deferred} deferred"
+        f"{result.failed} failed, {result.deferred} deferred, "
+        f"{result.backed_off} backed off (unresolved < 24 h ago)"
     )
     print(f"unknown    {len(unknown)} (counted as Easy until resolved)")
     return EXIT_OK
