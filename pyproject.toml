@@ -24,7 +24,7 @@ dependencies = [
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.9.2#subdirectory=crdt-sync",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays",
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.4.0#subdirectory=sickdays",
-    "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.6.0#subdirectory=focus_project",
+    "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.7.0#subdirectory=focus_project",
     "leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.1#subdirectory=leetcode_coach",
     "requests==2.34.2",
 ]
