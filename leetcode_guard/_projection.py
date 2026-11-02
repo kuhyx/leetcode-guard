@@ -17,10 +17,11 @@ target and what the rules will actually have collected by then -- so the
 printed breakdown reproduces by hand.
 
 Future solves are assumed to fill Easy first, then Medium, then Hard, because
-that is the order the suggestion list serves them in. One required credit is
-taken to be one *new* problem: the harvest mints a credit per accepted
-submission id, so re-solving an old problem earns a credit without moving the
-profile count -- the projection cannot see that and does not try to.
+that is the order the suggestion list serves them in. Credits are difficulty-
+weighted (Easy 1, Medium 2, Hard 4), so the required credits are spent on *new*
+problems at those prices. The harvest mints a credit per accepted submission
+id, so re-solving an old problem earns a credit without moving the profile
+count -- the projection cannot see that and does not try to.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._daycost import day_cost, surcharge_applies
-from leetcode_guard._progress import DIFFICULTIES
+from leetcode_guard._progress import DIFFICULTIES, DIFFICULTY_WEIGHTS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -106,14 +107,19 @@ class Projection:
     sick_days: int = 0
 
 
-def _fill_easy_first(progress: Progress, new_solves: int) -> dict[str, int]:
-    """Spread ``new_solves`` over the difficulties in serving order."""
+def _fill_easy_first(progress: Progress, budget: int) -> dict[str, int]:
+    """Spend ``budget`` credits on problems in serving order, each at its weight.
+
+    Easy costs 1, Medium 2, Hard 4 (``_difficulty``): a Medium is only bought
+    with two credits to spare, so a leftover credit buys nothing.
+    """
     projected = dict(progress.solved)
-    left = new_solves
+    left = budget
     for name in DIFFICULTIES:
-        take = min(left, progress.remaining(name))
+        weight = DIFFICULTY_WEIGHTS[name]
+        take = min(left // weight, progress.remaining(name))
         projected[name] += take
-        left -= take
+        left -= take * weight
     return projected
 
 

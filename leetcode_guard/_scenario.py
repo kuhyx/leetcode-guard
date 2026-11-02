@@ -23,7 +23,7 @@ import math
 from typing import TYPE_CHECKING
 
 from leetcode_guard._daycost import REPRICE_DATE, base_terms, day_cost, what_if
-from leetcode_guard._progress import DIFFICULTIES
+from leetcode_guard._progress import DIFFICULTIES, DIFFICULTY_WEIGHTS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -47,9 +47,14 @@ class Goal:
     counts: dict[str, int]
 
     def needed(self, progress: Progress) -> int:
-        """New solves the goal still requires, summed over difficulties."""
+        """Credits the goal still requires.
+
+        Each difficulty's shortfall in new solves, priced at its weight (Easy 1,
+        Medium 2, Hard 4).
+        """
         return sum(
-            max(0, count - progress.solved[name]) for name, count in self.counts.items()
+            max(0, count - progress.solved[name]) * DIFFICULTY_WEIGHTS[name]
+            for name, count in self.counts.items()
         )
 
     def unreachable(self, progress: Progress) -> list[str]:
@@ -72,7 +77,7 @@ class Scenario:
     Attributes:
         target: The date the what-if was worked for.
         base_cost: The price the user typed.
-        needed: New solves the goal requires from where the counts stand.
+        needed: Credits the goal requires from where the counts stand.
         forced: What ``base_cost`` collects by the target (pay-it-all reading).
         lands_on: First day ``forced`` reaches ``needed`` at that price, which
             may be after the target; ``None`` when the horizon ran out.
@@ -94,7 +99,7 @@ class Scenario:
 
     @property
     def shortfall(self) -> int:
-        """Solves the typed price leaves undone on the target date."""
+        """Credits the typed price leaves unearned on the target date."""
         return max(0, self.needed - self.forced)
 
 

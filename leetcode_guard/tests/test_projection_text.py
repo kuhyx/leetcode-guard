@@ -55,8 +55,7 @@ def test_projection_lines_show_the_working_and_the_counts():
         "By 26.09.2026, counting from 20.09.2026: 7 gated day(s), 0 free."
     )
     assert (
-        lines[1]
-        == "11 (day prices) + 14 (debt) - 0 (banked) = 25 new problem(s) to solve."
+        lines[1] == "11 (day prices) + 14 (debt) - 0 (banked) = 25 credit(s) to earn."
     )
     assert "demand 15 by then and leave 10 of the debt" in lines[2]
     assert lines[3] == "Easy      80 / 965   (  8.3 %)   885 left"

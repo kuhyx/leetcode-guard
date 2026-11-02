@@ -41,6 +41,7 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         "DEMO_LEDGER_FILE": data / "ledger_demo.json",
         "POOL_CACHE_FILE": data / "pool_cache.json",
         "PROGRESS_CACHE_FILE": data / "progress_cache.json",
+        "DIFFICULTY_FILE": data / "difficulty.json",
         "STATEMENTS_CACHE_FILE": data / "statements_cache.json",
         "ESCAPE_HISTORY_FILE": data / "escape_history.json",
         "DEMO_ESCAPE_HISTORY_FILE": data / "escape_history_demo.json",

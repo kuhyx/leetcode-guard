@@ -88,8 +88,8 @@ def test_the_lines_for_the_original_question():
 
     assert lines == [
         "Goal: Easy 837 (779 more).",
-        "At price 1: 746 forced by 31.12.2027, 33 short of the 779 the goal needs "
-        "-- reached on 21.01.2028.",
+        "At price 1: 746 forced by 31.12.2027, 33 short of the 779 credits the "
+        "goal needs -- reached on 21.01.2028.",
         "Price that lands the goal exactly on 31.12.2027: 1.06; smallest whole "
         "price 2, which lands it on 23.06.2027.",
     ]
@@ -105,8 +105,8 @@ def test_a_price_that_makes_it_says_so_without_a_shortfall():
     lines = scenario_lines(scenario, ALL_FREE_EASY, PROGRESS)
 
     assert lines[1] == (
-        "At price 2: 1325 forced by 31.12.2027, the goal needs 779 -- reached on "
-        "23.06.2027."
+        "At price 2: 1325 forced by 31.12.2027, the goal needs 779 credits -- "
+        "reached on 23.06.2027."
     )
 
 
@@ -140,7 +140,8 @@ def test_goals_across_difficulties_sum_their_shortfalls_and_say_so():
 
     assert mixed.beyond_easy()
     assert not ALL_FREE_EASY.beyond_easy()
-    assert scenario.needed == 789
+    # 779 Easy at 1 credit + 10 Hard at 4 credits each.
+    assert scenario.needed == 779 + 10 * 4
     assert goal_line(mixed, PROGRESS) == "Goal: Easy 837 (779 more), Hard 10 (10 more)."
     assert scenario_lines(scenario, mixed, PROGRESS)[-1] == BEYOND_EASY_NOTE
 
@@ -199,3 +200,9 @@ def test_the_minimal_price_lands_on_or_before_the_target(price: int):
 
     assert scenario.minimal_lands_on is not None
     assert scenario.minimal_lands_on <= TARGET
+
+
+def test_a_medium_goal_is_priced_at_two_credits_a_solve():
+    goal = Goal({"Medium": PROGRESS.solved["Medium"] + 5})
+
+    assert goal.needed(PROGRESS) == 10

@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     from leetcode_guard._scenario import Goal, Scenario
 
 BEYOND_EASY_NOTE = (
-    "The goal sums each difficulty's shortfall -- it is yours to pick which. The "
-    "rows above fill Easy first, so they show Medium and Hard moving only once "
-    "Easy is exhausted."
+    "The goal sums each difficulty's shortfall in credits (Easy 1, Medium 2, "
+    "Hard 4 per solve) -- it is yours to pick which. The rows above fill Easy "
+    "first, so they show Medium and Hard moving only once Easy is exhausted."
 )
 NO_PRICED_DAY = (
     "No priced day lies between now and that date, so no price can land the goal."
@@ -55,11 +55,13 @@ def _typed_price_line(scenario: Scenario) -> str:
     if scenario.shortfall == 0:
         return (
             f"At price {scenario.base_cost}: {scenario.forced} forced by {by}, "
-            f"the goal needs {scenario.needed} -- reached {_when(scenario.lands_on)}."
+            f"the goal needs {scenario.needed} credits -- reached "
+            f"{_when(scenario.lands_on)}."
         )
     return (
         f"At price {scenario.base_cost}: {scenario.forced} forced by {by}, "
-        f"{scenario.shortfall} short of the {scenario.needed} the goal needs -- "
+        f"{scenario.shortfall} short of the {scenario.needed} credits the goal "
+        f"needs -- "
         f"reached {_when(scenario.lands_on)}."
     )
 

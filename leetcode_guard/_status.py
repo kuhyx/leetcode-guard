@@ -8,7 +8,7 @@ trigger a network fetch.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 
@@ -26,6 +26,7 @@ from leetcode_guard._gate_today import decide_today
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
+from leetcode_guard._progress import DIFFICULTY_WEIGHTS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -80,6 +81,21 @@ class StatusSnapshot:
     pool_source: str
     pool_notes: tuple[str, ...]
     suggestions: tuple[Suggestion, ...]
+    solves: dict[str, int] = field(default_factory=dict)
+    """Counted submissions by difficulty plus ``unknown``; see ``Balance.solves``."""
+
+
+def weighting_line(solves: dict[str, int]) -> str | None:
+    """``Easy x1: 154, Medium x2: 0, ...`` -- how the credits above were priced."""
+    if not any(solves.values()):
+        return None
+    parts = [
+        f"{name} x{weight}: {solves.get(name, 0)}"
+        for name, weight in DIFFICULTY_WEIGHTS.items()
+    ]
+    if solves.get("unknown"):
+        parts.append(f"no difficulty yet (counted Easy): {solves['unknown']}")
+    return "priced     " + ", ".join(parts)
 
 
 def gather_status(
@@ -139,6 +155,7 @@ def gather_status(
         auth_note=auth.note,
         pool_source=pool.source,
         pool_notes=pool.notes,
+        solves=dict(decision.balance.solves),
         suggestions=tuple(
             Suggestion(
                 title=problem.title,
@@ -168,6 +185,8 @@ def format_status(snapshot: StatusSnapshot) -> str:
         f"debt       {debt_summary(snapshot.debt)}",
         f"state      {snapshot.state} -- {snapshot.reason}",
     ]
+    if priced := weighting_line(snapshot.solves):
+        lines.insert(2, priced)
     if snapshot.needed:
         plural = "" if snapshot.needed == 1 else "s"
         lines.append(f"needed     {snapshot.needed} more solve{plural} to unlock today")

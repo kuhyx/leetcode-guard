@@ -75,6 +75,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--backfill-difficulty",
+        action="store_true",
+        help=(
+            "Write signed difficulty rows for every solved problem that lacks "
+            "one (pool cache first, then LeetCode, politely). Credits are "
+            "priced Easy 1 / Medium 2 / Hard 4; unknown counts as Easy."
+        ),
+    )
+    parser.add_argument(
+        "--max-fetch",
+        type=int,
+        default=25,
+        help="Network lookups per --backfill-difficulty run (default 25).",
+    )
+    parser.add_argument(
         "--login",
         action="store_true",
         help=(

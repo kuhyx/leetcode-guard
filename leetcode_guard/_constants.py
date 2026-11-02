@@ -82,11 +82,11 @@ WORKDAY_PENALTY_FILE: Final = _WAKE_ALARM_STATE_DIR / "workday_penalty.json"
 NIGHT_LOCKDOWN_STAMP: Final = Path("/var/lib/night-lockdown/locked_at_epoch")
 """gatelock.night_lockdown's default; no re-arm after tonight's lockdown."""
 DEMO_LEDGER_FILE: Final = DATA_DIR / "ledger_demo.json"
-"""Wiped and re-seeded on every demo run. Never the real ledger: a demo must
-not be able to mint a credit, and must not be able to spend one either."""
-
+"""Wiped and re-seeded on every demo run; a demo can neither mint nor spend."""
 POOL_CACHE_FILE: Final = DATA_DIR / "pool_cache.json"
 STATEMENTS_CACHE_FILE: Final = DATA_DIR / "statements_cache.json"
+DIFFICULTY_FILE: Final = DATA_DIR / "difficulty.json"
+"""Signed ``slug -> difficulty`` rows; unlike its neighbours it DECIDES."""
 PROGRESS_CACHE_FILE: Final = DATA_DIR / "progress_cache.json"
 """Solved/total per difficulty, as LeetCode's profile reports it. Display
 only: nothing that decides, charges or credits may read it."""

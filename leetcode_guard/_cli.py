@@ -28,6 +28,7 @@ from leetcode_guard._cli_commands import (
     cmd_status,
     cmd_sync,
 )
+from leetcode_guard._cli_difficulty import cmd_backfill_difficulty
 from leetcode_guard._constants import (
     DEMO_ESCAPE_HISTORY_FILE,
     DEMO_LEDGER_FILE,
@@ -217,6 +218,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_sync()
     if args.cache_statements:
         return cmd_cache_statements()
+    if args.backfill_difficulty:
+        return cmd_backfill_difficulty(max_fetch=args.max_fetch)
     if args.push_snapshot:
         return cmd_push_snapshot()
     return cmd_lock(demo_mode=not args.production)

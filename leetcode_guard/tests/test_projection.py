@@ -156,10 +156,11 @@ def test_new_solves_fill_easy_then_medium_then_hard():
         date(2026, 9, 26), position(debt=0), is_free=never_free, progress=nearly_done
     )
 
-    # 11 required: 2 finish Easy, 1 finishes Medium, 5 land on Hard, 3 spill
-    # past the end of the site and are dropped rather than invented.
+    # 11 credits: 2 finish Easy (1 each), 1 Medium costs 2, one Hard costs 4,
+    # and the 3 left cannot buy another Hard (4) -- they are dropped, not
+    # rounded up into a problem nobody solved.
     assert result.required == 11
-    assert result.projected == {"Easy": 965, "Medium": 2115, "Hard": 975}
+    assert result.projected == {"Easy": 965, "Medium": 2115, "Hard": 971}
 
 
 def test_percent_is_zero_over_an_empty_total():

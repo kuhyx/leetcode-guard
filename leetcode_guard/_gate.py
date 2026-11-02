@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from datetime import date, datetime
     from pathlib import Path
 
+    from leetcode_guard._difficulty import WeightTable
     from leetcode_guard._ledger import LedgerEntry
 
 
@@ -91,6 +92,7 @@ def decide(
     workday_penalty: bool = False,
     sick_day: bool = False,
     focus_day: str | None = None,
+    weights: WeightTable | None = None,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
@@ -122,11 +124,13 @@ def decide(
         focus_day: The active focus project's name when it stands the gate
             down today (and no real sick day does); the verdict is
             ``focus-day`` and today costs 0. Also voids ``workday_penalty``.
+        weights: Difficulty rows pricing each credit (Easy 1, Medium 2, Hard
+            4); ``None`` prices every credit flat at 1.
 
     Returns:
         The decision. Nothing is written.
     """
-    balance = compute_balance(ledger)
+    balance = compute_balance(ledger, weights)
     pricing = pricing_for(day)
     penalised = workday_penalty and not sick_day and focus_day is None
     base_cost = pricing.penalised_cost(day) if penalised else day_cost(day)

@@ -41,6 +41,9 @@ _VERSION: Final = 1
 DIFFICULTIES: Final = ("Easy", "Medium", "Hard")
 """In the order the lock feeds them, which is also the order they are listed."""
 
+DIFFICULTY_WEIGHTS: Final = {"Easy": 1, "Medium": 2, "Hard": 4}
+"""Credits per accepted submission (kuhy, 2026-11-02, retroactive); derived."""
+
 
 @dataclass(frozen=True)
 class Progress:

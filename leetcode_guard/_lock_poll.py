@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard._daycost import local_today
+from leetcode_guard._difficulty_resolve import resolve_probe
 from leetcode_guard._escape_flow import is_offerable
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
@@ -150,7 +151,18 @@ class PollMixin:
 
     def _check(self) -> SolveProbe:
         """The blocking network call. Runs on the executor, never on Tk."""
-        return fetch_recent_ac(self._deps.post, self._deps.username)
+        probe = fetch_recent_ac(self._deps.post, self._deps.username)
+        if self._deps.write_ledger:
+            # Executor thread, before the credit is harvested: a Medium solve
+            # must already price as 2 when ``_decision`` runs on the Tk thread.
+            moment = self._deps.moment()
+            resolve_probe(
+                probe,
+                post=self._deps.post,
+                now=moment,
+                key_file=self._deps.key_file,
+            )
+        return probe
 
     def _on_poll_result(self, probe: SolveProbe | None) -> None:
         """Fold one probe into the ledger and repaint.

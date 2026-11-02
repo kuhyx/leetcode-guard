@@ -41,6 +41,8 @@ from leetcode_guard._constants import (
     LEDGER_FILE,
 )
 from leetcode_guard._daycost import local_today
+from leetcode_guard._difficulty import credited_slugs
+from leetcode_guard._difficulty_resolve import resolve_difficulties
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding
@@ -95,6 +97,17 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
     if needs_seeding(ledger):
         return "ledger not seeded yet; the lock's first run seeds it"
     result = harvest(ledger, probe, day=day, now=now, key_file=key_file)
+    # Price before deciding: fresh credits first, then any credited problem
+    # still lacking a signed difficulty row (bounded per tick). Credit is
+    # recorded even when pricing fails -- it just counts as Easy until a later
+    # tick resolves it.
+    fresh = [entry.detail["title_slug"] for entry in result.new_credits]
+    resolve_difficulties(
+        [*fresh, *credited_slugs(ledger)],
+        post=client.post,
+        now=now,
+        key_file=key_file,
+    )
     if not result.gained:
         return f"nothing new ({result.already_known} known)"
     commit_harvest(ledger, result, LEDGER_FILE)

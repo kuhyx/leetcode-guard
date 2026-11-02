@@ -82,8 +82,8 @@ def projection_lines(projection: Projection, progress: Progress | None) -> list[
     )
     working = (
         f"{projection.base_cost} (day prices) + {projection.debt} (debt) - "
-        f"{projection.available} (banked) = {projection.required} new problem(s) "
-        "to solve."
+        f"{projection.available} (banked) = {projection.required} credit(s) "
+        "to earn."
     )
     lines = [span, working, _rules_line(projection)]
     if projection.projected is None or progress is None:
@@ -97,6 +97,7 @@ def projection_lines(projection: Projection, progress: Progress | None) -> list[
     lines.append(_count_line(_ALL, solved_all, progress.total_all))
     lines.append(
         "Assumes every new solve is a problem not solved before, served Easy "
-        "first, then Medium, then Hard -- the suggestion order."
+        "first, then Medium, then Hard -- the suggestion order -- at 1, 2 and 4 "
+        "credits each."
     )
     return lines

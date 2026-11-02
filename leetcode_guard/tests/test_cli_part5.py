@@ -43,7 +43,7 @@ def test_status_by_prints_the_counts_and_the_projection(monkeypatch, capsys, dat
     assert "  Easy      55 / 965   (  5.7 %)   910 left" in out
     assert "by 31.12.2999" in out
     assert "By 31.12.2999, counting from" in out
-    assert "new problem(s) to solve." in out
+    assert "credit(s) to earn." in out
 
 
 def test_status_by_with_nothing_known_still_prints_the_working(

@@ -55,7 +55,7 @@ def test_a_bad_goal_is_exit_2_but_the_projection_still_prints(
     assert _cli.main(["--status", "--goal", "Easy"]) == 2
     out = capsys.readouterr().out
 
-    assert "new problem(s) to solve." in out
+    assert "credit(s) to earn." in out
     assert "The Easy goal must be a whole number, or blank." in out
 
 

@@ -44,14 +44,15 @@ arrived over sync from somewhere else.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._constants import DEVICE_ID
-from leetcode_guard._ledger import CHARGE, CREDIT, LedgerEntry
+from leetcode_guard._ledger import CHARGE, CREDIT, SOURCE_LEETCODE, LedgerEntry
 
 if TYPE_CHECKING:
+    from leetcode_guard._difficulty import WeightTable
     from leetcode_guard._ledger_io import Ledger
 
 _logger: Final = logging.getLogger(__name__)
@@ -75,6 +76,9 @@ class Balance:
     tampered: int
     integrity_ok: bool
     unparsable: int
+    solves: dict[str, int] = field(default_factory=dict)
+    """Counted accepted submissions by difficulty (``Easy``/``Medium``/``Hard``)
+    plus ``unknown`` (no trusted difficulty row, priced as Easy). Display only."""
 
 
 def is_trusted(entry: LedgerEntry, *, integrity_ok: bool) -> bool:
@@ -96,11 +100,32 @@ def counts_toward_balance(entry: LedgerEntry, *, integrity_ok: bool) -> bool:
     return is_trusted(entry, integrity_ok=integrity_ok)
 
 
-def compute_balance(ledger: Ledger) -> Balance:
+def credit_value(
+    entry: LedgerEntry, weights: WeightTable | None, solves: dict[str, int]
+) -> int:
+    """What one credit is worth, and tally its difficulty into ``solves``.
+
+    A LeetCode credit is worth its submission's difficulty weight (Easy 1,
+    Medium 2, Hard 4; ``_difficulty``) times its stored ``amount`` -- which is
+    always 1, so re-pricing never rewrites a signed row. A credit with no
+    ``title_slug``, or no table at all, is worth just its ``amount``.
+    """
+    slug = entry.detail.get("title_slug")
+    if weights is None or not slug or entry.detail.get("source") != SOURCE_LEETCODE:
+        return entry.amount
+    level = weights.level(slug)
+    solves[level or "unknown"] += 1
+    return entry.amount * weights.weight(slug)
+
+
+def compute_balance(ledger: Ledger, weights: WeightTable | None = None) -> Balance:
     """Derive the balance from the entries.
 
     Args:
         ledger: A loaded ledger, with verification already attached.
+        weights: Trusted difficulty rows. ``None`` prices every credit at its
+            stored amount (flat 1). Unknown slugs count as Easy, with one
+            aggregated warning.
 
     Returns:
         The position, including how much was refused and why.
@@ -109,6 +134,7 @@ def compute_balance(ledger: Ledger) -> Balance:
     earned = 0
     charged = 0
     discounted = 0
+    solves = dict.fromkeys(("Easy", "Medium", "Hard", "unknown"), 0)
     for entry in ledger.entries.values():
         if entry.kind == CHARGE:
             charged += entry.amount
@@ -116,10 +142,12 @@ def compute_balance(ledger: Ledger) -> Balance:
         if entry.kind != CREDIT:
             continue
         if counts_toward_balance(entry, integrity_ok=ledger.integrity_ok):
-            earned += entry.amount
+            earned += credit_value(entry, weights, solves)
         else:
             discounted += entry.amount
 
+    if weights is not None:
+        weights.warn_unknown()
     if discounted:
         _logger.error(
             "%d ledger credits were refused (forged signature, or written by "
@@ -135,4 +163,5 @@ def compute_balance(ledger: Ledger) -> Balance:
         tampered=ledger.tampered,
         integrity_ok=ledger.integrity_ok,
         unparsable=ledger.unparsable,
+        solves=solves,
     )
