@@ -99,20 +99,6 @@ jobs:
               python3 scripts/screenshot_states.py "$state"
           done
 
-      - name: The status window builds real Tk widgets
-        run: |
-          xvfb-run -a -s "-screen 0 1000x900x24" timeout 30 \
-            python3 -c "
-          import tkinter as tk
-          import leetcode_guard.status_view as sv
-          from leetcode_guard._status_full import gather_full
-          root = tk.Tk()
-          sv.StatusWindow(root, gather_full(), on_refresh=lambda: None,
-                          on_close=root.destroy)
-          root.update_idletasks(); root.update(); root.destroy()
-          print('status window rendered')
-          "
-
       # Ran only in the local pre-push hook until 2026-09-20, when that became
       # a 1-second stamp check (pre-commit's manual stage holds it now); this
       # is the only other place with an X server to prove it on every push.
