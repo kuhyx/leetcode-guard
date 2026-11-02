@@ -33,6 +33,16 @@ def leetcode_stands_down(day: date) -> bool:
     )
 
 
+def focus_day_name(day: date) -> str | None:
+    """The focus project's name when it, and not a sick day, stands down ``day``.
+
+    A real sick day keeps its own verdict and text, so it wins here.
+    """
+    if sickdays.stands_down(sickdays.LOCKER_LEETCODE, day):
+        return None
+    return _focus.label(_focus.GATE, day)
+
+
 def alarm_stands_down(day: date) -> bool:
     """Whether the wake-alarm switch is off on ``day``.
 

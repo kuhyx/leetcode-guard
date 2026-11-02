@@ -162,6 +162,7 @@ def _no_focus_project_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     from leetcode_guard import _focus
 
     monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: False)
+    monkeypatch.setattr(_focus, "project_name", lambda _day: "Test project")
 
 
 @pytest.fixture

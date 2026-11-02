@@ -162,6 +162,11 @@ def explain_not_triggered(full: FullStatus) -> list[str]:
             "Today is a declared sick day: the gate stands down, charges "
             "nothing and adds nothing to the debt. A solve still earns credit."
         )
+    elif gate.state == "focus-day":
+        lines.append(
+            f"Today is a {gate.reason}: the gate stands down, charges nothing, "
+            "costs 0 and adds nothing to the debt. A solve still earns credit."
+        )
     elif gate.state == "not-started" and full.in_force:
         lines.append(gate.reason)
     if _keeps_leetcode(gate.day):

@@ -155,7 +155,7 @@ def cost_phrase(day: date, cost: int, debt: Debt) -> str:
     The surcharge spelled out, because a quota that silently doubled reads as
     a bug.
     """
-    surcharge = debt.surcharge_on(day)
+    surcharge = min(debt.surcharge_on(day), cost)  # a day costing 0 owes no extra
     if not surcharge:
         return f"{weekday_name(day)} costs {cost}"
     return f"{weekday_name(day)} costs {cost} ({cost - surcharge} +{surcharge} debt)"

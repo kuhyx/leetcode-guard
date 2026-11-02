@@ -13,9 +13,11 @@ import pytest
 import sickdays
 
 from leetcode_guard import _focus, _gate_today, _sick, _status_projection
-from leetcode_guard._debt import compute_debt
-from leetcode_guard._gate import GateState
+from leetcode_guard._debt import compute_debt, cost_phrase
+from leetcode_guard._gate import GateState, decide
 from leetcode_guard._ledger_io import Ledger
+from leetcode_guard._status_full import explain_not_triggered
+from leetcode_guard._viewmodel import build_viewmodel
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -24,12 +26,21 @@ from leetcode_guard.tests._ledger_fixtures import (
     WEDNESDAY,
 )
 from leetcode_guard.tests.test_projection import never_free
+from leetcode_guard.tests.test_status_gather import full_for
+from leetcode_guard.tests.test_viewmodel import (
+    CHECKED_AT,
+    OK_PROBE,
+    SIGNED_OUT,
+    pool_of,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 NEXT_MONDAY = MONDAY + timedelta(days=7)
 REAL_STANDS_DOWN = _focus.stands_down
+REAL_PROJECT_NAME = _focus.project_name
 """Captured at import: the autouse stub replaces the module attribute per test."""
 
 
@@ -47,6 +58,10 @@ def focus_on(monkeypatch: pytest.MonkeyPatch) -> Callable[..., list[tuple[str, d
         return asked
 
     return declare
+
+
+def stands_down_on(*days: date):
+    return lambda _locker, day=None, **_kw: day in days
 
 
 def test_a_focus_day_is_a_stand_down_day(focus_on):
@@ -84,7 +99,7 @@ def test_decide_today_on_a_focus_day_charges_and_locks_nothing(focus_on, debt_st
 
     decision = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
 
-    assert decision.state is GateState.UNLOCKED_SICK_DAY
+    assert decision.state is GateState.UNLOCKED_FOCUS_DAY
     assert (decision.locked, decision.charge, decision.needed) == (False, None, 0)
     assert decision.debt.missed_days == 0
     assert _gate_today.gate_off(WEDNESDAY) is True
@@ -120,3 +135,73 @@ def test_a_missing_package_fails_closed_and_logs_once(monkeypatch, caplog):
     errors = [r for r in caplog.records if r.levelno == logging.ERROR]
     assert len(errors) == 1
     assert "focus_project is not importable" in errors[0].getMessage()
+
+
+def test_a_focus_day_says_focus_not_sick(focus_on, debt_starts):
+    debt_starts(MONDAY)
+    focus_on(WEDNESDAY)
+
+    decision = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
+
+    assert decision.state is GateState.UNLOCKED_FOCUS_DAY
+    assert decision.state.value == "focus-day"
+    assert decision.reason == "focus day: Test project"
+    assert not decision.locked
+
+
+def test_a_focus_day_costs_nothing_even_with_debt(focus_on, debt_starts):
+    debt_starts(MONDAY)
+    plain = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
+    focus_on(TUESDAY, WEDNESDAY)
+
+    decision = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
+
+    assert plain.cost > 0
+    assert decision.cost == 0
+    assert cost_phrase(WEDNESDAY, decision.cost, decision.debt) == "Wednesday costs 0"
+
+
+def test_a_real_sick_day_keeps_its_text_when_focus_also_applies(
+    focus_on, debt_starts, monkeypatch
+):
+    debt_starts(MONDAY)
+    focus_on(WEDNESDAY)
+    monkeypatch.setattr(sickdays, "stands_down", stands_down_on(WEDNESDAY))
+
+    decision = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
+
+    assert decision.state is GateState.UNLOCKED_SICK_DAY
+    assert decision.reason == "today is a sick day"
+
+
+def test_the_window_and_status_name_the_focus_day(
+    monkeypatch, hmac_key: Path, data_dir: Path
+):
+    from leetcode_guard._status import format_status, gather_status
+
+    monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: True)
+    decision = decide(
+        Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, focus_day="Prep"
+    )
+    model = build_viewmodel(
+        decision, pool_of(), SIGNED_OUT, OK_PROBE, checked_at=CHECKED_AT, limit=10
+    )
+    snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
+    lines = explain_not_triggered(full_for(data_dir, hmac_key, Ledger()))
+
+    assert model.headline == "Focus day -- the gate stands down"
+    assert "day        " in format_status(snapshot)
+    assert "costs 0" in format_status(snapshot)
+    assert "focus-day -- focus day: Test project" in format_status(snapshot)
+    assert any("focus day" in line for line in lines)
+
+
+def test_the_project_name_comes_from_the_package(monkeypatch):
+    project = SimpleNamespace(name="HackerRank prep")
+    fake = SimpleNamespace(active=lambda day: project if day == MONDAY else None)
+    monkeypatch.setitem(sys.modules, "focus_project", fake)
+
+    assert REAL_PROJECT_NAME(MONDAY) == "HackerRank prep"
+    assert REAL_PROJECT_NAME(WEDNESDAY) == "focus project"
+    monkeypatch.setitem(sys.modules, "focus_project", None)
+    assert REAL_PROJECT_NAME(MONDAY) == "focus project"

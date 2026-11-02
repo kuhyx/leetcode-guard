@@ -103,6 +103,8 @@ def _headline(decision: GateDecision) -> str:
         return "Not in force yet"
     if decision.state is GateState.UNLOCKED_SICK_DAY:
         return "Sick day -- the gate stands down"
+    if decision.state is GateState.UNLOCKED_FOCUS_DAY:
+        return "Focus day -- the gate stands down"
     if not decision.locked:
         left = _remaining_after_today(decision)
         plural = "" if left == 1 else "s"

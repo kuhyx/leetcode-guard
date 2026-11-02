@@ -34,6 +34,8 @@ cost nothing.
   `_sick.leetcode_stands_down` is True, so no charge, no debt owed for that
   day (past days included), no lock, no workday penalty. If `focus_project`
   cannot be imported the error is logged and the gate applies as before.
+  The verdict says `focus-day` (`focus day: <project name>`, `GateState.
+  UNLOCKED_FOCUS_DAY`) and the day costs 0; a real sick day keeps `sick-day`.
 - **A sick day can keep this gate** (`sickdays add --keep leetcode`, or
   `sickdays keep <day> leetcode`; sickdays 0.2.0). "Sick" above always means
   *leetcode stands down* (`_sick.leetcode_stands_down`): sick **and** not kept.

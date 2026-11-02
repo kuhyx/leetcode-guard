@@ -18,19 +18,22 @@ from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from datetime import date
+    from types import ModuleType
 
 GATE: Final = "leetcode"
 """The gate name ``focus_project`` knows this gate by."""
+
+GENERIC_NAME: Final = "focus project"
 
 _logger = logging.getLogger(__name__)
 _warned: set[str] = set()
 """Which failures were already logged: one line per process, not per day."""
 
 
-def stands_down(gate: str, day: date) -> bool:
-    """Whether an active focus project replaces ``gate`` on ``day``."""
+def _module() -> ModuleType | None:
+    """The ``focus_project`` package, or None (logged once) when not importable."""
     try:
-        module = importlib.import_module("focus_project")
+        return importlib.import_module("focus_project")
     except ImportError:
         if "import" not in _warned:
             _warned.add("import")
@@ -38,5 +41,26 @@ def stands_down(gate: str, day: date) -> bool:
                 "focus_project is not importable: not standing down for a "
                 "focus project (the gate applies as before)"
             )
-        return False
-    return bool(module.stands_down(gate, day))
+        return None
+
+
+def stands_down(gate: str, day: date) -> bool:
+    """Whether an active focus project replaces ``gate`` on ``day``."""
+    module = _module()
+    return module is not None and bool(module.stands_down(gate, day))
+
+
+def project_name(day: date) -> str:
+    """The name of the focus project active on ``day`` (for status text).
+
+    Only asked on a day :func:`stands_down` already said yes to; a package
+    that cannot say falls back to a generic name rather than hiding the day.
+    """
+    module = _module()
+    project = None if module is None else module.active(day)
+    return GENERIC_NAME if project is None else str(project.name)
+
+
+def label(gate: str, day: date) -> str | None:
+    """The focus project's name when it stands ``gate`` down on ``day``."""
+    return project_name(day) if stands_down(gate, day) else None

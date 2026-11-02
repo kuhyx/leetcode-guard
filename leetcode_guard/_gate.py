@@ -9,7 +9,6 @@ filesystem.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import enum
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._balance import Balance, compute_balance
@@ -17,6 +16,7 @@ from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import GATE_START_DATE
 from leetcode_guard._daycost import day_cost, day_key, pricing_for
 from leetcode_guard._debt import NO_DEBT, Debt, cost_phrase
+from leetcode_guard._gate_state import GateState
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
 
@@ -25,35 +25,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from leetcode_guard._ledger import LedgerEntry
-
-
-class GateState(enum.Enum):
-    """Why the gate reached its verdict."""
-
-    UNLOCKED_NOT_STARTED = "not-started"
-    """Today is before :data:`GATE_START_DATE`. The gate is installed but not
-    yet in force."""
-
-    UNLOCKED_ALREADY_CHARGED = "already-charged"
-    """Today was settled by an earlier run. Re-running is a no-op, which is
-    what makes the afternoon retry safe."""
-
-    UNLOCKED_CHARGED_NOW = "charged"
-    """Enough credit was available; this run spent it."""
-
-    LOCKED_INSUFFICIENT = "locked"
-    """Not enough credit. Solve something."""
-
-    LOCKED_CLOCK_UNTRUSTED = "locked-clock"
-    """The system date moved backwards past a settled day."""
-
-    UNLOCKED_FREE_DAY = "free-day"
-    """Today is in the shared free-day pool. No lock, and no charge either --
-    a day off is not paid for out of the credit balance."""
-
-    UNLOCKED_SICK_DAY = "sick-day"
-    """Today is in the shared *sick*-day pool (not the free-day pool): no lock,
-    no charge, nothing added to the debt."""
 
 
 @dataclass(frozen=True)
@@ -89,7 +60,7 @@ _ALREADY: Final = "today is already paid for"
 
 
 def _standing_down(
-    day: date, *, free_day: bool, sick_day: bool
+    day: date, *, free_day: bool, sick_day: bool, focus_day: str | None
 ) -> tuple[GateState, str] | None:
     """Why the gate does nothing today, when it does nothing.
 
@@ -97,6 +68,8 @@ def _standing_down(
     """
     if free_day:
         return GateState.UNLOCKED_FREE_DAY, "today is a free day"
+    if focus_day is not None:
+        return GateState.UNLOCKED_FOCUS_DAY, f"focus day: {focus_day}"
     if sick_day:
         return GateState.UNLOCKED_SICK_DAY, "today is a sick day"
     if day < GATE_START_DATE:
@@ -117,6 +90,7 @@ def decide(
     debt: Debt = NO_DEBT,
     workday_penalty: bool = False,
     sick_day: bool = False,
+    focus_day: str | None = None,
 ) -> GateDecision:
     """Work out whether today is settled, settleable, or locked.
 
@@ -145,16 +119,19 @@ def decide(
         sick_day: Whether ``day`` is sick and does not keep ``leetcode``
             (``_sick.leetcode_stands_down``). Checked after the clock, like
             ``free_day``. A charge on the day repays as on any other day.
+        focus_day: The active focus project's name when it stands the gate
+            down today (and no real sick day does); the verdict is
+            ``focus-day`` and today costs 0. Also voids ``workday_penalty``.
 
     Returns:
         The decision. Nothing is written.
     """
     balance = compute_balance(ledger)
     pricing = pricing_for(day)
-    penalised = workday_penalty and not sick_day
+    penalised = workday_penalty and not sick_day and focus_day is None
     base_cost = pricing.penalised_cost(day) if penalised else day_cost(day)
     surcharge = debt.surcharge_on(day)
-    cost = base_cost + surcharge
+    cost = 0 if focus_day is not None else base_cost + surcharge
     costs = cost_phrase(day, cost, debt)
 
     def stand_down(state: GateState, reason: str) -> GateDecision:
@@ -181,7 +158,9 @@ def decide(
             charge=None,
             reason=verdict.reason,
         )
-    if standing := _standing_down(day, free_day=free_day, sick_day=sick_day):
+    if standing := _standing_down(
+        day, free_day=free_day, sick_day=sick_day, focus_day=focus_day
+    ):
         return stand_down(*standing)
     if ledger.has(f"charge:{day_key(day)}"):
         return stand_down(GateState.UNLOCKED_ALREADY_CHARGED, _ALREADY)
