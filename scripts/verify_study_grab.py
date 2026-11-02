@@ -41,7 +41,7 @@ import freedays
 import sickdays
 
 from leetcode_guard import _browser as browser
-from leetcode_guard import _gate
+from leetcode_guard import _focus, _gate
 from leetcode_guard import _lock_study as lock_study
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
@@ -93,7 +93,7 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
     binds the real ``_check``, so ``post`` must answer a well-formed empty feed.
     """
     _gate.GATE_START_DATE = date(2000, 1, 1)
-    freedays.is_free_day = lambda *_a, **_k: False
+    freedays.is_free_day = _focus.stands_down = lambda *_a, **_k: False
     sickdays.is_sick_day = sickdays.stands_down = lambda *_a, **_k: False
     sickdays.kept_lockers = lambda *_a, **_k: frozenset()
     cached = read_cache(POOL_CACHE_FILE)

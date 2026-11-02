@@ -16,13 +16,21 @@ from typing import TYPE_CHECKING
 
 import sickdays
 
+from leetcode_guard import _focus
+
 if TYPE_CHECKING:
     from datetime import date
 
 
 def leetcode_stands_down(day: date) -> bool:
-    """Whether this gate is off on ``day``: sick, and leetcode not kept."""
-    return sickdays.stands_down(sickdays.LOCKER_LEETCODE, day)
+    """Whether this gate is off on ``day``.
+
+    Sick with leetcode not kept, or an active focus project replaces it
+    (:mod:`leetcode_guard._focus`): both owe nothing, charge nothing.
+    """
+    return sickdays.stands_down(sickdays.LOCKER_LEETCODE, day) or _focus.stands_down(
+        _focus.GATE, day
+    )
 
 
 def alarm_stands_down(day: date) -> bool:

@@ -29,6 +29,11 @@ cost nothing.
   never carries one. Solves on a sick day credit normally. An unreadable
   sick-day pool reads as "not sick" (`sickdays.stands_down` never raises), so
   the normal rules apply.
+- **Focus projects** (`focus_project.stands_down("leetcode", day)`, wrapped
+  in `_focus.stands_down`) count as a sick day that does not keep this gate:
+  `_sick.leetcode_stands_down` is True, so no charge, no debt owed for that
+  day (past days included), no lock, no workday penalty. If `focus_project`
+  cannot be imported the error is logged and the gate applies as before.
 - **A sick day can keep this gate** (`sickdays add --keep leetcode`, or
   `sickdays keep <day> leetcode`; sickdays 0.2.0). "Sick" above always means
   *leetcode stands down* (`_sick.leetcode_stands_down`): sick **and** not kept.

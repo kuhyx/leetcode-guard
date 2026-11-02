@@ -152,6 +152,18 @@ def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     monkeypatch.setattr(freedays._api, "resolve_paths", lambda paths: paths or isolated)
 
 
+@pytest.fixture(autouse=True)
+def _no_focus_project_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never let the gate read the developer's real focus-project registry.
+
+    A live project would stand the gate down in every scenario of this suite.
+    Tests about focus days replace ``_focus.stands_down`` themselves.
+    """
+    from leetcode_guard import _focus
+
+    monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: False)
+
+
 @pytest.fixture
 def hmac_key(tmp_path: Path) -> Path:
     """A real 32-byte signing key, isolated per test.

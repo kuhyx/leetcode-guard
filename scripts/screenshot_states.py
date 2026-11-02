@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING
 import freedays
 import sickdays
 
-from leetcode_guard import _gate
+from leetcode_guard import _focus, _gate
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
 from leetcode_guard._daycost import local_today
@@ -143,6 +143,7 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
     freedays.is_free_day = lambda *_a, **_k: False
     sickdays.is_sick_day = sickdays.stands_down = lambda *_a, **_k: False
     sickdays.kept_lockers = lambda *_a, **_k: frozenset()
+    _focus.stands_down = lambda *_a, **_k: False
 
     ledger_path = workdir / "ledger.json"
     ledger = Ledger()
