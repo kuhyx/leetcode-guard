@@ -3,8 +3,12 @@
 # ============================================================================
 # Point the /leetcode skill and the `leetcode` command at leetcode_coach/.
 #
-#   ~/.claude/skills/leetcode -> <repo>/leetcode_coach
-#   ~/.local/bin/leetcode     -> <repo>/leetcode_coach/leetcode
+#   ~/.claude/skills/leetcode -> <leetcode_coach package dir>
+#   ~/.local/bin/leetcode     -> <leetcode_coach package dir>/leetcode
+#
+# The package lives in ~/src/utils/leetcode_coach (a pinned dependency, editable
+# after install.sh); its directory is whatever the system python imports.
+# $LEETCODE_COACH_DIR overrides it (tests).
 #
 # Called by install.sh; idempotent. An existing symlink is repointed. A real
 # directory at the skill path is replaced only when it is the pre-2026-10-23
@@ -16,9 +20,7 @@
 
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly REPO_DIR
-readonly COACH_DIR="${REPO_DIR}/leetcode_coach"
+readonly SYSTEM_PYTHON="/usr/bin/python3"
 readonly SKILL_LINK="${HOME}/.claude/skills/leetcode"
 readonly BIN_LINK="${HOME}/.local/bin/leetcode"
 readonly BACKUP_ROOT="${HOME}/.claude/backups"
@@ -60,9 +62,22 @@ link() {
     log "$path -> $target"
 }
 
+coach_dir() {
+    # -P and cwd /: the package the unit and the Stop hook import, not a copy
+    # in whatever directory this runs from.
+    if [[ -n "${LEETCODE_COACH_DIR:-}" ]]; then
+        printf '%s\n' "$LEETCODE_COACH_DIR"
+        return
+    fi
+    (cd / && "$SYSTEM_PYTHON" -P -c 'import leetcode_coach, os; print(os.path.dirname(leetcode_coach.__file__))') \
+        || fail "leetcode_coach is not importable by $SYSTEM_PYTHON (install it first)"
+}
+
 main() {
+    local COACH_DIR
+    COACH_DIR="$(coach_dir)"
     [[ -f "${COACH_DIR}/SKILL.md" && -x "${COACH_DIR}/leetcode" ]] \
-        || fail "no leetcode_coach package at $COACH_DIR"
+        || fail "no skill body or launcher at $COACH_DIR"
     link "$COACH_DIR" "$SKILL_LINK" yes
     link "${COACH_DIR}/leetcode" "$BIN_LINK" no
 }

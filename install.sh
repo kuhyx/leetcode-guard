@@ -19,6 +19,7 @@ readonly SYSTEM_PYTHON="/usr/bin/python3"
 readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly HMAC_KEY="/etc/workout-locker/hmac.key"
 readonly GATELOCK_SRC="${HOME}/src/utils/gatelock"
+readonly COACH_SRC="${HOME}/src/utils/leetcode_coach"
 
 log() { printf 'install: %s\n' "$1" >&2; }
 fail() { printf 'install: FAILED -- %s\n' "$1" >&2; exit 1; }
@@ -29,24 +30,27 @@ install_package() {
         || fail "pip install"
 }
 
-preserve_editable_gatelock() {
-    # `pip install -e .` resolves our pinned `gatelock @ git+...` dependency
-    # and installs it NON-editably, silently replacing an editable install
-    # pointing at ~/src/utils/gatelock. That breaks live editing across all four
-    # lockers, and it is invisible until someone edits gatelock and wonders
-    # why nothing changed. Caught twice by hand; now handled here.
-    if [[ ! -d "$GATELOCK_SRC" ]]; then
+preserve_editable() {
+    # `pip install -e .` resolves our pinned `<name> @ git+...` dependencies
+    # and installs them NON-editably, silently replacing an editable install
+    # pointing at ~/src/utils/<name>. That breaks live editing across every
+    # consumer (gatelock: all four lockers; leetcode_coach: the relay, the
+    # Stop hook, the `leetcode` command), and it is invisible until someone
+    # edits the library and wonders why nothing changed. Caught twice by hand
+    # for gatelock; now handled here for both.
+    local module="$1" src="$2"
+    if [[ ! -d "$src" ]]; then
         return
     fi
     local resolved
-    resolved="$("$SYSTEM_PYTHON" -c 'import gatelock; print(gatelock.__file__)' 2>/dev/null || true)"
-    if [[ "$resolved" == "$GATELOCK_SRC"* ]]; then
-        log "gatelock is still editable ($GATELOCK_SRC)"
+    resolved="$(cd / && "$SYSTEM_PYTHON" -P -c "import $module; print($module.__file__)" 2>/dev/null || true)"
+    if [[ "$resolved" == "$src"* ]]; then
+        log "$module is still editable ($src)"
         return
     fi
-    log "restoring the editable gatelock install at $GATELOCK_SRC"
-    "$SYSTEM_PYTHON" -m pip install --user --break-system-packages -q -e "$GATELOCK_SRC" \
-        || fail "could not restore the editable gatelock"
+    log "restoring the editable $module install at $src"
+    "$SYSTEM_PYTHON" -m pip install --user --break-system-packages -q --no-deps -e "$src" \
+        || fail "could not restore the editable $module"
 }
 
 verify_imports() {
@@ -140,9 +144,11 @@ install_tray() {
 
 main() {
     install_package
-    preserve_editable_gatelock
+    preserve_editable gatelock "$GATELOCK_SRC"
+    preserve_editable leetcode_coach "$COACH_SRC"
     verify_imports
-    # The /leetcode skill and the `leetcode` command now live in leetcode_coach/;
+    # The /leetcode skill and the `leetcode` command live in the leetcode_coach
+    # package (~/src/utils/leetcode_coach, a pinned dependency);
     # after verify_imports, because the Stop-hook shim in ~/.claude/hooks runs
     # `/usr/bin/python3 -P -m leetcode_coach.stop_gate` and needs the import.
     "${REPO_DIR}/scripts/link_leetcode_coach.sh"

@@ -29,7 +29,7 @@ repos:
         # Shared, non-test helpers (fixtures, factories) imported by the
         # real test modules — deliberately not collected as tests, hence the
         # leading underscore rather than a test_/*_test name.
-        exclude: ^leetcode_(guard|coach)/tests/_[a-z][a-z_]*\.py$
+        exclude: ^leetcode_guard/tests/_[a-z][a-z_]*\.py$
       - id: check-ast
       - id: mixed-line-ending
         args: [--fix=lf]
@@ -47,20 +47,12 @@ repos:
         entry: '(?i)#\s*ruff:\s*noqa'
         language: pygrep
         types: [python]
-      # One entry per package: with two top-level packages the checker's
-      # auto-detection refuses to guess, so each names its own.
       - id: requirements-sync
         name: requirements.txt covers all package imports
         entry: python3 scripts/check_requirements_sync.py --package leetcode_guard
         language: system
         pass_filenames: false
         files: ^(leetcode_guard/.*\.py|requirements\.txt)$
-      - id: requirements-sync-coach
-        name: requirements.txt covers all leetcode_coach imports
-        entry: python3 scripts/check_requirements_sync.py --package leetcode_coach
-        language: system
-        pass_filenames: false
-        files: ^(leetcode_coach/.*\.py|requirements\.txt)$
       - id: repo-contract
         name: repo contract (CLAUDE.md Commands + test_changed)
         entry: scripts/check_repo_contract.sh
@@ -127,7 +119,6 @@ repos:
           - --fail-under=8.0
           - --jobs=4
           - leetcode_guard
-          - leetcode_coach
           - scripts
         # Kept byte-identical to pyproject.toml/requirements.txt. This block
         # has drifted from those manifests before, and a pin that lags them
@@ -138,6 +129,7 @@ repos:
           - requests
           - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.10.0#subdirectory=gatelock
           - crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.9.2#subdirectory=crdt-sync
+          - leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.0#subdirectory=leetcode_coach
           - freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays
           - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.3.0#subdirectory=sickdays
           - mcp>=2,<3
