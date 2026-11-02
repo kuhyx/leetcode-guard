@@ -14,10 +14,7 @@
 /// made Firebase auto-create this package's Android OAuth clients.
 library;
 
-import 'dart:developer';
-
-import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_account_token/google_account_token.dart' as plugin;
 
 /// The account the security rules pin.
 ///
@@ -38,15 +35,12 @@ const kServerClientId =
 
 /// Whether programmatic sign-in can work here with [serverClientId].
 ///
-/// Only Android ships the Credential Manager flow. The desktop is the web
-/// build, where `authenticate()` throws `UnimplementedError` (an `Error`
-/// that escapes an ordinary catch), so the button must not exist there.
-/// A platform check through `foundation` rather than `dart:io`, because the
-/// web app's import graph must stay free of `dart:io`.
+/// Only Android has an AccountManager (the plugin's own gate). The desktop is
+/// the web build, where there is no account chooser, so the button must not
+/// exist there; the plugin's check also keeps the web import graph free of
+/// `dart:io`.
 bool googleSignInAvailable({String serverClientId = kServerClientId}) =>
-    !kIsWeb &&
-    defaultTargetPlatform == TargetPlatform.android &&
-    serverClientId.isNotEmpty;
+    plugin.googleAccountTokenSupported && serverClientId.isNotEmpty;
 
 /// [googleSignInAvailable] for the compiled-in client id.
 bool get googleSignInSupported => googleSignInAvailable();
@@ -54,38 +48,12 @@ bool get googleSignInSupported => googleSignInAvailable();
 /// Returns a Google ID token for the picked account, or null.
 ///
 /// Null rather than throwing when the user dismisses the picker: cancelling
-/// is an ordinary outcome. [signInFn] and [serverClientId] exist for tests,
-/// which cannot reach the plugin's platform channel.
+/// is an ordinary outcome. [signInFn] and [serverClientId] exist for tests
+/// that bypass the plugin.
 Future<String?> googleIdToken({
   Future<String?> Function()? signInFn,
   String serverClientId = kServerClientId,
 }) async {
   if (signInFn != null) return await signInFn();
-  if (serverClientId.isEmpty) {
-    log('Google sign-in unavailable: no server client id', level: 900);
-    return null;
-  }
-  // The plugin reaches the OS account picker through a platform channel,
-  // which `flutter test` has no binding for. Everything above is covered.
-  // coverage:ignore-start
-  try {
-    await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
-    if (!GoogleSignIn.instance.supportsAuthenticate()) {
-      log('Google sign-in is not available on this platform', level: 900);
-      return null;
-    }
-    final account = await GoogleSignIn.instance.authenticate();
-    return account.authentication.idToken;
-  } on GoogleSignInException catch (error, stackTrace) {
-    // Includes a dismissed picker, but also a configuration failure
-    // (unregistered SHA-1, wrong client id), which arrives the same way.
-    log(
-      'Google sign-in did not complete',
-      level: 900,
-      error: error,
-      stackTrace: stackTrace,
-    );
-    return null;
-  }
-  // coverage:ignore-end
+  return await plugin.googleIdToken(serverClientId: serverClientId);
 }

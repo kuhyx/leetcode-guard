@@ -1,8 +1,19 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
 
+const _channel = MethodChannel('dev.kuhy/google_account_token');
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    debugDefaultTargetPlatformOverride = null;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, null);
+  });
+
   group('googleIdToken', () {
     test('returns the token the sign-in function yields', () async {
       // The injected path: the closure is what feeds crdt_sync, and no
@@ -16,8 +27,22 @@ void main() {
     });
 
     test('reports "not configured" when the client id is missing', () async {
-      // Passed explicitly: with the real const this would reach the plugin.
+      // Passed explicitly: an empty id must not reach the OS chooser.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       expect(await googleIdToken(serverClientId: ''), isNull);
+    });
+
+    test('asks the account-token plugin for the Web client id', () async {
+      // The real path: the plugin's channel gets the pinned Web client id.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      Object? sent;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            sent = call.arguments;
+            return 'plugin-token';
+          });
+      expect(await googleIdToken(), 'plugin-token');
+      expect(sent, {'serverClientId': kServerClientId});
     });
   });
 
@@ -40,8 +65,6 @@ void main() {
   });
 
   group('googleSignInSupported', () {
-    tearDown(() => debugDefaultTargetPlatformOverride = null);
-
     test('is true on Android', () {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       expect(googleSignInSupported, isTrue);
