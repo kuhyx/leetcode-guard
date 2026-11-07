@@ -44,6 +44,7 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._ledger_io import load_ledger
+from leetcode_guard._lock_carrot import CarrotMixin
 from leetcode_guard._lock_nudge import NudgeMixin
 from leetcode_guard._lock_poll import PollMixin
 from leetcode_guard._lock_release import ReleaseMixin
@@ -69,7 +70,9 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 
-class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin, NudgeMixin, RevealMixin):
+class LeetcodeGuard(
+    PollMixin, CarrotMixin, ReleaseMixin, StudyMixin, NudgeMixin, RevealMixin
+):
     """A gatelock consumer that releases when a LeetCode problem is solved.
 
     ``PollMixin`` comes first and the order is load-bearing. ``StudyMixin``
@@ -167,6 +170,7 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin, NudgeMixin, RevealMixin
         )
         self._poller.start()
         self._start_nudges(deps.nudge_port)
+        self._start_carrot_watch()
         self._lock.grab_input()
 
     # -- gatelock hooks ---------------------------------------------------
@@ -212,6 +216,7 @@ class LeetcodeGuard(PollMixin, ReleaseMixin, StudyMixin, NudgeMixin, RevealMixin
         # back, so ``LockWindow.close``'s restore is not skipped and the
         # machine does not exit with VT switching still disabled.
         self._end_study()
+        self._stop_carrot_watch()
         self._stop_nudges()
         self._stop_reveal()
         self._poller.stop()
