@@ -14,6 +14,7 @@ import 'package:leetcode_guard/src/coach/ids.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/rtdb_namespace.dart';
 import 'package:leetcode_guard/src/model/coach_relay.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/model/json_read.dart';
@@ -28,9 +29,11 @@ class RtdbCoachTransport implements CoachTransport {
     required this.open,
     required String databaseUrl,
     http.Client? httpClient,
+    String? namespace,
   }) : databaseUrl = databaseUrl.endsWith('/')
            ? databaseUrl.substring(0, databaseUrl.length - 1)
            : databaseUrl,
+       _namespace = resolveNamespace(namespace),
        _http = httpClient ?? http.Client();
 
   /// Opens the signed-in client; only its token provider is used.
@@ -38,6 +41,7 @@ class RtdbCoachTransport implements CoachTransport {
 
   /// The regional database origin, no trailing slash.
   final String databaseUrl;
+  final String _namespace;
   final http.Client _http;
 
   @override
@@ -135,8 +139,9 @@ class RtdbCoachTransport implements CoachTransport {
     final http.Response res;
     try {
       final token = await client.auth.idToken();
-      final uri = Uri.parse('$databaseUrl/$kCoachRoot/$node.json')
-          .replace(queryParameters: {...query, 'auth': token});
+      final uri = Uri.parse(
+        '$databaseUrl/${namespacedPath(_namespace, '$kCoachRoot/$node')}.json',
+      ).replace(queryParameters: {...query, 'auth': token});
       final request = http.Request(method, uri);
       if (body != null) {
         request

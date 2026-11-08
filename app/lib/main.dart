@@ -2,6 +2,8 @@
 // Bootstrap only: picks the platform's source and binds the plugins
 // (url_launcher, the keystore) that `flutter test` has no binding for.
 // Everything it wires is tested through LeetGuardApp's injected seams.
+import 'package:crdt_sync/crdt_sync.dart'
+    show checkSyncNamespace, syncNamespace;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
@@ -25,6 +27,8 @@ import 'package:url_launcher/url_launcher.dart';
 /// Entry point.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Fail closed on a bad SYNC_NAMESPACE before any screen or request.
+  checkSyncNamespace(syncNamespace);
   // Desktop is this web build in a Chrome window: the wrapper that served
   // the page reads the exporter's local file, so the desktop never touches
   // Firebase or a credential. Its window resolves loopback only, so links

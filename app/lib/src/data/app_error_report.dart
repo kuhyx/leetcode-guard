@@ -18,6 +18,7 @@ import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/data/app_errors.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/rtdb_namespace.dart';
 
 /// Where each install's errors land.
 const kAppErrorsRoot = 'leetcode-guard/app_errors';
@@ -41,9 +42,11 @@ class RtdbErrorReporter implements ErrorReporter {
     required this.open,
     required String databaseUrl,
     http.Client? httpClient,
+    String? namespace,
   }) : databaseUrl = databaseUrl.endsWith('/')
            ? databaseUrl.substring(0, databaseUrl.length - 1)
            : databaseUrl,
+       _namespace = resolveNamespace(namespace),
        _http = httpClient ?? http.Client();
 
   /// The kept errors.
@@ -57,6 +60,7 @@ class RtdbErrorReporter implements ErrorReporter {
 
   /// The regional database origin, no trailing slash.
   final String databaseUrl;
+  final String _namespace;
   final http.Client _http;
   bool _sending = false;
 
@@ -84,8 +88,9 @@ class RtdbErrorReporter implements ErrorReporter {
     try {
       final token = await client.auth.idToken();
       res = await _http.put(
-        Uri.parse('$databaseUrl/$kAppErrorsRoot/$device.json')
-            .replace(queryParameters: {'print': 'silent', 'auth': token}),
+        Uri.parse(
+          '$databaseUrl/${namespacedPath(_namespace, '$kAppErrorsRoot/$device')}.json',
+        ).replace(queryParameters: {'print': 'silent', 'auth': token}),
         headers: {'content-type': 'application/json'},
         body: jsonEncode(batch.body),
       );

@@ -11,6 +11,7 @@ import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/hash_gated_source.dart';
+import 'package:leetcode_guard/src/data/rtdb_namespace.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
 /// Where the PC's exporter publishes the snapshot (one JSON string leaf).
@@ -35,9 +36,11 @@ class FirebaseSnapshotSource implements HashedSnapshotSource {
     required this.open,
     required String databaseUrl,
     http.Client? httpClient,
+    String? namespace,
   }) : databaseUrl = databaseUrl.endsWith('/')
            ? databaseUrl.substring(0, databaseUrl.length - 1)
            : databaseUrl,
+       _namespace = resolveNamespace(namespace),
        _http = httpClient ?? http.Client();
 
   /// Opens the signed-in client; only its token provider is used.
@@ -45,6 +48,7 @@ class FirebaseSnapshotSource implements HashedSnapshotSource {
 
   /// The regional database origin, no trailing slash.
   final String databaseUrl;
+  final String _namespace;
   final http.Client _http;
 
   @override
@@ -67,7 +71,7 @@ class FirebaseSnapshotSource implements HashedSnapshotSource {
     try {
       final token = await client.auth.idToken();
       res = await _http.get(
-        Uri.parse('$databaseUrl/$path.json')
+        Uri.parse('$databaseUrl/${namespacedPath(_namespace, path)}.json')
             .replace(queryParameters: {'auth': token}),
       );
     } on http.ClientException catch (error) {
