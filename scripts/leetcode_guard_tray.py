@@ -28,8 +28,16 @@ import subprocess
 
 import gi
 
-gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
+# ``require_version`` must run before the ``gi.repository`` import, and a
+# module-level ``try`` is the one shape that keeps that import at the top of
+# the module. The tray starts from i3, where a traceback is easy to miss, so
+# a missing GTK 3 is logged by name before it propagates.
+try:
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import GLib, Gtk
+except ValueError:
+    logging.getLogger("leetcode-guard-tray").exception("GTK 3 is not available")
+    raise
 
 STATUS_CMD = ["/usr/bin/python3", "-m", "leetcode_guard.status_cli"]
 DEFAULT_APP_LAUNCHER = (
@@ -100,6 +108,16 @@ def _notify(text: str) -> None:
         _logger.warning("could not show the status notification: %s", exc)
 
 
+def _spawn_detached(command: list[str]) -> subprocess.Popen[bytes]:
+    """Start ``command`` in its own session and hand back the handle.
+
+    Never waited on, so no ``with``: ``Popen.__exit__`` waits, and the app must
+    outlive both the click and the tray. Through bash (see the caller), so a
+    launcher checked out without its exec bit still runs.
+    """
+    return subprocess.Popen(command, start_new_session=True)
+
+
 def _launch_app() -> bool:
     """Start the status app detached; ``False``, with a warning, if it cannot."""
     if not APP_LAUNCHER.is_file():
@@ -109,8 +127,7 @@ def _launch_app() -> bool:
         )
         return False
     try:
-        # Through bash, so a launcher checked out without its exec bit runs.
-        subprocess.Popen(["/bin/bash", str(APP_LAUNCHER)], start_new_session=True)
+        _spawn_detached(["/bin/bash", str(APP_LAUNCHER)])
     except OSError as exc:
         _logger.warning("could not start the status app %s: %s", APP_LAUNCHER, exc)
         return False

@@ -134,7 +134,7 @@ def _run_case(
         return False
     profile = Path(tempfile.mkdtemp(dir=SCRATCH))
     url = f"https://leetcode.com/problems/two-sum/?t={transport}&id={check_id}"
-    proc = subprocess.Popen(
+    with subprocess.Popen(
         [
             browser,
             "--headless=new",
@@ -148,16 +148,16 @@ def _run_case(
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-    )
-    try:
-        deadline = time.monotonic() + (WAIT_SECONDS if should_ring else 8.0)
-        while time.monotonic() < deadline and not rang:
-            time.sleep(0.01)
-    finally:
-        proc.terminate()
-        proc.wait(timeout=10)
-        bell.stop()
-        shutil.rmtree(profile, ignore_errors=True)
+    ) as proc:
+        try:
+            deadline = time.monotonic() + (WAIT_SECONDS if should_ring else 8.0)
+            while time.monotonic() < deadline and not rang:
+                time.sleep(0.01)
+        finally:
+            proc.terminate()
+            proc.wait(timeout=10)
+            bell.stop()
+            shutil.rmtree(profile, ignore_errors=True)
     served = _Mock.served.get(check_id)
     if served is None:
         _say(f"FAIL {name}: the mock verdict was never requested")
