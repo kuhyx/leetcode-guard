@@ -111,6 +111,8 @@ repos:
         # shells. Single-threaded, the whole tree lints in ~9 s. The 3.14 pin,
         # matching pyproject.toml's `py-version`, is the second defence.
         language_version: python3.14
+        # The gate is 10.00 and never goes down again: a lower bar lets the
+        # next message in unnoticed, and each one costs more to clear later.
         # Whole tree, never the staged subset. `--fail-under` grades a *score*,
         # and a score over an arbitrary handful of files is an arbitrary
         # number: the same tests that sit at 8.55 alongside the package score
@@ -122,7 +124,7 @@ repos:
         pass_filenames: false
         args:
           - --rcfile=pyproject.toml
-          - --fail-under=8.0
+          - --fail-under=10
           - --jobs=1
           - leetcode_guard
           - scripts
