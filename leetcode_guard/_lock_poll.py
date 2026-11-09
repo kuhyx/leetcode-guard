@@ -17,21 +17,28 @@ from leetcode_guard._difficulty_resolve import resolve_probe
 from leetcode_guard._escape_flow import is_offerable
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
-from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
+from leetcode_guard._harvest import (
+    SeedStamp,
+    commit_harvest,
+    harvest,
+    needs_seeding,
+    seed_ledger,
+)
 from leetcode_guard._ledger_io import solved_slugs
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel
+from leetcode_guard._viewmodel_source import ViewSource
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from gatelock import EscapeTracker
-
     from leetcode_guard._gate import GateDecision
     from leetcode_guard._ledger_io import Ledger
     from leetcode_guard._lock_deps import GuardDeps
+    from leetcode_guard._lock_state import EscapeKit, OutageState, RunState
     from leetcode_guard._poller import SolvePoller
+    from leetcode_guard._view_group import FrameGroup
     from leetcode_guard._viewmodel import ViewModel
 
 _logger: Final = logging.getLogger(__name__)
@@ -44,9 +51,8 @@ not to feel like the lock is stuck."""
 class PollMixin:
     """The tick half of :class:`~leetcode_guard._lock.LeetcodeGuard`.
 
-    Reads ``_deps``, ``_ledger``, ``_tracker``, ``_started``, ``_outage_note``,
-    ``_poller``, ``_views``, ``_model``, ``_closed``, ``_demo`` and ``root``
-    from the
+    Reads ``_deps``, ``_ledger``, ``_escape``, ``_outage``, ``_run``,
+    ``_poller``, ``_frames``, ``_model`` and ``root`` from the
     class it is mixed into, and calls back into the release and study halves.
     Declared rather than assumed, as the other two mixins do: a mixin that
     silently expects attributes is one that breaks on a refactor and says
@@ -55,14 +61,12 @@ class PollMixin:
 
     _deps: GuardDeps
     _ledger: Ledger
-    _tracker: EscapeTracker
-    _started: float
-    _outage_note: str | None
+    _escape: EscapeKit
+    _outage: OutageState
+    _run: RunState
     _poller: SolvePoller
-    _views: dict[str, Any]
+    _frames: FrameGroup
     _model: ViewModel
-    _closed: bool
-    _demo: bool
     root: Any
     _blind_seconds: Callable[[], float]
     _blind_for_long_enough: Callable[[], bool]
@@ -84,10 +88,12 @@ class PollMixin:
         seed_ledger(
             self._ledger,
             self._deps.probe,
-            day=local_today(now=self._deps.moment()),
-            now=self._deps.moment(),
+            stamp=SeedStamp(
+                day=local_today(now=self._deps.moment()),
+                now=self._deps.moment(),
+                key_file=self._deps.key_file,
+            ),
             path=self._deps.ledger_path,
-            key_file=self._deps.key_file,
         )
 
     def _decision(self) -> GateDecision:
@@ -99,25 +105,27 @@ class PollMixin:
             day=day,
             now=moment,
             key_file=self._deps.key_file,
-            demo=self._demo,
+            demo=self._run.demo,
         )
 
     def _build_model(self, probe: SolveProbe) -> ViewModel:
         """Render the current state."""
         model = build_viewmodel(
             self._decision(),
-            self._deps.pool,
-            self._deps.auth,
+            ViewSource(
+                self._deps.pool,
+                self._deps.auth,
+                # Every unsolved problem: the surface scrolls (``_view_scroll``).
+                limit=len(self._deps.pool.problems),
+                solved_slugs=self._solved_slugs(probe),
+            ),
             probe,
             checked_at=self._deps.moment(),
-            # Every unsolved problem: the surface scrolls (``_view_scroll``).
-            limit=len(self._deps.pool.problems),
             show_escape=self._should_offer_escape(),
-            solved_slugs=self._solved_slugs(probe),
         )
-        if self._outage_note is None:
+        if self._outage.note is None:
             return model
-        return replace(model, notes=(*model.notes, self._outage_note))
+        return replace(model, notes=(*model.notes, self._outage.note))
 
     def _solved_slugs(self, probe: SolveProbe) -> frozenset[str]:
         """Everything known to be solved right now, from both sources.
@@ -140,8 +148,8 @@ class PollMixin:
             # only exit, and refusing it is what made the lock a trap.
             return True
         return is_offerable(
-            self._tracker,
-            elapsed_seconds=time.monotonic() - self._started,
+            self._escape.tracker,
+            elapsed_seconds=time.monotonic() - self._run.started,
             # hasattr because the first model is built before the poller
             # exists; treating that as "not blind yet" is correct.
             unverifiable_seconds=self._blind_seconds()
@@ -196,7 +204,7 @@ class PollMixin:
             self.clear_outage()
         elif self._blind_for_long_enough():
             self._handle_outage()
-            if self._closed:
+            if self._run.closed:
                 return
 
         if self._deps.write_ledger:
@@ -221,7 +229,7 @@ class PollMixin:
 
         self._last_probe = probe
         self._model = self._build_model(probe)
-        apply_viewmodel(self._views.values(), self._model)
+        apply_viewmodel(self._frames.views.values(), self._model)
         self._refresh_strip()
 
     def _release(self, probe: SolveProbe) -> None:
@@ -234,5 +242,5 @@ class PollMixin:
         """
         self._end_study()
         self._model = self._build_model(probe)
-        apply_viewmodel(self._views.values(), self._model)
+        apply_viewmodel(self._frames.views.values(), self._model)
         self.root.after(_UNLOCK_LINGER_MS, self.close)

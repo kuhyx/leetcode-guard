@@ -31,15 +31,15 @@ def test_the_incident_form_is_not_offered_before_its_wait(
 
     guard._open_escape()
 
-    assert guard._hatch.open
-    assert not guard._incident_hatch.open
+    assert guard._escape.hatch.open
+    assert not guard._escape.incident_hatch.open
 
 
 def test_the_incident_form_is_offered_once_the_wait_elapses(
     tmp_path: Path, hmac_key: Path
 ):
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage_since = time.monotonic() - 10_000
+    guard._outage.since = time.monotonic() - 10_000
 
     assert guard._incident_form_due()
     assert guard._should_offer_escape()
@@ -61,20 +61,20 @@ def test_the_offline_path_has_an_exit_even_with_the_escape_budget_spent(
     )
 
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage_since = time.monotonic() - 10_000
+    guard._outage.since = time.monotonic() - 10_000
 
-    assert guard._tracker.is_budget_exhausted()
+    assert guard._escape.tracker.is_budget_exhausted()
     assert guard._should_offer_escape()
 
     guard._open_escape()
-    assert guard._incident_hatch.open
-    assert not guard._hatch.open
+    assert guard._escape.incident_hatch.open
+    assert not guard._escape.hatch.open
 
-    form = guard._incident_hatch._form
+    form = guard._escape.incident_hatch._form
     form.reason.get.return_value = "the router died and the ISP is down"
     form.description.get.return_value = "y" * 200
 
-    assert guard._incident_hatch.submit()
+    assert guard._escape.incident_hatch.submit()
     assert not guard._decision().locked
 
 
@@ -98,32 +98,32 @@ def test_the_ordinary_hatch_is_used_when_the_gate_is_not_offline(
 
     guard._open_escape()
 
-    assert guard._hatch.open
-    assert not guard._incident_hatch.open
+    assert guard._escape.hatch.open
+    assert not guard._escape.incident_hatch.open
 
 
 def test_opening_a_form_twice_is_a_no_op(tmp_path: Path, hmac_key: Path):
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage_since = time.monotonic() - 10_000
+    guard._outage.since = time.monotonic() - 10_000
     guard._open_escape()
-    first = guard._incident_hatch._form
+    first = guard._escape.incident_hatch._form
 
     guard._open_escape()
 
-    assert guard._incident_hatch._form is first
+    assert guard._escape.incident_hatch._form is first
 
 
 def test_a_recovered_network_clears_the_stale_banner(tmp_path: Path, hmac_key: Path):
     """The banner outlived the outage, telling the user they had no internet
     long after they had reconnected."""
     guard = blind_offline(tmp_path, hmac_key)
-    assert guard._outage_note is not None
+    assert guard._outage.note is not None
 
     guard._on_poll_result(probe_of("solved-after-reconnect"))
 
-    assert guard._diagnosis is None
-    assert guard._outage_note is None
-    assert guard._incident_policy is None
+    assert guard._outage.diagnosis is None
+    assert guard._outage.note is None
+    assert guard._outage.policy is None
 
 
 def test_clearing_an_outage_that_never_happened_is_a_no_op(
@@ -133,7 +133,7 @@ def test_clearing_an_outage_that_never_happened_is_a_no_op(
 
     guard.clear_outage()
 
-    assert guard._diagnosis is None
+    assert guard._outage.diagnosis is None
 
 
 def test_a_recovered_leetcode_neither_unlocks_nor_demands_a_form(
@@ -152,5 +152,5 @@ def test_a_recovered_leetcode_neither_unlocks_nor_demands_a_form(
     guard._on_poll_result(UNVERIFIABLE)
 
     assert guard._decision().locked
-    assert guard._incident_policy is None
+    assert guard._outage.policy is None
     assert not guard._incident_form_due()

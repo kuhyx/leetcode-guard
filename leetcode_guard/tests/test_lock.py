@@ -26,16 +26,16 @@ def test_demo_arms_with_a_local_grab_and_leaves_vt_alone(tmp_path: Path):
     lost, so demo is the default and it is genuinely weaker."""
     guard, _ = create_guard(tmp_path, demo_mode=True)
 
-    assert guard._config.resolved_grab() == "local"
-    assert guard._config.resolved_disable_vt() is False
-    assert guard._config.resolved_overrideredirect() is True
+    assert guard._run.config.resolved_grab() == "local"
+    assert guard._run.config.resolved_disable_vt() is False
+    assert guard._run.config.resolved_overrideredirect() is True
 
 
 def test_production_arms_with_a_global_grab_and_disables_vt(tmp_path: Path):
     guard, _ = create_guard(tmp_path, demo_mode=False)
 
-    assert guard._config.resolved_grab() == "global"
-    assert guard._config.resolved_disable_vt() is True
+    assert guard._run.config.resolved_grab() == "global"
+    assert guard._run.config.resolved_disable_vt() is True
 
 
 def test_the_arbiter_rank_sits_between_diet_guard_and_screen_locker(tmp_path: Path):
@@ -43,7 +43,7 @@ def test_the_arbiter_rank_sits_between_diet_guard_and_screen_locker(tmp_path: Pa
     and force a re-pin across three live consumers."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._config.rank == 150
+    assert guard._run.config.rank == 150
 
 
 def test_overrideredirect_stays_on_even_in_demo(tmp_path: Path):
@@ -51,16 +51,16 @@ def test_overrideredirect_stays_on_even_in_demo(tmp_path: Path):
     would not be testing the real window at all."""
     guard, _ = create_guard(tmp_path, demo_mode=True)
 
-    assert guard._config.resolved_overrideredirect() is True
+    assert guard._run.config.resolved_overrideredirect() is True
 
 
 def test_colours_are_gatelocks_defaults_not_overrides(tmp_path: Path):
     """LockConfig's own defaults *are* the unified design system."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._config.palette.bg == "#211D1B"
-    assert guard._config.palette.accent == "#B8862E"
-    assert guard._config.palette.on_fill == "#211D1B"
+    assert guard._run.config.palette.bg == "#211D1B"
+    assert guard._run.config.palette.accent == "#B8862E"
+    assert guard._run.config.palette.on_fill == "#211D1B"
 
 
 def test_a_first_run_seeds_without_writing_a_charge(tmp_path: Path, hmac_key: Path):

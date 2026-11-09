@@ -29,7 +29,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from leetcode_guard._lock_deps import GuardDeps
+    from leetcode_guard._lock_state import RunState
     from leetcode_guard._submissions import SolveProbe
+    from leetcode_guard._view_group import FrameGroup
     from leetcode_guard._viewmodel import ViewModel
 
 _logger: Final = logging.getLogger(__name__)
@@ -40,9 +42,9 @@ class RevealMixin:
 
     root: Any
     _deps: GuardDeps
-    _views: dict[str, Any]
+    _frames: FrameGroup
     _model: ViewModel
-    _closed: bool
+    _run: RunState
     _build_model: Callable[[SolveProbe], ViewModel]
 
     def _start_reveal(self) -> None:
@@ -56,14 +58,14 @@ class RevealMixin:
         self._reveal_slugs: list[str] = []
         self._last_probe = self._deps.probe
         self._reveal_executor: Executor = (
-            self._deps.executor
-            if self._deps.executor is not None
+            self._deps.seams.executor
+            if self._deps.seams.executor is not None
             else ThreadPoolExecutor(max_workers=1)
         )
 
     def _stop_reveal(self) -> None:
         """Release the executor if it is ours."""
-        if self._deps.executor is None:
+        if self._deps.seams.executor is None:
             self._reveal_executor.shutdown(wait=False)
 
     def _on_reveal(self, depth: int) -> None:
@@ -73,7 +75,7 @@ class RevealMixin:
 
     def _request_reveal_check(self) -> None:
         """Submit the next unchecked batch, if any and if nothing is in flight."""
-        if self._closed or self._reveal_blind or self._reveal_future is not None:
+        if self._run.closed or self._reveal_blind or self._reveal_future is not None:
             return
         unchecked = [
             line.slug
@@ -93,7 +95,7 @@ class RevealMixin:
     def _drain_reveal(self) -> None:
         """On the Tk thread: fold a finished batch in and ask for the next."""
         future = self._reveal_future
-        if self._closed or future is None:
+        if self._run.closed or future is None:
             return
         if not future.done():
             self.root.after(POLL_DRAIN_MS, self._drain_reveal)
@@ -120,5 +122,5 @@ class RevealMixin:
                 ),
             )
             self._model = self._build_model(self._last_probe)
-            apply_viewmodel(self._views.values(), self._model)
+            apply_viewmodel(self._frames.views.values(), self._model)
         self._request_reveal_check()

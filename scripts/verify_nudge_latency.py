@@ -32,7 +32,7 @@ from leetcode_guard import _gate, _lock_poll
 from leetcode_guard._auth import AuthState
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
-from leetcode_guard._lock_deps import GuardDeps
+from leetcode_guard._lock_deps import GuardDeps, GuardSeams
 from leetcode_guard._nudge_server import NUDGE_PATH, NUDGE_PORT
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -102,15 +102,17 @@ def trial(rtt: float, workdir: Path, *, lag: float, port: int) -> tuple[float, f
         deps=GuardDeps(
             ledger_path=workdir / "ledger.json",
             escape_path=workdir / "escape.json",
-            incident_path=workdir / "incidents.json",
             post=feed.post,
             username="kuchy",
             auth=AuthState(cookies=None, note="signed out"),
             pool=PoolResolution(problems=(), source="none", notes=()),
             probe=SolveProbe(status=ProbeStatus.OK, submissions=(), reason="seed"),
-            wait_turn=False,
-            now=lambda: NOW,
-            nudge_port=port,
+            seams=GuardSeams(
+                incident_path=workdir / "incidents.json",
+                wait_turn=False,
+                now=lambda: NOW,
+                nudge_port=port,
+            ),
         ),
     )
     # Watch the repaint itself: the first model whose balance line differs

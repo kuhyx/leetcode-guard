@@ -11,13 +11,14 @@ import sickdays
 from leetcode_guard import _gate_today, _status_projection
 from leetcode_guard._daycost import day_cost
 from leetcode_guard._debt import compute_debt
-from leetcode_guard._gate import GateState, decide
+from leetcode_guard._gate import DayContext, GateState, decide
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append
 from leetcode_guard._projection import project
 from leetcode_guard._projection_text import projection_lines
 from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._viewmodel import build_viewmodel
+from leetcode_guard._viewmodel_source import ViewSource
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -53,7 +54,13 @@ def stands_down_on(*days: date):
 
 
 def test_a_sick_day_stands_down_with_no_credit_and_no_charge(hmac_key: Path):
-    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, sick_day=True)
+    decision = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(sick_day=True),
+    )
 
     assert decision.state is GateState.UNLOCKED_SICK_DAY
     assert decision.state.value == "sick-day"
@@ -63,8 +70,20 @@ def test_a_sick_day_stands_down_with_no_credit_and_no_charge(hmac_key: Path):
 
 
 def test_sick_is_not_free(hmac_key: Path):
-    free = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
-    sick = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, sick_day=True)
+    free = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(free_day=True),
+    )
+    sick = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(sick_day=True),
+    )
 
     assert free.state is GateState.UNLOCKED_FREE_DAY
     assert sick.state is not free.state
@@ -74,16 +93,24 @@ def test_a_sick_day_does_not_override_an_untrusted_clock(hmac_key: Path):
     ledger = Ledger()
     add_charge(ledger, TUESDAY, key_file=hmac_key)
 
-    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key, sick_day=True)
+    decision = decide(
+        ledger,
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(sick_day=True),
+    )
 
     assert decision.state is GateState.LOCKED_CLOCK_UNTRUSTED
 
 
 def test_a_workday_penalty_is_ignored_on_a_sick_day(hmac_key: Path):
-    kwargs = {"day": TUESDAY, "now": NOW, "key_file": hmac_key, "workday_penalty": True}
+    kwargs = {"day": TUESDAY, "now": NOW, "key_file": hmac_key}
+    penalised = DayContext(workday_penalty=True)
+    sick = DayContext(workday_penalty=True, sick_day=True)
 
-    assert decide(Ledger(), **kwargs).cost == 2
-    assert decide(Ledger(), sick_day=True, **kwargs).cost == 1
+    assert decide(Ledger(), context=penalised, **kwargs).cost == 2
+    assert decide(Ledger(), context=sick, **kwargs).cost == 1
 
 
 def test_a_sick_day_adds_nothing_to_the_debt():
@@ -173,15 +200,19 @@ def test_sick_days_reach_the_status_projection(
 
 
 def test_the_window_says_sick_not_unlocked(hmac_key: Path):
-    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, sick_day=True)
+    decision = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(sick_day=True),
+    )
 
     model = build_viewmodel(
         decision,
-        pool_of(),
-        SIGNED_OUT,
+        ViewSource(pool_of(), SIGNED_OUT, limit=10),
         OK_PROBE,
         checked_at=CHECKED_AT,
-        limit=10,
     )
 
     assert model.headline == "Sick day -- the gate stands down"

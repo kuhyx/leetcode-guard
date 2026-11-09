@@ -33,7 +33,7 @@ from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
 from leetcode_guard._progress import Progress, read_progress_cache
-from leetcode_guard._status import StatusSnapshot, gather_status
+from leetcode_guard._status import gather_status
 from leetcode_guard._status_extra import (
     BudgetStatus,
     CacheStatus,
@@ -51,7 +51,20 @@ if TYPE_CHECKING:
     from datetime import date
     from pathlib import Path
 
+    from leetcode_guard._status_model import StatusSnapshot
+
 _UNUSED: Final = "-"
+
+
+@dataclass(frozen=True)
+class GateSetup:
+    """How this machine is configured: when the gate starts, what is set up."""
+
+    start_date: str
+    in_force: bool
+    sync_configured: bool
+    cookies_configured: bool
+    ledger_path: str
 
 
 @dataclass(frozen=True)
@@ -65,11 +78,7 @@ class FullStatus:
     pool_cache: CacheStatus
     statement_cache: CacheStatus
     timer: TimerStatus
-    start_date: str
-    in_force: bool
-    sync_configured: bool
-    cookies_configured: bool
-    ledger_path: str
+    setup: GateSetup
     progress: Progress | None
     """The profile's solved counts as last mirrored, or ``None`` if never."""
 
@@ -106,11 +115,13 @@ def gather_full(
             STATEMENTS_CACHE_FILE, "Offline statements", "statements", now=seconds
         ),
         timer=gather_timer(),
-        start_date=str(GATE_START_DATE),
-        in_force=today >= GATE_START_DATE,
-        sync_configured=SYNC_TOKEN_FILE.exists(),
-        cookies_configured=COOKIES_FILE.exists(),
-        ledger_path=str(ledger_file),
+        setup=GateSetup(
+            start_date=str(GATE_START_DATE),
+            in_force=today >= GATE_START_DATE,
+            sync_configured=SYNC_TOKEN_FILE.exists(),
+            cookies_configured=COOKIES_FILE.exists(),
+            ledger_path=str(ledger_file),
+        ),
         progress=read_progress_cache(PROGRESS_CACHE_FILE),
     )
 
@@ -136,39 +147,40 @@ def explain_not_triggered(full: FullStatus) -> list[str]:
             f"The systemd timer is NOT enabled ({full.timer.detail}), so the gate "
             "would not have fired at all today."
         )
-    if not full.in_force:
+    if not full.setup.in_force:
         # The gate's own reason says the same thing, so it is not repeated
         # below -- a duplicated explanation reads like two separate causes.
         lines.append(
-            f"The gate is not in force until {full.start_date}; every scheduled "
+            f"The gate is not in force until {full.setup.start_date}; every scheduled "
             "run exits immediately until then."
         )
 
-    if gate.locked:
-        lines.append(f"It WOULD lock right now: {gate.reason}")
-    elif gate.state == "already-charged":
+    if gate.verdict.locked:
+        lines.append(f"It WOULD lock right now: {gate.verdict.reason}")
+    elif gate.verdict.state == "already-charged":
         lines.append(
             "Today was already settled by an earlier run, so a second run is a "
             "no-op. That is what makes the afternoon retry free."
         )
-    elif gate.state == "charged":
+    elif gate.verdict.state == "charged":
+        banked = gate.balance.credits - gate.balance.charged + gate.cost
         lines.append(
-            f"You had {gate.credits - gate.charged + gate.cost} credit(s) banked "
+            f"You had {banked} credit(s) banked "
             f"and {gate.weekday} costs {gate.cost}, so the day was paid for "
             "without asking you to solve anything."
         )
-    elif gate.state == "sick-day":
+    elif gate.verdict.state == "sick-day":
         lines.append(
             "Today is a declared sick day: the gate stands down, charges "
             "nothing and adds nothing to the debt. A solve still earns credit."
         )
-    elif gate.state == "focus-day":
+    elif gate.verdict.state == "focus-day":
         lines.append(
-            f"Today is a {gate.reason}: the gate stands down, charges nothing, "
+            f"Today is a {gate.verdict.reason}: the gate stands down, charges nothing, "
             "costs 0 and adds nothing to the debt. A solve still earns credit."
         )
-    elif gate.state == "not-started" and full.in_force:
-        lines.append(gate.reason)
+    elif gate.verdict.state == "not-started" and full.setup.in_force:
+        lines.append(gate.verdict.reason)
     if _keeps_leetcode(gate.day):
         lines.append(
             "Today is a sick day that keeps leetcode: the gate locks, prices "
@@ -188,17 +200,19 @@ def _keeps_leetcode(iso: str) -> bool:
 def _warnings(gate: StatusSnapshot) -> list[str]:
     """Anything wrong with the ledger itself, regardless of the verdict."""
     lines: list[str] = []
-    if gate.discounted:
+    if gate.balance.discounted:
         lines.append(
-            f"{gate.discounted} credit(s) in the ledger were REFUSED (bad "
+            f"{gate.balance.discounted} credit(s) in the ledger were REFUSED (bad "
             "signature, or written by another device) -- which may be why the "
             "balance is lower than you expect."
         )
-    if gate.tampered:
-        lines.append(f"{gate.tampered} ledger entries failed their signature check.")
-    if gate.unparsable:
-        lines.append(f"{gate.unparsable} ledger rows could not be read at all.")
-    if not gate.integrity_ok:
+    if gate.balance.tampered:
+        lines.append(
+            f"{gate.balance.tampered} ledger entries failed their signature check."
+        )
+    if gate.balance.unparsable:
+        lines.append(f"{gate.balance.unparsable} ledger rows could not be read at all.")
+    if not gate.balance.integrity_ok:
         lines.append("Ledger integrity checking is OFF -- the HMAC key is unreadable.")
     if not gate.clock_trusted:
         lines.append("The system clock has moved backwards past a settled day.")

@@ -8,7 +8,7 @@ trigger a network fetch.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 
@@ -21,68 +21,41 @@ from leetcode_guard._constants import (
     SUGGESTION_COUNT,
 )
 from leetcode_guard._daycost import local_today, weekday_name
-from leetcode_guard._debt import Debt, debt_summary
+from leetcode_guard._debt import debt_summary
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import DIFFICULTY_WEIGHTS
+from leetcode_guard._status_model import (
+    BalanceView,
+    PoolView,
+    StatusSnapshot,
+    Suggestion,
+    Verdict,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from leetcode_guard._gate import GateDecision
+    from leetcode_guard._ledger_io import Ledger
 
 _EXIT_OK: Final = 0
 _EXIT_LOCKED: Final = 1
 
 
 @dataclass(frozen=True)
-class Suggestion:
-    """One suggested problem, flattened for display and for MCP."""
+class PoolFiles:
+    """Where the suggestion pool is read from; ``None`` is the deployed file.
 
-    title: str
-    difficulty: str
-    ac_rate: float
-    url: str
+    The cache and the cookies travel together because they only ever feed one
+    call, ``resolve_pool``: the cookies decide whether LeetCode's own
+    solved-filter applied to what the cache holds.
+    """
 
-
-@dataclass(frozen=True)
-class StatusSnapshot:
-    """Everything the gate knows, without touching the network."""
-
-    day: str
-    weekday: str
-    cost: int
-    """Today's full price: the day plus any debt surcharge."""
-
-    debt: Debt
-    """The full position; the flat fields below are it, spread for
-    :func:`snapshot_dict` and the tray."""
-
-    surcharge: int
-    debt_owed: int
-    debt_repaid: int
-    debt_outstanding: int
-    missed_days: int
-    credits: int
-    charged: int
-    available: int
-    needed: int
-    state: str
-    locked: bool
-    reason: str
-    charged_today: bool
-    integrity_ok: bool
-    tampered: int
-    discounted: int
-    unparsable: int
-    clock_trusted: bool
-    auth_present: bool
-    auth_note: str
-    pool_source: str
-    pool_notes: tuple[str, ...]
-    suggestions: tuple[Suggestion, ...]
-    solves: dict[str, int] = field(default_factory=dict)
-    """Counted submissions by difficulty plus ``unknown``; see ``Balance.solves``."""
+    cache: Path | None = None
+    cookies: Path | None = None
 
 
 def weighting_line(solves: dict[str, int]) -> str | None:
@@ -102,31 +75,18 @@ def gather_status(
     *,
     now: datetime | None = None,
     ledger_path: Path | None = None,
-    cache_path: Path | None = None,
-    cookies_path: Path | None = None,
     key_file: Path | None = None,
     limit: int = SUGGESTION_COUNT,
+    pool_files: PoolFiles | None = None,
 ) -> StatusSnapshot:
     """Assemble the snapshot. Reads only; writes nothing, fetches nothing."""
-    ledger_file = LEDGER_FILE if ledger_path is None else ledger_path
-    pool_file = POOL_CACHE_FILE if cache_path is None else cache_path
-    cookie_file = COOKIES_FILE if cookies_path is None else cookies_path
-
     moment = now if now is not None else datetime.now().astimezone()
     day = local_today(now=moment)
 
-    ledger = load_ledger(ledger_file, key_file=key_file)
-    decision = decide_today(ledger, day=day, now=moment, key_file=key_file)
-    clock = check_clock(ledger, day=day)
-
-    auth = load_cookies(cookie_file)
-    # `post=None` is what makes this read-only: resolve_pool cannot fetch.
-    pool = resolve_pool(
-        None,
-        pool_file,
-        now=moment.timestamp(),
-        solved=SolvedKnowledge(auth=auth, slugs=solved_slugs(ledger)),
+    ledger = load_ledger(
+        LEDGER_FILE if ledger_path is None else ledger_path, key_file=key_file
     )
+    decision = decide_today(ledger, day=day, now=moment, key_file=key_file)
 
     return StatusSnapshot(
         day=day.isoformat(),
@@ -134,28 +94,53 @@ def gather_status(
         cost=decision.cost,
         debt=decision.debt,
         surcharge=min(decision.debt.surcharge_on(decision.day), decision.cost),
-        debt_owed=decision.debt.owed,
-        debt_repaid=decision.debt.repaid,
-        debt_outstanding=decision.debt.outstanding,
-        missed_days=decision.debt.missed_days,
-        credits=decision.balance.credits,
-        charged=decision.balance.charged,
-        available=decision.balance.available,
-        needed=decision.needed,
+        clock_trusted=check_clock(ledger, day=day).trusted,
+        verdict=_verdict(decision),
+        balance=_balance_view(decision),
+        pool=_pool_view(
+            ledger, pool_files or PoolFiles(), now=moment.timestamp(), limit=limit
+        ),
+    )
+
+
+def _verdict(decision: GateDecision) -> Verdict:
+    return Verdict(
         state=decision.state.value,
         locked=decision.locked,
         reason=decision.reason,
+        needed=decision.needed,
         charged_today=decision.state.value == "already-charged",
-        integrity_ok=decision.balance.integrity_ok,
-        tampered=decision.balance.tampered,
-        discounted=decision.balance.discounted,
-        unparsable=decision.balance.unparsable,
-        clock_trusted=clock.trusted,
+    )
+
+
+def _balance_view(decision: GateDecision) -> BalanceView:
+    balance = decision.balance
+    return BalanceView(
+        credits=balance.credits,
+        charged=balance.charged,
+        available=balance.available,
+        integrity_ok=balance.integrity_ok,
+        tampered=balance.tampered,
+        discounted=balance.discounted,
+        unparsable=balance.unparsable,
+        solves=dict(balance.solves),
+    )
+
+
+def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> PoolView:
+    auth = load_cookies(COOKIES_FILE if files.cookies is None else files.cookies)
+    # `post=None` is what makes this read-only: resolve_pool cannot fetch.
+    pool = resolve_pool(
+        None,
+        POOL_CACHE_FILE if files.cache is None else files.cache,
+        now=now,
+        solved=SolvedKnowledge(auth=auth, slugs=solved_slugs(ledger)),
+    )
+    return PoolView(
         auth_present=auth.present,
         auth_note=auth.note,
-        pool_source=pool.source,
-        pool_notes=pool.notes,
-        solves=dict(decision.balance.solves),
+        source=pool.source,
+        notes=pool.notes,
         suggestions=tuple(
             Suggestion(
                 title=problem.title,
@@ -169,8 +154,47 @@ def gather_status(
 
 
 def snapshot_dict(snapshot: StatusSnapshot) -> dict[str, Any]:
-    """The snapshot as plain data, for the MCP server."""
-    return asdict(snapshot)
+    """The snapshot as plain data, for the MCP server.
+
+    Flat, with the keys and order the MCP tools have always returned: the
+    grouping in ``_status_model`` is an internal shape, not a contract change.
+    """
+    debt, verdict, balance, pool = (
+        snapshot.debt,
+        snapshot.verdict,
+        snapshot.balance,
+        snapshot.pool,
+    )
+    return {
+        "day": snapshot.day,
+        "weekday": snapshot.weekday,
+        "cost": snapshot.cost,
+        "debt": asdict(debt),
+        "surcharge": snapshot.surcharge,
+        "debt_owed": debt.owed,
+        "debt_repaid": debt.repaid,
+        "debt_outstanding": debt.outstanding,
+        "missed_days": debt.missed_days,
+        "credits": balance.credits,
+        "charged": balance.charged,
+        "available": balance.available,
+        "needed": verdict.needed,
+        "state": verdict.state,
+        "locked": verdict.locked,
+        "reason": verdict.reason,
+        "charged_today": verdict.charged_today,
+        "integrity_ok": balance.integrity_ok,
+        "tampered": balance.tampered,
+        "discounted": balance.discounted,
+        "unparsable": balance.unparsable,
+        "clock_trusted": snapshot.clock_trusted,
+        "auth_present": pool.auth_present,
+        "auth_note": pool.auth_note,
+        "pool_source": pool.source,
+        "pool_notes": pool.notes,
+        "suggestions": tuple(asdict(item) for item in pool.suggestions),
+        "solves": dict(balance.solves),
+    }
 
 
 def format_status(snapshot: StatusSnapshot) -> str:
@@ -178,38 +202,37 @@ def format_status(snapshot: StatusSnapshot) -> str:
     costs = f"costs {snapshot.cost}"
     if snapshot.surcharge:
         costs += f" ({snapshot.cost - snapshot.surcharge} +{snapshot.surcharge} debt)"
+    balance, verdict = snapshot.balance, snapshot.verdict
     lines = [
         f"day        {snapshot.day} ({snapshot.weekday}), {costs}",
-        f"credits    {snapshot.credits} earned - {snapshot.charged} spent "
-        f"= {snapshot.available} available",
+        f"credits    {balance.credits} earned - {balance.charged} spent "
+        f"= {balance.available} available",
         f"debt       {debt_summary(snapshot.debt)}",
-        f"state      {snapshot.state} -- {snapshot.reason}",
+        f"state      {verdict.state} -- {verdict.reason}",
     ]
-    if priced := weighting_line(snapshot.solves):
+    if priced := weighting_line(balance.solves):
         lines.insert(2, priced)
-    if snapshot.needed:
-        plural = "" if snapshot.needed == 1 else "s"
-        lines.append(f"needed     {snapshot.needed} more solve{plural} to unlock today")
-    if not snapshot.integrity_ok:
+    if verdict.needed:
+        plural = "" if verdict.needed == 1 else "s"
+        lines.append(f"needed     {verdict.needed} more solve{plural} to unlock today")
+    if not balance.integrity_ok:
         lines.append("integrity  OFF -- the HMAC key is unreadable")
-    if snapshot.tampered:
-        lines.append(f"tampered   {snapshot.tampered} entries failed their signature")
-    if snapshot.discounted:
-        lines.append(f"refused    {snapshot.discounted} credits were not counted")
-    if snapshot.unparsable:
-        lines.append(
-            f"unreadable {snapshot.unparsable} ledger rows could not be parsed"
-        )
+    if balance.tampered:
+        lines.append(f"tampered   {balance.tampered} entries failed their signature")
+    if balance.discounted:
+        lines.append(f"refused    {balance.discounted} credits were not counted")
+    if balance.unparsable:
+        lines.append(f"unreadable {balance.unparsable} ledger rows could not be parsed")
     if not snapshot.clock_trusted:
         lines.append("clock      UNTRUSTED -- the system date moved backwards")
     lines.append(
-        f"pool       {len(snapshot.suggestions)} suggestions "
-        f"from {snapshot.pool_source}"
+        f"pool       {len(snapshot.pool.suggestions)} suggestions "
+        f"from {snapshot.pool.source}"
     )
-    lines.extend(f"  note: {note}" for note in snapshot.pool_notes)
+    lines.extend(f"  note: {note}" for note in snapshot.pool.notes)
     lines.extend(
         f"  {index:2d}. {item.title} -- {item.difficulty} - {item.ac_rate:.1f}%"
-        for index, item in enumerate(snapshot.suggestions, start=1)
+        for index, item in enumerate(snapshot.pool.suggestions, start=1)
     )
     return "\n".join(lines)
 
@@ -219,4 +242,4 @@ def main(argv: list[str] | None = None) -> int:
     configure_logging(verbose=bool(argv and "--verbose" in argv))
     snapshot = gather_status()
     print(format_status(snapshot))
-    return _EXIT_LOCKED if snapshot.locked else _EXIT_OK
+    return _EXIT_LOCKED if snapshot.verdict.locked else _EXIT_OK

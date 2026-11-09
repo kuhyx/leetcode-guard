@@ -7,7 +7,7 @@ module that only holds a value can be imported by any of them without a cycle.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -24,19 +24,14 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class GuardDeps:
-    """Everything the lock needs, injected so tests never patch globals."""
+class GuardSeams:
+    """The lock's optional behaviour and test seams, grouped off ``GuardDeps``.
 
-    ledger_path: Path
-    escape_path: Path
-    post: PostFn
-    username: str
-    auth: AuthState
-    pool: PoolResolution
-    probe: SolveProbe
+    Every field defaults to the production behaviour, so the CLI sets only
+    what differs and a test sets only the seam it drives.
+    """
+
     incident_path: Path | None = None
-    key_file: Path | None = None
-    write_ledger: bool = True
     executor: Executor | None = None
     now: Any = None
     sync_on_close: bool = False
@@ -59,6 +54,23 @@ class GuardDeps:
     diagnose: Callable[[], NetworkDiagnosis] | None = None
     """Network classifier. ``None`` means use the real one."""
 
+
+@dataclass
+class GuardDeps:
+    """Everything the lock needs, injected so tests never patch globals."""
+
+    ledger_path: Path
+    escape_path: Path
+    post: PostFn
+    username: str
+    auth: AuthState
+    pool: PoolResolution
+    probe: SolveProbe
+    key_file: Path | None = None
+    write_ledger: bool = True
+    seams: GuardSeams = field(default_factory=GuardSeams)
+
     def moment(self) -> datetime:
         """Current time, injectable."""
-        return self.now() if self.now is not None else datetime.now().astimezone()
+        now = self.seams.now
+        return now() if now is not None else datetime.now().astimezone()

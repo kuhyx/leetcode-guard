@@ -33,7 +33,7 @@ def test_status_without_by_never_fetches(monkeypatch, capsys, data_dir: Path):
 
 def test_status_by_prints_the_counts_and_the_projection(monkeypatch, capsys, data_dir):
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
-    expected = 1 if gather_status().locked else 0
+    expected = 1 if gather_status().verdict.locked else 0
 
     exit_code = _cli.main(["--status", "--by", "31.12.2999"])
     out = capsys.readouterr().out

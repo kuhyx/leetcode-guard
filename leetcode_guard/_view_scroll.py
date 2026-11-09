@@ -134,15 +134,19 @@ def grow_rows(view: GuardView, config: LockConfig) -> int:
         How many rows were added. Zero when the list is already fully built,
         or when it is showing the no-problems stand-in.
     """
-    have = len(view.problem_labels)
-    extra = view.lines[have : have + ROW_BATCH]
-    if not extra or not view.lines or view.scroll is None:
+    have = len(view.problems.labels)
+    extra = view.problems.lines[have : have + ROW_BATCH]
+    if not extra or not view.problems.lines or view.problems.scroll is None:
         return 0
     labels, buttons = append_rows(
-        view.scroll.inner, config, extra, view.on_open, bind=view.scroll.bind_wheel
+        view.problems.scroll.inner,
+        config,
+        extra,
+        view.hooks.on_open,
+        bind=view.problems.scroll.bind_wheel,
     )
-    view.problem_labels.extend(labels)
-    view.open_buttons.extend(buttons)
-    if view.on_reveal is not None:
-        view.on_reveal(len(view.problem_labels))
+    view.problems.labels.extend(labels)
+    view.problems.buttons.extend(buttons)
+    if view.hooks.on_reveal is not None:
+        view.hooks.on_reveal(len(view.problems.labels))
     return len(labels)

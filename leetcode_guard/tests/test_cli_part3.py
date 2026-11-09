@@ -107,7 +107,7 @@ def test_the_lock_is_wired_to_the_right_paths_for_its_mode(
     )
     assert deps.ledger_path != deps.escape_path
     # A demo must never push to the shared sync repo.
-    assert deps.sync_on_close is production
+    assert deps.seams.sync_on_close is production
     # And the live data the surface renders from reaches it intact.
     assert deps.username == "kuchy"
     assert deps.probe.submissions[0].title_slug == "solved-already"

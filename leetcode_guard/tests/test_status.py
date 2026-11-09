@@ -6,12 +6,12 @@ from datetime import UTC, datetime
 import json
 from typing import TYPE_CHECKING
 
-from leetcode_guard import _status
 from leetcode_guard._ledger import LedgerEntry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
 from leetcode_guard._pool_cache import CachedPool, write_cache
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._status import (
+    PoolFiles,
     format_status,
     gather_status,
     snapshot_dict,
@@ -46,17 +46,18 @@ def test_reports_a_locked_day(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
-    assert snapshot.locked
+    assert snapshot.verdict.locked
     assert snapshot.day == "2026-08-10"
     assert snapshot.weekday == "Monday"
     assert snapshot.cost == 1
-    assert snapshot.needed == 1
-    assert snapshot.state == "locked"
+    assert snapshot.verdict.needed == 1
+    assert snapshot.verdict.state == "locked"
 
 
 def test_reports_an_already_settled_day(tmp_path: Path, hmac_key: Path):
@@ -68,16 +69,17 @@ def test_reports_an_already_settled_day(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=path,
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
-    assert not snapshot.locked
-    assert snapshot.charged_today
-    assert snapshot.credits == 2
-    assert snapshot.charged == 1
-    assert snapshot.available == 1
+    assert not snapshot.verdict.locked
+    assert snapshot.verdict.charged_today
+    assert snapshot.balance.credits == 2
+    assert snapshot.balance.charged == 1
+    assert snapshot.balance.available == 1
 
 
 def test_never_fetches_even_with_no_cache(tmp_path: Path, hmac_key: Path):
@@ -86,13 +88,14 @@ def test_never_fetches_even_with_no_cache(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=tmp_path / "absent.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "absent.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
-    assert snapshot.pool_source == "none"
-    assert snapshot.suggestions == ()
+    assert snapshot.pool.source == "none"
+    assert snapshot.pool.suggestions == ()
 
 
 def test_suggestions_come_from_the_cache(tmp_path: Path, hmac_key: Path):
@@ -102,14 +105,13 @@ def test_suggestions_come_from_the_cache(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=cache,
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(cache=cache, cookies=tmp_path / "cookies.json"),
         key_file=hmac_key,
     )
 
-    assert snapshot.pool_source == "cache"
-    assert len(snapshot.suggestions) == 2
-    assert snapshot.suggestions[0].url.startswith("https://leetcode.com/problems/")
+    assert snapshot.pool.source == "cache"
+    assert len(snapshot.pool.suggestions) == 2
+    assert snapshot.pool.suggestions[0].url.startswith("https://leetcode.com/problems/")
 
 
 def test_the_suggestion_limit_is_honoured(tmp_path: Path, hmac_key: Path):
@@ -119,13 +121,12 @@ def test_the_suggestion_limit_is_honoured(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=cache,
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(cache=cache, cookies=tmp_path / "cookies.json"),
         key_file=hmac_key,
         limit=2,
     )
 
-    assert len(snapshot.suggestions) == 2
+    assert len(snapshot.pool.suggestions) == 2
 
 
 def test_integrity_problems_are_surfaced(tmp_path: Path, hmac_key: Path):
@@ -138,13 +139,14 @@ def test_integrity_problems_are_surfaced(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=path,
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
-    assert snapshot.tampered == 2
-    assert snapshot.discounted == 2
+    assert snapshot.balance.tampered == 2
+    assert snapshot.balance.discounted == 2
     assert "tampered" in format_status(snapshot)
     assert "refused" in format_status(snapshot)
 
@@ -158,8 +160,9 @@ def test_an_untrusted_clock_is_surfaced(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=path,
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
@@ -171,12 +174,13 @@ def test_an_unreadable_key_is_surfaced(tmp_path: Path, missing_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=missing_key,
     )
 
-    assert not snapshot.integrity_ok
+    assert not snapshot.balance.integrity_ok
     assert "integrity  OFF" in format_status(snapshot)
 
 
@@ -187,12 +191,13 @@ def test_unparsable_rows_are_surfaced(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=path,
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
-    assert snapshot.unparsable == 1
+    assert snapshot.balance.unparsable == 1
     assert "unreadable" in format_status(snapshot)
 
 
@@ -200,8 +205,9 @@ def test_the_shortfall_line_is_singular_for_one(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
@@ -212,8 +218,9 @@ def test_snapshot_dict_is_plain_data(tmp_path: Path, hmac_key: Path):
     snapshot = gather_status(
         now=MONDAY_NOON,
         ledger_path=tmp_path / "ledger.json",
-        cache_path=tmp_path / "pool.json",
-        cookies_path=tmp_path / "cookies.json",
+        pool_files=PoolFiles(
+            cache=tmp_path / "pool.json", cookies=tmp_path / "cookies.json"
+        ),
         key_file=hmac_key,
     )
 
@@ -229,21 +236,4 @@ def test_snapshot_dict_is_plain_data(tmp_path: Path, hmac_key: Path):
 def test_defaults_resolve_to_the_isolated_paths(data_dir: Path):
     snapshot = gather_status(now=MONDAY_NOON)
 
-    assert snapshot.locked
-
-
-def test_main_exits_one_when_locked(capsys, data_dir: Path):
-    exit_code = _status.main([])
-
-    assert exit_code == 1
-    assert "state" in capsys.readouterr().out
-
-
-def test_main_exits_zero_when_unlocked(
-    capsys, data_dir: Path, hmac_key: Path, monkeypatch
-):
-    ledger = Ledger()
-    add_charge(ledger, _status.local_today(), key_file=hmac_key)
-    monkeypatch.setattr(_status, "load_ledger", lambda *a, **k: ledger)
-
-    assert _status.main([]) == 0
+    assert snapshot.verdict.locked

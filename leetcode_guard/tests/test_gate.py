@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard._clock_guard import check_clock, latest_charged_day
 from leetcode_guard._gate import (
+    DayContext,
     GateState,
     apply_decision,
     decide,
     settle_day,
 )
 from leetcode_guard._ledger import SOURCE_ESCAPE, LedgerEntry
+from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
@@ -151,11 +153,8 @@ def test_settle_day_forgives_a_day_and_leaves_the_debt(tmp_path: Path, hmac_key:
 
     assert settle_day(
         ledger,
-        day=MONDAY,
-        now=NOW,
-        source=SOURCE_ESCAPE,
-        path=path,
-        key_file=hmac_key,
+        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
+        path,
     )
 
     monday = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key)
@@ -172,7 +171,13 @@ def test_a_free_day_unlocks_without_spending_credit(hmac_key: Path):
     """A day off is not paid for out of the balance."""
     ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
 
-    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+    decision = decide(
+        ledger,
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(free_day=True),
+    )
 
     assert decision.state is GateState.UNLOCKED_FREE_DAY
     assert not decision.locked
@@ -181,7 +186,13 @@ def test_a_free_day_unlocks_without_spending_credit(hmac_key: Path):
 
 
 def test_a_free_day_unlocks_even_with_no_credit_at_all(hmac_key: Path):
-    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+    decision = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(free_day=True),
+    )
 
     assert decision.state is GateState.UNLOCKED_FREE_DAY
     assert not decision.locked
@@ -192,21 +203,37 @@ def test_a_free_day_does_not_override_an_untrusted_clock(hmac_key: Path):
     ledger = Ledger()
     add_charge(ledger, TUESDAY, key_file=hmac_key)
 
-    decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key, free_day=True)
+    decision = decide(
+        ledger,
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(free_day=True),
+    )
 
     assert decision.state is GateState.LOCKED_CLOCK_UNTRUSTED
     assert decision.locked
 
 
 def test_without_a_free_day_the_normal_rules_still_apply(hmac_key: Path):
-    decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, free_day=False)
+    decision = decide(
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(free_day=False),
+    )
 
     assert decision.state is GateState.LOCKED_INSUFFICIENT
 
 
 def test_a_workday_penalty_removes_tuesdays_discount(hmac_key: Path):
     decision = decide(
-        Ledger(), day=TUESDAY, now=NOW, key_file=hmac_key, workday_penalty=True
+        Ledger(),
+        day=TUESDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(workday_penalty=True),
     )
 
     assert decision.cost == 2
@@ -215,7 +242,11 @@ def test_a_workday_penalty_removes_tuesdays_discount(hmac_key: Path):
 
 def test_no_workday_penalty_keeps_tuesdays_discount(hmac_key: Path):
     decision = decide(
-        Ledger(), day=TUESDAY, now=NOW, key_file=hmac_key, workday_penalty=False
+        Ledger(),
+        day=TUESDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(workday_penalty=False),
     )
 
     assert decision.cost == 1
@@ -225,7 +256,11 @@ def test_a_workday_penalty_on_an_already_doubled_day_changes_nothing(
     hmac_key: Path,
 ):
     decision = decide(
-        Ledger(), day=SATURDAY, now=NOW, key_file=hmac_key, workday_penalty=True
+        Ledger(),
+        day=SATURDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(workday_penalty=True),
     )
 
     assert decision.cost == 2

@@ -56,10 +56,10 @@ def test_surfaces_are_registered_and_torn_down(tmp_path: Path):
 
     assert guard._frames.names
 
-    for name in list(guard._views):
+    for name in list(guard._frames.views):
         guard.teardown_surface(_FakeSurface(name))
 
-    assert guard._views == {}
+    assert guard._frames.views == {}
     assert guard._frames.names == ()
 
 
@@ -69,7 +69,7 @@ def test_close_is_idempotent(tmp_path: Path):
     guard.close()
     guard.close()
 
-    assert guard._closed
+    assert guard._run.closed
 
 
 def test_on_close_stops_the_poller(tmp_path: Path):
@@ -85,7 +85,7 @@ def test_a_callback_error_is_shown_rather_than_swallowed(tmp_path: Path):
 
     guard.on_callback_error()
 
-    for view in guard._views.values():
+    for view in guard._frames.views.values():
         view.status_line.configure.assert_called()
 
 

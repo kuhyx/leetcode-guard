@@ -16,6 +16,7 @@ import pytest
 from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_problems import INITIAL_ROWS, ROW_BATCH, append_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
+from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
 CONFIG = LockConfig()
@@ -51,8 +52,8 @@ def _bound(widget: MagicMock, sequence: str) -> Any:
 def test_the_list_builds_two_screens_not_the_whole_pool() -> None:
     view = build_guard_view(MagicMock(), CONFIG, model(500), output_name="DP-0")
 
-    assert len(view.problem_labels) == INITIAL_ROWS
-    assert len(view.lines) == 500
+    assert len(view.problems.labels) == INITIAL_ROWS
+    assert len(view.problems.lines) == 500
 
 
 def test_scrolling_near_the_end_builds_the_next_batch_and_reports_it() -> None:
@@ -62,14 +63,13 @@ def test_scrolling_near_the_end_builds_the_next_batch_and_reports_it() -> None:
         CONFIG,
         model(500),
         output_name="DP-0",
-        on_open=lambda _u: None,
-        on_reveal=revealed.append,
+        hooks=ViewHooks(on_open=lambda _u: None, on_reveal=revealed.append),
     )
 
     added = grow_rows(view, CONFIG)
 
     assert added == ROW_BATCH
-    assert len(view.open_buttons) == INITIAL_ROWS + ROW_BATCH
+    assert len(view.problems.buttons) == INITIAL_ROWS + ROW_BATCH
     assert revealed == [INITIAL_ROWS + ROW_BATCH]
 
 
@@ -81,8 +81,8 @@ def test_a_fully_built_list_does_not_grow() -> None:
 
 def test_growing_without_a_reveal_callback_is_fine() -> None:
     view = GuardView("DP-0", *(MagicMock() for _ in range(5)))
-    view.scroll = MagicMock()
-    view.lines = lines(4)
+    view.problems.scroll = MagicMock()
+    view.problems.lines = lines(4)
 
     assert grow_rows(view, CONFIG) == 4
 

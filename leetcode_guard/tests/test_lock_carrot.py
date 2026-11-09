@@ -131,7 +131,7 @@ def test_the_stand_down_ends_study_mode_and_stops_recovery(
 
     recovery = guard._lock._arming.recovery
     assert recovery.stop.called
-    assert guard._closed
+    assert guard._run.closed
 
 
 def test_no_carrot_keeps_the_lock_and_reschedules(
@@ -145,7 +145,7 @@ def test_no_carrot_keeps_the_lock_and_reschedules(
     assert (_UNLOCK_LINGER_MS, guard.close) not in [
         c.args for c in guard.root.after.call_args_list
     ]
-    assert not guard._closed
+    assert not guard._run.closed
 
 
 def test_yesterdays_or_expired_carrot_keeps_the_lock(
@@ -175,7 +175,7 @@ def test_outside_the_morning_window_the_file_is_not_even_read(
 
     reads.assert_not_called()
     assert len(_scheduled(guard, guard._carrot_tick)) == 2
-    assert not guard._closed
+    assert not guard._run.closed
 
 
 def test_the_poll_never_waits(
@@ -206,7 +206,7 @@ def test_a_reader_crash_is_logged_and_the_lock_keeps_watching(
 
     assert any("could not read" in r.getMessage() for r in caplog.records)
     assert len(_scheduled(guard, guard._carrot_tick)) == 2
-    assert not guard._closed
+    assert not guard._run.closed
 
 
 def test_a_closed_lock_stops_the_watch(tmp_path: Path, hmac_key: Path) -> None:

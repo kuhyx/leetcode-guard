@@ -15,6 +15,7 @@ from gatelock import LockConfig
 from leetcode_guard._breakglass import STOP_COMMAND
 from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_group import FrameGroup
+from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
@@ -73,14 +74,14 @@ def test_a_view_is_built_for_one_surface():
     assert isinstance(view, GuardView)
     assert view.output_name == "DP-0"
     assert view.escape_button is None
-    assert len(view.problem_labels) == 1
+    assert len(view.problems.labels) == 1
 
 
 def test_an_empty_pool_gets_a_placeholder_rather_than_nothing():
     """A lock screen offering nothing at all is a dead end."""
     view = build_guard_view(MagicMock(), CONFIG, model(problems=()), output_name="DP-0")
 
-    assert len(view.problem_labels) == 1
+    assert len(view.problems.labels) == 1
 
 
 def test_the_escape_button_is_built_but_hidden_until_offered():
@@ -89,7 +90,7 @@ def test_the_escape_button_is_built_but_hidden_until_offered():
         CONFIG,
         model(show_escape=False),
         output_name="DP-0",
-        on_escape=lambda: None,
+        hooks=ViewHooks(on_escape=lambda: None),
     )
 
     assert view.escape_button is not None
@@ -102,7 +103,7 @@ def test_the_escape_button_stays_packed_when_offered():
         CONFIG,
         model(show_escape=True),
         output_name="DP-0",
-        on_escape=lambda: None,
+        hooks=ViewHooks(on_escape=lambda: None),
     )
 
     view.escape_button.pack_forget.assert_not_called()
@@ -123,10 +124,14 @@ def _three() -> ViewModel:
 def test_every_problem_gets_a_control_that_opens_it():
     """The 2026-08-05 lock named problems and offered no way to reach one."""
     view = build_guard_view(
-        MagicMock(), CONFIG, _three(), output_name="DP-0", on_open=lambda _url: None
+        MagicMock(),
+        CONFIG,
+        _three(),
+        output_name="DP-0",
+        hooks=ViewHooks(on_open=lambda _url: None),
     )
 
-    assert len(view.open_buttons) == 3
+    assert len(view.problems.buttons) == 3
 
 
 def test_each_open_button_carries_its_own_url(tk_mock):
@@ -134,7 +139,11 @@ def test_each_open_button_carries_its_own_url(tk_mock):
     URL, and a count-based assertion cannot see that. So press each one."""
     opened: list[str] = []
     build_guard_view(
-        MagicMock(), CONFIG, _three(), output_name="DP-0", on_open=opened.append
+        MagicMock(),
+        CONFIG,
+        _three(),
+        output_name="DP-0",
+        hooks=ViewHooks(on_open=opened.append),
     )
 
     commands = [
@@ -156,15 +165,19 @@ def test_without_the_callback_the_list_stays_inert():
     """Read-only renders (the fit harness, any future preview) must still work."""
     view = build_guard_view(MagicMock(), CONFIG, _three(), output_name="DP-0")
 
-    assert view.open_buttons == []
-    assert len(view.problem_labels) == 3
+    assert view.problems.buttons == []
+    assert len(view.problems.labels) == 3
 
 
 def test_the_url_is_not_printed_beside_the_button(tk_mock):
     """It was only ever there because nothing was clickable, and the second line
     it cost is what pushed the surface past its 768px budget."""
     build_guard_view(
-        MagicMock(), CONFIG, _three(), output_name="DP-0", on_open=lambda _url: None
+        MagicMock(),
+        CONFIG,
+        _three(),
+        output_name="DP-0",
+        hooks=ViewHooks(on_open=lambda _url: None),
     )
 
     texts = [str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list]
@@ -178,11 +191,11 @@ def test_an_empty_pool_still_gets_no_buttons():
         CONFIG,
         model(problems=()),
         output_name="DP-0",
-        on_open=lambda _url: None,
+        hooks=ViewHooks(on_open=lambda _url: None),
     )
 
-    assert view.open_buttons == []
-    assert len(view.problem_labels) == 1
+    assert view.problems.buttons == []
+    assert len(view.problems.labels) == 1
 
 
 # -- break-glass -----------------------------------------------------------

@@ -7,7 +7,7 @@ cache or the network.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Final
 
@@ -97,6 +97,65 @@ def _pool_levels() -> dict[str, str]:
     return {problem.title_slug: problem.difficulty for problem in pool.problems}
 
 
+@dataclass
+class _Counts:
+    """The per-call tallies :class:`ResolveResult` reports."""
+
+    fetched: int = 0
+    failed: int = 0
+    deferred: int = 0
+    backed_off: int = 0
+
+
+@dataclass
+class _Sweep:
+    """One pass over the slugs that lack a trusted row."""
+
+    post: PostFn
+    now: datetime
+    key_file: Path | None
+    max_fetch: int
+    pool: dict[str, str]
+    marks: dict[str, float]
+    rows: list[LedgerEntry] = field(default_factory=list)
+    counts: _Counts = field(default_factory=_Counts)
+
+    def take(self, slug: str) -> None:
+        """Price one slug from the pool, else from LeetCode, else count it failed."""
+        level, source = self.pool.get(slug), "pool"
+        if level not in DIFFICULTY_WEIGHTS:
+            if not self._may_fetch(slug):
+                return
+            level, source = self._fetch(slug), "graphql"
+        if level is None:
+            self.counts.failed += 1
+            return
+        self.marks.pop(slug, None)
+        self.rows.append(
+            difficulty_row(
+                slug, level, now=self.now, key_file=self.key_file, source=source
+            )
+        )
+
+    def _may_fetch(self, slug: str) -> bool:
+        """Whether this call may ask LeetCode about ``slug``; counts the refusal."""
+        if is_backed_off(self.marks, slug, now=self.now.timestamp()):
+            self.counts.backed_off += 1
+            return False
+        if self.counts.fetched >= self.max_fetch:
+            self.counts.deferred += 1
+            return False
+        return True
+
+    def _fetch(self, slug: str) -> str | None:
+        """Ask LeetCode, marking a slug it answered without a difficulty."""
+        self.counts.fetched += 1
+        level, unresolved = _fetch_level(self.post, slug)
+        if unresolved:
+            self.marks[slug] = self.now.timestamp()
+        return level
+
+
 def resolve_difficulties(
     slugs: Iterable[str],
     *,
@@ -117,47 +176,31 @@ def resolve_difficulties(
     have = trusted_levels(ledger)
     unique = list(dict.fromkeys(slugs))
     wanted = [slug for slug in unique if slug not in have]
-    already = len(unique) - len(wanted)
-    pool = _pool_levels() if wanted else {}
-    marks = load_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE) if wanted else {}
-    marks_before = dict(marks)
-    epoch = now.timestamp()
-    rows: list[LedgerEntry] = []
-    fetched = failed = deferred = backed_off = 0
+    sweep = _Sweep(
+        post=post,
+        now=now,
+        key_file=key_file,
+        max_fetch=max_fetch,
+        pool=_pool_levels() if wanted else {},
+        marks=load_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE) if wanted else {},
+    )
+    marks_before = dict(sweep.marks)
     for slug in wanted:
-        level, source = pool.get(slug), "pool"
-        if level not in DIFFICULTY_WEIGHTS:
-            if is_backed_off(marks, slug, now=epoch):
-                backed_off += 1
-                continue
-            if fetched >= max_fetch:
-                deferred += 1
-                continue
-            fetched += 1
-            level, unresolved = _fetch_level(post, slug)
-            source = "graphql"
-            if unresolved:
-                marks[slug] = epoch
-        if level is None:
-            failed += 1
-            continue
-        marks.pop(slug, None)
-        rows.append(
-            difficulty_row(slug, level, now=now, key_file=key_file, source=source)
-        )
-    for row in rows:
+        sweep.take(slug)
+    for row in sweep.rows:
         # Replace, never append: a forged row under the same id must be overwritten.
         ledger.entries[row.entry_id] = row
-    saved = bool(rows) and save_ledger(_constants.DIFFICULTY_FILE, ledger)
-    if marks != marks_before:
-        save_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE, marks)
+    saved = bool(sweep.rows) and save_ledger(_constants.DIFFICULTY_FILE, ledger)
+    if sweep.marks != marks_before:
+        save_unresolved(_constants.DIFFICULTY_UNRESOLVED_FILE, sweep.marks)
     return ResolveResult(
-        resolved=len(rows) if saved else 0,
-        fetched=fetched,
-        already=already,
-        failed=failed + (0 if saved or not rows else len(rows)),
-        deferred=deferred,
-        backed_off=backed_off,
+        resolved=len(sweep.rows) if saved else 0,
+        fetched=sweep.counts.fetched,
+        already=len(unique) - len(wanted),
+        failed=sweep.counts.failed
+        + (0 if saved or not sweep.rows else len(sweep.rows)),
+        deferred=sweep.counts.deferred,
+        backed_off=sweep.counts.backed_off,
     )
 
 

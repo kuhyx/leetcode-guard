@@ -26,6 +26,7 @@ from leetcode_guard._nudge_server import NudgeServer
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from leetcode_guard._lock_state import RunState
     from leetcode_guard._poller import SolvePoller
 
 _logger: Final = logging.getLogger(__name__)
@@ -49,12 +50,13 @@ extra requests per five seconds whatever is ringing the bell."""
 class NudgeMixin:
     """Owns the doorbell, the bell flag and the burst schedule.
 
-    Reads ``root``, ``_poller`` and ``_refresh_strip`` from the host class.
+    Reads ``root``, ``_poller``, ``_run`` and ``_refresh_strip`` from the host
+    class.
     """
 
     root: Any
     _poller: SolvePoller[Any]
-    _closed: bool
+    _run: RunState
     _refresh_strip: Callable[[], None]
 
     nudge_verifying: bool = False
@@ -87,7 +89,7 @@ class NudgeMixin:
 
     def _watch_bell(self) -> None:
         """Start a burst when the bell rang and the cooldown has passed."""
-        if self._closed:
+        if self._run.closed:
             return
         if self._bell.is_set():
             self._bell.clear()

@@ -18,54 +18,83 @@ broken -- still holds.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import tkinter as tk
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from leetcode_guard._breakglass import breakglass_lines
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._view_problems import build_problem_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
+from leetcode_guard._view_types import GuardView, ProblemList, ViewHooks
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from gatelock import LockConfig
 
-    from leetcode_guard._viewmodel import ProblemLine, ViewModel
+    from leetcode_guard._viewmodel import ViewModel
 
 _PAD = 16
 
 
-@dataclass
-class GuardView:
-    """The widgets belonging to one output."""
+def _label(parent: tk.Misc, config: LockConfig, text: str, *, font: str) -> tk.Label:
+    """One centred, wrapped line of muted text in the lock's colours."""
+    return tk.Label(
+        parent,
+        text=text,
+        font=config.font(font),
+        fg=config.palette.muted,
+        bg=config.palette.bg,
+        # Wrapped. An over-wide label on a place-centred frame shears off both
+        # edges rather than clipping one, and these lines carry variable-length
+        # text (an unverifiable probe's reason, the names of solves that freed
+        # a row, the notes).
+        justify="center",
+        wraplength=900,
+    )
 
-    output_name: str
-    container: Any
-    headline: Any
-    balance_line: Any
-    status_line: Any
-    notes_label: Any
-    problem_labels: list[Any] = field(default_factory=list)
-    problems_frame: Any = None
-    escape_button: Any = None
-    open_buttons: list[Any] = field(default_factory=list)
-    breakglass_label: Any = None
-    scroll: Any = None
-    lines: tuple[ProblemLine, ...] = ()
-    """What the rows were last painted from; rows built on scroll read it."""
 
-    on_reveal: Callable[[int], None] | None = None
-    """Told how many rows exist after the list grows, so they can be verified."""
+def _build_problems(
+    inner: tk.Misc,
+    config: LockConfig,
+    model: ViewModel,
+    hooks: ViewHooks,
+    grow: list[Callable[[], object]],
+) -> ProblemList:
+    """The scrolling suggestion list, with an Open button per row if wired."""
+    scroll = ScrollArea(inner, config, on_near_end=lambda: [g() for g in grow])
+    scroll.outer.pack(pady=(0, _PAD), padx=_PAD, fill="x")
+    labels, buttons = build_problem_rows(
+        scroll.inner, config, model, hooks.on_open, bind=scroll.bind_wheel
+    )
+    scroll.fit_rows(len(labels), PROBLEM_DISPLAY_LIMIT)
+    return ProblemList(
+        labels=labels,
+        frame=scroll.inner,
+        buttons=buttons,
+        scroll=scroll,
+        lines=model.problems,
+    )
 
-    on_open: Callable[[str], None] | None = None
-    """Retained so a repaint can re-bind a row to a different problem.
 
-    Each button's command closes over the URL it was built with, so promoting a
-    problem into a freed slot without rebinding would leave an Open button
-    pointing at the problem that was just solved.
-    """
+def _add_escape_button(
+    view: GuardView, inner: tk.Misc, config: LockConfig, model: ViewModel
+) -> None:
+    """The hatch button, built whenever a hatch is wired and hidden if not due."""
+    view.escape_button = tk.Button(
+        inner,
+        text="I cannot do this right now",
+        font=config.font("caption"),
+        # on_fill, not fg: near-white on the danger fill measures about
+        # 2.5:1, while the dark ink measures about 5.8:1.
+        fg=config.palette.on_fill,
+        bg=config.palette.danger,
+        command=view.hooks.on_escape,
+        relief="flat",
+    )
+    view.escape_button.pack(pady=(_PAD, 0))
+    if not model.show_escape:
+        view.escape_button.pack_forget()
 
 
 def build_guard_view(
@@ -74,9 +103,7 @@ def build_guard_view(
     model: ViewModel,
     *,
     output_name: str,
-    on_escape: Callable[[], None] | None = None,
-    on_open: Callable[[str], None] | None = None,
-    on_reveal: Callable[[int], None] | None = None,
+    hooks: ViewHooks | None = None,
 ) -> GuardView:
     """Create the widget tree for one surface.
 
@@ -85,17 +112,13 @@ def build_guard_view(
         config: Design tokens and colours.
         model: What to display right now.
         output_name: Which output this is, for bookkeeping.
-        on_escape: Invoked when the escape hatch is pressed, if offered.
-        on_open: Invoked with a problem's URL when its Open button is pressed.
-            ``None`` renders the list as inert text, which is what the fit
-            harness and any read-only render want -- and what the lock itself
-            did on 2026-08-05, when naming ten problems it would accept and
-            offering no way to reach one made it unsatisfiable.
-        on_reveal: Invoked with the row count whenever scrolling builds more.
+        hooks: The callbacks the surface may invoke (escape, open, reveal);
+            ``None`` renders the list as inert text and builds no hatch.
 
     Returns:
         Handles to every widget that later updates need to touch.
     """
+    hooks = hooks if hooks is not None else ViewHooks()
     container = tk.Frame(parent, bg=config.palette.bg)
     container.pack(expand=True, fill="both")
 
@@ -121,38 +144,12 @@ def build_guard_view(
     balance_line.pack(pady=(0, _PAD))
 
     grow: list[Callable[[], object]] = []
-    scroll = ScrollArea(inner, config, on_near_end=lambda: [g() for g in grow])
-    scroll.outer.pack(pady=(0, _PAD), padx=_PAD, fill="x")
-    problems_frame = scroll.inner
-    problem_labels, open_buttons = build_problem_rows(
-        problems_frame, config, model, on_open, bind=scroll.bind_wheel
-    )
-    scroll.fit_rows(len(problem_labels), PROBLEM_DISPLAY_LIMIT)
+    problems = _build_problems(inner, config, model, hooks, grow)
 
-    status_line = tk.Label(
-        inner,
-        text=model.status_line,
-        font=config.font("body"),
-        fg=config.palette.muted,
-        bg=config.palette.bg,
-        # Wrapped like its siblings. This line carries two variable-length
-        # things -- an unverifiable probe's reason, and the names of solves
-        # that freed a row -- and an over-wide label on a place-centred frame
-        # shears off both edges rather than clipping one.
-        justify="center",
-        wraplength=900,
-    )
+    status_line = _label(inner, config, model.status_line, font="body")
     status_line.pack(pady=(0, _PAD // 2))
 
-    notes_label = tk.Label(
-        inner,
-        text="\n".join(model.notes),
-        font=config.font("caption"),
-        fg=config.palette.muted,
-        bg=config.palette.bg,
-        justify="center",
-        wraplength=900,
-    )
+    notes_label = _label(inner, config, "\n".join(model.notes), font="caption")
     notes_label.pack()
 
     # Permanent, and never unpacked. This is the only instruction on the screen
@@ -160,14 +157,8 @@ def build_guard_view(
     # absence is why the 2026-08-05 lockout needed a terminal that happened to
     # already be open. `apply_viewmodel` does not touch it, so no repaint can
     # quietly hide it.
-    breakglass_label = tk.Label(
-        inner,
-        text="\n".join(breakglass_lines(config)),
-        font=config.font("caption"),
-        fg=config.palette.muted,
-        bg=config.palette.bg,
-        justify="center",
-        wraplength=900,
+    breakglass_label = _label(
+        inner, config, "\n".join(breakglass_lines(config)), font="caption"
     )
     breakglass_label.pack(pady=(_PAD, 0))
 
@@ -178,32 +169,14 @@ def build_guard_view(
         balance_line=balance_line,
         status_line=status_line,
         notes_label=notes_label,
-        problem_labels=problem_labels,
-        problems_frame=problems_frame,
-        open_buttons=open_buttons,
         breakglass_label=breakglass_label,
-        scroll=scroll,
-        lines=model.problems,
-        on_reveal=on_reveal,
-        on_open=on_open,
+        problems=problems,
+        hooks=hooks,
     )
     grow.append(lambda: grow_rows(view, config))
 
-    if on_escape is not None:
-        view.escape_button = tk.Button(
-            inner,
-            text="I cannot do this right now",
-            font=config.font("caption"),
-            # on_fill, not fg: near-white on the danger fill measures about
-            # 2.5:1, while the dark ink measures about 5.8:1.
-            fg=config.palette.on_fill,
-            bg=config.palette.danger,
-            command=on_escape,
-            relief="flat",
-        )
-        view.escape_button.pack(pady=(_PAD, 0))
-        if not model.show_escape:
-            view.escape_button.pack_forget()
+    if hooks.on_escape is not None:
+        _add_escape_button(view, inner, config, model)
 
     return view
 

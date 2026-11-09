@@ -17,9 +17,9 @@ from leetcode_guard._submissions import ProbeStatus
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from leetcode_guard._auth import AuthState
     from leetcode_guard._pool_resolve import PoolResolution
     from leetcode_guard._submissions import SolveProbe
+    from leetcode_guard._viewmodel_source import ViewSource
 
 
 @dataclass(frozen=True)
@@ -184,32 +184,26 @@ def _accepted_prefix(dropped: tuple[str, ...], *, needed: int) -> str:
 
 def build_viewmodel(
     decision: GateDecision,
-    pool: PoolResolution,
-    auth: AuthState,
+    source: ViewSource,
     probe: SolveProbe,
     *,
     checked_at: datetime,
-    limit: int,
     show_escape: bool = False,
-    solved_slugs: frozenset[str] = frozenset(),
 ) -> ViewModel:
     """Assemble the whole surface.
 
     Args:
         decision: The gate verdict.
-        pool: The resolved suggestion list, including its provenance notes.
-        auth: Whether solved problems could be filtered out.
+        source: The resolved pool, the auth state and the display limit; see
+            :class:`~leetcode_guard._viewmodel_source.ViewSource`.
         probe: The most recent solve check.
         checked_at: When that check happened, for the status line.
-        limit: How many problems to list.
         show_escape: Whether the escape hatch button is currently offered.
-        solved_slugs: Everything now known to be solved. Unlike ``pool``, which
-            is resolved once before the window opens, this is recomputed every
-            tick, so a problem solved *during* the lock stops being suggested.
 
     Returns:
         The rendered text.
     """
+    pool, auth = source.pool, source.auth
     notes = list(pool.notes)
     if auth.note not in notes:
         notes.insert(0, auth.note)
@@ -232,7 +226,7 @@ def build_viewmodel(
         notes.append(debt_line(decision.debt))
 
     problems, dropped = build_problem_lines(
-        pool, limit=limit, solved_slugs=solved_slugs
+        pool, limit=source.limit, solved_slugs=source.solved_slugs
     )
     prefix = _accepted_prefix(dropped, needed=decision.needed)
 

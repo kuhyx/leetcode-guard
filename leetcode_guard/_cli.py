@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import sys
+from typing import TYPE_CHECKING
 
 from gatelock import wait_for_x_server
 
@@ -43,11 +44,11 @@ from leetcode_guard._constants import (
 from leetcode_guard._daycost import local_today
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
-from leetcode_guard._harvest import needs_seeding, seed_ledger
+from leetcode_guard._harvest import SeedStamp, needs_seeding, seed_ledger
 from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._lock import LeetcodeGuard
-from leetcode_guard._lock_deps import GuardDeps
+from leetcode_guard._lock_deps import GuardDeps, GuardSeams
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._morning_session import defer_for_morning_session
 from leetcode_guard._night_lockdown import defer_for_evening_lockdown
@@ -57,6 +58,10 @@ from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
 from leetcode_guard._snapshot_push import cmd_push_snapshot
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from collections.abc import Callable
 
 
 def cmd_lock(*, demo_mode: bool) -> int:
@@ -158,7 +163,7 @@ def _run_lock(*, demo_mode: bool) -> int:
     # state behind -- delete the ledger and you skip one run, you do not earn a
     # day.
     if not demo_mode and needs_seeding(ledger) and probe.status is ProbeStatus.OK:
-        seed_ledger(ledger, probe, day=day, now=now, path=ledger_path, key_file=None)
+        seed_ledger(ledger, probe, stamp=SeedStamp(day=day, now=now), path=ledger_path)
         print("seeded a new ledger; not arming this run -- the next one gates")
         return EXIT_OK
 
@@ -190,8 +195,7 @@ def _run_lock(*, demo_mode: bool) -> int:
             auth=client.auth,
             pool=pool,
             probe=probe,
-            sync_on_close=not demo_mode,
-            nudge_port=NUDGE_PORT,
+            seams=GuardSeams(sync_on_close=not demo_mode, nudge_port=NUDGE_PORT),
         ),
     )
     guard.run()
@@ -206,20 +210,32 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     configure_logging(verbose=args.verbose)
-    if args.probe:
-        return cmd_probe()
-    if args.status:
-        return cmd_status(by=args.by, price=args.price, goals=args.goal)
-    if args.check:
-        return cmd_check()
-    if args.login:
-        return cmd_login()
-    if args.sync:
-        return cmd_sync()
-    if args.cache_statements:
-        return cmd_cache_statements()
-    if args.backfill_difficulty:
-        return cmd_backfill_difficulty(max_fetch=args.max_fetch)
-    if args.push_snapshot:
-        return cmd_push_snapshot()
+    command = _chosen_command(args)
+    if command is not None:
+        return command()
     return cmd_lock(demo_mode=not args.production)
+
+
+def _chosen_command(args: Namespace) -> Callable[[], int] | None:
+    """The first one-shot command the flags ask for, or ``None`` to lock.
+
+    First match wins, in this order. Built per call, so the commands are looked
+    up when ``main`` runs rather than frozen at import.
+    """
+    commands: tuple[tuple[bool, Callable[[], int]], ...] = (
+        (args.probe, cmd_probe),
+        (
+            args.status,
+            lambda: cmd_status(by=args.by, price=args.price, goals=args.goal),
+        ),
+        (args.check, cmd_check),
+        (args.login, cmd_login),
+        (args.sync, cmd_sync),
+        (args.cache_statements, cmd_cache_statements),
+        (
+            args.backfill_difficulty,
+            lambda: cmd_backfill_difficulty(max_fetch=args.max_fetch),
+        ),
+        (args.push_snapshot, cmd_push_snapshot),
+    )
+    return next((run for chosen, run in commands if chosen), None)

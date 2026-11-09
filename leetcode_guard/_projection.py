@@ -85,10 +85,8 @@ class Projection:
         base_cost: Sum of each gated day's base price.
         debt: Outstanding debt, counted in full.
         available: Credits already banked, which the sum is reduced by.
-        required: New solves needed under the pay-it-all reading.
-        rules_demand: What the mechanism will actually have collected by
-            ``target`` -- debt repays at most one credit per surcharged day.
-        debt_left_by_rules: Debt still owed on ``target`` under the rules.
+        repaid_by_rules: Debt the rules will have collected by ``target`` --
+            at most one credit per surcharged day.
         projected: Solved count per difficulty after ``required`` new solves,
             Easy first; ``None`` when the current counts are unknown.
     """
@@ -100,11 +98,24 @@ class Projection:
     base_cost: int
     debt: int
     available: int
-    required: int
-    rules_demand: int
-    debt_left_by_rules: int
+    repaid_by_rules: int
     projected: dict[str, int] | None
     sick_days: int = 0
+
+    @property
+    def required(self) -> int:
+        """New solves needed under the pay-it-all reading."""
+        return max(0, self.base_cost + self.debt - self.available)
+
+    @property
+    def rules_demand(self) -> int:
+        """What the mechanism will actually have collected by ``target``."""
+        return max(0, self.base_cost + self.repaid_by_rules - self.available)
+
+    @property
+    def debt_left_by_rules(self) -> int:
+        """Debt still owed on ``target`` under the rules."""
+        return self.debt - self.repaid_by_rules
 
 
 def _fill_easy_first(progress: Progress, budget: int) -> dict[str, int]:
@@ -126,6 +137,17 @@ def _fill_easy_first(progress: Progress, budget: int) -> dict[str, int]:
 def _never_sick(_day: date) -> bool:
     """The default sick-day pool: empty."""
     return False
+
+
+@dataclass(frozen=True)
+class _DayTally:
+    """The days in a range, sorted by how the gate prices them."""
+
+    gated: int = 0
+    free: int = 0
+    sick: int = 0
+    base_cost: int = 0
+    surcharged: int = 0
 
 
 @dataclass(frozen=True)
@@ -157,9 +179,34 @@ def project(
     (:func:`~leetcode_guard._daycost.what_if`); it is an argument, never a
     patched global, because a patched price is a bypass surface.
     """
-    today, debt_outstanding = position.today, position.debt_outstanding
-    available = position.available
-    first_day = today + timedelta(days=1) if position.charged_today else today
+    first_day = (
+        position.today + timedelta(days=1) if position.charged_today else position.today
+    )
+    tally = _tally_days(first_day, target, position, is_free=is_free, cost_of=cost_of)
+    required = max(0, tally.base_cost + position.debt_outstanding - position.available)
+    return Projection(
+        target=target,
+        first_day=first_day,
+        gated_days=tally.gated,
+        free_days=tally.free,
+        sick_days=tally.sick,
+        base_cost=tally.base_cost,
+        debt=position.debt_outstanding,
+        available=position.available,
+        repaid_by_rules=min(position.debt_outstanding, tally.surcharged),
+        projected=None if progress is None else _fill_easy_first(progress, required),
+    )
+
+
+def _tally_days(
+    first_day: date,
+    target: date,
+    position: Position,
+    *,
+    is_free: Callable[[date], bool],
+    cost_of: Callable[[date], int],
+) -> _DayTally:
+    """Count ``first_day..target`` as free, sick or gated, pricing the gated."""
     gated = free = sick = base_cost = surcharged = 0
     cursor = first_day
     while cursor <= target:
@@ -172,22 +219,8 @@ def project(
             base_cost += cost_of(cursor)
             surcharged += surcharge_applies(cursor)
         cursor += timedelta(days=1)
-    required = max(0, base_cost + debt_outstanding - available)
-    repaid_by_rules = min(debt_outstanding, surcharged)
-    rules_demand = max(0, base_cost + repaid_by_rules - available)
-    return Projection(
-        target=target,
-        first_day=first_day,
-        gated_days=gated,
-        free_days=free,
-        sick_days=sick,
-        base_cost=base_cost,
-        debt=debt_outstanding,
-        available=available,
-        required=required,
-        rules_demand=rules_demand,
-        debt_left_by_rules=debt_outstanding - repaid_by_rules,
-        projected=None if progress is None else _fill_easy_first(progress, required),
+    return _DayTally(
+        gated=gated, free=free, sick=sick, base_cost=base_cost, surcharged=surcharged
     )
 
 

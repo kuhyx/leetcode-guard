@@ -39,18 +39,18 @@ is worth waking the user about.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, time
 import json
 import logging
 from typing import TYPE_CHECKING, Final
 
-from gatelock.log_integrity import DEFAULT_HMAC_KEY_FILE, verify_entry_hmac
+from gatelock.log_integrity import DEFAULT_HMAC_KEY_FILE
 
 from leetcode_guard._constants import LEDGER_FILE
-from leetcode_guard._daycost import local_now, local_today, parse_day
-from leetcode_guard._ledger import CHARGE, CREDIT, SOURCE_LEETCODE
+from leetcode_guard._daycost import local_now
+from leetcode_guard._solved_today_scan import scan_today
 
 if TYPE_CHECKING:
+    from datetime import datetime
     from pathlib import Path
 
 _logger: Final = logging.getLogger(__name__)
@@ -116,45 +116,6 @@ def _read_entries(ledger_path: Path) -> list[object] | str:
     return rows
 
 
-def _landed_today(
-    entry: dict[str, object],
-    *,
-    window: tuple[float, float],
-    today_key: str,
-) -> bool:
-    """Whether this credit's accepted submission happened today, locally.
-
-    Args:
-        entry: One ledger entry, already known to be a verified credit.
-        window: Local midnight and now, as unix seconds.
-        today_key: Today's local ``YYYY-MM-DD``, used only by the fallback.
-
-    Returns:
-        Whether the solve falls inside today.
-    """
-    detail = entry.get("detail")
-    raw = detail.get("submitted_at") if isinstance(detail, dict) else None
-    if raw is not None:
-        try:
-            stamp = float(str(raw))
-        except ValueError:
-            _logger.warning(
-                "Credit %r has an unparsable submitted_at (%r) -- falling back "
-                "to its day key",
-                entry.get("entry_id"),
-                raw,
-            )
-        else:
-            start, end = window
-            return start <= stamp <= end
-
-    # No usable submission time: fall back to the harvest day. That key is
-    # skewed late but never early, so it can miss a late-night solve and can
-    # never invent one.
-    day = entry.get("day")
-    return isinstance(day, str) and day == today_key and parse_day(day) is not None
-
-
 def solved_today(
     *,
     now: datetime | None = None,
@@ -183,30 +144,8 @@ def solved_today(
     if isinstance(rows, str):
         return _unchecked(rows)
 
-    moment = local_now(now=now)
-    midnight = datetime.combine(local_today(now=moment), time.min, moment.tzinfo)
-    window_start = midnight.timestamp()
-    window_end = moment.timestamp()
-    today_key = local_today(now=moment).isoformat()
-
-    count = 0
-    forged = 0
-    settled = False
-    for row in rows:
-        if not isinstance(row, dict) or row.get("kind") not in {CREDIT, CHARGE}:
-            continue
-        if not verify_entry_hmac(row, key_file=target_key):
-            forged += 1
-            continue
-        if row["kind"] == CHARGE:
-            detail = row.get("detail")
-            settled = settled or (
-                row.get("day") == today_key
-                and isinstance(detail, dict)
-                and detail.get("source") == SOURCE_LEETCODE
-            )
-        elif _landed_today(row, window=(window_start, window_end), today_key=today_key):
-            count += 1
+    tally = scan_today(rows, moment=local_now(now=now), key_file=target_key)
+    count, forged = tally.count, tally.forged
 
     if forged:
         # Loud, but not fatal: a forged row is simply not counted, exactly
@@ -226,7 +165,7 @@ def solved_today(
             if count
             else "no accepted submission recorded today"
         ),
-        settled_by_credit=settled,
+        settled_by_credit=tally.settled,
     )
 
 

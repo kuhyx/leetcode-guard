@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from leetcode_guard._lock_deps import GuardDeps
+    from leetcode_guard._lock_state import RunState
     from leetcode_guard._submissions import SolveProbe
 
 _logger: Final = logging.getLogger(__name__)
@@ -52,14 +53,13 @@ def in_carrot_window(now: datetime) -> bool:
 class CarrotMixin:
     """The late carrot check, mixed into the lock.
 
-    Reads ``_deps``, ``_closed``, ``_demo``, ``_last_probe`` and ``root`` from
+    Reads ``_deps``, ``_run``, ``_last_probe`` and ``root`` from
     the host class and calls its ``_release`` and ``_say``; declared rather
     than assumed, as the other mixins do.
     """
 
     _deps: GuardDeps
-    _closed: bool
-    _demo: bool
+    _run: RunState
     _last_probe: SolveProbe
     root: Any
     _say: Callable[[str], None]
@@ -68,7 +68,7 @@ class CarrotMixin:
 
     def _start_carrot_watch(self) -> None:
         """Begin polling, unless this is the demo (it never reads live state)."""
-        if self._demo:
+        if self._run.demo:
             return
         self._carrot_job = self.root.after(CARROT_POLL_MS, self._carrot_tick)
 
@@ -81,7 +81,7 @@ class CarrotMixin:
     def _carrot_tick(self) -> None:
         """One check; reschedules itself unless the lock is going away."""
         self._carrot_job = None
-        if self._closed:
+        if self._run.closed:
             return
         # Rescheduled first so a crash below can never end the watch.
         self._carrot_job = self.root.after(CARROT_POLL_MS, self._carrot_tick)

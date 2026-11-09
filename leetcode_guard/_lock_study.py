@@ -22,11 +22,12 @@ from leetcode_guard._study import StudySession
 from leetcode_guard._study_strip import StripText, build_strip
 
 if TYPE_CHECKING:
-    from gatelock import LockConfig, OutputRect
+    from gatelock import OutputRect
 
     from leetcode_guard._gate import GateDecision
+    from leetcode_guard._lock_state import RunState
     from leetcode_guard._study_strip import StudyStrip
-    from leetcode_guard._view import GuardView
+    from leetcode_guard._view_group import FrameGroup
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -34,16 +35,17 @@ _logger: Final = logging.getLogger(__name__)
 class StudyMixin:
     """Study mode, mixed into the lock.
 
-    Reads ``_study``, ``_strip``, ``_views``, ``_config`` and ``_lock`` from the
-    class it is mixed into. Declared rather than assumed, for the reason
-    ``ReleaseMixin`` gives: a mixin that quietly expects attributes breaks on a
+    Owns ``_study`` and ``_strip`` (``None`` until a session starts) and reads
+    ``_frames``, ``_run`` and ``_lock`` from the class it is mixed into.
+    Declared rather than assumed, for the reason ``ReleaseMixin`` gives: a mixin
+    that quietly expects attributes breaks on a
     refactor and says nothing until runtime.
     """
 
-    _study: StudySession | None
-    _strip: StudyStrip | None
-    _views: dict[str, GuardView]
-    _config: LockConfig
+    _study: StudySession | None = None
+    _strip: StudyStrip | None = None
+    _frames: FrameGroup
+    _run: RunState
     _lock: Any
     nudge_verifying: bool
     nudge_down: bool
@@ -120,7 +122,7 @@ class StudyMixin:
             return
         self._strip = build_strip(
             self._lock.root,
-            self._config,
+            self._run.config,
             self._strip_text(),
             rect=rect,
             on_back=self._back_to_lock,
@@ -192,7 +194,7 @@ class StudyMixin:
         if self._study is None:
             self._study = StudySession(
                 self._lock,
-                self._config,
+                self._run.config,
                 on_fail_closed=self._say,
             )
         return self._study
@@ -203,5 +205,5 @@ class StudyMixin:
         The same channel ``on_callback_error`` uses: when something goes wrong
         while the lock is up, the screen is the only place the user is looking.
         """
-        for view in self._views.values():
+        for view in self._frames.views.values():
             view.status_line.configure(text=message)

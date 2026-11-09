@@ -49,8 +49,8 @@ def test_status_prices_credits_from_the_signed_cache(data_dir: Path, hmac_key: P
     snapshot = gather_status(now=NOW, key_file=hmac_key)
     text = format_status(snapshot)
 
-    assert snapshot.credits == 2 + 1
-    assert snapshot.solves == {"Easy": 0, "Medium": 1, "Hard": 0, "unknown": 1}
+    assert snapshot.balance.credits == 2 + 1
+    assert snapshot.balance.solves == {"Easy": 0, "Medium": 1, "Hard": 0, "unknown": 1}
     lines = text.splitlines()
     assert lines[1].startswith("credits    3 earned")
     assert lines[2].startswith("priced     Easy x1: 0, Medium x2: 1")

@@ -43,7 +43,7 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
         view.balance_line.configure(text=model.balance_line)
         view.status_line.configure(text=model.status_line)
         view.notes_label.configure(text="\n".join(model.notes))
-        view.lines = model.problems
+        view.problems.lines = model.problems
         _apply_problem_rows(view, model.problems)
         _apply_escape_visibility(view, model)
         count += 1
@@ -52,7 +52,7 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
 
 def _apply_problem_rows(view: GuardView, lines: tuple[ProblemLine, ...]) -> None:
     """Re-point the existing rows at the problems still worth solving."""
-    labels = view.problem_labels
+    labels = view.problems.labels
     if not labels:
         return
     if not lines:
@@ -72,25 +72,25 @@ def _apply_problem_rows(view: GuardView, lines: tuple[ProblemLine, ...]) -> None
 
 def _rebind_open_button(view: GuardView, index: int, url: str) -> None:
     """Point one row's Open button at whatever that row now shows."""
-    if index >= len(view.open_buttons):
+    if index >= len(view.problems.buttons):
         return
-    handler = view.on_open
+    handler = view.hooks.on_open
     if handler is None:
         return
     # Same default-argument trick as the builder: a bare closure would capture
     # the loop variable and every button would open the last problem.
-    view.open_buttons[index].configure(command=lambda target=url: handler(target))
+    view.problems.buttons[index].configure(command=lambda target=url: handler(target))
 
 
 def _hide_open_button(view: GuardView, index: int) -> None:
     """Take one Open button off the screen without destroying it."""
-    if index < len(view.open_buttons):
-        view.open_buttons[index].pack_forget()
+    if index < len(view.problems.buttons):
+        view.problems.buttons[index].pack_forget()
 
 
 def _hide_rows_from(view: GuardView, start: int) -> None:
     """Hide the tail of the list, row frame and button together."""
-    for label in view.problem_labels[start:]:
+    for label in view.problems.labels[start:]:
         label.master.pack_forget()
 
 

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._queries import RECENT_AC_QUERY, recent_ac_variables
 
 if TYPE_CHECKING:
-    from leetcode_guard._leetcode import PostFn
+    from leetcode_guard._leetcode import GraphQLResult, PostFn
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -89,42 +89,11 @@ def fetch_recent_ac(post: PostFn, username: str) -> SolveProbe:
         An OK probe carrying up to 20 submissions (LeetCode's hard cap), or an
         UNVERIFIABLE one explaining what went wrong.
     """
-    result = post(RECENT_AC_QUERY, recent_ac_variables(username))
-
-    if result.transport_error is not None:
-        return _unverifiable(f"cannot reach LeetCode: {result.transport_error}")
-
-    if result.errors:
-        joined = "; ".join(result.errors)
-        if any(_NO_SUCH_USER in message for message in result.errors):
-            # A configuration bug, not an outage: it will never fix itself, so
-            # it is louder than the surrounding WARNINGs.
-            _logger.error(
-                "LeetCode username %r does not exist -- fix the configured "
-                "username or the gate can never unlock",
-                username,
-            )
-            return _unverifiable(
-                f"LeetCode says the username {username!r} does not exist -- "
-                "fix the configured username."
-            )
-        return _unverifiable(f"LeetCode rejected the query: {joined}")
-
-    if result.data is None:
-        return _unverifiable(
-            "LeetCode returned HTTP 200 with no data (expired session or rate limit)"
-        )
-
-    rows = result.data.get(_FIELD)
-    if rows is None:
-        return _unverifiable(
-            "LeetCode returned no submission list (expired session or rate limit)"
-        )
-    if not isinstance(rows, list):
-        return _unverifiable(
-            f"LeetCode returned a {type(rows).__name__} "
-            "where the submission list belongs"
-        )
+    rows = _submission_rows(
+        post(RECENT_AC_QUERY, recent_ac_variables(username)), username
+    )
+    if isinstance(rows, str):
+        return _unverifiable(rows)
 
     parsed = [_parse_submission(row) for row in rows]
     submissions = tuple(item for item in parsed if item is not None)
@@ -140,6 +109,47 @@ def fetch_recent_ac(post: PostFn, username: str) -> SolveProbe:
         submissions=submissions,
         reason=f"{len(submissions)} recent accepted submission{plural}",
     )
+
+
+def _submission_rows(result: GraphQLResult, username: str) -> list[object] | str:
+    """The raw submission rows, or the reason LeetCode's answer is unreadable.
+
+    Every ``str`` here becomes an UNVERIFIABLE probe -- "could not check",
+    never "nothing solved".
+    """
+    if result.transport_error is not None:
+        return f"cannot reach LeetCode: {result.transport_error}"
+    if result.errors:
+        return _rejection(result.errors, username)
+    if result.data is None:
+        return "LeetCode returned HTTP 200 with no data (expired session or rate limit)"
+    rows = result.data.get(_FIELD)
+    if rows is None:
+        return "LeetCode returned no submission list (expired session or rate limit)"
+    if not isinstance(rows, list):
+        return (
+            f"LeetCode returned a {type(rows).__name__} "
+            "where the submission list belongs"
+        )
+    return rows
+
+
+def _rejection(errors: tuple[str, ...], username: str) -> str:
+    """Why LeetCode refused the query, logging the unfixable case loudly."""
+    if any(_NO_SUCH_USER in message for message in errors):
+        # A configuration bug, not an outage: it will never fix itself, so
+        # it is louder than the surrounding WARNINGs.
+        _logger.error(
+            "LeetCode username %r does not exist -- fix the configured "
+            "username or the gate can never unlock",
+            username,
+        )
+        return (
+            f"LeetCode says the username {username!r} does not exist -- "
+            "fix the configured username."
+        )
+    joined = "; ".join(errors)
+    return f"LeetCode rejected the query: {joined}"
 
 
 def _parse_submission(row: object) -> AcSubmission | None:

@@ -26,17 +26,15 @@ from leetcode_guard._constants import UNVERIFIABLE_HATCH_SECONDS
 from leetcode_guard._daycost import local_today
 from leetcode_guard._gate import settle_day
 from leetcode_guard._ledger import SOURCE_ESCAPE, SOURCE_NETWORK_INCIDENT, SOURCE_OUTAGE
+from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._netcheck import classify
 from leetcode_guard._network_incident import decide_policy
 
 if TYPE_CHECKING:
-    from gatelock import EscapeTracker
-
-    from leetcode_guard._escape_flow import EscapeHatch
     from leetcode_guard._ledger_io import Ledger
     from leetcode_guard._lock_deps import GuardDeps
+    from leetcode_guard._lock_state import EscapeKit, OutageState, RunState
     from leetcode_guard._netcheck import NetworkDiagnosis
-    from leetcode_guard._network_incident import IncidentPolicy
     from leetcode_guard._poller import SolvePoller
     from leetcode_guard._submissions import SolveProbe
     from leetcode_guard._view_group import FrameGroup
@@ -47,8 +45,9 @@ _logger: Final = logging.getLogger(__name__)
 class ReleaseMixin:
     """Outage classification and the escape hatch, mixed into the lock.
 
-    Reads ``_poller``, ``_deps``, ``_ledger``, ``_incidents``, ``_hatch`` and
-    ``_frames`` from the class it is mixed into, and calls ``_release``.
+    Reads ``_poller``, ``_deps``, ``_ledger``, ``_run``, ``_escape``,
+    ``_outage`` and ``_frames`` from the class it is mixed into, and calls
+    ``_release``.
 
     Those collaborators are declared below rather than left implicit. A mixin
     that silently assumes attributes exist is the kind that breaks when the
@@ -57,17 +56,12 @@ class ReleaseMixin:
     """
 
     _poller: SolvePoller[SolveProbe]
-    _poll_interval: int
+    _run: RunState
     _deps: GuardDeps
     _ledger: Ledger
-    _incidents: EscapeTracker
-    _hatch: EscapeHatch
+    _escape: EscapeKit
+    _outage: OutageState
     _frames: FrameGroup
-    _diagnosis: NetworkDiagnosis | None
-    _outage_note: str | None
-    _incident_hatch: EscapeHatch
-    _incident_policy: IncidentPolicy | None
-    _outage_since: float | None
 
     def _release(self, probe: SolveProbe) -> None:
         """Provided by the host class."""
@@ -75,7 +69,9 @@ class ReleaseMixin:
 
     def _blind_seconds(self) -> float:
         """How long every check in a row has failed."""
-        return self._poller.state.consecutive_unverifiable * self._poll_interval / 1000
+        return (
+            self._poller.state.consecutive_unverifiable * self._run.poll_interval / 1000
+        )
 
     def _blind_for_long_enough(self) -> bool:
         """Whether it is time to work out *why* we are blind."""
@@ -88,13 +84,14 @@ class ReleaseMixin:
         lookup on every tick would be noise, and the answer does not change
         between ticks -- a network that is down stays down.
         """
-        if self._diagnosis is not None:
+        if self._outage.diagnosis is not None:
             return
-        diagnose = self._deps.diagnose if self._deps.diagnose is not None else classify
+        seam = self._deps.seams.diagnose
+        diagnose = seam if seam is not None else classify
         diagnosis: NetworkDiagnosis = diagnose()
-        self._diagnosis = diagnosis
-        policy = decide_policy(diagnosis, self._incidents)
-        self._outage_note = policy.message
+        self._outage.diagnosis = diagnosis
+        policy = decide_policy(diagnosis, self._escape.incidents)
+        self._outage.note = policy.message
 
         if policy.unlock_now:
             self._settle_and_release(SOURCE_OUTAGE)
@@ -104,8 +101,8 @@ class ReleaseMixin:
             # Recording the policy is what makes that promise true -- without
             # it the offline path had no exit at all once the ordinary escape
             # budget was spent, which is a trapped keyboard.
-            self._incident_policy = policy
-            self._outage_since = time.monotonic()
+            self._outage.policy = policy
+            self._outage.since = time.monotonic()
 
     def clear_outage(self) -> None:
         """Forget the diagnosis once LeetCode answers again.
@@ -113,20 +110,20 @@ class ReleaseMixin:
         Without this the banner outlives the outage and keeps telling the user
         they have no internet long after they reconnected.
         """
-        if self._diagnosis is None:
+        if self._outage.diagnosis is None:
             return
         _logger.info("LeetCode is reachable again -- clearing the outage banner")
-        self._diagnosis = None
-        self._outage_note = None
-        self._incident_policy = None
-        self._outage_since = None
+        self._outage.diagnosis = None
+        self._outage.note = None
+        self._outage.policy = None
+        self._outage.since = None
 
     def _incident_form_due(self) -> bool:
         """Whether the mandatory network-incident form may be submitted yet."""
-        policy = self._incident_policy
-        if policy is None or self._outage_since is None:
+        policy = self._outage.policy
+        if policy is None or self._outage.since is None:
             return False
-        return time.monotonic() - self._outage_since >= policy.wait_seconds
+        return time.monotonic() - self._outage.since >= policy.wait_seconds
 
     def _on_incident_recorded(self, reason: str) -> None:
         """Settle the day once the written network account is accepted."""
@@ -140,8 +137,12 @@ class ReleaseMixin:
         because *this machine* is offline, that is the sanctioned way out and
         it must not consume the ordinary escape budget.
         """
-        hatch = self._incident_hatch if self._incident_form_due() else self._hatch
-        if hatch.open or self._hatch.open or self._incident_hatch.open:
+        hatch = (
+            self._escape.incident_hatch
+            if self._incident_form_due()
+            else self._escape.hatch
+        )
+        if hatch.open or self._escape.hatch.open or self._escape.incident_hatch.open:
             return
         first = next(iter(self._frames), None)
         if first is None:
@@ -160,12 +161,11 @@ class ReleaseMixin:
         """Mark today paid for by ``source`` and let the lock go."""
         if self._deps.write_ledger:
             moment = self._deps.moment()
-            settle_day(
-                self._ledger,
-                day=local_today(now=moment),
+            entry = charge_entry(
+                local_today(now=moment),
                 now=moment,
                 source=source,
-                path=self._deps.ledger_path,
                 key_file=self._deps.key_file,
             )
+            settle_day(self._ledger, entry, self._deps.ledger_path)
         self._release(self._deps.probe)

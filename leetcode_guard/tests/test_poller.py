@@ -11,7 +11,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 from typing import Any
 
-from leetcode_guard._poller import PollState, SolvePoller
+from leetcode_guard._poller import PollerSettings, PollState, SolvePoller
 
 
 class InlineExecutor:
@@ -47,11 +47,13 @@ class FakeRoot:
 def build(root: FakeRoot, work, on_result, **kwargs) -> SolvePoller:
     return SolvePoller(
         root,
-        interval_ms=kwargs.pop("interval_ms", 1000),
-        work=work,
-        on_result=on_result,
-        executor=InlineExecutor(),
-        **kwargs,
+        PollerSettings(
+            interval_ms=kwargs.pop("interval_ms", 1000),
+            work=work,
+            on_result=on_result,
+            executor=InlineExecutor(),
+            **kwargs,
+        ),
     )
 
 
@@ -140,17 +142,19 @@ def test_a_pending_future_is_drained_not_resubmitted():
     executor = InlineExecutor()
     poller = SolvePoller(
         root,
-        interval_ms=1000,
-        work=lambda: 1,
-        on_result=lambda _: None,
-        executor=executor,
+        PollerSettings(
+            interval_ms=1000,
+            work=lambda: 1,
+            on_result=lambda _: None,
+            executor=executor,
+        ),
     )
     poller.start()
     poller._future = Future()  # never completes
 
     root.run_next()
 
-    assert root.scheduled[0][0] == poller._drain_ms
+    assert root.scheduled[0][0] == poller._settings.drain_ms
 
 
 def test_a_failed_future_is_reported_without_calling_the_handler():
@@ -158,10 +162,12 @@ def test_a_failed_future_is_reported_without_calling_the_handler():
     seen: list[Any] = []
     poller = SolvePoller(
         root,
-        interval_ms=1000,
-        work=lambda: 1,
-        on_result=seen.append,
-        executor=InlineExecutor(),
+        PollerSettings(
+            interval_ms=1000,
+            work=lambda: 1,
+            on_result=seen.append,
+            executor=InlineExecutor(),
+        ),
     )
     broken: Future = Future()
     broken.set_exception(RuntimeError("nope"))
@@ -174,7 +180,8 @@ def test_a_failed_future_is_reported_without_calling_the_handler():
 def test_the_default_executor_is_created_and_shut_down():
     root = FakeRoot()
     poller = SolvePoller(
-        root, interval_ms=1000, work=lambda: 1, on_result=lambda _: None
+        root,
+        PollerSettings(interval_ms=1000, work=lambda: 1, on_result=lambda _: None),
     )
 
     poller.start()

@@ -64,7 +64,7 @@ def test_no_browser_means_the_lock_is_never_weakened(
     guard._lock.recovery.stop.assert_not_called()
     guard._lock.root.grab_release.assert_not_called()
     assert not guard._session().active
-    for view in guard._views.values():
+    for view in guard._frames.views.values():
         view.status_line.configure.assert_called()
 
 
@@ -176,10 +176,10 @@ def test_a_failed_regrab_is_reported_on_the_surface(
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
     guard._open_problem(URL)
     guard._lock.root.grab_set_global.side_effect = tk.TclError("taken")
-    for view in guard._views.values():
+    for view in guard._frames.views.values():
         view.status_line.configure.reset_mock()
 
     guard._back_to_lock()
 
-    for view in guard._views.values():
+    for view in guard._frames.views.values():
         view.status_line.configure.assert_called()

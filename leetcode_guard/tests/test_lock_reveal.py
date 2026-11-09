@@ -107,7 +107,7 @@ def test_an_unfinished_batch_is_drained_again_later(tmp_path: Path) -> None:
 
 def test_nothing_happens_after_close(tmp_path: Path) -> None:
     guard, asked = _guard(tmp_path)
-    guard._closed = True
+    guard._run.closed = True
 
     guard._on_reveal(len(SLUGS))
     guard._reveal_future = Future()
@@ -123,7 +123,7 @@ def test_its_own_executor_is_shut_down_and_an_injected_one_is_not(
     injected = guard._reveal_executor
     guard._stop_reveal()
 
-    guard._deps.executor = None
+    guard._deps.seams.executor = None
     guard._start_reveal()
     own = guard._reveal_executor
     assert own is not injected

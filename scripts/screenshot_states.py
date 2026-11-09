@@ -29,6 +29,12 @@ States: ``locked``, ``solved-one``, ``unlocked``, ``escape``, ``outage``,
 ``production``.
 """
 
+# This harness drives the lock's internals on purpose, for the same reason the
+# test suite does: the states it photographs are only reachable from inside.
+# Same access as its ruff ``SLF001`` exemption in ``pyproject.toml``, declared
+# here because pylint has no per-file-ignores.
+# pylint: disable=protected-access
+
 from __future__ import annotations
 
 from concurrent.futures import Future
@@ -49,7 +55,7 @@ from leetcode_guard._ledger_entries import credit_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
-from leetcode_guard._lock_deps import GuardDeps
+from leetcode_guard._lock_deps import GuardDeps, GuardSeams
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import rank_pool
@@ -168,7 +174,6 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
         deps=GuardDeps(
             ledger_path=ledger_path,
             escape_path=workdir / "escape.json",
-            incident_path=workdir / "incidents.json",
             # The poller binds the real ``_check``: answer a well-formed empty feed.
             post=lambda _q, _v: GraphQLResult(data={"recentAcSubmissionList": []}),
             username="kuchy",
@@ -176,9 +181,12 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             pool=pool,
             probe=probe(),
             write_ledger=False,
-            wait_turn=False,
-            executor=Inline(),
-            now=lambda: NOW,
+            seams=GuardSeams(
+                incident_path=workdir / "incidents.json",
+                wait_turn=False,
+                executor=Inline(),
+                now=lambda: NOW,
+            ),
         ),
     )
 
@@ -199,14 +207,14 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
     elif state == "escape":
         guard._open_escape()
     elif state == "outage":
-        guard._outage_note = (
+        guard._outage.note = (
             "This machine has no working internet connection -- none of 3 "
             "independent hosts responded.\nReconnect and the gate carries on as "
             "normal. If you cannot, the machine unlocks after 5 minute(s) -- but "
             "only once you have written down what happened to the network."
         )
         guard._model = guard._build_model(probe())
-        apply_viewmodel(guard._views.values(), guard._model)
+        apply_viewmodel(guard._frames.views.values(), guard._model)
 
     return guard
 

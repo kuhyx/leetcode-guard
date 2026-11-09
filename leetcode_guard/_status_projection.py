@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     from leetcode_guard._progress import Progress
     from leetcode_guard._projection import Projection
-    from leetcode_guard._status import StatusSnapshot
+    from leetcode_guard._status_model import StatusSnapshot
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -150,9 +150,9 @@ def position_of(snapshot: StatusSnapshot) -> Position:
     day = parse_day(snapshot.day) or local_today()
     return Position(
         today=day,
-        charged_today=snapshot.charged_today,
-        available=snapshot.available,
-        debt_outstanding=snapshot.debt_outstanding,
+        charged_today=snapshot.verdict.charged_today,
+        available=snapshot.balance.available,
+        debt_outstanding=snapshot.debt.outstanding,
         is_sick=leetcode_stands_down,
     )
 

@@ -14,6 +14,7 @@ from leetcode_guard._gate import (
     settle_day,
 )
 from leetcode_guard._ledger import SOURCE_ESCAPE
+from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, save_ledger
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
@@ -31,10 +32,14 @@ def test_settle_day_is_idempotent(tmp_path: Path, hmac_key: Path):
     ledger = Ledger()
 
     assert settle_day(
-        ledger, day=MONDAY, now=NOW, source=SOURCE_ESCAPE, path=path, key_file=hmac_key
+        ledger,
+        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
+        path,
     )
     assert not settle_day(
-        ledger, day=MONDAY, now=NOW, source=SOURCE_ESCAPE, path=path, key_file=hmac_key
+        ledger,
+        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
+        path,
     )
 
 
@@ -62,11 +67,8 @@ def test_settle_day_reports_a_failed_save(tmp_path: Path, hmac_key: Path):
 
     assert not settle_day(
         Ledger(),
-        day=MONDAY,
-        now=NOW,
-        source=SOURCE_ESCAPE,
-        path=blocker / "ledger.json",
-        key_file=hmac_key,
+        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
+        blocker / "ledger.json",
     )
 
 

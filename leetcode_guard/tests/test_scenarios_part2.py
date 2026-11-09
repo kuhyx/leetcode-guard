@@ -6,7 +6,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from leetcode_guard._gate import GateState, decide
-from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
+from leetcode_guard._harvest import (
+    SeedStamp,
+    commit_harvest,
+    harvest,
+    needs_seeding,
+    seed_ledger,
+)
 from leetcode_guard._ledger_io import Ledger, load_ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
 from leetcode_guard.tests._guard_factories import create_guard, probe_of
@@ -36,7 +42,12 @@ def test_an_unverifiable_first_probe_settles_nothing(tmp_path: Path, hmac_key: P
     )
 
     assert (
-        seed_ledger(ledger, blind, day=MONDAY, now=NOW, path=path, key_file=hmac_key)
+        seed_ledger(
+            ledger,
+            blind,
+            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+            path=path,
+        )
         == -1
     )
 
@@ -53,7 +64,12 @@ def test_an_already_seeded_ledger_is_never_rewritten(tmp_path: Path, hmac_key: P
     probe = SolveProbe(
         status=ProbeStatus.OK, submissions=(submission("old-1"),), reason="1 recent"
     )
-    seed_ledger(ledger, probe, day=MONDAY, now=NOW, path=path, key_file=hmac_key)
+    seed_ledger(
+        ledger,
+        probe,
+        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+        path=path,
+    )
     before = path.read_bytes()
 
     assert not needs_seeding(ledger)
@@ -83,10 +99,8 @@ def test_a_freshly_seeded_lock_offers_a_way_out_at_t0(
     seed_ledger(
         ledger,
         probe_of("old-1", "old-2"),
-        day=MONDAY,
-        now=NOW,
+        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
         path=path,
-        key_file=hmac_key,
     )
     guard, _ = create_guard(
         tmp_path,
@@ -124,10 +138,8 @@ def test_a_solve_from_before_the_lock_engaged_still_counts(
     seed_ledger(
         ledger,
         SolveProbe(status=ProbeStatus.OK, submissions=(), reason="none"),
-        day=MONDAY,
-        now=NOW,
+        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
         path=path,
-        key_file=hmac_key,
     )
     early = SolveProbe(
         status=ProbeStatus.OK,

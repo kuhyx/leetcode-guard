@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from leetcode_guard._harvest import (
+    SeedStamp,
     commit_harvest,
     harvest,
     needs_seeding,
@@ -101,10 +102,8 @@ def test_seeding_marks_submissions_without_granting_credit(
         seeded = seed_ledger(
             ledger,
             probe_of("a", "b"),
-            day=MONDAY,
-            now=NOW,
+            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
             path=path,
-            key_file=hmac_key,
         )
 
     assert seeded == 2
@@ -126,7 +125,10 @@ def test_seeding_refuses_an_unverifiable_probe(tmp_path: Path, hmac_key: Path, c
 
     with caplog.at_level(logging.WARNING):
         result = seed_ledger(
-            ledger, UNVERIFIABLE, day=MONDAY, now=NOW, path=path, key_file=hmac_key
+            ledger,
+            UNVERIFIABLE,
+            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+            path=path,
         )
 
     assert result == -1
@@ -140,7 +142,10 @@ def test_seeding_an_empty_feed_still_records_the_marker(tmp_path: Path, hmac_key
 
     assert (
         seed_ledger(
-            ledger, probe_of(), day=MONDAY, now=NOW, path=path, key_file=hmac_key
+            ledger,
+            probe_of(),
+            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+            path=path,
         )
         == 0
     )
@@ -151,7 +156,10 @@ def test_seeded_markers_survive_a_reload(tmp_path: Path, hmac_key: Path):
     path = tmp_path / "ledger.json"
     ledger = Ledger()
     seed_ledger(
-        ledger, probe_of("a"), day=MONDAY, now=NOW, path=path, key_file=hmac_key
+        ledger,
+        probe_of("a"),
+        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+        path=path,
     )
 
     reloaded = load_ledger(path, key_file=hmac_key)

@@ -33,11 +33,11 @@ def test_a_brief_blind_spell_does_not_trigger_classification(
         calls["n"] += 1
         return local_offline()
 
-    guard._deps = replace(guard._deps, diagnose=diagnose)
+    guard._deps.seams = replace(guard._deps.seams, diagnose=diagnose)
     guard._on_poll_result(UNVERIFIABLE)
 
     assert calls["n"] == 0
-    assert guard._diagnosis is None
+    assert guard._outage.diagnosis is None
 
 
 def test_leetcodes_own_outage_settles_the_day_and_releases(
@@ -100,7 +100,7 @@ def test_the_queue_wait_can_be_skipped(tmp_path: Path):
     lockers rather than drawing over them."""
     guard, _ = create_guard(tmp_path, wait_turn=False)
 
-    assert guard._config.rank == 150
+    assert guard._run.config.rank == 150
 
 
 def test_an_outage_unlock_stops_the_poll_handler_early(tmp_path: Path, hmac_key: Path):
@@ -111,14 +111,14 @@ def test_an_outage_unlock_stops_the_poll_handler_early(tmp_path: Path, hmac_key:
 
     guard._on_poll_result(UNVERIFIABLE)
 
-    assert guard._closed
+    assert guard._run.closed
 
 
 def test_a_remote_outage_with_writes_disabled_still_releases(tmp_path: Path):
     guard, _ = create_guard(
         tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, write_ledger=False
     )
-    guard._deps = replace(guard._deps, diagnose=remote_outage)
+    guard._deps.seams = replace(guard._deps.seams, diagnose=remote_outage)
     guard._poller.state.consecutive_unverifiable = 999
 
     guard._on_poll_result(UNVERIFIABLE)
@@ -130,7 +130,7 @@ def test_production_pushes_the_ledger_on_close(tmp_path: Path, hmac_key: Path):
     """Best-effort and last, so a sync failure can never abort teardown and
     leave the screen grabbed."""
     guard, _ = create_guard(tmp_path, key_file=hmac_key)
-    guard._deps = replace(guard._deps, sync_on_close=True)
+    guard._deps.seams = replace(guard._deps.seams, sync_on_close=True)
     pushed = {"n": 0}
 
     import leetcode_guard._lock as lock_module

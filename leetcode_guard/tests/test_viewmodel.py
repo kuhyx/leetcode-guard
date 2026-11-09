@@ -13,6 +13,7 @@ from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
 from leetcode_guard._viewmodel import build_problem_lines, build_viewmodel
+from leetcode_guard._viewmodel_source import ViewSource
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -45,15 +46,13 @@ def pool_of(*slugs: str, notes: tuple[str, ...] = ()) -> PoolResolution:
 
 def model_for(ledger: Ledger, *, day=MONDAY, probe=OK_PROBE, key_file=None, **kwargs):
     decision = decide(ledger, day=day, now=NOW, key_file=key_file)
-    return build_viewmodel(
-        decision,
+    source = ViewSource(
         kwargs.pop("pool", pool_of()),
         kwargs.pop("auth", SIGNED_OUT),
-        probe,
-        checked_at=CHECKED_AT,
         limit=kwargs.pop("limit", 10),
-        **kwargs,
+        solved_slugs=kwargs.pop("solved_slugs", frozenset()),
     )
+    return build_viewmodel(decision, source, probe, checked_at=CHECKED_AT, **kwargs)
 
 
 def test_locked_headline_names_the_shortfall(hmac_key: Path):

@@ -64,16 +64,16 @@ def get_credits() -> dict[str, Any]:
     """Just the credit position, for a status line or a quick check."""
     snapshot = gather_status()
     return {
-        "credits": snapshot.credits,
-        "charged": snapshot.charged,
-        "available": snapshot.available,
+        "credits": snapshot.balance.credits,
+        "charged": snapshot.balance.charged,
+        "available": snapshot.balance.available,
         "today_cost": snapshot.cost,
         "surcharge": snapshot.surcharge,
-        "debt_outstanding": snapshot.debt_outstanding,
-        "missed_days": snapshot.missed_days,
-        "needed": snapshot.needed,
-        "locked": snapshot.locked,
-        "integrity_ok": snapshot.integrity_ok,
+        "debt_outstanding": snapshot.debt.outstanding,
+        "missed_days": snapshot.debt.missed_days,
+        "needed": snapshot.verdict.needed,
+        "locked": snapshot.verdict.locked,
+        "integrity_ok": snapshot.balance.integrity_ok,
     }
 
 
@@ -92,7 +92,7 @@ def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]
             "ac_rate": item.ac_rate,
             "url": item.url,
         }
-        for item in snapshot.suggestions
+        for item in snapshot.pool.suggestions
     ]
 
 
@@ -104,20 +104,20 @@ def explain_lock() -> dict[str, Any]:
         "day": snapshot.day,
         "weekday": snapshot.weekday,
         "cost": snapshot.cost,
-        "state": snapshot.state,
-        "locked": snapshot.locked,
-        "reason": snapshot.reason,
-        "needed": snapshot.needed,
-        "charged_today": snapshot.charged_today,
+        "state": snapshot.verdict.state,
+        "locked": snapshot.verdict.locked,
+        "reason": snapshot.verdict.reason,
+        "needed": snapshot.verdict.needed,
+        "charged_today": snapshot.verdict.charged_today,
         "clock_trusted": snapshot.clock_trusted,
-        "integrity_ok": snapshot.integrity_ok,
-        "tampered": snapshot.tampered,
-        "discounted": snapshot.discounted,
-        "unparsable": snapshot.unparsable,
-        "auth_present": snapshot.auth_present,
-        "auth_note": snapshot.auth_note,
-        "pool_source": snapshot.pool_source,
-        "pool_notes": list(snapshot.pool_notes),
+        "integrity_ok": snapshot.balance.integrity_ok,
+        "tampered": snapshot.balance.tampered,
+        "discounted": snapshot.balance.discounted,
+        "unparsable": snapshot.balance.unparsable,
+        "auth_present": snapshot.pool.auth_present,
+        "auth_note": snapshot.pool.auth_note,
+        "pool_source": snapshot.pool.source,
+        "pool_notes": list(snapshot.pool.notes),
     }
 
 

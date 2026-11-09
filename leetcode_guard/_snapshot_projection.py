@@ -26,7 +26,7 @@ from leetcode_guard._status_projection import position_of
 if TYPE_CHECKING:
     from leetcode_guard._progress import Progress
     from leetcode_guard._projection import Projection
-    from leetcode_guard._status import StatusSnapshot
+    from leetcode_guard._status_model import StatusSnapshot
 
 DAILY_TARGETS: Final = 90
 """Today and the 89 days after it."""

@@ -73,7 +73,7 @@ def test_a_quiet_bell_only_reschedules_the_watch(tmp_path: Path) -> None:
 
 def test_a_closed_lock_stops_watching(tmp_path: Path) -> None:
     guard = _armed(tmp_path)
-    guard._closed = True
+    guard._run.closed = True
 
     guard._watch_bell()
 

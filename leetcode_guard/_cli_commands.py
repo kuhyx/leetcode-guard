@@ -109,7 +109,7 @@ def cmd_status(
     for line in phone_error_lines():
         print(line)
     if by is None and price is None and goals is None:
-        return EXIT_LOCKED if snapshot.locked else EXIT_OK
+        return EXIT_LOCKED if snapshot.verdict.locked else EXIT_OK
     inputs = projection_inputs(by, price, goals)
     report = build_report(snapshot, fetch_live_progress(), inputs)
     print("\nsolved now")
@@ -120,7 +120,7 @@ def cmd_status(
         print(f"  {line}")
     if report.projection is None or report.goal_problem is not None:
         return EXIT_UNVERIFIABLE
-    return EXIT_LOCKED if snapshot.locked else EXIT_OK
+    return EXIT_LOCKED if snapshot.verdict.locked else EXIT_OK
 
 
 def projection_inputs(

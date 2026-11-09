@@ -31,9 +31,9 @@ def state_word(full: FullStatus) -> str:
     ``warn`` -- unlocked, but nothing banked beyond today.
     ``ok``   -- unlocked with credit to spare.
     """
-    if full.gate.locked:
+    if full.gate.verdict.locked:
         return STATE_LOCK
-    if full.gate.available <= 0:
+    if full.gate.balance.available <= 0:
         return STATE_WARN
     return STATE_OK
 
@@ -42,14 +42,14 @@ def summary_line(full: FullStatus) -> str:
     """One line for the tray tooltip."""
     gate = full.gate
     costs = f"{gate.weekday} costs {gate.cost}"
-    if gate.debt_outstanding:
-        costs += f", debt {gate.debt_outstanding}"
-    if gate.locked:
-        plural = "" if gate.needed == 1 else "s"
-        return f"LOCKED - solve {gate.needed} problem{plural} ({costs})"
-    if gate.state == "not-started":
-        return f"leetcode-guard: {gate.reason}"
-    return f"Unlocked - {gate.available} credit(s) left ({costs})"
+    if gate.debt.outstanding:
+        costs += f", debt {gate.debt.outstanding}"
+    if gate.verdict.locked:
+        plural = "" if gate.verdict.needed == 1 else "s"
+        return f"LOCKED - solve {gate.verdict.needed} problem{plural} ({costs})"
+    if gate.verdict.state == "not-started":
+        return f"leetcode-guard: {gate.verdict.reason}"
+    return f"Unlocked - {gate.balance.available} credit(s) left ({costs})"
 
 
 def main(argv: list[str] | None = None) -> int:

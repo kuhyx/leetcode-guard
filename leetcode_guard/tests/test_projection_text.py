@@ -119,9 +119,9 @@ def test_position_of_lifts_the_gate_facts(data_dir: Path, hmac_key: Path):
 
     assert lifted == Position(
         today=date.fromisoformat(snapshot.day),
-        charged_today=snapshot.charged_today,
-        available=snapshot.available,
-        debt_outstanding=snapshot.debt_outstanding,
+        charged_today=snapshot.verdict.charged_today,
+        available=snapshot.balance.available,
+        debt_outstanding=snapshot.debt.outstanding,
         is_sick=_status_projection.leetcode_stands_down,
     )
 

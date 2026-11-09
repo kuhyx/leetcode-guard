@@ -35,17 +35,17 @@ def _verdict_and_credits(full: FullStatus) -> dict[str, Any]:
     return {
         "day": gate.day,
         "weekday": gate.weekday,
-        "state": gate.state,
-        "locked": gate.locked,
-        "reason": gate.reason,
+        "state": gate.verdict.state,
+        "locked": gate.verdict.locked,
+        "reason": gate.verdict.reason,
         "explanation": explain_not_triggered(full),
         "cost": gate.cost,
         "surcharge": gate.surcharge,
-        "credits": gate.credits,
-        "charged": gate.charged,
-        "available": gate.available,
-        "needed": gate.needed,
-        "charged_today": gate.charged_today,
+        "credits": gate.balance.credits,
+        "charged": gate.balance.charged,
+        "available": gate.balance.available,
+        "needed": gate.verdict.needed,
+        "charged_today": gate.verdict.charged_today,
         "earned_all_time": full.ledger.credits_earned,
         "spent_all_time": full.ledger.charges_spent,
         "debt": {
@@ -74,8 +74,8 @@ def _solves_and_days(full: FullStatus) -> dict[str, Any]:
         },
         "days": {
             "charged": list(ledger.charged_days),
-            "start_date": full.start_date,
-            "in_force": full.in_force,
+            "start_date": full.setup.start_date,
+            "in_force": full.setup.in_force,
         },
     }
 
@@ -111,23 +111,23 @@ def _health(full: FullStatus) -> dict[str, Any]:
     gate = full.gate
     return {
         "integrity": {
-            "ok": gate.integrity_ok,
-            "tampered": gate.tampered,
-            "discounted": gate.discounted,
-            "unparsable": gate.unparsable,
+            "ok": gate.balance.integrity_ok,
+            "tampered": gate.balance.tampered,
+            "discounted": gate.balance.discounted,
+            "unparsable": gate.balance.unparsable,
             "clock_trusted": gate.clock_trusted,
             "total_entries": full.ledger.total_entries,
             "bootstrapped": full.ledger.bootstrapped,
-            "ledger_path": full.ledger_path,
+            "ledger_path": full.setup.ledger_path,
         },
         "environment": {
             "clock_trusted": gate.clock_trusted,
-            "auth_present": gate.auth_present,
-            "auth_note": gate.auth_note,
-            "pool_source": gate.pool_source,
-            "pool_notes": list(gate.pool_notes),
-            "cookies_configured": full.cookies_configured,
-            "sync_configured": full.sync_configured,
+            "auth_present": gate.pool.auth_present,
+            "auth_note": gate.pool.auth_note,
+            "pool_source": gate.pool.source,
+            "pool_notes": list(gate.pool.notes),
+            "cookies_configured": full.setup.cookies_configured,
+            "sync_configured": full.setup.sync_configured,
             "timer": {
                 "enabled": full.timer.enabled,
                 "next_fire": full.timer.next_fire,
@@ -156,6 +156,6 @@ def status_section(full: FullStatus) -> dict[str, Any]:
                 "ac_rate": item.ac_rate,
                 "url": item.url,
             }
-            for item in full.gate.suggestions
+            for item in full.gate.pool.suggestions
         ],
     }

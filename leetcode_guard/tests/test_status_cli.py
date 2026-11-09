@@ -7,6 +7,7 @@ back to ``--summary`` when the status app's launcher is missing.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from leetcode_guard import status_cli
@@ -31,8 +32,12 @@ def test_state_word_tracks_the_verdict(data_dir: Path, hmac_key: Path):
 
 def test_the_state_word_warns_with_nothing_banked(data_dir: Path, hmac_key: Path):
     full = full_for(data_dir, hmac_key)
-    gate = type(full.gate)(**{**vars(full.gate), "locked": False, "available": 0})
-    combined = type(full)(**{**vars(full), "gate": gate})
+    gate = replace(
+        full.gate,
+        verdict=replace(full.gate.verdict, locked=False),
+        balance=replace(full.gate.balance, available=0),
+    )
+    combined = replace(full, gate=gate)
 
     assert status_cli.state_word(combined) == status_cli.STATE_WARN
 
@@ -46,10 +51,13 @@ def test_summary_line_names_the_shortfall(data_dir: Path, hmac_key: Path):
 
 def test_summary_line_pluralises(data_dir: Path, hmac_key: Path):
     full = full_for(data_dir, hmac_key)
-    saturday = type(full.gate)(
-        **{**vars(full.gate), "needed": 2, "weekday": "Saturday", "cost": 2}
+    saturday = replace(
+        full.gate,
+        verdict=replace(full.gate.verdict, needed=2),
+        weekday="Saturday",
+        cost=2,
     )
-    combined = type(full)(**{**vars(full), "gate": saturday})
+    combined = replace(full, gate=saturday)
 
     assert "solve 2 problems" in status_cli.summary_line(combined)
 
@@ -64,8 +72,9 @@ def test_summary_line_when_unlocked(data_dir: Path, hmac_key: Path):
 
 def test_summary_line_names_the_debt(data_dir: Path, hmac_key: Path):
     full = full_for(data_dir, hmac_key)
-    owing = type(full.gate)(**{**vars(full.gate), "debt_outstanding": 9})
-    combined = type(full)(**{**vars(full), "gate": owing})
+    debt = full.gate.debt
+    owing = replace(full.gate, debt=replace(debt, owed=debt.repaid + 9))
+    combined = replace(full, gate=owing)
 
     assert "debt 9" in status_cli.summary_line(combined)
 
@@ -74,15 +83,10 @@ def test_the_summary_line_reports_a_gate_not_yet_in_force(
     data_dir: Path, hmac_key: Path
 ):
     full = full_for(data_dir, hmac_key)
-    gate = type(full.gate)(
-        **{
-            **vars(full.gate),
-            "state": "not-started",
-            "locked": False,
-            "reason": "not yet",
-        }
+    verdict = replace(
+        full.gate.verdict, state="not-started", locked=False, reason="not yet"
     )
-    combined = type(full)(**{**vars(full), "gate": gate})
+    combined = replace(full, gate=replace(full.gate, verdict=verdict))
 
     assert status_cli.summary_line(combined) == "leetcode-guard: not yet"
 

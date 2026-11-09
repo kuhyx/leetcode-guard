@@ -16,7 +16,7 @@ from leetcode_guard._daycost import day_cost
 from leetcode_guard._gate import GateState, settle_day
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._ledger import SOURCE_ESCAPE
-from leetcode_guard._ledger_entries import credit_entry
+from leetcode_guard._ledger_entries import charge_entry, credit_entry
 from leetcode_guard._ledger_io import Ledger, append
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
@@ -215,11 +215,8 @@ def test_an_escaped_day_settles_itself_but_repays_nothing(
     path = tmp_path / "ledger.json"
     settle_day(
         ledger,
-        day=NEXT_THURSDAY,
-        now=NOW,
-        source=SOURCE_ESCAPE,
-        path=path,
-        key_file=hmac_key,
+        charge_entry(NEXT_THURSDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
+        path,
     )
 
     tomorrow = decide_today(

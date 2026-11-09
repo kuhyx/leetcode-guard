@@ -6,6 +6,7 @@ tkinter window's tests: the rendering went, the reasons it rendered stayed.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 import logging
 from types import SimpleNamespace
@@ -120,10 +121,14 @@ def test_an_untrusted_clock_is_reported(data_dir: Path, hmac_key: Path):
 
 
 def _not_started(full, *, reason: str, in_force: bool):
-    gate = type(full.gate)(
-        **{**vars(full.gate), "state": "not-started", "locked": False, "reason": reason}
+    verdict = replace(
+        full.gate.verdict, state="not-started", locked=False, reason=reason
     )
-    return type(full)(**{**vars(full), "gate": gate, "in_force": in_force})
+    return replace(
+        full,
+        gate=replace(full.gate, verdict=verdict),
+        setup=replace(full.setup, in_force=in_force),
+    )
 
 
 def test_the_not_started_reason_shows_once_the_gate_is_in_force(
@@ -190,6 +195,6 @@ def test_run_systemctl_returns_stdout(monkeypatch):
 def test_the_default_gather_reads_the_isolated_paths(data_dir: Path):
     full = gather_full()
 
-    assert full.ledger_path.endswith("ledger.json")
-    assert not full.sync_configured
-    assert not full.cookies_configured
+    assert full.setup.ledger_path.endswith("ledger.json")
+    assert not full.setup.sync_configured
+    assert not full.setup.cookies_configured

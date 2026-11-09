@@ -88,12 +88,8 @@ def write_cache(path: Path, pool: CachedPool) -> bool:
     return True
 
 
-def read_cache(path: Path) -> CachedPool | None:
-    """Load a previously written pool, or ``None`` if there isn't a usable one.
-
-    Every corruption mode returns ``None`` with a WARNING rather than raising,
-    for the same reason as :func:`write_cache`.
-    """
+def _read_object(path: Path) -> dict[str, Any] | None:
+    """The cache file's top-level JSON object, or ``None`` with a WARNING."""
     if not path.exists():
         return None
     try:
@@ -104,26 +100,38 @@ def read_cache(path: Path) -> CachedPool | None:
     if not isinstance(raw, dict):
         _logger.warning("pool cache at %s is not a JSON object", path)
         return None
+    return raw
+
+
+def _schema_fault(raw: dict[str, Any]) -> str | None:
+    """Why ``raw`` is not a usable pool, or ``None`` if it is."""
     if raw.get("version") != _VERSION:
-        _logger.warning(
-            "pool cache at %s has version %r, expected %d -- ignoring",
-            path,
-            raw.get("version"),
-            _VERSION,
-        )
-        return None
+        return f"has version {raw.get('version')!r}, expected {_VERSION} -- ignoring"
     fetched_at = raw.get("fetched_at")
     if isinstance(fetched_at, bool) or not isinstance(fetched_at, (int, float)):
-        _logger.warning("pool cache at %s has no usable fetched_at", path)
+        return "has no usable fetched_at"
+    if not isinstance(raw.get("problems"), list):
+        return "has no problems array"
+    return None
+
+
+def read_cache(path: Path) -> CachedPool | None:
+    """Load a previously written pool, or ``None`` if there isn't a usable one.
+
+    Every corruption mode returns ``None`` with a WARNING rather than raising,
+    for the same reason as :func:`write_cache`.
+    """
+    raw = _read_object(path)
+    if raw is None:
         return None
-    rows = raw.get("problems")
-    if not isinstance(rows, list):
-        _logger.warning("pool cache at %s has no problems array", path)
+    fault = _schema_fault(raw)
+    if fault is not None:
+        _logger.warning("pool cache at %s %s", path, fault)
         return None
-    parsed = [parse_problem(row) for row in rows]
+    parsed = [parse_problem(row) for row in raw["problems"]]
     problems = tuple(problem for problem in parsed if problem is not None)
     return CachedPool(
         problems=problems,
-        fetched_at=float(fetched_at),
+        fetched_at=float(raw["fetched_at"]),
         complete=bool(raw.get("complete", False)),
     )

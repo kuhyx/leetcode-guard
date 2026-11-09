@@ -139,6 +139,14 @@ def post_graphql(
         _logger.warning("LeetCode request failed: %s", exc)
         return GraphQLResult(transport_error=f"network error: {exc}")
 
+    body = _json_object(response)
+    if isinstance(body, GraphQLResult):
+        return body
+    return _classify(body)
+
+
+def _json_object(response: requests.Response) -> dict[str, Any] | GraphQLResult:
+    """The response's JSON object, or the transport failure that replaces it."""
     if response.status_code != _HTTP_OK:
         _logger.warning("LeetCode returned HTTP %d", response.status_code)
         return GraphQLResult(transport_error=f"HTTP {response.status_code}")
@@ -154,7 +162,11 @@ def post_graphql(
             "LeetCode returned a JSON %s, not an object", type(body).__name__
         )
         return GraphQLResult(transport_error="LeetCode returned a non-object JSON body")
+    return body
 
+
+def _classify(body: dict[str, Any]) -> GraphQLResult:
+    """Split a well-formed GraphQL body into errors, data, or neither."""
     errors = _extract_errors(body)
     if errors:
         _logger.warning("LeetCode rejected the query: %s", "; ".join(errors))

@@ -14,10 +14,11 @@ import sickdays
 
 from leetcode_guard import _focus, _gate_today, _sick, _status_projection
 from leetcode_guard._debt import compute_debt, cost_phrase
-from leetcode_guard._gate import GateState, decide
+from leetcode_guard._gate import DayContext, GateState, decide
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._viewmodel import build_viewmodel
+from leetcode_guard._viewmodel_source import ViewSource
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -181,10 +182,17 @@ def test_the_window_and_status_name_the_focus_day(
 
     monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: True)
     decision = decide(
-        Ledger(), day=MONDAY, now=NOW, key_file=hmac_key, focus_day="Prep"
+        Ledger(),
+        day=MONDAY,
+        now=NOW,
+        key_file=hmac_key,
+        context=DayContext(focus_day="Prep"),
     )
     model = build_viewmodel(
-        decision, pool_of(), SIGNED_OUT, OK_PROBE, checked_at=CHECKED_AT, limit=10
+        decision,
+        ViewSource(pool_of(), SIGNED_OUT, limit=10),
+        OK_PROBE,
+        checked_at=CHECKED_AT,
     )
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     lines = explain_not_triggered(full_for(data_dir, hmac_key, Ledger()))

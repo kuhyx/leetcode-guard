@@ -12,10 +12,10 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from leetcode_guard._auth import AuthState
-from leetcode_guard._harvest import seed_ledger
+from leetcode_guard._harvest import SeedStamp, seed_ledger
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._lock import LeetcodeGuard
-from leetcode_guard._lock_deps import GuardDeps
+from leetcode_guard._lock_deps import GuardDeps, GuardSeams
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -107,10 +107,10 @@ def create_guard(
         seed_ledger(
             Ledger(),
             startup,
-            day=now.date() - timedelta(days=3),
-            now=now,
+            stamp=SeedStamp(
+                day=now.date() - timedelta(days=3), now=now, key_file=key_file
+            ),
             path=tmp_path / "ledger.json",
-            key_file=key_file,
         )
     polled = poll_probe if poll_probe is not None else startup
     calls: dict[str, Any] = {"posts": 0}
@@ -137,9 +137,9 @@ def create_guard(
             probe=startup,
             key_file=key_file,
             write_ledger=write_ledger,
-            wait_turn=wait_turn,
-            executor=InlineExecutor(),
-            now=lambda: now,
+            seams=GuardSeams(
+                wait_turn=wait_turn, executor=InlineExecutor(), now=lambda: now
+            ),
         ),
     )
     # The poller's work function is the only thing that would really call the

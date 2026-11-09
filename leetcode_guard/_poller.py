@@ -56,6 +56,31 @@ class SubmitsWork(Protocol):
         """Release the executor's resources."""
 
 
+@dataclass(frozen=True)
+class PollerSettings[R]:
+    """What a :class:`SolvePoller` runs and how often.
+
+    One record rather than five keyword arguments: the poller's constructor
+    stays within the lint profile's argument limit, and a caller (or a test)
+    can build the settings once and reuse them.
+
+    Attributes:
+        interval_ms: Gap between checks.
+        work: The blocking call. Runs on the executor, never on Tk.
+        on_result: Called on the Tk thread with whatever ``work`` returned.
+        executor: Something with ``submit``. ``None`` means a single-worker
+            thread pool the poller owns and shuts down; tests pass an inline
+            one so ordering is deterministic and no threads are involved.
+        drain_ms: How often to check whether the future has finished.
+    """
+
+    interval_ms: int
+    work: Callable[[], R | None]
+    on_result: Callable[[R | None], None]
+    executor: SubmitsWork | None = None
+    drain_ms: int = POLL_DRAIN_MS
+
+
 @dataclass
 class PollState:
     """How the check has been going.
@@ -79,38 +104,22 @@ class PollState:
 class SolvePoller[R]:
     """Drive a periodic background check from the Tk event loop."""
 
-    def __init__(
-        self,
-        root: AfterScheduler,
-        *,
-        interval_ms: int,
-        work: Callable[[], _R | None],
-        on_result: Callable[[_R | None], None],
-        executor: SubmitsWork | None = None,
-        drain_ms: int = POLL_DRAIN_MS,
-    ) -> None:
+    def __init__(self, root: AfterScheduler, settings: PollerSettings[R]) -> None:
         """Create the poller.
 
         Args:
             root: The Tk root, used only for ``after`` scheduling.
-            interval_ms: Gap between checks.
-            work: The blocking call. Runs on the executor, never on Tk.
-            on_result: Called on the Tk thread with whatever ``work`` returned.
-            executor: Something with ``submit``. Defaults to a single-worker
-                thread pool; tests pass an inline one so ordering is
-                deterministic and no threads are involved.
-            drain_ms: How often to check whether the future has finished.
+            settings: The work, its callback and the timing; see
+                :class:`PollerSettings`.
         """
         self._root = root
-        self._interval_ms = interval_ms
-        self._work = work
-        self._on_result = on_result
-        self._executor = (
-            executor if executor is not None else ThreadPoolExecutor(max_workers=1)
+        self._settings = settings
+        self._executor: SubmitsWork = (
+            settings.executor
+            if settings.executor is not None
+            else ThreadPoolExecutor(max_workers=1)
         )
-        self._owns_executor = executor is None
-        self._drain_ms = drain_ms
-        self._future: Future[_R | None] | None = None
+        self._future: Future[R | None] | None = None
         self._stopped = False
         self._tick_job: str | None = None
         self._poked = threading.Event()
@@ -123,11 +132,16 @@ class SolvePoller[R]:
         escape hatch in seconds."""
         self.state = PollState()
 
+    @property
+    def _owns_executor(self) -> bool:
+        """Whether this poller created the executor, and so must shut it down."""
+        return self._settings.executor is None
+
     def start(self) -> None:
         """Kick off the first check immediately, and start watching for pokes."""
         self._stopped = False
         self._tick()
-        self._root.after(self._drain_ms, self._watch)
+        self._root.after(self._settings.drain_ms, self._watch)
 
     def poke(self) -> None:
         """Ask for a check as soon as none is in flight.
@@ -148,7 +162,7 @@ class SolvePoller[R]:
         if self._stopped:
             return
         self._fire_poke()
-        self._root.after(self._drain_ms, self._watch)
+        self._root.after(self._settings.drain_ms, self._watch)
 
     def _fire_poke(self) -> None:
         """Start the poked check if the poller is idle between checks.
@@ -177,9 +191,9 @@ class SolvePoller[R]:
         if self._future is None or self._future.done():
             self._in_flight_poked = poked
             self._future = self._executor.submit(self._guarded_work)
-        self._root.after(self._drain_ms, self._drain)
+        self._root.after(self._settings.drain_ms, self._drain)
 
-    def _guarded_work(self) -> _R | None:
+    def _guarded_work(self) -> R | None:
         """Run ``work``, converting a crash into a value.
 
         Returning ``None`` rather than propagating keeps the loop alive: an
@@ -188,7 +202,7 @@ class SolvePoller[R]:
         screen with no diagnosis.
         """
         try:
-            return self._work()
+            return self._settings.work()
         except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the solve check raised; treating it as unverifiable")
             return None
@@ -202,11 +216,11 @@ class SolvePoller[R]:
             self._future = None
             self.last_was_poke = self._in_flight_poked
             self._deliver(future)
-            self._tick_job = self._root.after(self._interval_ms, self._tick)
+            self._tick_job = self._root.after(self._settings.interval_ms, self._tick)
             return
-        self._root.after(self._drain_ms, self._drain)
+        self._root.after(self._settings.drain_ms, self._drain)
 
-    def _deliver(self, future: Future[_R | None]) -> None:
+    def _deliver(self, future: Future[R | None]) -> None:
         """Hand one result to the callback, never letting it kill the loop."""
         try:
             result = future.result()
@@ -214,6 +228,6 @@ class SolvePoller[R]:
             _logger.exception("the solve check future failed")
             return
         try:
-            self._on_result(result)
+            self._settings.on_result(result)
         except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the poll result handler raised")

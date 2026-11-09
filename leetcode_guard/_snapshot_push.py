@@ -98,7 +98,9 @@ def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
     """
     moment = local_now(now=now)
     full = gather_full(now=moment)
-    profile = refresh_profile(now=moment.timestamp(), credit_count=full.gate.credits)
+    profile = refresh_profile(
+        now=moment.timestamp(), credit_count=full.gate.balance.credits
+    )
     return build_snapshot(
         full,
         # Re-read: the refresh above may just have rewritten the mirror that

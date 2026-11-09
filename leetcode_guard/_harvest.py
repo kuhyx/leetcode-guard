@@ -80,14 +80,23 @@ def needs_seeding(ledger: Ledger) -> bool:
     return not ledger.of_kind(BOOTSTRAP)
 
 
+@dataclass(frozen=True)
+class SeedStamp:
+    """When a seed happens, and the key its markers are signed with."""
+
+    day: date
+    """Today's local date, stamped onto every marker."""
+    now: datetime
+    key_file: Path | None = None
+    """HMAC key override, for tests."""
+
+
 def seed_ledger(
     ledger: Ledger,
     probe: SolveProbe,
     *,
-    day: date,
-    now: datetime,
+    stamp: SeedStamp,
     path: Path,
-    key_file: Path | None = None,
 ) -> int:
     """Record pre-existing submissions as zero-value markers.
 
@@ -108,12 +117,15 @@ def seed_ledger(
         return -1
 
     markers = [
-        seen_entry(submission, day=day, now=now, key_file=key_file)
+        seen_entry(submission, day=stamp.day, now=stamp.now, key_file=stamp.key_file)
         for submission in probe.submissions
     ]
     markers.append(
         bootstrap_entry(
-            day=day, now=now, seeded=len(probe.submissions), key_file=key_file
+            day=stamp.day,
+            now=stamp.now,
+            seeded=len(probe.submissions),
+            key_file=stamp.key_file,
         )
     )
     append(ledger, markers)

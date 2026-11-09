@@ -25,17 +25,17 @@ def test_the_escape_form_opens_on_a_surface(tmp_path: Path):
 
     guard._open_escape()
 
-    assert guard._hatch.open
+    assert guard._escape.hatch.open
 
 
 def test_opening_the_escape_form_twice_is_a_no_op(tmp_path: Path):
     guard, _ = create_guard(tmp_path)
 
     guard._open_escape()
-    first = guard._hatch._form
+    first = guard._escape.hatch._form
     guard._open_escape()
 
-    assert guard._hatch._form is first
+    assert guard._escape.hatch._form is first
 
 
 def test_the_escape_form_declines_to_open_with_no_surface(tmp_path: Path, caplog):
@@ -47,7 +47,7 @@ def test_the_escape_form_declines_to_open_with_no_surface(tmp_path: Path, caplog
     with caplog.at_level(logging.WARNING):
         guard._open_escape()
 
-    assert not guard._hatch.open
+    assert not guard._escape.hatch.open
     assert any("no surface available" in record.message for record in caplog.records)
 
 
@@ -176,7 +176,7 @@ def blind_guard(tmp_path: Path, hmac_key: Path, diagnose):
         # self-seeding guard is unlocked and none of these outage paths apply.
         seeded=True,
     )
-    guard._deps = replace(guard._deps, diagnose=diagnose)
+    guard._deps.seams = replace(guard._deps.seams, diagnose=diagnose)
     # Enough consecutive failures that the classifier is due to run.
     guard._poller.state.consecutive_unverifiable = 999
     return guard
@@ -192,6 +192,6 @@ def blind_offline(tmp_path: Path, hmac_key: Path):
 def test_a_local_outage_captures_the_incident_policy(tmp_path: Path, hmac_key: Path):
     guard = blind_offline(tmp_path, hmac_key)
 
-    assert guard._incident_policy is not None
-    assert guard._incident_policy.require_form
+    assert guard._outage.policy is not None
+    assert guard._outage.policy.require_form
     assert guard._decision().locked

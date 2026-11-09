@@ -10,7 +10,7 @@ ever needs to drive one logical widget across surfaces again.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -26,6 +26,8 @@ class FrameGroup:
 
     def __init__(self) -> None:
         self._frames: dict[str, tk.Misc] = {}
+        self.views: dict[str, Any] = {}
+        """The guard view built inside each container, keyed the same way."""
 
     def add(self, output_name: str, frame: tk.Misc) -> None:
         """Register one surface's container."""

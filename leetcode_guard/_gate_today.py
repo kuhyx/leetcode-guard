@@ -14,7 +14,7 @@ import freedays
 
 from leetcode_guard._debt import NO_DEBT, compute_debt
 from leetcode_guard._difficulty import load_weights
-from leetcode_guard._gate import GateDecision, decide
+from leetcode_guard._gate import DayContext, GateDecision, decide
 from leetcode_guard._sick import focus_day_name, leetcode_stands_down
 from leetcode_guard._workday_penalty import workday_penalty_for
 
@@ -64,12 +64,14 @@ def decide_today(
         day=day,
         now=now,
         key_file=key_file,
-        free_day=freedays.is_free_day(day),
-        debt=debt,
-        workday_penalty=workday_penalty_for(day),
-        sick_day=leetcode_stands_down(day),
-        focus_day=focus_day_name(day),
-        weights=load_weights(key_file=key_file),
+        context=DayContext(
+            free_day=freedays.is_free_day(day),
+            debt=debt,
+            workday_penalty=workday_penalty_for(day),
+            sick_day=leetcode_stands_down(day),
+            focus_day=focus_day_name(day),
+            weights=load_weights(key_file=key_file),
+        ),
     )
 
 

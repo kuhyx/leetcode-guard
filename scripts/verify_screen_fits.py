@@ -35,6 +35,7 @@ from gatelock import LockConfig, measure_fit, report_fit
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._view import build_guard_view
+from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
 if TYPE_CHECKING:
@@ -147,8 +148,7 @@ def _build_lock(surface: ScrollableSurface) -> tk.Misc:
         LockConfig(),
         _MODEL,
         output_name="fit-check",
-        on_escape=lambda: None,
-        on_open=lambda _url: None,
+        hooks=ViewHooks(on_escape=lambda: None, on_open=lambda _url: None),
     )
     return _placed_child(surface.content)
 

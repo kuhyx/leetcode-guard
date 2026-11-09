@@ -12,9 +12,15 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from leetcode_guard._debt import NO_DEBT, Debt
-from leetcode_guard._gate import GateState, apply_decision, decide
+from leetcode_guard._gate import DayContext, GateState, apply_decision, decide
 from leetcode_guard._gate_today import decide_today
-from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding, seed_ledger
+from leetcode_guard._harvest import (
+    SeedStamp,
+    commit_harvest,
+    harvest,
+    needs_seeding,
+    seed_ledger,
+)
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
 from leetcode_guard.tests._ledger_fixtures import (
@@ -38,7 +44,9 @@ def run_day(
     ledger: Ledger, day: date, path: Path, key_file: Path, *, debt: Debt = NO_DEBT
 ) -> GateState:
     """Fire the gate for one day, persisting whatever it decides."""
-    decision = decide(ledger, day=day, now=NOW, key_file=key_file, debt=debt)
+    decision = decide(
+        ledger, day=day, now=NOW, key_file=key_file, context=DayContext(debt=debt)
+    )
     apply_decision(ledger, decision, path)
     return decision.state
 
@@ -150,7 +158,12 @@ def test_first_run_seeds_without_touching_the_gate(tmp_path: Path, hmac_key: Pat
 
     assert needs_seeding(ledger)
     assert (
-        seed_ledger(ledger, old, day=MONDAY, now=NOW, path=path, key_file=hmac_key)
+        seed_ledger(
+            ledger,
+            old,
+            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+            path=path,
+        )
         == 20
     )
     assert not needs_seeding(ledger)
@@ -190,7 +203,12 @@ def test_seeding_never_writes_a_credit(tmp_path: Path, hmac_key: Path):
         reason="5 recent",
     )
 
-    seed_ledger(ledger, probe, day=MONDAY, now=NOW, path=path, key_file=hmac_key)
+    seed_ledger(
+        ledger,
+        probe,
+        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
+        path=path,
+    )
 
     kinds = {entry.kind for entry in ledger.entries.values()}
     assert "credit" not in kinds

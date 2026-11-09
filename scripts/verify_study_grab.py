@@ -27,6 +27,12 @@ being released is the original bug wearing the fix as a disguise, and it is the
 single most likely thing to regress when gatelock is bumped.
 """
 
+# Reaches gatelock and lock privates on purpose: it checks the adapter's own
+# assumptions on a real X server, so routing it through ``_gatelock_internals``
+# would be marking its own homework (CLAUDE.md). Same access as its ruff
+# ``SLF001`` exemption, declared here because pylint has no per-file-ignores.
+# pylint: disable=protected-access
+
 from __future__ import annotations
 
 from concurrent.futures import Future
@@ -47,7 +53,7 @@ from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
-from leetcode_guard._lock_deps import GuardDeps
+from leetcode_guard._lock_deps import GuardDeps, GuardSeams
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import rank_pool
@@ -106,7 +112,6 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
         deps=GuardDeps(
             ledger_path=workdir / "ledger.json",
             escape_path=workdir / "escape.json",
-            incident_path=workdir / "incidents.json",
             post=lambda _q, _v: GraphQLResult(data={"recentAcSubmissionList": []}),
             username="kuchy",
             auth=signed_out,
@@ -115,9 +120,12 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
             ),
             probe=probe,
             write_ledger=False,
-            wait_turn=False,
-            executor=_Inline(),
-            now=lambda: NOW,
+            seams=GuardSeams(
+                incident_path=workdir / "incidents.json",
+                wait_turn=False,
+                executor=_Inline(),
+                now=lambda: NOW,
+            ),
         ),
     )
 
@@ -172,7 +180,7 @@ def main() -> int:
     results: list[bool] = []
     try:
         _pump(guard)
-        if guard._config.resolved_grab() != "global":
+        if guard._run.config.resolved_grab() != "global":
             print("  [FAIL] this is not a production lock; nothing to prove")
             return 1
 

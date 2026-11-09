@@ -14,6 +14,7 @@ from gatelock import LockConfig
 
 from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_problems import NO_PROBLEMS_TEXT
+from leetcode_guard._view_types import ProblemList, ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
 
@@ -39,12 +40,12 @@ def rows_view(count: int, *, buttons: int | None = None, on_open=None) -> GuardV
         balance_line=MagicMock(),
         status_line=MagicMock(),
         notes_label=MagicMock(),
-        problem_labels=[MagicMock() for _ in range(count)],
-        problems_frame=MagicMock(),
-        open_buttons=[
-            MagicMock() for _ in range(count if buttons is None else buttons)
-        ],
-        on_open=on_open,
+        problems=ProblemList(
+            labels=[MagicMock() for _ in range(count)],
+            frame=MagicMock(),
+            buttons=[MagicMock() for _ in range(count if buttons is None else buttons)],
+        ),
+        hooks=ViewHooks(on_open=on_open),
     )
 
 
@@ -65,9 +66,9 @@ def test_a_solved_problem_frees_its_slot_and_the_bench_moves_up():
         ),
     )
 
-    view.problem_labels[0].configure.assert_called_once_with(text="1. B")
-    view.problem_labels[1].configure.assert_called_once_with(text="2. C")
-    view.problem_labels[2].master.pack_forget.assert_called_once_with()
+    view.problems.labels[0].configure.assert_called_once_with(text="1. B")
+    view.problems.labels[1].configure.assert_called_once_with(text="2. C")
+    view.problems.labels[2].master.pack_forget.assert_called_once_with()
 
 
 def test_a_promoted_row_opens_the_problem_it_now_shows():
@@ -82,7 +83,7 @@ def test_a_promoted_row_opens_the_problem_it_now_shows():
 
     apply_viewmodel([view], model(ProblemLine(label="1. B", url="https://x/b/")))
 
-    command = view.open_buttons[0].configure.call_args.kwargs["command"]
+    command = view.problems.buttons[0].configure.call_args.kwargs["command"]
     command()
     handler.assert_called_once_with("https://x/b/")
 
@@ -98,11 +99,11 @@ def test_no_row_is_ever_destroyed():
 
     apply_viewmodel([view], model(ProblemLine(label="1. B", url="https://x/b/")))
 
-    for label in view.problem_labels:
+    for label in view.problems.labels:
         label.destroy.assert_not_called()
-    for button in view.open_buttons:
+    for button in view.problems.buttons:
         button.destroy.assert_not_called()
-    view.problems_frame.destroy.assert_not_called()
+    view.problems.frame.destroy.assert_not_called()
 
 
 def test_solving_everything_on_offer_leaves_the_stand_in_sentence():
@@ -111,9 +112,9 @@ def test_solving_everything_on_offer_leaves_the_stand_in_sentence():
 
     apply_viewmodel([view], model())
 
-    view.problem_labels[0].configure.assert_called_once_with(text=NO_PROBLEMS_TEXT)
-    view.open_buttons[0].pack_forget.assert_called_once_with()
-    view.problem_labels[1].master.pack_forget.assert_called_once_with()
+    view.problems.labels[0].configure.assert_called_once_with(text=NO_PROBLEMS_TEXT)
+    view.problems.buttons[0].pack_forget.assert_called_once_with()
+    view.problems.labels[1].master.pack_forget.assert_called_once_with()
 
 
 def test_an_inert_list_is_repainted_without_rebinding_anything():
@@ -122,8 +123,8 @@ def test_an_inert_list_is_repainted_without_rebinding_anything():
 
     apply_viewmodel([view], model(ProblemLine(label="1. B", url="https://x/b/")))
 
-    view.problem_labels[0].configure.assert_called_once_with(text="1. B")
-    view.open_buttons[0].configure.assert_not_called()
+    view.problems.labels[0].configure.assert_called_once_with(text="1. B")
+    view.problems.buttons[0].configure.assert_not_called()
 
 
 def test_a_row_without_a_button_is_repainted_anyway():
@@ -132,7 +133,7 @@ def test_a_row_without_a_button_is_repainted_anyway():
 
     apply_viewmodel([view], model(ProblemLine(label="1. B", url="https://x/b/")))
 
-    view.problem_labels[0].configure.assert_called_once_with(text="1. B")
+    view.problems.labels[0].configure.assert_called_once_with(text="1. B")
 
 
 def test_an_empty_list_with_no_buttons_still_gets_the_stand_in():
@@ -140,7 +141,7 @@ def test_an_empty_list_with_no_buttons_still_gets_the_stand_in():
 
     apply_viewmodel([view], model())
 
-    view.problem_labels[0].configure.assert_called_once_with(text=NO_PROBLEMS_TEXT)
+    view.problems.labels[0].configure.assert_called_once_with(text=NO_PROBLEMS_TEXT)
 
 
 def test_the_status_line_is_wrapped(tk_mock):

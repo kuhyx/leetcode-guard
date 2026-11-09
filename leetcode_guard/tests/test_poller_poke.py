@@ -10,7 +10,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 from typing import Any
 
-from leetcode_guard._poller import SolvePoller
+from leetcode_guard._poller import PollerSettings, SolvePoller
 
 
 class FakeRoot:
@@ -65,12 +65,13 @@ class ManualExecutor:
 def _poller(root: FakeRoot, executor: ManualExecutor, seen: list[bool]) -> SolvePoller:
     poller: SolvePoller = SolvePoller(
         root,
-        interval_ms=30_000,
-        work=lambda: "probe",
-        on_result=lambda _r: None,
-        executor=executor,
+        PollerSettings(
+            interval_ms=30_000,
+            work=lambda: "probe",
+            on_result=lambda _r: seen.append(poller.last_was_poke),
+            executor=executor,
+        ),
     )
-    poller._on_result = lambda _r: seen.append(poller.last_was_poke)
     return poller
 
 
