@@ -40,8 +40,11 @@ class Heatmap extends StatelessWidget {
     builder: (context, constraints) {
       final cell = math.min(14, constraints.maxWidth / weeks - gap).toDouble();
       final scheme = Theme.of(context).colorScheme;
+      // Spoken only: the cells are the picture, this is what they add up to.
+      final semanticLabel =
+          '${total(counts, today)} submissions in the last 52 weeks';
       return Semantics(
-        label: '${total(counts, today)} submissions in the last 52 weeks',
+        label: semanticLabel,
         child: SizedBox(
           key: const Key('heatmap'),
           width: weeks * (cell + gap),

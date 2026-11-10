@@ -70,7 +70,7 @@ void main() {
       matching: find.byType(SectionCard),
     );
     final split = find.ancestor(
-      of: find.text('Difficulty split'),
+      of: find.byKey(const Key('section-difficulty-split')),
       matching: find.byType(SectionCard),
     );
     expect(

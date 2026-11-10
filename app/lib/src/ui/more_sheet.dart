@@ -5,10 +5,11 @@ library;
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/difficulty_mark.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
-/// [rows] as two tiles to a line, the label above its value: half the height
-/// of the same rows one per line, and a long label wraps in a whole column.
+/// [rows] as two tiles to a line, the icon above its value: half the height
+/// of the same rows one per line.
 List<Widget> pairRows(List<InfoRow> rows) => [
   for (var i = 0; i < rows.length; i += 2)
     Row(
@@ -39,11 +40,16 @@ class _Tile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            row.label,
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: muted),
-          ),
+          // The label is spoken only (textgate); the row's icon is painted.
+          if (row case final LevelRow level)
+            DifficultyMark(level.level, semanticLabel: level.label)
+          else
+            Icon(
+              row.icon ?? Icons.circle_outlined,
+              color: muted,
+              size: AppSpacing.lg,
+              semanticLabel: row.label,
+            ),
           Text(
             row.value,
             key: const Key('value'),
@@ -55,12 +61,17 @@ class _Tile extends StatelessWidget {
   }
 }
 
-/// A button that opens [rows] in a bottom sheet titled [title].
+/// A button that opens [rows] in a bottom sheet for the section [title].
+///
+/// No words (textgate): it paints [icon] and [label], which is a count or
+/// empty; [title] is spoken ("Show all <title>") and keys the button and
+/// the sheet.
 Widget showAllButton(
   BuildContext context, {
   required String label,
   required String title,
   required List<Widget> rows,
+  IconData? icon,
 }) => Align(
   alignment: Alignment.centerLeft,
   widthFactor: 1,
@@ -75,11 +86,20 @@ Widget showAllButton(
           key: Key('sheet-$title'),
           padding: kGutter,
           shrinkWrap: true,
-          children: [SectionHeader(title), ...rows],
+          children: rows,
         ),
       ),
     ),
-    child: Text(label),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon ?? Icons.expand_more, semanticLabel: 'Show all $title'),
+        if (label.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.xs),
+          Text(label),
+        ],
+      ],
+    ),
   ),
 );
 
@@ -91,15 +111,17 @@ List<Widget> limitedRows<T>(
   int limit,
   Widget Function(T) row, {
   required String title,
+  Widget? leading,
 }) {
   if (items == null || items.length <= limit) return listRows(items, row);
   return [
     for (final item in items.take(limit)) row(item),
     showAllButton(
       context,
-      label: 'Show all ${items.length}',
+      label: '${items.length}',
       title: title,
       rows: [for (final item in items) row(item)],
+      icon: leading is Icon ? leading.icon : Icons.expand_more,
     ),
   ];
 }

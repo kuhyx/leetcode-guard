@@ -1,5 +1,10 @@
-/// The words for where the PC's coach relay stands, shared by the Coach
-/// tab and the session screen.
+/// Where the PC's coach relay stands, shared by the Coach tab and the
+/// session screen.
+///
+/// No words (textgate): one glyph in the danger hue per kind of trouble,
+/// the old sentence as its spoken label. What stays painted is data: the
+/// command that starts the relay (kuhy types it) and the time of the last
+/// heartbeat.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -7,39 +12,77 @@ import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_how_to.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// The command that starts the relay (desktop, relay down).
 const kStartRelayCommand = 'systemctl --user start leetcode-coach-relay';
 
-/// Lines describing [c]'s presence, or empty when it is online.
+/// Spoken while the first heartbeat is read.
+const kCheckingPc = 'Checking the PC...';
+
+/// The relay's state as rows, or empty when it is online.
 List<Widget> presenceLines(BuildContext context, CoachController c) {
+  final presence = c.presence;
   final danger = Theme.of(context).colorScheme.error;
-  switch (c.presence) {
+  Widget glyph(String spoken, {Color? color}) => Icon(
+    presenceIcon(presence, c.outage?.outage),
+    key: const Key('presence'),
+    color: color ?? danger,
+    size: 32,
+    semanticLabel: spoken,
+  );
+  switch (presence) {
     case CoachPresence.online:
       return const [];
     case CoachPresence.checking:
-      return const [Muted('Checking the PC...')];
+      return [
+        glyph(
+          kCheckingPc,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ];
     case CoachPresence.relayDown:
       return [
-        Line(kRelayDownText, color: danger, strong: true),
-        const Muted('Start it on this PC:'),
-        SelectableText(kStartRelayCommand, style: monoStyle(context)),
+        glyph(kRelayDownText),
+        Row(
+          children: [
+            const Icon(Icons.terminal, semanticLabel: 'Start it on this PC'),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: SelectableText(
+                kStartRelayCommand,
+                style: monoStyle(context),
+              ),
+            ),
+          ],
+        ),
       ];
     case CoachPresence.pcOffline:
       final beat = c.heartbeat?.beat;
-      final seen = beat == null
-          ? 'The relay has never checked in.'
-          : 'Last heard from ${timeOfMs(beat, c.now())}.';
       return [
-        Line('PC offline', color: danger, strong: true),
-        Muted('No heartbeat for over 2 minutes. $seen'),
+        Row(
+          children: [
+            glyph(
+              beat == null
+                  ? 'PC offline. The relay has never checked in.'
+                  : 'PC offline. No heartbeat for over 2 minutes.',
+            ),
+            const SizedBox(width: AppSpacing.md),
+            // The last heartbeat's time, or the empty set for never.
+            Muted(
+              beat == null
+                  ? kNoneRecorded
+                  : '$kAsOf ${timeOfMs(beat, c.now())}',
+              key: const Key('last-beat'),
+            ),
+          ],
+        ),
       ];
     case CoachPresence.unreachable:
       return [
-        Line('Cannot reach the coach', color: danger, strong: true),
-        Muted(c.outage?.message ?? kUnknown),
+        glyph('Cannot reach the coach: ${c.outage?.message ?? kUnknown}'),
       ];
   }
 }

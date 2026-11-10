@@ -36,4 +36,20 @@ void main() {
     };
     expect(Heatmap.total(counts, today), 3);
   });
+
+  testWidgets('the total is spoken, never painted', (tester) async {
+    final today = DateTime.utc(2026, 10, 23);
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Heatmap(counts: {today: 3}, today: today),
+      ),
+    );
+    expect(
+      find.bySemanticsLabel('3 submissions in the last 52 weeks'),
+      findsOneWidget,
+    );
+    expect(find.byType(Text), findsNothing);
+    semantics.dispose();
+  });
 }

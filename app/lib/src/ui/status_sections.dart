@@ -1,54 +1,91 @@
-/// The gate sections of the Status tab: verdict, credits, solves, days,
-/// budgets. The diagnostic ones live in `status_health.dart`.
+/// The gate sections of the Status tab: verdict and credits. Solves, days
+/// and budgets live in `status_days.dart`, the diagnostic ones in
+/// `status_health.dart`.
 ///
 /// Colour is load-bearing, as in the tkinter window it replaces: red means
 /// the gate is holding you, amber needs attention, green is clear. Every
 /// sentence of rules (pricing, "why it did not trigger") is Python's own
-/// text from the snapshot: nothing here re-derives a rule.
+/// text from the snapshot: nothing here re-derives a rule. No words are
+/// painted (textgate): those sentences are spoken, and only their dates and
+/// numbers are drawn, next to an icon.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/more_sheet.dart';
+import 'package:leetcode_guard/src/ui/status_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+
+/// The icon of each gate state Python publishes (`GateState` in
+/// `leetcode_guard/_gate_state.py`); anything else is a question mark.
+IconData gateStateIcon(String? state) => switch (state) {
+  'not-started' => Icons.hourglass_empty,
+  'already-charged' => Icons.done_all,
+  'charged' => Icons.paid,
+  'locked' => Icons.lock,
+  'locked-clock' => Icons.update_disabled,
+  'free-day' => Icons.beach_access,
+  'sick-day' => Icons.sick,
+  'focus-day' => Icons.center_focus_strong,
+  _ => Icons.help_outline,
+};
 
 /// "Right now": am I locked, and why.
 Widget verdictSection(BuildContext context, StatusData? s) {
   const title = 'Right now';
-  if (s == null) return const SectionCard.unknown(title: title);
+  final leading = sectionIcon(Icons.lock_clock, title);
+  if (s == null) return SectionCard.unknown(title: title, leading: leading);
   final colors = statusColors(context);
   final danger = Theme.of(context).colorScheme.error;
-  final (headline, color) = switch (s.locked) {
-    true => ('LOCKED: solve ${show(s.needed)} more', danger),
-    false => (
-      'Unlocked (${show(s.state)})',
-      (s.available ?? 0) > 0 ? colors.success : colors.warning,
+  final reason = s.reason ?? 'Reason $kUnknown';
+  final headline = switch (s.locked) {
+    true => GlyphLine(
+      Icons.lock,
+      show(s.needed),
+      spoken: 'LOCKED: solve ${show(s.needed)} more. $reason',
+      color: danger,
+      strong: true,
+      glyphs: [Icon(Icons.code, color: danger)],
     ),
-    null => ('Lock state $kUnknown', null),
+    false => GlyphLine(
+      Icons.lock_open,
+      '',
+      spoken: 'Unlocked (${show(s.state)}). $reason',
+      color: (s.available ?? 0) > 0 ? colors.success : colors.warning,
+      strong: true,
+      glyphs: [Icon(gateStateIcon(s.state))],
+    ),
+    null => GlyphLine(
+      Icons.help_outline,
+      kUnknown,
+      spoken: 'Lock state $kUnknown. $reason',
+      strong: true,
+    ),
   };
   final explanation = s.explanation;
   return SectionCard(
     title: title,
+    leading: leading,
     children: [
-      Line(headline, color: color, strong: true),
-      Line(
-        '${show(s.day)} (${show(s.weekday)}), costs ${show(s.cost)} credit(s)',
-      ),
-      Muted(s.reason ?? 'Reason $kUnknown'),
-      InfoRow('Surcharge', show(s.surcharge)),
-      InfoRow('Paid today', show(s.chargedToday)),
-      if (explanation != null && explanation.isNotEmpty) ...[
+      KeyedSubtree(key: const Key('verdict'), child: headline),
+      ...iconPairs([
+        InfoRow('Day', show(s.day), icon: Icons.today),
+        InfoRow('Cost', show(s.cost), icon: Icons.sell_outlined),
+        InfoRow('Surcharge', show(s.surcharge), icon: Icons.add_card),
+        InfoRow('Paid today', show(s.chargedToday), icon: Icons.paid),
+      ]),
+      if (explanation != null && explanation.isNotEmpty)
         showAllButton(
           context,
-          label: 'Why the lock did not trigger',
+          label: '',
+          icon: Icons.help_outline,
           title: title,
           rows: [
             for (final (i, line) in explanation.indexed)
-              Muted('${i + 1}. $line'),
+              spokenNote(Icons.notes, '${i + 1}. $line'),
           ],
         ),
-      ],
     ],
   );
 }
@@ -56,129 +93,48 @@ Widget verdictSection(BuildContext context, StatusData? s) {
 /// "Credits (tokens)": what you have, earned and spent.
 Widget creditsSection(BuildContext context, StatusData? s) {
   const title = 'Credits (tokens)';
-  if (s == null) return const SectionCard.unknown(title: title);
+  final leading = sectionIcon(Icons.toll, title);
+  if (s == null) return SectionCard.unknown(title: title, leading: leading);
   final colors = statusColors(context);
   final debt = s.debt;
   return SectionCard(
     title: title,
+    leading: leading,
     children: [
-      Line(
-        '${show(s.available)} available',
+      GlyphLine(
+        Icons.toll,
+        show(s.available),
+        spoken: '${show(s.available)} available',
         color: (s.available ?? 0) > 0 ? colors.success : colors.warning,
         strong: true,
+        key: const Key('available'),
       ),
-      ...pairRows([
-        InfoRow('Earned all-time', show(s.earnedAllTime)),
-        InfoRow('Spent all-time', show(s.spentAllTime)),
-        InfoRow('Needed today', show(s.needed)),
+      ...iconPairs([
+        InfoRow('Earned all-time', show(s.earnedAllTime), icon: Icons.add),
+        InfoRow('Spent all-time', show(s.spentAllTime), icon: Icons.remove),
+        InfoRow('Needed today', show(s.needed), icon: Icons.flag_outlined),
         if (debt == null)
-          InfoRow('Debt', kUnknown)
+          InfoRow('Debt', kUnknown, icon: Icons.money_off)
         else ...[
           InfoRow(
             'Debt outstanding',
             show(debt.outstanding),
+            icon: Icons.money_off,
             color: (debt.outstanding ?? 0) > 0 ? colors.warning : null,
           ),
-          InfoRow('Debt owed', show(debt.owed)),
-          InfoRow('Debt repaid', show(debt.repaid)),
-          InfoRow('Missed days', show(debt.missedDays)),
+          InfoRow('Debt owed', show(debt.owed), icon: Icons.receipt_long),
+          InfoRow('Debt repaid', show(debt.repaid), icon: Icons.replay),
+          InfoRow('Missed days', show(debt.missedDays), icon: Icons.event_busy),
         ],
       ]),
       if (s.pricingNote case final String note)
         showAllButton(
           context,
-          label: 'Pricing rules',
+          label: '',
+          icon: Icons.sell_outlined,
           title: title,
-          rows: [Muted(note)],
+          rows: [spokenNote(Icons.sell_outlined, note)],
         ),
     ],
   );
-}
-
-/// "Solves": what you actually solved.
-Widget solvesSection(BuildContext context, StatusData? s) {
-  const title = 'Solves';
-  final solves = s?.solves;
-  if (solves == null) return const SectionCard.unknown(title: title);
-  return SectionCard(
-    title: title,
-    children: [
-      ...pairRows([
-        InfoRow('Today', show(solves.today)),
-        InfoRow('Last 7 days', show(solves.last7Days)),
-        InfoRow('Total credited', show(solves.totalCredited)),
-      ]),
-      ...limitedRows(context, solves.recent, 3, (solve) {
-        final lang = solve.lang == null ? '' : ' [${solve.lang}]';
-        return InfoRow(
-          show(solve.day),
-          '${show(solve.titleSlug)}$lang',
-          key: ObjectKey(solve),
-        );
-      }, title: 'Recent solves'),
-    ],
-  );
-}
-
-/// "Days settled": which days were charged, and since when.
-Widget daysSection(StatusData? s) {
-  const title = 'Days settled';
-  final days = s?.days;
-  if (days == null) return const SectionCard.unknown(title: title);
-  final charged = days.charged;
-  return SectionCard(
-    title: title,
-    children: [
-      InfoRow(
-        'Gate in force from ${show(days.startDate)}',
-        show(days.gateInForce),
-      ),
-      InfoRow('Days charged', show(charged?.length)),
-      if (charged == null)
-        const Muted(kUnknown)
-      else if (charged.isEmpty)
-        const Muted(kNoneRecorded)
-      else
-        Muted(charged.join(', ')),
-    ],
-  );
-}
-
-/// "Escape budgets": the escape hatch and network-incident allowances.
-Widget budgetsSection(BuildContext context, StatusData? s) {
-  const title = 'Escape budgets';
-  final budgets = s?.budgets;
-  if (budgets == null) return const SectionCard.unknown(title: title);
-  final danger = Theme.of(context).colorScheme.error;
-  return SectionCard(
-    title: title,
-    children: [
-      if (budgets.isEmpty) const Muted(kNoneRecorded),
-      for (final MapEntry(:key, :value) in budgets.entries)
-        ..._budgetRows(key, value, danger),
-    ],
-  );
-}
-
-List<Widget> _budgetRows(String name, Budget? b, Color danger) {
-  if (b == null) return [Muted('$name: $kUnknown')];
-  final wait = b.nextWaitSeconds;
-  final summary = b.summary;
-  return [
-    Line(
-      summary ?? b.label ?? name,
-      color: b.exhausted ?? false ? danger : null,
-    ),
-    if (wait != null || (b.exhausted ?? false))
-      Muted(
-        [
-          if (wait != null) 'next use waits ${wait ~/ 60} min',
-          if (b.exhausted ?? false) 'EXHAUSTED',
-        ].join(', '),
-      ),
-    // Python's summary already words the counters; without it, show them.
-    if (summary == null)
-      for (final MapEntry(:key, :value) in b.extra.entries)
-        Muted('$key: ${show(value)}'),
-  ];
 }

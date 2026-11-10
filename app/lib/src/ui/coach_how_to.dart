@@ -1,84 +1,111 @@
-/// The Coach tab's "How to start" card: the method, the first command in a
-/// monospace box with a copy button, and the other commands.
+/// The Coach tab's "How to start" card: the method as a row of step glyphs,
+/// the first command in a monospace box with a copy button, and the other
+/// commands in a sheet.
+///
+/// No words (textgate): the commands are what kuhy types (content); the
+/// coach's step names and explanations and each command's meaning are
+/// spoken only.
 library;
+
+import 'dart:async';
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
-import 'package:leetcode_guard/src/ui/more_sheet.dart';
+import 'package:leetcode_guard/src/ui/coach_dialogs.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
-/// "How to start": the method, the first command and the other commands;
-/// "unknown" when [howTo] is null.
-class HowToCard extends StatelessWidget implements Titled {
-  /// Creates the card over [howTo].
-  const new(this.howTo, {super.key});
+/// The card's spoken title (a [SectionCard] title is never painted).
+const kHowToTitle = 'How to start';
 
-  /// The coach's `how_to` block, or null when unknown.
-  final HowTo? howTo;
+/// The card's painted mark, also its phone chip.
+const kHowToIcon = Icon(
+  Icons.rocket_launch_outlined,
+  semanticLabel: kHowToTitle,
+);
 
-  @override
-  String get cardTitle => 'How to start';
+/// "How to start" over [howTo]; unknown when it is null. A bare
+/// [SectionCard], so the phone chip shows its icon.
+SectionCard howToCard(HowTo? howTo) {
+  if (howTo == null) {
+    return const SectionCard.unknown(title: kHowToTitle, leading: kHowToIcon);
+  }
+  final first = howTo.firstCommand;
+  return SectionCard(
+    title: kHowToTitle,
+    leading: kHowToIcon,
+    children: [
+      _Method(howTo.steps ?? const []),
+      if (first != null) ...[
+        const SizedBox(height: AppSpacing.sm),
+        _CommandBox(first),
+      ],
+      Align(
+        alignment: Alignment.centerLeft,
+        child: _CommandsButton(howTo.commands ?? const []),
+      ),
+    ],
+  );
+}
+
+/// The method's steps as glyphs in order, arrows between them.
+class _Method extends StatelessWidget {
+  const new(this.steps);
+
+  final List<HowToStep> steps;
 
   @override
   Widget build(BuildContext context) {
-    const title = 'How to start';
-    final h = howTo;
-    if (h == null) return const SectionCard.unknown(title: title);
-    final first = h.firstCommand;
-    return SectionCard(
-      title: title,
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Wrap(
+      key: const Key('method'),
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.xs,
       children: [
-        for (final (index, step) in (h.steps ?? const <HowToStep>[]).indexed)
-          Line('${index + 1}. ${show(step.name)}', strong: true),
-        if (first != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          const Muted('First session:'),
-          _CommandBox(first),
+        for (final (i, step) in steps.indexed) ...[
+          if (i > 0) Icon(Icons.arrow_forward, size: 16, color: muted),
+          Icon(
+            switch (stepNumberOf(step.name)) {
+              final int n => stepGlyph(n).icon,
+              null => Icons.circle_outlined,
+            },
+            key: Key('method-$i'),
+            semanticLabel: '${i + 1}. ${show(step.name)}: ${show(step.text)}',
+          ),
         ],
-        Wrap(
-          children: [
-            showAllButton(
-              context,
-              label: 'The method',
-              title: 'The method',
-              rows: [
-                for (final (i, step)
-                    in (h.steps ?? const <HowToStep>[]).indexed)
-                  _Step(i + 1, step),
-              ],
-            ),
-            showAllButton(
-              context,
-              label: 'All commands',
-              title: 'Commands',
-              rows: [
-                for (final c in h.commands ?? const <HowToCommand>[])
-                  _CommandRow(c),
-              ],
-            ),
-          ],
-        ),
       ],
     );
   }
 }
 
-class _Step extends StatelessWidget {
-  const new(this.number, this.step);
+/// Opens the sheet of every command.
+class _CommandsButton extends StatelessWidget {
+  const new(this.commands);
 
-  final int number;
-  final HowToStep step;
+  final List<HowToCommand> commands;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Line('$number. ${show(step.name)}', strong: true),
-      Muted(show(step.text)),
-    ],
+  Widget build(BuildContext context) => IconButton(
+    key: const Key('show-commands'),
+    icon: const Icon(Icons.list, semanticLabel: 'All commands'),
+    onPressed: () => unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => SafeArea(
+          child: ListView(
+            key: const Key('sheet'),
+            padding: kGutter,
+            shrinkWrap: true,
+            children: [for (final c in commands) _CommandRow(c)],
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -98,7 +125,9 @@ class _CommandBox extends StatelessWidget {
 
   Future<void> _copy(BuildContext context) async {
     await Clipboard.setData(ClipboardData(text: command));
-    if (context.mounted) showToast(context, 'Copied');
+    if (context.mounted) {
+      showIconSnack(context, Icons.check, semanticLabel: 'Copied');
+    }
   }
 
   @override
@@ -111,6 +140,8 @@ class _CommandBox extends StatelessWidget {
     ),
     child: Row(
       children: [
+        const Icon(Icons.terminal, semanticLabel: 'First session'),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           // One line however narrow: a command broken at a hyphen reads as
           // two. It shrinks to fit only when it would not.
@@ -122,8 +153,7 @@ class _CommandBox extends StatelessWidget {
         ),
         IconButton(
           key: const Key('copy-command'),
-          tooltip: 'Copy command',
-          icon: const Icon(Icons.copy),
+          icon: const Icon(Icons.copy, semanticLabel: 'Copy command'),
           onPressed: () => _copy(context),
         ),
       ],
@@ -131,6 +161,7 @@ class _CommandBox extends StatelessWidget {
   );
 }
 
+/// A command, its meaning spoken.
 class _CommandRow extends StatelessWidget {
   const new(this.entry);
 
@@ -139,11 +170,13 @@ class _CommandRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Row(
       children: [
-        SelectableText(show(entry.command), style: monoStyle(context)),
-        Muted(show(entry.meaning)),
+        Icon(Icons.terminal, size: 18, semanticLabel: show(entry.meaning)),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: SelectableText(show(entry.command), style: monoStyle(context)),
+        ),
       ],
     ),
   );

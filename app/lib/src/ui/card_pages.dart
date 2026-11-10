@@ -68,7 +68,13 @@ class _CardPagesState extends State<CardPages> {
                 for (final (i, page) in pages.indexed) ...[
                   if (i > 0) const SizedBox(width: AppSpacing.sm),
                   ChoiceChip(
-                    label: Text(pageTitle(page, i)),
+                    // A text-free section names its chip with its icon.
+                    // Anything without an icon falls back to its number.
+                    label: switch (page) {
+                      SectionCard(:final leading?) => leading,
+                      Iconic(:final cardIcon) => cardIcon,
+                      _ => Text('${i + 1}'),
+                    },
                     selected: i == index,
                     onSelected: (_) => setState(() => _selected = i),
                   ),

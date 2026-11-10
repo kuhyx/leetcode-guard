@@ -1,6 +1,10 @@
 /// The Coach tab's cluster cards: one per cluster, with progress, the next
 /// problem and every problem as a link to its LeetCode page; with a coach
 /// relay, each problem and the next one also get a Start.
+///
+/// No words (textgate): a cluster is its glyph (its id is spoken), its
+/// progress `solved / total` with a bar, the next problem an arrow and the
+/// problem's own title (content).
 library;
 
 import 'package:design_system/design_system.dart';
@@ -8,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/problem_url.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
@@ -30,59 +35,93 @@ List<Widget> clusterCards(
   UrlOpener openUrl, [
   CoachSessionLink? link,
 ]) {
-  if (clusters == null) return const [SectionCard.unknown(title: 'Clusters')];
+  if (clusters == null) {
+    return const [SectionCard.unknown(title: kClustersTitle, leading: _icon)];
+  }
   if (clusters.isEmpty) {
     return const [
-      SectionCard(title: 'Clusters', children: [Muted(kNoneRecorded)]),
+      SectionCard(
+        title: kClustersTitle,
+        leading: _icon,
+        children: [Muted(kNoneRecorded)],
+      ),
     ];
   }
   return [
-    for (final e in _ordered(clusters)) _Cluster(e.key, e.value, openUrl, link),
+    for (final e in _ordered(clusters)) _cluster(e.key, e.value, openUrl, link),
   ];
 }
 
-class _Cluster extends StatelessWidget implements Titled {
-  const new(this.name, this.progress, this.openUrl, this.link);
+/// The spoken title of the clusters card when there is no cluster to show.
+const kClustersTitle = 'Clusters';
 
-  final String name;
-  final ClusterProgress? progress;
-  final UrlOpener openUrl;
-  final CoachSessionLink? link;
+const _icon = Icon(Icons.category, semanticLabel: kClustersTitle);
 
-  @override
-  String get cardTitle => name;
-
-  /// The title of the problem the coach would serve next.
-  String? get _next {
-    final slug = progress?.next;
-    if (slug == null) return null;
-    for (final p in progress?.problems ?? const <ClusterProblem>[]) {
-      if (p.slug == slug) return p.title ?? slug;
-    }
-    return slug;
+/// The title of the problem the coach would serve next.
+String? _nextTitle(ClusterProgress? progress) {
+  final slug = progress?.next;
+  if (slug == null) return null;
+  for (final p in progress?.problems ?? const <ClusterProblem>[]) {
+    if (p.slug == slug) return p.title ?? slug;
   }
+  return slug;
+}
+
+/// One cluster's card: a bare [SectionCard], so the phone chip shows the
+/// cluster's glyph.
+SectionCard _cluster(
+  String name,
+  ClusterProgress? p,
+  UrlOpener openUrl,
+  CoachSessionLink? link,
+) {
+  final next = _nextTitle(p);
+  final nextSlug = p?.next;
+  return SectionCard(
+    title: name,
+    leading: Icon(clusterIcon(name), semanticLabel: name),
+    children: [
+      InfoRow(
+        'Solved',
+        fraction(p?.solved, p?.total),
+        icon: Icons.check_circle_outline,
+        key: Key('row-$name'),
+      ),
+      _SolvedBar(p?.solved, p?.total),
+      if (next != null)
+        Row(
+          children: [
+            const Icon(Icons.next_plan_outlined, semanticLabel: 'Next'),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Muted(next, key: Key('next-$name'))),
+            if (link != null && nextSlug != null)
+              StartButton(link, nextSlug, keyName: 'start-next-$name'),
+          ],
+        ),
+      for (final problem in p?.problems ?? const <ClusterProblem>[])
+        _ClusterProblemTile(problem, openUrl, link),
+    ],
+  );
+}
+
+/// The progress bar under `solved / total`; nothing when either is unknown.
+class _SolvedBar extends StatelessWidget {
+  const new(this.solved, this.total);
+
+  final int? solved;
+  final int? total;
 
   @override
   Widget build(BuildContext context) {
-    final p = progress;
-    final next = _next;
-    final nextSlug = p?.next;
-    final link = this.link;
-    return SectionCard(
-      title: name,
-      children: [
-        InfoRow('Solved', fraction(p?.solved, p?.total), key: Key('row-$name')),
-        if (next != null)
-          Row(
-            children: [
-              Expanded(child: Muted('Next: $next')),
-              if (link != null && nextSlug != null)
-                StartButton(link, nextSlug, keyName: 'start-next-$name'),
-            ],
-          ),
-        for (final problem in p?.problems ?? const <ClusterProblem>[])
-          _ClusterProblemTile(problem, openUrl, link),
-      ],
+    final s = solved;
+    final t = total;
+    if (s == null || t == null || t <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: LinearProgressIndicator(
+        value: (s / t).clamp(0, 1).toDouble(),
+        color: statusColors(context).success,
+      ),
     );
   }
 }

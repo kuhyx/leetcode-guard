@@ -14,18 +14,34 @@ abstract interface class Titled {
   String get cardTitle;
 }
 
+/// A section that names its chip with an icon (textgate: chips carry no
+/// words). [SectionCard] gets this from its `leading`; other sections
+/// implement it directly.
+abstract interface class Iconic {
+  /// The chip's icon.
+  Widget get cardIcon;
+}
+
 /// One titled group of rows on a raised surface. No shadow: this is a dark
 /// UI, where depth comes from the lighter surface alone.
 class SectionCard extends StatelessWidget implements Titled {
   /// Creates a section titled [title] holding [children].
-  const new({required this.title, required this.children, super.key});
+  const new({
+    required this.title,
+    required this.children,
+    this.leading,
+    super.key,
+  });
 
   /// A section whose data is unknown: the title and the word, nothing else.
-  const new unknown({required this.title, super.key})
+  const new unknown({required this.title, this.leading, super.key})
     : children = const [Muted(kUnknown)];
 
   /// The heading.
   final String title;
+
+  /// Optional leading icon for text-free headers.
+  final Widget? leading;
 
   @override
   String get cardTitle => title;
@@ -46,7 +62,12 @@ class SectionCard extends StatelessWidget implements Titled {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SectionHeader(title),
+          // The title is spoken only (textgate): the header paints the icon.
+          Semantics(
+            header: true,
+            label: title,
+            child: ExcludeSemantics(child: Row(children: [?leading])),
+          ),
           const SizedBox(height: AppSpacing.sm),
           ...children,
         ],
@@ -55,17 +76,24 @@ class SectionCard extends StatelessWidget implements Titled {
   }
 }
 
-/// A label on the left, its value on the right. An unknown value is muted
+/// An icon on the left, its value on the right. An unknown value is muted
 /// so it never reads as a measured number.
+///
+/// No words (textgate): [label] is spoken only (the icon's semantic label);
+/// what is painted is [icon]. Every caller passes an icon that says what the
+/// value is; the fallback dot exists only so a forgotten one is visible.
 class InfoRow extends StatelessWidget {
   /// Creates a row; the key `row-<label>` lets tests find its value. Rows
   /// in a list whose labels can repeat (two solves on one day) pass their
   /// own [key] instead.
-  new(this.label, this.value, {this.color, Key? key})
+  new(this.label, this.value, {this.icon, this.color, Key? key})
     : super(key: key ?? Key('row-$label'));
 
-  /// What the value is.
+  /// What the value is, for screen readers and tests. Never painted.
   final String label;
+
+  /// What the value is, painted.
+  final IconData? icon;
 
   /// The value, already formatted.
   final String value;
@@ -81,8 +109,13 @@ class InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(label, style: TextStyle(color: muted)),
+          // Fixed width, not Expanded: a label used to need half the row,
+          // an icon does not, and the value (an ISO date) wrapped without it.
+          Icon(
+            icon ?? Icons.circle_outlined,
+            color: muted,
+            size: AppSpacing.lg,
+            semanticLabel: label,
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -144,8 +177,8 @@ class Line extends StatelessWidget {
   );
 }
 
-/// The words for an empty list: known to be empty, unlike null.
-const kNoneRecorded = 'None recorded';
+/// An empty list, known to be empty (unlike null, which is [kUnknown]).
+const kNoneRecorded = '∅';
 
 /// Rows for a list that may be unknown (null) or empty.
 List<Widget> listRows<T>(List<T>? items, Widget Function(T) row) {

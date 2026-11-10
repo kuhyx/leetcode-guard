@@ -16,6 +16,7 @@
 /// decides, credits or unlocks (spec decision 2).
 library;
 
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
@@ -61,21 +62,26 @@ class CoachTab extends StatelessWidget {
 
   Widget _grid() {
     final link = session;
-    final live = [if (link != null) LiveSessionCard(link)];
+    final live = [if (link != null) liveSessionCard(link)];
     return switch (coach) {
+      // Unknown: the mark and a sync-trouble glyph (the why is spoken).
       null => CardGrid(
         cards: [
           ...live,
           const SectionCard(
-            title: 'Coach',
-            children: [Muted(kUnknown), Muted(kCoachWhy)],
+            title: kCoachTitle,
+            leading: _unknownIcon,
+            children: [
+              Muted(kUnknown),
+              Icon(Icons.sync_problem, semanticLabel: kCoachWhy),
+            ],
           ),
         ],
       ),
       final CoachData c when c.problems?.isEmpty ?? false => CardGrid(
         cards: [
           ...live,
-          HowToCard(c.howTo),
+          howToCard(c.howTo),
           ...clusterCards(c.clusters, openUrl, link),
         ],
         footer: _footer(c),
@@ -84,11 +90,16 @@ class CoachTab extends StatelessWidget {
         cards: [
           ...live,
           SectionCard(
-            title: 'Problems',
+            title: kProblemsTitle,
+            leading: const Icon(Icons.history, semanticLabel: kProblemsTitle),
             children: listRows(c.problems, ProblemHistoryTile.new),
           ),
           SectionCard(
-            title: 'Re-tests due',
+            title: kRetestsTitle,
+            leading: const Icon(
+              Icons.event_repeat,
+              semanticLabel: kRetestsTitle,
+            ),
             children: listRows(c.retestsDue, _RetestRow.new),
           ),
           ...clusterCards(c.clusters, openUrl, link),
@@ -98,11 +109,26 @@ class CoachTab extends StatelessWidget {
     };
   }
 
+  // The coach's note on what `--cluster` serves is spoken only.
   static List<Widget> _footer(CoachData c) => [
-    if (c.howTo?.nextNote case final String note) Muted(note),
+    if (c.howTo?.nextNote case final String note)
+      Semantics(label: note, child: const SizedBox.shrink()),
   ];
 }
 
+/// Spoken section titles (a [SectionCard] title is never painted).
+const kCoachTitle = 'Coach';
+
+/// See [kCoachTitle].
+const kProblemsTitle = 'Problems';
+
+/// See [kCoachTitle].
+const kRetestsTitle = 'Re-tests due';
+
+const _unknownIcon = Icon(Icons.school_outlined, semanticLabel: kCoachTitle);
+
+/// A re-test: the slug, a calendar glyph and the due date (data), then the
+/// command that runs it (code).
 class _RetestRow extends StatelessWidget {
   const new(this.r);
 
@@ -110,9 +136,17 @@ class _RetestRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
+    key: ObjectKey(r),
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      InfoRow(show(r.slug), 'due ${show(r.due)}', key: ObjectKey(r)),
+      Row(
+        children: [
+          Expanded(child: Line(show(r.slug))),
+          const Icon(Icons.event, size: 18, semanticLabel: 'due'),
+          const SizedBox(width: AppSpacing.xs),
+          Text(show(r.due), key: const Key('due')),
+        ],
+      ),
       if (r.command case final String command)
         SelectableText(command, style: monoStyle(context)),
     ],

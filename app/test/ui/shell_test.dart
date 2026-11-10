@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/stale_banner.dart';
 
 import '../support/fixtures.dart';
 import '../support/pump.dart';
@@ -15,8 +16,31 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.text(asOf(kGeneratedAt)), findsOneWidget);
     expect(find.byKey(const Key('stale-banner')), findsNothing);
-    // The first section's chip, and its heading.
-    expect(find.text('Right now'), findsNWidgets(2));
+    // One chip per Status section, the first one selected.
+    expect(find.byType(ChoiceChip), findsNWidgets(9));
+    expect(
+      tester.widget<ChoiceChip>(find.byType(ChoiceChip).first).selected,
+      isTrue,
+    );
+  });
+
+  testWidgets('the bar paints icons only and never a tooltip', (tester) async {
+    await pumpApp(tester);
+    final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+    expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysHide);
+    for (final d in bar.destinations.cast<NavigationDestination>()) {
+      expect(d.tooltip, isEmpty, reason: d.label);
+    }
+    // The selected tab is the filled icon, the others outlined.
+    Finder inBar(IconData icon) => find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.byIcon(icon),
+    );
+    expect(inBar(Icons.shield), findsOneWidget);
+    expect(inBar(kCoachTab), findsOneWidget);
+    await openTab(tester, kProfileTab);
+    expect(inBar(Icons.person), findsOneWidget);
+    expect(inBar(kStatusTab), findsOneWidget);
   });
 
   testWidgets('narrow desktop: navigation rail and capped content width', (
@@ -26,54 +50,59 @@ void main() {
     await pumpApp(tester, size: const Size(1000, 900));
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+    final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+    expect(rail.labelType, NavigationRailLabelType.none);
     final list = tester.getSize(find.byKey(const Key('status-list')));
     expect(list.width, lessThanOrEqualTo(720));
   });
 
   testWidgets('tabs switch on both layouts', (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Coach'));
-    await tester.pumpAndSettle();
-    expect(find.text('Re-tests due'), findsWidgets);
-    await tester.tap(find.text('Profile'));
-    await tester.pumpAndSettle();
-    expect(find.text('Difficulty split'), findsWidgets);
+    await openTab(tester, kCoachTab);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Icon && w.semanticLabel == 'Re-tests due',
+      ),
+      findsWidgets,
+    );
+    await openTab(tester, kProfileTab);
+    expect(find.byKey(const Key('section-difficulty-split')), findsWidgets);
   });
 
   testWidgets('rail destinations switch tabs', (tester) async {
     await pumpApp(tester, size: kDesktop);
-    await tester.tap(find.text('Profile'));
-    await tester.pumpAndSettle();
-    expect(find.text('Streaks'), findsWidgets);
+    await openTab(tester, kProfileTab);
+    expect(find.byKey(const Key('profile-section-streaks')), findsWidgets);
   });
 
   testWidgets('older than ten minutes shows the stale banner', (tester) async {
     await pumpApp(tester, minutes: 25);
     expect(find.byKey(const Key('stale-banner')), findsOneWidget);
-    expect(find.textContaining('25 min old'), findsOneWidget);
   });
 
   testWidgets('a failed refresh keeps data and says why', (tester) async {
     final c = await pumpApp(
       tester,
+      size: const Size(390, 4000),
       answers: ['snapshot_full', const SnapshotUnavailable('network down')],
     );
     await c.refresh();
     await tester.pumpAndSettle();
-    expect(find.textContaining('network down'), findsOneWidget);
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Credits (tokens)'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 available'), findsOneWidget);
+    // The banner marks the failure by kind; the reason itself is spoken.
+    final banner = tester.widget<StaleBanner>(find.byType(StaleBanner));
+    expect(banner.spoken, contains('network down'));
+    expect(find.byKey(const Key('failure-other')), findsOneWidget);
+    expect(find.text('312 / 4055'), findsOneWidget);
   });
 
   testWidgets('no snapshot at all: banner and unknown, never 0', (
     tester,
   ) async {
     await pumpApp(tester, answers: [const SnapshotUnavailable('offline')]);
-    expect(find.textContaining('No snapshot yet'), findsOneWidget);
-    expect(find.text('as of unknown'), findsOneWidget);
+    expect(find.byKey(const Key('stale-banner')), findsOneWidget);
+    expect(find.text(asOf(null)), findsOneWidget);
     expect(find.text('0'), findsNothing);
-    expect(find.text('unknown'), findsWidgets);
+    expect(find.text(kUnknown), findsWidgets);
   });
 
   testWidgets('polls again every minute', (tester) async {
@@ -95,7 +124,7 @@ void main() {
       settingsBuilder: (_) =>
           Scaffold(appBar: AppBar(), body: const Text('sign-in page')),
     );
-    await tester.tap(find.byTooltip('Sync account'));
+    await tester.tap(find.bySemanticsLabel('Sync account'));
     await tester.pumpAndSettle();
     expect(find.text('sign-in page'), findsOneWidget);
     expect(c.error, isNull);
@@ -106,6 +135,6 @@ void main() {
 
   testWidgets('no settings button on desktop', (tester) async {
     await pumpApp(tester);
-    expect(find.byTooltip('Sync account'), findsNothing);
+    expect(find.bySemanticsLabel('Sync account'), findsNothing);
   });
 }

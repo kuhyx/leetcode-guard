@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
+import 'package:leetcode_guard/src/ui/stale_banner.dart';
 
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
@@ -18,17 +20,19 @@ const _token = 'eyJhbGciOiJSUzI1NiJ9.SECRETPAYLOAD.SIGNATURE';
 /// The Pixel 6a in portrait (logical pixels).
 const _pixel6a = Size(412, 915);
 
-/// Every string drawn on screen.
+/// Every string drawn in the banner.
 Iterable<String> _drawn(WidgetTester tester) => tester
-    .widgetList<RichText>(find.byType(RichText))
+    .widgetList<RichText>(
+      find.descendant(
+        of: find.byKey(const Key('stale-banner')),
+        matching: find.byType(RichText),
+      ),
+    )
     .map((r) => r.text.toPlainText());
 
-Text _bannerText(WidgetTester tester) => tester.widget<Text>(
-  find.descendant(
-    of: find.byKey(const Key('stale-banner')),
-    matching: find.byType(Text),
-  ),
-);
+/// What the banner says to a screen reader.
+String _spoken(WidgetTester tester) =>
+    tester.widget<StaleBanner>(find.byType(StaleBanner)).spoken;
 
 Future<StatusController> _pump(
   WidgetTester tester,
@@ -86,21 +90,30 @@ void main() {
         ),
       ),
     );
+    final semantics = tester.ensureSemantics();
     await _pump(tester, source);
     expect(find.byKey(const Key('stale-banner')), findsOneWidget);
-    for (final expanded in [false, true]) {
-      final drawn = _drawn(tester).join('\n');
-      expect(drawn, contains("Offline: can't reach Firebase"));
-      for (final secret in ['SECRETPAYLOAD', 'auth=', '?', 'http']) {
-        expect(drawn, isNot(contains(secret)), reason: 'expanded: $expanded');
-      }
-      expect(tester.takeException(), isNull);
-      await tester.tap(find.byKey(const Key('stale-banner')));
-      await tester.pumpAndSettle();
+    // Painted: the age and the offline cloud, no words, no secret.
+    expect(find.byKey(const Key('failure-offline')), findsOneWidget);
+    expect(find.byKey(const Key('stale-age')), findsOneWidget);
+    final drawn = _drawn(tester).join('\n');
+    expect(drawn, isNot(matches(RegExp('[A-Za-z]{2,}'))));
+    // Spoken: the reason, and still no secret in the accessibility tree.
+    final spoken = _spoken(tester);
+    expect(spoken, contains("Offline: can't reach Firebase"));
+    expect(
+      find.bySemanticsLabel(RegExp("Offline: can't reach Firebase")),
+      findsOneWidget,
+    );
+    for (final secret in ['SECRETPAYLOAD', 'auth=', '?', 'http']) {
+      expect(drawn, isNot(contains(secret)));
+      expect(spoken, isNot(contains(secret)));
     }
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 
-  testWidgets('a long error is two lines; a tap shows it all, still bounded', (
+  testWidgets('a long error stays one bounded strip; all of it is spoken', (
     tester,
   ) async {
     final long = List.filled(400, 'word').join(' ');
@@ -109,23 +122,42 @@ void main() {
       FakeSource([SnapshotUnavailable(long)]),
       size: const Size(320, 640),
     );
-    final collapsed = _bannerText(tester);
-    expect(collapsed.maxLines, 2);
-    expect(collapsed.overflow, TextOverflow.ellipsis);
-    final twoLines = tester.getSize(find.byKey(const Key('stale-banner')));
-    expect(twoLines.height, lessThan(80));
+    final strip = tester.getSize(find.byKey(const Key('stale-banner')));
+    expect(strip.height, lessThan(80));
     expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('failure-other')), findsOneWidget);
+    expect(_spoken(tester), endsWith(long));
+  });
 
-    await tester.tap(find.byKey(const Key('stale-banner')));
-    await tester.pumpAndSettle();
-    expect(_bannerText(tester).maxLines, isNull);
-    final open = tester.getSize(find.byKey(const Key('stale-banner')));
-    expect(open.height, greaterThan(twoLines.height));
-    expect(open.height, lessThanOrEqualTo(640 / 2));
-    expect(tester.takeException(), isNull);
+  testWidgets('an HTTP failure paints its status code', (tester) async {
+    await _pump(tester, FakeSource([SnapshotUnavailable(httpFailure(503))]));
+    expect(find.byKey(const Key('failure-http')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stale-banner')),
+        matching: find.text('503'),
+      ),
+      findsOneWidget,
+    );
+  });
 
-    await tester.tap(find.byKey(const Key('stale-banner')));
-    await tester.pumpAndSettle();
-    expect(_bannerText(tester).maxLines, 2);
+  test('each failure the sources produce has its own kind', () {
+    expect(failureKind(kOfflineText), FailureKind.offline);
+    expect(failureKind(kTimeoutText), FailureKind.timeout);
+    expect(failureKind(httpFailure(401)), FailureKind.http);
+    expect(failureKind('Wrapper HTTP 500: oops'), FailureKind.http);
+    expect(httpStatusIn('Wrapper HTTP 500: oops'), 500);
+    expect(httpStatusIn('network down'), isNull);
+    expect(
+      failureKind(describeSignInFailure(const FormatException('x'))),
+      FailureKind.signIn,
+    );
+    expect(failureKind('network down'), FailureKind.other);
+    for (final kind in FailureKind.values) {
+      expect(failureIcon(kind), isA<IconData>());
+    }
+    expect({
+      for (final kind in FailureKind.values) failureIcon(kind),
+    }, hasLength(FailureKind.values.length));
   });
 }

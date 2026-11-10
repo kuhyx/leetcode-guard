@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/ui/coach_chat_message.dart';
+import 'package:leetcode_guard/src/ui/coach_run_result.dart';
 
+import '../support/coach_labels.dart';
 import '../support/coach_rig.dart';
 import '../support/fake_relay.dart';
 
 const _code = 'function missingNumber(nums) { return 0; }';
 
 Future<void> _openChat(WidgetTester tester) async {
-  await tester.tap(find.text('Chat'));
+  await tester.tap(find.byKey(const Key('chat')));
   await tester.pumpAndSettle();
 }
 
 Future<void> _openSteps(WidgetTester tester) async {
-  await tester.tap(find.text('Steps'));
+  await tester.tap(find.byKey(const Key('steps')));
   await tester.pumpAndSettle();
 }
 
@@ -40,11 +42,22 @@ void main() {
     await tapKey(tester, 'hint');
     await settle(tester, rig);
     expect(find.text('Hint H0: $kHint'), findsOneWidget);
+    // kuhy's own "hint" line is the bulb glyph, never the word.
+    expect(find.text('hint'), findsNothing);
+    expect(byLabel('You, hint'), findsOneWidget);
     expect(rig.transport.relay.ran.last.$1, 'hint');
 
-    // Code before step 2: the relay refuses it and says why.
+    // Code before step 2: the relay refuses it and says why (spoken), with
+    // the requirements glyph in the banner.
     await _say(tester, rig, _code);
-    expect(find.textContaining(kLocked), findsWidgets);
+    expect(byLabelContaining(kLocked), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('failure')),
+        matching: find.byIcon(Icons.checklist),
+      ),
+      findsOneWidget,
+    );
     final run = find.byKey(const Key('run-m0006'));
     expect(run, findsOneWidget);
     expect(tester.widget<ButtonStyleButton>(run).onPressed, isNull);
@@ -69,12 +82,12 @@ void main() {
       matching: find.byType(MessageBubble),
     );
     expect(
-      find.descendant(of: codeBubble, matching: find.textContaining('example')),
+      find.descendant(of: codeBubble, matching: find.byType(RunResults)),
       findsNothing,
     );
     // Tapping Run scrolled up to the code; the line is at the newest end.
     await tester.scrollUntilVisible(
-      find.textContaining('example 2: got 1'),
+      find.byKey(const Key('example-2')),
       -300,
       scrollable: find
           .descendant(
@@ -83,8 +96,16 @@ void main() {
           )
           .first,
     );
-    expect(find.textContaining('example 1: got 2, expected 2'), findsOneWidget);
-    expect(find.textContaining('example 2: got 1, expected 2'), findsOneWidget);
+    // Example 1 passes (✓ 2), example 2 fails (✗ 1 ≠ 2); the line is spoken.
+    expect(byLabel('example 1: got 2, expected 2'), findsOneWidget);
+    expect(byLabel('example 2: got 1, expected 2'), findsOneWidget);
+    Finder inExample(int n, Finder f) =>
+        find.descendant(of: find.byKey(Key('example-$n')), matching: f);
+    expect(inExample(1, find.byIcon(Icons.check)), findsOneWidget);
+    expect(inExample(1, find.text('≠')), findsNothing);
+    expect(inExample(2, find.byIcon(Icons.close)), findsOneWidget);
+    expect(inExample(2, find.text('≠')), findsOneWidget);
+    expect(inExample(2, find.text('1')), findsWidgets);
   });
 
   testWidgets('Reveal asks first, and confirming ends the exercise', (
@@ -94,18 +115,21 @@ void main() {
     await startMissingNumber(tester, rig);
     await _openChat(tester);
     await tapKey(tester, 'reveal');
-    expect(find.textContaining('ends the exercise'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.byKey(const Key('confirm-reveal')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-reveal')));
     await tester.pumpAndSettle();
     expect(rig.transport.relay.ran.map((r) => r.$1), ['session_start']);
 
     await tapKey(tester, 'reveal');
-    await tester.tap(find.widgetWithText(TextButton, 'Reveal'));
+    await tester.tap(find.byKey(const Key('confirm-reveal')));
     await tester.pumpAndSettle();
     await settle(tester, rig);
     expect(rig.transport.relay.ran.last.$1, 'reveal');
     expect(find.text(kReveal), findsOneWidget);
-    expect(find.textContaining('Session ended'), findsOneWidget);
+    expect(
+      byLabel('Session ended: the solution was revealed.'),
+      findsOneWidget,
+    );
     expect(
       tester.widget<TextField>(find.byKey(const Key('chat-input'))).enabled,
       isFalse,
@@ -118,6 +142,7 @@ void main() {
     await openCoachTab(tester);
     await tapKey(tester, 'start-single-number-iii');
     await settle(tester, rig);
-    expect(find.text('No answer key for that problem'), findsOneWidget);
+    expect(byLabel('No answer key for that problem'), findsOneWidget);
+    expect(find.byIcon(Icons.key_off), findsOneWidget);
   });
 }

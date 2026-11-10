@@ -11,6 +11,7 @@ import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/coach_chat.dart';
+import 'package:leetcode_guard/src/ui/coach_dialogs.dart';
 import 'package:leetcode_guard/src/ui/coach_presence.dart';
 import 'package:leetcode_guard/src/ui/coach_session_banners.dart';
 import 'package:leetcode_guard/src/ui/coach_steps.dart';
@@ -75,23 +76,23 @@ class _CoachSessionScreenState extends State<CoachSessionScreen> {
   }
 
   Future<void> _reveal() async {
-    final yes = await confirmDestructive(
+    final yes = await confirmAction(
       context,
-      title: 'Reveal the solution?',
-      message:
-          'This ends the exercise: the coach shows the solution and the '
-          'session closes. It is logged as revealed.',
-      confirmLabel: 'Reveal',
+      action: Icons.visibility,
+      semanticLabel: 'Reveal',
+      confirmKey: const Key('confirm-reveal'),
+      cancelKey: const Key('cancel-reveal'),
     );
     if (yes) _c.reveal();
   }
 
   Future<void> _end() async {
-    final yes = await confirmDestructive(
+    final yes = await confirmAction(
       context,
-      title: 'End this session?',
-      message: 'The grades so far stay in the log.',
-      confirmLabel: 'End session',
+      action: Icons.stop_circle_outlined,
+      semanticLabel: 'End session',
+      confirmKey: const Key('confirm-end'),
+      cancelKey: const Key('cancel-end'),
     );
     if (yes) _c.endSession();
   }
@@ -148,8 +149,24 @@ class _CoachSessionScreenState extends State<CoachSessionScreen> {
             width: double.infinity,
             child: SegmentedButton<int>(
               segments: const [
-                ButtonSegment(value: 0, label: Text('Steps')),
-                ButtonSegment(value: 1, label: Text('Chat')),
+                ButtonSegment(
+                  value: 0,
+                  icon: Icon(
+                    Icons.list,
+                    key: Key('steps'),
+                    semanticLabel: 'Steps',
+                  ),
+                  label: SizedBox.shrink(),
+                ),
+                ButtonSegment(
+                  value: 1,
+                  icon: Icon(
+                    Icons.chat,
+                    key: Key('chat'),
+                    semanticLabel: 'Chat',
+                  ),
+                  label: SizedBox.shrink(),
+                ),
               ],
               selected: {_pane},
               showSelectedIcon: false,
@@ -169,15 +186,29 @@ class _CoachSessionScreenState extends State<CoachSessionScreen> {
     controller: _c,
     builder: (context) {
       final session = _c.state?.session;
+      // The problem's own name is content; before the relay has named it
+      // the bar shows the coach's glyph.
+      final name = session?.title ?? session?.slug;
       return Scaffold(
         appBar: AppBar(
-          title: Text(session?.title ?? session?.slug ?? 'Coach session'),
+          // Flutter's own BackButton paints "Back" as a long-press tooltip.
+          leading: IconButton(
+            key: const Key('back'),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back, semanticLabel: 'Back'),
+          ),
+          title: name != null
+              ? Text(name)
+              : const Icon(Icons.school, semanticLabel: 'Coach session'),
           actions: [
             if (_c.sid != null)
               TextButton(
                 key: const Key('end-session'),
                 onPressed: _c.canAct ? _end : null,
-                child: const Text('End session'),
+                child: const Icon(
+                  Icons.stop_circle_outlined,
+                  semanticLabel: 'End session',
+                ),
               ),
           ],
         ),

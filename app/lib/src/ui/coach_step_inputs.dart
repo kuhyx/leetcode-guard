@@ -8,12 +8,53 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
-import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 
-/// "Too long" for a field over the 8 KiB limit, else null.
-String? limitError(String text) {
-  if (fitsLimit(text)) return null;
-  return 'Too long: ${utf8.encode(text).length} of $kMaxTextBytes bytes';
+/// An outlined field whose 8 KiB limit shows as a live `bytes/limit`
+/// counter once the text is within a tenth of it; over the limit the
+/// counter and the outline turn red (textgate: numbers, not "Too long").
+InputDecoration limitDecoration(
+  String text, {
+  Widget? prefixIcon,
+  Widget? suffix,
+}) {
+  final bytes = utf8.encode(text).length;
+  final over = !fitsLimit(text);
+  return InputDecoration(
+    border: const OutlineInputBorder(),
+    prefixIcon: prefixIcon,
+    suffix: suffix,
+    counter: bytes * 10 >= kMaxTextBytes * 9
+        ? LimitCounter(bytes, over: over)
+        : null,
+    // An empty error widget: the red outline without any words.
+    error: over ? const SizedBox.shrink() : null,
+  );
+}
+
+/// `bytes/limit`, red when over.
+class LimitCounter extends StatelessWidget {
+  /// Creates the counter for [bytes].
+  const new(this.bytes, {required this.over, super.key});
+
+  /// UTF-8 bytes typed.
+  final int bytes;
+
+  /// Whether that is over the limit.
+  final bool over;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Text(
+      '$bytes/$kMaxTextBytes',
+      key: const Key('limit-counter'),
+      semanticsLabel: over
+          ? 'Too long: $bytes of $kMaxTextBytes bytes'
+          : '$bytes of $kMaxTextBytes bytes',
+      style: TextStyle(color: over ? scheme.error : scheme.onSurfaceVariant),
+    );
+  }
 }
 
 /// Steps 1 and 5: one free-text answer.
@@ -47,10 +88,14 @@ class TextAnswerInput extends StatelessWidget {
     minLines: 3,
     maxLines: 8,
     onChanged: (_) => onChanged(),
-    decoration: InputDecoration(
-      border: const OutlineInputBorder(),
-      hintText: n == 1 ? 'The rule the constraint gives you' : 'Why it worked',
-      errorText: limitError(field.text),
+    decoration: limitDecoration(
+      field.text,
+      prefixIcon: Icon(
+        stepGlyph(n).icon,
+        semanticLabel: n == 1
+            ? 'The rule the constraint gives you'
+            : 'Why it worked',
+      ),
     ),
   );
 }
@@ -90,23 +135,25 @@ class PropertyListInput extends StatelessWidget {
                   controller: field,
                   enabled: enabled,
                   onChanged: (_) => onChanged(),
-                  decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
-                    hintText: 'Property ${i + 1}',
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(
+                      Icons.table_view,
+                      semanticLabel: 'Property',
+                    ),
                   ),
                 ),
               ),
               if (fields.length > 1)
                 IconButton(
                   key: Key('remove-property-$i'),
-                  tooltip: 'Remove',
                   onPressed: enabled
                       ? () {
                           fields.removeAt(i).dispose();
                           onChanged();
                         }
                       : null,
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, semanticLabel: 'Remove'),
                 ),
             ],
           ),
@@ -121,8 +168,8 @@ class PropertyListInput extends StatelessWidget {
                   onChanged();
                 }
               : null,
-          icon: const Icon(Icons.add),
-          label: const Text('Add property'),
+          icon: const Icon(Icons.add, semanticLabel: 'Add property'),
+          label: const SizedBox.shrink(),
         ),
       ),
     ],
@@ -154,7 +201,15 @@ class ToolboxInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const Muted('The toolbox is not loaded yet.');
+    if (entries.isEmpty) {
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: Icon(
+          Icons.hourglass_empty,
+          semanticLabel: 'The toolbox is not loaded yet.',
+        ),
+      );
+    }
     final full = picks.length >= kMaxPicks;
     return Column(
       children: [

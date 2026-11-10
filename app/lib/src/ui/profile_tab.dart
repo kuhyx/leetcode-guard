@@ -1,13 +1,46 @@
 /// The Profile tab: difficulty split, streaks, acceptance rate and the
 /// 52-week submission heatmap.
+///
+/// No words (textgate, 2026-11-08): every section paints its icon, the
+/// titles and row labels are spoken only.
 library;
 
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
+import 'package:leetcode_guard/src/ui/difficulty_mark.dart';
 import 'package:leetcode_guard/src/ui/heatmap.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+
+// Section titles: spoken only. SectionCard speaks its title and paints
+// `leading`; the phone's section chip shows the icon, which speaks it too.
+const _split = 'Difficulty split';
+const _streaks = 'Streaks';
+const _acceptance = 'Acceptance rate';
+const _calendar = 'Submission calendar';
+
+const _splitIcon = Icon(
+  Icons.pie_chart_outline,
+  semanticLabel: _split,
+  key: Key('section-difficulty-split'),
+);
+const _streaksIcon = Icon(
+  Icons.local_fire_department,
+  semanticLabel: _streaks,
+  key: Key('profile-section-streaks'),
+);
+const _acceptanceIcon = Icon(
+  Icons.percent,
+  semanticLabel: _acceptance,
+  key: Key('section-acceptance-rate'),
+);
+const _calendarIcon = Icon(
+  Icons.calendar_month,
+  semanticLabel: _calendar,
+  key: Key('section-submission-calendar'),
+);
 
 /// The LeetCode profile view.
 class ProfileTab extends StatelessWidget {
@@ -28,7 +61,8 @@ class ProfileTab extends StatelessWidget {
   /// The UTC day the heatmap ends on.
   final DateTime today;
 
-  static const _levels = {'easy': 'Easy', 'medium': 'Medium', 'hard': 'Hard'};
+  /// Profile keys by the [kLevels] key they paint as.
+  static const _levels = {'Easy': 'easy', 'Medium': 'medium', 'Hard': 'hard'};
 
   @override
   Widget build(BuildContext context) {
@@ -36,58 +70,104 @@ class ProfileTab extends StatelessWidget {
     if (p == null) {
       return const CardGrid(
         cards: [
-          SectionCard.unknown(title: 'Difficulty split'),
-          SectionCard.unknown(title: 'Streaks'),
-          SectionCard.unknown(title: 'Acceptance rate'),
+          SectionCard.unknown(title: _split, leading: _splitIcon),
+          SectionCard.unknown(title: _streaks, leading: _streaksIcon),
+          SectionCard.unknown(title: _acceptance, leading: _acceptanceIcon),
         ],
-        footer: [SectionCard.unknown(title: 'Submission calendar')],
+        footer: [SectionCard.unknown(title: _calendar, leading: _calendarIcon)],
       );
     }
     final calendar = p.calendar;
     return CardGrid(
       // The PC serves a dated mirror when a refresh fails, so say how old.
-      header: [Muted('Profile ${asOfDated(p.fetchedAt, now)}')],
+      header: [_FetchedAt(asOfDated(p.fetchedAt, now))],
       cards: [
         SectionCard(
-          title: 'Difficulty split',
+          title: _split,
+          leading: _splitIcon,
           children: [
             for (final MapEntry(:key, :value) in _levels.entries)
-              InfoRow(
-                value,
-                fraction(p.difficulty?[key]?.solved, p.difficulty?[key]?.total),
+              LevelRow(
+                key,
+                fraction(
+                  p.difficulty?[value]?.solved,
+                  p.difficulty?[value]?.total,
+                ),
               ),
           ],
         ),
         SectionCard(
-          title: 'Streaks',
+          title: _streaks,
+          leading: _streaksIcon,
           children: [
-            InfoRow('Current', _days(p.streakCurrent)),
-            InfoRow('Longest', _days(p.streakLongest)),
+            InfoRow(
+              'Current streak in days',
+              show(p.streakCurrent),
+              icon: Icons.local_fire_department_outlined,
+            ),
+            InfoRow(
+              'Longest streak in days',
+              show(p.streakLongest),
+              icon: Icons.emoji_events_outlined,
+            ),
           ],
         ),
         SectionCard(
-          title: 'Acceptance rate',
-          children: [InfoRow('Accepted', percent(p.acceptanceRate))],
+          title: _acceptance,
+          leading: _acceptanceIcon,
+          children: [
+            InfoRow(
+              'Accepted',
+              percent(p.acceptanceRate),
+              icon: Icons.check_circle_outline,
+            ),
+          ],
         ),
       ],
       // The heatmap is 52 weeks wide: it gets the whole row, not a column.
       footer: [
         if (calendar == null)
-          const SectionCard.unknown(title: 'Submission calendar')
+          const SectionCard.unknown(title: _calendar, leading: _calendarIcon)
         else
           SectionCard(
-            title: 'Submission calendar',
+            title: _calendar,
+            leading: _calendarIcon,
             children: [
               Heatmap(counts: calendar, today: today),
-              Muted(
-                '${Heatmap.total(calendar, today)} submissions in the last '
-                '52 weeks',
+              InfoRow(
+                'Submissions in the last 52 weeks',
+                '${Heatmap.total(calendar, today)}',
+                icon: Icons.functions,
               ),
             ],
           ),
       ],
     );
   }
+}
 
-  static String _days(int? n) => n == null ? kUnknown : '$n days';
+/// When the profile was read: the person glyph tells it apart from the app
+/// bar's snapshot time.
+class _FetchedAt extends StatelessWidget {
+  const new(this.at);
+
+  final String at;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Row(
+      key: const Key('profile-fetched-at'),
+      children: [
+        Icon(
+          Icons.person_outline,
+          color: muted,
+          size: AppSpacing.lg,
+          semanticLabel: 'Profile read at',
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Muted(at),
+      ],
+    );
+  }
 }

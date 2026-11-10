@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
+import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 
+import '../support/coach_labels.dart';
 import '../support/coach_rig.dart';
 
 const _down = CoachUnavailable(
@@ -14,7 +16,7 @@ void main() {
       'greys the session controls', (tester) async {
     final rig = await pumpCoach(tester, size: kPhoneSession, phone: true);
     await startMissingNumber(tester, rig);
-    expect(find.textContaining('PC offline'), findsNothing);
+    expect(byLabelContaining('PC offline'), findsNothing);
     expect(await enabled(tester, 'submit-1'), isFalse, reason: 'empty answer');
     await typeInto(tester, 'answer-1', 'O(1) space');
     expect(await enabled(tester, 'submit-1'), isTrue);
@@ -24,14 +26,14 @@ void main() {
       seconds: 1,
     ).inMilliseconds;
     await wait(tester, rig, 5);
-    expect(find.textContaining('PC offline'), findsOneWidget);
+    expect(byLabelContaining('PC offline'), findsOneWidget);
     expect(await enabled(tester, 'submit-1'), isFalse);
     // The last state stays on screen.
     expect(find.byKey(const Key('answer-1')), findsOneWidget);
 
     rig.transport.relay.beatAge = 0;
     await wait(tester, rig, 5);
-    expect(find.textContaining('PC offline'), findsNothing);
+    expect(byLabelContaining('PC offline'), findsNothing);
     expect(await enabled(tester, 'submit-1'), isTrue);
   });
 
@@ -46,7 +48,7 @@ void main() {
           t.relay.beatAge = const Duration(minutes: 5).inMilliseconds,
     );
     await openCoachTab(tester);
-    expect(find.textContaining('PC offline'), findsOneWidget);
+    expect(byLabelContaining('PC offline'), findsOneWidget);
     expect(await enabled(tester, 'start-missing-number'), isFalse);
   });
 
@@ -55,7 +57,7 @@ void main() {
   ) async {
     final rig = await pumpCoach(tester, before: (t) => t.outage = _down);
     await openCoachTab(tester);
-    expect(find.text('Coach service not running'), findsOneWidget);
+    expect(byLabel(kRelayDownText), findsOneWidget);
     expect(
       find.text('systemctl --user start leetcode-coach-relay'),
       findsOneWidget,
@@ -64,7 +66,7 @@ void main() {
 
     rig.transport.outage = null;
     await wait(tester, rig, 30);
-    expect(find.text('Coach service not running'), findsNothing);
+    expect(byLabel(kRelayDownText), findsNothing);
     expect(await enabled(tester, 'start-missing-number'), isTrue);
   });
 
@@ -75,7 +77,7 @@ void main() {
     await startMissingNumber(tester, rig);
     rig.transport.outage = _down;
     await wait(tester, rig, 5);
-    expect(find.text('Coach service not running'), findsOneWidget);
+    expect(byLabel(kRelayDownText), findsOneWidget);
     expect(find.byKey(const Key('answer-1')), findsOneWidget);
   });
 
@@ -88,15 +90,15 @@ void main() {
     await typeInto(tester, 'answer-1', 'O(1) space');
     await tapKey(tester, 'submit-1');
     await wait(tester, rig, 299);
-    expect(find.textContaining('No reply from PC'), findsNothing);
+    expect(byLabelContaining('No reply from PC'), findsNothing);
     await wait(tester, rig, 2);
-    expect(find.textContaining('No reply from PC'), findsOneWidget);
+    expect(byLabelContaining('No reply from PC'), findsOneWidget);
     rig.transport.silent = false;
     await tapKey(tester, 'send-again');
     await settle(tester, rig);
     final sent = rig.transport.sent;
     expect(sent[sent.length - 1].$1, sent[sent.length - 2].$1);
-    expect(find.text('passed'), findsOneWidget);
+    expect(byLabel('passed'), findsOneWidget);
     expect(
       rig.transport.relay.ran.where((r) => r.$1 == 'grade_step'),
       hasLength(1),

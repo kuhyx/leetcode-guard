@@ -95,7 +95,8 @@ class RelayFailure {
     final ms = readInt(value);
     if (ms != null) {
       final t = DateTime.fromMillisecondsSinceEpoch(ms);
-      return 'at ${asOf(t).substring('as of '.length)}';
+      // `asOf` is "◷ HH:MM" now: keep the bare clock time.
+      return 'at ${asOf(t).substring(kAsOf.length + 1)}';
     }
     return switch (readString(value)) {
       final String s => 'at $s',

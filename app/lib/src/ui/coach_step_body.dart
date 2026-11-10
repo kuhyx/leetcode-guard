@@ -6,13 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_grade.dart';
 import 'package:leetcode_guard/src/ui/coach_implement.dart';
 import 'package:leetcode_guard/src/ui/coach_session_screen.dart';
 import 'package:leetcode_guard/src/ui/coach_step_inputs.dart';
-import 'package:leetcode_guard/src/ui/coach_steps.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
-import 'package:leetcode_guard/src/ui/widgets.dart';
 
 /// Step [n]'s body.
 class StepBody extends StatefulWidget {
@@ -123,8 +122,12 @@ class _StepBodyState extends State<StepBody> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Muted(kSteps[n - 1].$2),
-              const SizedBox(height: AppSpacing.sm),
+              // What the step asks is spoken only: the header's number and
+              // glyph name it, the field's glyph repeats it.
+              Semantics(
+                label: stepGlyph(n).asks,
+                child: const SizedBox(width: double.infinity),
+              ),
               if (showInput) _input(),
               if (_editable && n != 4) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -133,7 +136,7 @@ class _StepBodyState extends State<StepBody> {
                   child: FilledButton(
                     key: Key('submit-$n'),
                     onPressed: _c.canAct && _ready ? _submit : null,
-                    child: const Text('Submit'),
+                    child: const Icon(Icons.send, semanticLabel: 'Submit'),
                   ),
                 ),
               ],

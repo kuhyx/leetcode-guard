@@ -2,6 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/difficulty_mark.dart';
+import 'package:leetcode_guard/src/ui/projection_section.dart';
+import 'package:leetcode_guard/src/ui/widgets.dart';
 
 import '../support/pump.dart';
 
@@ -39,23 +43,77 @@ void main() {
     expect(_text(tester, 'Projected solved'), '313');
     expect(await _detail(tester, 'Gated days'), '1');
     expect(await _detail(tester, 'Rules demand'), '2');
+    // The price the projection assumed sits in the sheet as a number.
+    expect(await _detail(tester, 'Tue-Thu price in credits'), '2');
+  });
+
+  testWidgets('difficulty paints as 1 / 2 / 4 diamonds, not a word', (
+    tester,
+  ) async {
+    await pumpApp(tester, size: tall);
+    final section = find.byType(ProjectionSection);
+    for (final (level, weight) in [('Easy', 1), ('Medium', 2), ('Hard', 4)]) {
+      final mark = find.descendant(
+        of: section,
+        matching: find.byWidgetPredicate(
+          (w) => w is DifficultyMark && w.level == level,
+        ),
+      );
+      // Solved so far, and projected for the date.
+      expect(mark, findsNWidgets(2), reason: level);
+      expect(
+        find.descendant(of: mark.first, matching: find.byIcon(Icons.diamond)),
+        findsNWidgets(weight),
+        reason: level,
+      );
+      expect(
+        find.descendant(of: section, matching: find.text(level)),
+        findsNothing,
+      );
+    }
+    expect(_text(tester, 'Medium'), '150 / 2300');
+    expect(_text(tester, 'Projected Easy'), '121');
+  });
+
+  testWidgets('no published dates: the empty mark, no sentence', (
+    tester,
+  ) async {
+    await pumpApp(
+      tester,
+      size: tall,
+      answers: [
+        jsonEncode({
+          'generated_at': '2026-10-23T14:05:00+02:00',
+          'projections': <String, Object>{},
+        }),
+      ],
+    );
+    final section = find.byType(ProjectionSection);
+    expect(
+      find.descendant(of: section, matching: find.byIcon(Icons.event_busy)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: section, matching: find.text(kNoneRecorded)),
+      findsOneWidget,
+    );
   });
 
   testWidgets('arrows step through the published keys', (tester) async {
     await pumpApp(tester, size: tall);
-    await tester.tap(find.byTooltip('Later date'));
+    await tester.tap(find.bySemanticsLabel('Later date'));
     await tester.pumpAndSettle();
     expect(_date('2026-10-31'), findsOneWidget);
     expect(_text(tester, 'Projected solved'), '333');
     expect(await _detail(tester, 'Debt'), '2');
-    await tester.tap(find.byTooltip('Later date'));
+    await tester.tap(find.bySemanticsLabel('Later date'));
     await tester.pumpAndSettle();
     expect(await _detail(tester, 'Free days'), '1');
     // The last key: "later" is disabled rather than wrapping around.
-    await tester.tap(find.byTooltip('Later date'));
+    await tester.tap(find.bySemanticsLabel('Later date'));
     await tester.pumpAndSettle();
     expect(_date('2026-11-30'), findsOneWidget);
-    await tester.tap(find.byTooltip('Earlier date'));
+    await tester.tap(find.bySemanticsLabel('Earlier date'));
     await tester.pumpAndSettle();
     expect(_date('2026-10-31'), findsOneWidget);
   });
@@ -102,14 +160,14 @@ void main() {
         }),
       ],
     );
-    await tester.tap(find.byTooltip('Later date'));
+    await tester.tap(find.bySemanticsLabel('Later date'));
     await tester.pumpAndSettle();
     await c.refresh();
     await tester.pumpAndSettle();
     expect(_date('2026-12-31'), findsOneWidget);
     expect(_text(tester, 'Projected solved'), '500');
-    expect(await _detail(tester, 'Gated days'), 'unknown');
-    expect(find.text('unknown'), findsWidgets);
+    expect(await _detail(tester, 'Gated days'), kUnknown);
+    expect(find.text(kUnknown), findsWidgets);
   });
 
   testWidgets('a key that is not a date still shows, picker disabled', (
@@ -131,6 +189,6 @@ void main() {
     await tester.tap(_date('someday'));
     await tester.pumpAndSettle();
     expect(find.byType(DatePickerDialog), findsNothing);
-    expect(_text(tester, 'Projected solved'), 'unknown');
+    expect(_text(tester, 'Projected solved'), kUnknown);
   });
 }

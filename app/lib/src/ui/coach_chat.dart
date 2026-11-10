@@ -13,6 +13,9 @@ import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/ui/coach_chat_message.dart';
 import 'package:leetcode_guard/src/ui/coach_step_inputs.dart';
 
+/// Ctrl+Enter as keycap symbols (no letters): the desktop send chord.
+const kSendChord = '⌃⏎';
+
 /// The chat panel.
 class ChatPanel extends StatelessWidget {
   /// Creates the panel; [onReveal] confirms and sends a reveal.
@@ -110,15 +113,24 @@ class _Composer extends StatelessWidget {
                 enabled: live,
                 minLines: 1,
                 maxLines: 6,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: !live
-                      ? 'The session has ended'
-                      // A phone has no Ctrl key to speak of.
-                      : c.transport.phone
-                      ? 'Ask the coach, or paste JavaScript'
-                      : 'Ask the coach, or paste JavaScript (Ctrl+Enter sends)',
-                  errorText: limitError(text),
+                // The field's glyph says what goes in (a lock once the
+                // session ended); the desktop shows the send chord as keycap
+                // symbols. The old hint sentences are spoken only.
+                decoration: limitDecoration(
+                  text,
+                  prefixIcon: Icon(
+                    live ? Icons.chat_bubble_outline : Icons.lock_outline,
+                    semanticLabel: !live
+                        ? 'The session has ended'
+                        : 'Ask the coach, or paste JavaScript',
+                  ),
+                  // A phone has no Ctrl key to speak of.
+                  suffix: live && !c.transport.phone
+                      ? const Text(
+                          kSendChord,
+                          semanticsLabel: 'Ctrl+Enter sends',
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -128,19 +140,22 @@ class _Composer extends StatelessWidget {
                 OutlinedButton(
                   key: const Key('hint'),
                   onPressed: act ? c.hint : null,
-                  child: const Text('Hint'),
+                  child: const Icon(
+                    Icons.lightbulb_outline,
+                    semanticLabel: 'Hint',
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 OutlinedButton(
                   key: const Key('reveal'),
                   onPressed: act ? onReveal : null,
-                  child: const Text('Reveal'),
+                  child: const Icon(Icons.visibility, semanticLabel: 'Reveal'),
                 ),
                 const Spacer(),
                 FilledButton(
                   key: const Key('chat-send'),
                   onPressed: canSend ? _send : null,
-                  child: const Text('Send'),
+                  child: const Icon(Icons.send, semanticLabel: 'Send'),
                 ),
               ],
             ),

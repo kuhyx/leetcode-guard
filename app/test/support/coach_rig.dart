@@ -135,8 +135,15 @@ Future<bool> enabled(WidgetTester tester, String key) async {
   return tester.widget<ButtonStyleButton>(finder).onPressed != null;
 }
 
+/// Leaves the session screen by its icon-only back button (Flutter's own
+/// paints a "Back" tooltip, so `pageBack` has nothing to find).
+Future<void> leaveSession(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('back')));
+  await tester.pumpAndSettle();
+}
+
 Future<void> openCoachTab(WidgetTester tester) async {
-  await tester.tap(find.text('Coach').first);
+  await tester.tap(find.byIcon(Icons.school_outlined).first);
   await tester.pumpAndSettle();
 }
 

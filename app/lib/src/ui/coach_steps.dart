@@ -8,36 +8,14 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_session_screen.dart';
 import 'package:leetcode_guard/src/ui/coach_step_body.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
-/// Each step's label and what it asks of kuhy.
-const kSteps = <(String, String)>[
-  (
-    'Constraint',
-    'What does the hard constraint rule out, and what rule does it give you?',
-  ),
-  (
-    'Requirements',
-    'List the properties a solution needs, one per field. '
-        'No code and no tool names yet.',
-  ),
-  (
-    'Toolbox',
-    'Pick the toolbox entries whose properties cover your requirements.',
-  ),
-  (
-    'Implement',
-    'Solve it on LeetCode. This step completes on its own once LeetCode '
-        'shows an Accepted for this problem.',
-  ),
-  (
-    'Post-mortem',
-    'Why did it work? Name the property that made the solution possible.',
-  ),
-];
+/// Spoken while the PC starts the session.
+const kStartingSession = 'Waiting for the PC to start the session...';
 
 /// The five steps.
 class StepsPanel extends StatelessWidget {
@@ -70,10 +48,16 @@ class StepsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = controller.state;
     if (state == null || state.steps.isEmpty) {
+      // The PC is starting the session: a glyph, no sentence (no spinner:
+      // an endless animation would never let the screen settle).
       return const Padding(
         padding: kGutter,
-        child: Column(
-          children: [Muted('Waiting for the PC to start the session...')],
+        child: Center(
+          child: Icon(
+            Icons.hourglass_top,
+            size: 48,
+            semanticLabel: kStartingSession,
+          ),
         ),
       );
     }
@@ -81,7 +65,7 @@ class StepsPanel extends StatelessWidget {
       key: const Key('steps-list'),
       padding: kGutter,
       children: [
-        for (var n = 1; n <= kSteps.length; n++) ...[
+        for (var n = 1; n <= kStepGlyphs.length; n++) ...[
           _StepHeader(n, state.stepAt(n), onSelect, selected: selected == n),
           if (selected == n)
             if (state.stepAt(n) case final CoachStep step)
@@ -128,22 +112,14 @@ class _StepHeader extends StatelessWidget {
           onTap: locked ? null : () => onSelect(n),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
+            // Number + step glyph name the step; the status glyph and its
+            // hue say where it stands (the old words are spoken only).
             child: Row(
               children: [
-                Icon(icon, color: color),
+                Icon(icon, color: color, semanticLabel: status.name),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    '$n. ${kSteps[n - 1].$1}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: locked ? scheme.onSurfaceVariant : null,
-                    ),
-                  ),
-                ),
-                Text(
-                  status.name,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
-                ),
+                StepMark(n, color: locked ? scheme.onSurfaceVariant : null),
+                const Spacer(),
               ],
             ),
           ),

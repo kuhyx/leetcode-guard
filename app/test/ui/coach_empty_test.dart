@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
+import 'package:leetcode_guard/src/ui/coach_how_to.dart';
+import 'package:leetcode_guard/src/ui/coach_tab.dart';
+import 'package:leetcode_guard/src/ui/widgets.dart';
 
+import '../support/coach_labels.dart';
 import '../support/coach_pump.dart';
 import '../support/pump.dart';
 
@@ -15,9 +21,18 @@ void main() {
         answers: ['snapshot_coach_empty'],
       );
       await openCoach(tester);
-      expect(find.text('How to start'), findsOneWidget);
-      expect(find.text('1. Constraint'), findsOneWidget);
-      expect(find.text('4. Post-mortem'), findsOneWidget);
+      expect(byLabel(kHowToTitle), findsWidgets);
+      // The method: one step glyph each, in order, the names spoken.
+      expect(byLabelContaining('1. Constraint'), findsOneWidget);
+      expect(byLabelContaining('4. Post-mortem'), findsOneWidget);
+      expect(
+        tester.widget<Icon>(find.byKey(const Key('method-0'))).icon,
+        stepGlyph(1).icon,
+      );
+      expect(
+        tester.widget<Icon>(find.byKey(const Key('method-3'))).icon,
+        stepGlyph(5).icon,
+      );
       expect(find.byKey(const Key('command-box')), findsOneWidget);
       expect(
         find.descendant(
@@ -27,16 +42,19 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('0 / 4'), findsNWidgets(6));
-      expect(find.text('Next: Missing Number'), findsOneWidget);
-      expect(find.text('Missing Number'), findsOneWidget);
+      expect(
+        numeralIn('next-bit-cancellation', 'Missing Number'),
+        findsOneWidget,
+      );
+      expect(find.text('Missing Number'), findsNWidgets(2));
       expect(find.text('#268'), findsOneWidget);
-      expect(find.text('unknown'), findsNothing);
-      expect(find.text('Problems'), findsNothing);
-      expect(find.text('Re-tests due'), findsNothing);
-      expect(find.textContaining("hasn't published"), findsNothing);
+      expect(find.text(kUnknown), findsNothing);
+      expect(find.byIcon(Icons.error), findsNothing);
+      expect(find.byIcon(Icons.table_view), findsNothing);
+      expect(byLabel(kCoachWhy), findsNothing);
     });
 
-    testWidgets('the method and the commands sit behind their buttons', (
+    testWidgets('the method is spoken; the commands sit behind a button', (
       tester,
     ) async {
       await pumpApp(
@@ -45,15 +63,15 @@ void main() {
         answers: ['snapshot_coach_empty'],
       );
       await openCoach(tester);
-      expect(find.text('leetcode report'), findsNothing);
-      await openSheet(tester, 'The method');
+      expect(find.byKey(const Key('show-method')), findsNothing);
       expect(
-        find.text('Turn the hard constraint into a rule for the design.'),
+        byLabelContaining(
+          'Turn the hard constraint into a rule for the design.',
+        ),
         findsOneWidget,
       );
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-      await openSheet(tester, 'All commands');
+      expect(find.text('leetcode report'), findsNothing);
+      await openSheet(tester, const Key('show-commands'));
       expect(find.text('leetcode report'), findsOneWidget);
     });
 
@@ -70,7 +88,7 @@ void main() {
       await tester.tap(find.byKey(const Key('copy-command')));
       await tester.pumpAndSettle();
       expect(copied, ['leetcode --cluster bit-cancellation']);
-      expect(find.text('Copied'), findsOneWidget);
+      expect(byLabel('Copied'), findsOneWidget);
     });
 
     testWidgets('clusters come in curriculum order, not key order', (
@@ -154,10 +172,10 @@ void main() {
         ],
       );
       await openCoach(tester);
-      expect(find.text('How to start'), findsOneWidget);
-      expect(find.text('unknown'), findsOneWidget);
+      expect(byLabel(kHowToTitle), findsWidgets);
+      expect(find.text(kUnknown), findsOneWidget);
       expect(find.byKey(const Key('command-box')), findsNothing);
-      expect(find.text('None recorded'), findsOneWidget);
+      expect(find.text(kNoneRecorded), findsOneWidget);
     });
 
     testWidgets('how_to without a first command still lists the commands', (
@@ -176,9 +194,9 @@ void main() {
         ],
       );
       await openCoach(tester);
-      await openSheet(tester, 'All commands');
+      await openSheet(tester, const Key('show-commands'));
       expect(find.text('leetcode due'), findsOneWidget);
-      expect(find.text('List them.'), findsOneWidget);
+      expect(byLabel('List them.'), findsOneWidget);
       expect(find.byKey(const Key('command-box')), findsNothing);
     });
   });

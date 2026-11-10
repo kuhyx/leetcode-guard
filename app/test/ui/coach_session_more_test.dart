@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
+import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/coach_chat_message.dart';
+import 'package:leetcode_guard/src/ui/coach_grade.dart';
 
+import '../support/coach_labels.dart';
 import '../support/coach_rig.dart';
 import '../support/fake_relay.dart';
 
@@ -16,33 +20,33 @@ void main() {
     expect(find.byKey(const Key('answer-5')), findsOneWidget);
     await tapKey(tester, 'step-1');
     expect(find.text('The rule is clear.'), findsOneWidget);
-    expect(find.text('Failed tries: 0'), findsOneWidget);
+    expect(numeralIn('tries-1', '0'), findsOneWidget);
     await tapKey(tester, 'step-4');
-    expect(find.text('Accepted on LeetCode.'), findsOneWidget);
-    expect(find.textContaining('Last checked'), findsOneWidget);
+    expect(byLabel('Accepted on LeetCode.'), findsOneWidget);
+    expect(find.byKey(const Key('checked')), findsOneWidget);
   });
 
   testWidgets('End session asks first, then ends it', (tester) async {
     final rig = await pumpCoach(tester);
     await startMissingNumber(tester, rig);
     await tapKey(tester, 'end-session');
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(const Key('cancel-end')));
     await tester.pumpAndSettle();
     expect(rig.transport.relay.ran, hasLength(1));
     await tapKey(tester, 'end-session');
-    await tester.tap(find.widgetWithText(TextButton, 'End session').last);
+    await tester.tap(find.byKey(const Key('confirm-end')));
     await tester.pumpAndSettle();
     await settle(tester, rig);
     expect(rig.transport.relay.ran.last.$1, 'session_end');
-    expect(find.text('Session ended.'), findsOneWidget);
+    expect(byLabel('Session ended.'), findsOneWidget);
     expect(find.byKey(const Key('end-session')), findsNothing);
 
     // Back on the Coach tab, the last session can be viewed.
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Last: Missing Number (ended)'), findsOneWidget);
+    await leaveSession(tester);
+    expect(find.text('Missing Number'), findsWidgets);
+    expect(byLabel('Last: Session ended.'), findsOneWidget);
     await tapKey(tester, 'resume-session');
-    expect(find.text('Session ended.'), findsOneWidget);
+    expect(byLabel('Session ended.'), findsOneWidget);
   });
 
   testWidgets('Resume reopens a live session from the Coach tab', (
@@ -50,9 +54,9 @@ void main() {
   ) async {
     final rig = await pumpCoach(tester);
     await startMissingNumber(tester, rig);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.text('Live: Missing Number, step 1 of 5'), findsOneWidget);
+    await leaveSession(tester);
+    expect(byLabel('Live: step 1 of 5'), findsOneWidget);
+    expect(find.text('Missing Number'), findsWidgets);
     expect(await enabled(tester, 'start-majority-element'), isFalse);
     await tapKey(tester, 'resume-session');
     expect(find.byKey(const Key('answer-1')), findsOneWidget);
@@ -65,8 +69,8 @@ void main() {
     await startMissingNumber(tester, rig);
     await typeInto(tester, 'chat-input', 'reveal');
     await tapKey(tester, 'chat-send');
-    expect(find.textContaining('ends the exercise'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.byKey(const Key('confirm-reveal')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-reveal')));
     await tester.pumpAndSettle();
 
     await typeInto(tester, 'chat-input', 'why xor?');
@@ -74,7 +78,8 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
-    expect(find.text('You (sending...)'), findsOneWidget);
+    expect(byLabel(kSendingLabel), findsOneWidget);
+    expect(find.text('why xor?'), findsOneWidget);
     await settle(tester, rig);
     expect(find.text(kReply), findsOneWidget);
   });
@@ -85,7 +90,11 @@ void main() {
     final rig = await pumpCoach(tester);
     await startMissingNumber(tester, rig);
     await typeInto(tester, 'answer-1', 'x' * 8193);
-    expect(find.textContaining('Too long: 8193 of 8192 bytes'), findsOneWidget);
+    // The live counter: numerals, red, plus the field's red outline.
+    expect(byLabel('Too long: 8193 of 8192 bytes'), findsOneWidget);
+    expect(find.text('8193/8192'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byKey(const Key('answer-1')));
+    expect(field.decoration?.error, isNotNull);
     expect(await enabled(tester, 'submit-1'), isFalse);
     await gradeText(tester, rig, 1, 'O(1) space');
 
@@ -102,8 +111,9 @@ void main() {
     };
     relay.rev++;
     await wait(tester, rig, 5);
-    expect(find.text('unknown'), findsOneWidget);
-    expect(find.text('not checked'), findsOneWidget);
+    expect(find.byKey(const Key('grade-2')), findsNothing);
+    expect(find.text(kUnknown), findsOneWidget);
+    expect(byLabel(kNotChecked), findsOneWidget);
   });
 
   testWidgets('a card failure is shown with the post-mortem pass', (
@@ -117,10 +127,8 @@ void main() {
       ..cardsError = 'AnkiConnect down';
     await wait(tester, rig, 5);
     await gradeText(tester, rig, 5, 'XOR pairs each index with its value');
-    expect(
-      find.text('Built 3 Anki cards; the rest failed: AnkiConnect down'),
-      findsOneWidget,
-    );
+    expect(numeralIn('cards', '3'), findsOneWidget);
+    expect(byLabel('The rest failed: AnkiConnect down'), findsOneWidget);
   });
 
   testWidgets('rate limited: "send again" goes out as a new request', (
@@ -131,7 +139,8 @@ void main() {
     rig.transport.relay.rateLimitNext = true;
     await tapKey(tester, 'hint');
     await settle(tester, rig);
-    expect(find.text('Too many requests: wait a moment'), findsOneWidget);
+    expect(byLabel('Too many requests: wait a moment'), findsOneWidget);
+    expect(find.byIcon(Icons.timer), findsOneWidget);
     final first = rig.transport.sent.last.$1;
     await tapKey(tester, 'retry-new');
     await settle(tester, rig);
@@ -147,7 +156,7 @@ void main() {
     await settle(tester, rig);
     expect(rig.transport.relay.done.values.single['code'], 'no_answer_key');
     expect(rig.transport.sent.single.$2['body'], {'slug': 'majority-element'});
-    expect(find.text('No answer key for that problem'), findsOneWidget);
+    expect(byLabel('No answer key for that problem'), findsOneWidget);
   });
 
   testWidgets('no network: the Coach tab says so and why', (tester) async {
@@ -159,8 +168,11 @@ void main() {
       ),
     );
     await openCoachTab(tester);
-    expect(find.text('Cannot reach the coach'), findsOneWidget);
-    expect(find.text('Network error: offline'), findsOneWidget);
+    expect(
+      byLabel('Cannot reach the coach: Network error: offline'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.wifi_off), findsOneWidget);
   });
 
   testWidgets('polling stops in the background and resumes', (tester) async {
@@ -177,6 +189,6 @@ void main() {
     go(const [AppLifecycleState.inactive, AppLifecycleState.resumed]);
     await wait(tester, rig, 31);
     expect(rig.transport.heartbeats, greaterThan(hidden));
-    expect(find.text('Guided session'), findsOneWidget);
+    expect(find.byKey(const Key('resume-session')), findsOneWidget);
   });
 }

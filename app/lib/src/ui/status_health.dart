@@ -1,155 +1,152 @@
-/// The diagnostic sections of the Status tab: integrity, environment and
-/// the suggested problems (the app's one action).
+/// The diagnostic sections of the Status tab: integrity and environment.
+/// The suggested problems live in `status_suggestions.dart`.
+///
+/// Icons, marks and numbers only (textgate): Python's notes are spoken and
+/// drawn as their own dates and numbers.
 library;
 
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/more_sheet.dart';
+import 'package:leetcode_guard/src/ui/status_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 
-/// Opens [uri] outside the app.
-typedef UrlOpener = Future<bool> Function(Uri uri);
+export 'package:leetcode_guard/src/ui/status_suggestions.dart';
 
 /// "Ledger integrity": HMAC verification counts.
 Widget integritySection(BuildContext context, StatusData? s) {
   const title = 'Ledger integrity';
+  final leading = sectionIcon(Icons.verified_user_outlined, title);
   final i = s?.integrity;
-  if (i == null) return const SectionCard.unknown(title: title);
+  if (i == null) return SectionCard.unknown(title: title, leading: leading);
   final danger = Theme.of(context).colorScheme.error;
   return SectionCard(
     title: title,
+    leading: leading,
     children: [
-      InfoRow('HMAC checking', switch (i.ok) {
-        true => 'on',
-        false => 'OFF (key unreadable)',
-        null => kUnknown,
-      }, color: i.ok == false ? danger : null),
-      InfoRow(
-        'Tampered',
-        show(i.tampered),
-        color: (i.tampered ?? 0) > 0 ? danger : null,
-      ),
-      InfoRow('Discounted', show(i.discounted)),
-      InfoRow('Unparsable', show(i.unparsable)),
-      InfoRow('Ledger entries', show(i.totalEntries)),
-      InfoRow('Seeded', show(i.bootstrapped)),
-      InfoRow('Clock trusted', show(i.clockTrusted)),
+      ...iconPairs([
+        InfoRow(
+          i.ok == false
+              ? 'HMAC checking OFF (key unreadable)'
+              : 'HMAC checking',
+          show(i.ok),
+          icon: i.ok == false ? Icons.key_off : Icons.key,
+          color: i.ok == false ? danger : null,
+          key: const Key('row-HMAC checking'),
+        ),
+        InfoRow(
+          'Tampered',
+          show(i.tampered),
+          icon: Icons.gpp_bad_outlined,
+          color: (i.tampered ?? 0) > 0 ? danger : null,
+        ),
+        InfoRow(
+          'Discounted',
+          show(i.discounted),
+          icon: Icons.remove_circle_outline,
+        ),
+        InfoRow('Unparsable', show(i.unparsable), icon: Icons.broken_image),
+        InfoRow('Ledger entries', show(i.totalEntries), icon: Icons.list_alt),
+        InfoRow('Seeded', show(i.bootstrapped), icon: Icons.grass),
+        InfoRow('Clock trusted', show(i.clockTrusted), icon: Icons.schedule),
+      ]),
+      // The ledger's path on the PC: data, kept as written.
       if (i.ledgerPath case final String path) Muted(path),
     ],
   );
 }
 
+/// The icon of each problem-pool source (`PoolSource` in
+/// `leetcode_guard/_pool_resolve.py`), and whether it is a warning.
+(IconData, bool) poolSourceIcon(String? source) => switch (source) {
+  final String s when s.startsWith('live') => (
+    Icons.cloud_done_outlined,
+    false,
+  ),
+  final String s when s.startsWith('stale-cache') => (Icons.history, true),
+  final String s when s.startsWith('cache') => (Icons.save_outlined, false),
+  'none' => (Icons.cloud_off, true),
+  _ => (Icons.help_outline, false),
+};
+
 /// "Environment": clock trust, LeetCode auth and where suggestions came from.
 Widget environmentSection(BuildContext context, StatusData? s) {
   const title = 'Environment';
+  final leading = sectionIcon(Icons.settings_suggest_outlined, title);
   final e = s?.environment;
-  if (e == null) return const SectionCard.unknown(title: title);
+  if (e == null) return SectionCard.unknown(title: title, leading: leading);
   final warning = statusColors(context).warning;
+  final (poolIcon, poolWarn) = poolSourceIcon(e.poolSource);
+  final nextFire = e.timer?.nextFire;
   return SectionCard(
     title: title,
+    leading: leading,
     children: [
-      ...pairRows([
+      ...iconPairs([
         InfoRow(
           'Clock trusted',
           show(e.clockTrusted),
+          icon: Icons.schedule,
           color: e.clockTrusted == false ? warning : null,
         ),
         InfoRow(
           'LeetCode cookies loaded',
           show(e.authPresent),
+          icon: Icons.cookie_outlined,
           color: e.authPresent == false ? warning : null,
         ),
-        InfoRow('Suggestions from', show(e.poolSource)),
-        InfoRow('Timer enabled', show(e.timer?.enabled)),
-        InfoRow('Next fire', show(e.timer?.nextFire)),
+        InfoRow(
+          'Suggestions from ${show(e.poolSource)}',
+          e.poolSource == null ? kUnknown : factsOf(e.poolSource!),
+          icon: poolIcon,
+          color: poolWarn ? warning : null,
+          key: const Key('row-Suggestions from'),
+        ),
+        InfoRow('Timer enabled', show(e.timer?.enabled), icon: Icons.timer),
       ]),
+      // systemd's "Sat 2026-10-24 09:00:00 CEST": the date and time only.
+      InfoRow(
+        'Next fire ${show(nextFire)}',
+        nextFire == null ? kUnknown : factsOf(nextFire),
+        icon: Icons.alarm,
+        key: const Key('row-Next fire'),
+      ),
       showAllButton(
         context,
-        label: 'Details',
+        label: '',
+        icon: Icons.info_outline,
         title: title,
         rows: [
-          if (e.authNote case final String note) Muted(note),
-          InfoRow('Cookies configured', show(e.cookiesConfigured)),
-          InfoRow('Sync token configured', show(e.syncConfigured)),
-          InfoRow('Timer detail', show(e.timer?.detail)),
-          Muted(e.poolCacheSummary ?? 'Problem pool: $kUnknown'),
-          Muted(e.statementCacheSummary ?? 'Offline statements: $kUnknown'),
-          for (final note in e.poolNotes ?? const <String>[]) Muted(note),
+          if (e.authNote case final String note)
+            spokenNote(Icons.cookie_outlined, note),
+          ...iconPairs([
+            InfoRow(
+              'Cookies configured',
+              show(e.cookiesConfigured),
+              icon: Icons.cookie_outlined,
+            ),
+            InfoRow(
+              'Sync token configured',
+              show(e.syncConfigured),
+              icon: Icons.sync,
+            ),
+          ]),
+          spokenNote(Icons.timer, e.timer?.detail, unknownSpoken: 'Timer'),
+          spokenNote(
+            Icons.inventory_2_outlined,
+            e.poolCacheSummary,
+            unknownSpoken: 'Problem pool:',
+          ),
+          spokenNote(
+            Icons.offline_pin_outlined,
+            e.statementCacheSummary,
+            unknownSpoken: 'Offline statements:',
+          ),
+          for (final note in e.poolNotes ?? const <String>[])
+            spokenNote(Icons.notes, note),
         ],
       ),
     ],
   );
-}
-
-/// "Suggested problems": tap one to open it in the browser.
-Widget suggestionsSection(
-  BuildContext context,
-  StatusData? s,
-  UrlOpener openUrl,
-) {
-  const title = 'Suggested problems';
-  if (s == null) return const SectionCard.unknown(title: title);
-  return SectionCard(
-    title: title,
-    children: limitedRows(
-      context,
-      s.suggestions,
-      3,
-      (item) => _SuggestionTile(item: item, openUrl: openUrl),
-      title: title,
-    ),
-  );
-}
-
-class _SuggestionTile extends StatelessWidget {
-  const new({required this.item, required this.openUrl});
-
-  final Suggestion item;
-  final UrlOpener openUrl;
-
-  /// Only https opens: the URL arrives over the network, and a
-  /// `javascript:` or `intent:` link must never be launched.
-  Uri? get _target {
-    final uri = Uri.tryParse(item.url ?? '');
-    return uri != null && uri.scheme == 'https' ? uri : null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final target = _target;
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      onTap: target == null ? null : () => openUrl(target),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    show(item.title),
-                    style: TextStyle(
-                      color: target == null ? null : scheme.primary,
-                    ),
-                  ),
-                  Text(
-                    '${show(item.difficulty)}, '
-                    '${percent(item.acRate)} accepted',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            if (target != null)
-              Icon(Icons.open_in_new, size: 20, color: scheme.onSurfaceVariant),
-          ],
-        ),
-      ),
-    );
-  }
 }

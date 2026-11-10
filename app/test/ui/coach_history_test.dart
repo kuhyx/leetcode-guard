@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
+import 'package:leetcode_guard/src/ui/coach_grade.dart';
 
+import '../support/coach_labels.dart';
 import '../support/coach_pump.dart';
 import '../support/pump.dart';
 
@@ -26,16 +29,27 @@ void main() {
   ) async {
     await pumpApp(tester, size: kTallCoach, answers: [snapshotWith(_coach)]);
     await openCoach(tester);
-    expect(find.text('Constraint: pass, 2 tries'), findsOneWidget);
-    expect(find.text('Requirements: partial, forced, 3 tries'), findsOneWidget);
-    expect(find.text('Toolbox: not graded'), findsOneWidget);
-    expect(find.text('Post-mortem: pass, not checked, 1 try'), findsOneWidget);
-    expect(find.text('Accepted on LeetCode: yes'), findsOneWidget);
-    expect(find.text('Hint rung: H2'), findsOneWidget);
+    // Each graded step: spoken as before, painted as mark + pill + count.
+    expect(byLabel('Constraint: pass, 2 tries'), findsOneWidget);
+    expect(byLabel('Requirements: partial, forced, 3 tries'), findsOneWidget);
+    expect(byLabel('Toolbox: not graded'), findsOneWidget);
+    expect(byLabel('Post-mortem: pass, not checked, 1 try'), findsOneWidget);
+    Finder inRow(int n, Finder f) => find.descendant(
+      of: find.byKey(Key('grades-missing-number-$n')),
+      matching: f,
+    );
+    expect(inRow(1, find.byType(GradeBadge)), findsOneWidget);
+    expect(inRow(1, find.text('2')), findsOneWidget);
+    expect(inRow(2, find.byIcon(Icons.redo)), findsOneWidget);
+    expect(inRow(3, find.byType(GradeBadge)), findsNothing);
+    expect(inRow(3, find.text('–')), findsOneWidget);
+    expect(inRow(5, find.byIcon(Icons.help_outline)), findsOneWidget);
+    expect(numeralIn('accepted-missing-number', '✓'), findsOneWidget);
+    expect(numeralIn('rung-missing-number', 'H2'), findsOneWidget);
     // A CLI-only session: grades unknown, never zero.
-    expect(find.text('Grades: unknown'), findsOneWidget);
-    expect(find.textContaining('Accepted on LeetCode'), findsOneWidget);
-    expect(find.textContaining('0 tries'), findsNothing);
+    expect(numeralIn('row-Grades', kUnknown), findsOneWidget);
+    expect(byLabel('Accepted on LeetCode'), findsOneWidget);
+    expect(byLabelContaining('0 tries'), findsNothing);
   });
 
   test('grades parse tolerantly: missing is unknown, not zero', () {
@@ -65,7 +79,7 @@ void main() {
       ],
     );
     await openCoach(tester);
-    expect(find.text('Constraint: unknown'), findsOneWidget);
+    expect(byLabel('Constraint: $kUnknown'), findsOneWidget);
     expect(find.byType(Scrollable), findsWidgets);
   });
 }

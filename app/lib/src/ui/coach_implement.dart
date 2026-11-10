@@ -58,24 +58,32 @@ class ImplementStatus extends StatelessWidget {
         Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     };
+    // The watch is a glyph in its hue (the sentence is spoken), then the
+    // clock of the last check.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FilledButton.icon(
+        FilledButton(
           key: const Key('open-leetcode'),
           onPressed: valid ? () => openUrl(Uri.parse(target)) : null,
-          icon: const Icon(Icons.open_in_new),
-          label: const Text('Open on LeetCode'),
+          child: const Icon(
+            Icons.open_in_new,
+            semanticLabel: 'Open on LeetCode',
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
-            Icon(icon, color: color),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Line(text)),
+            Icon(icon, color: color, size: 32, semanticLabel: text),
+            if (checked != null) ...[
+              const SizedBox(width: AppSpacing.md),
+              Muted(
+                '$kAsOf ${timeOfMs(checked, now)}',
+                key: const Key('checked'),
+              ),
+            ],
           ],
         ),
-        if (checked != null) Muted('Last checked ${timeOfMs(checked, now)}'),
       ],
     );
   }

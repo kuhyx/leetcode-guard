@@ -50,7 +50,11 @@ Future<void> _everyChip(
     await tester.ensureVisible(chips.at(i));
     await tester.tap(chips.at(i));
     await tester.pumpAndSettle();
-    final label = (tester.widget<ChoiceChip>(chips.at(i)).label as Text).data!;
+    final label = switch (tester.widget<ChoiceChip>(chips.at(i)).label) {
+      final Text text => text.data!,
+      final Icon icon => icon.semanticLabel!,
+      final other => '$other',
+    };
     if (exempt.contains(label)) continue;
     if (_overflow(tester).any((extent) => extent > 0)) {
       problems.add('$tab / $label scrolls by ${_overflow(tester)}');

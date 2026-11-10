@@ -51,6 +51,41 @@ String describeSignInFailure(Object error) {
 /// A non-2xx answer: the status code and nothing of the body.
 String httpFailure(int status) => 'Firebase answered HTTP $status';
 
+/// What went wrong, for the banner's icon. The reasons stay sentences
+/// because the error log and the coach area read them; the banner paints
+/// only the kind (textgate) and speaks the sentence.
+enum FailureKind {
+  /// [kOfflineText].
+  offline,
+
+  /// [kTimeoutText].
+  timeout,
+
+  /// An HTTP status other than 2xx; [httpStatusIn] has the code.
+  http,
+
+  /// [describeSignInFailure]'s own reason.
+  signIn,
+
+  /// Anything else.
+  other,
+}
+
+final _httpStatus = RegExp(r'\bHTTP (\d{3})\b');
+
+/// The kind of [reason], a string this file (or a source) produced.
+FailureKind failureKind(String reason) => switch (reason) {
+  kOfflineText => FailureKind.offline,
+  kTimeoutText => FailureKind.timeout,
+  _ when reason.startsWith('Firebase sign-in failed') => FailureKind.signIn,
+  _ when _httpStatus.hasMatch(reason) => FailureKind.http,
+  _ => FailureKind.other,
+};
+
+/// The HTTP status code inside [reason], if it names one.
+int? httpStatusIn(String reason) =>
+    int.tryParse(_httpStatus.firstMatch(reason)?[1] ?? '');
+
 final _secrets = RegExp(
   r'[a-z][a-z0-9+.-]*://\S+|\?\S*|\b(?:auth|key|token)=\S*|'
   r'eyJ[\w-]+\.[\w-]+\.[\w-]+',

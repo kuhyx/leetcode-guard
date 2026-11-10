@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -5,14 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 const kPhoneCoach = Size(412, 915);
 const kTallCoach = Size(412, 6000);
 
+/// Taps the Coach destination by its icon (the nav paints no words).
 Future<void> openCoach(WidgetTester tester) async {
-  await tester.tap(find.text('Coach'));
+  await tester.tap(find.byIcon(Icons.school_outlined).first);
   await tester.pumpAndSettle();
 }
 
-/// Taps the "Show all" style button labelled [label] and shows its sheet.
-Future<void> openSheet(WidgetTester tester, String label) async {
-  await tester.tap(find.text(label));
+/// Taps the "Show all" style button keyed [key] and shows its sheet.
+Future<void> openSheet(WidgetTester tester, Key key) async {
+  await tester.tap(find.byKey(key));
   await tester.pumpAndSettle();
 }
 

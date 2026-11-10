@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:leetcode_guard/src/format.dart';
+import 'package:leetcode_guard/src/ui/coach_how_to.dart';
+import 'package:leetcode_guard/src/ui/coach_tab.dart';
+
+import '../support/coach_labels.dart';
 import '../support/coach_pump.dart';
 import '../support/pump.dart';
+
+Finder _inTab(Finder f) =>
+    find.descendant(of: find.byType(CoachTab), matching: f);
 
 void main() {
   group('with sessions', () {
@@ -11,16 +19,21 @@ void main() {
     ) async {
       await pumpApp(tester, size: kTallCoach);
       await openCoach(tester);
-      expect(find.text('How to start'), findsNothing);
+      expect(byLabel(kHowToTitle), findsNothing);
       expect(find.text('missing-number'), findsNWidgets(2));
-      expect(find.text('bit-cancellation, 2026-10-23'), findsOneWidget);
-      expect(find.text('Requirements before code: yes'), findsOneWidget);
-      expect(find.text('Hint rung: H3, revealed'), findsOneWidget);
-      expect(find.text('Requirements check: incomplete'), findsOneWidget);
-      expect(find.text('due 2026-10-26'), findsOneWidget);
+      expect(byLabel('bit-cancellation'), findsWidgets);
+      expect(find.text('2026-10-23'), findsOneWidget);
+      expect(numeralIn('req-first-missing-number', '✓'), findsOneWidget);
+      expect(numeralIn('rung-single-number-iii', 'H3'), findsOneWidget);
+      expect(byLabel('Hint rung, revealed'), findsOneWidget);
+      expect(byLabel('Requirements check: incomplete'), findsOneWidget);
+      expect(find.text('2026-10-26'), findsOneWidget);
       expect(find.text('leetcode --retest missing-number'), findsOneWidget);
       expect(find.text('1 / 4'), findsOneWidget);
-      expect(find.text('Next: Majority Element'), findsOneWidget);
+      expect(
+        numeralIn('next-bit-cancellation', 'Majority Element'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a re-test row without a command shows none', (tester) async {
@@ -36,9 +49,9 @@ void main() {
         ],
       );
       await openCoach(tester);
-      expect(find.text('due 2026-10-26'), findsOneWidget);
+      expect(find.text('2026-10-26'), findsOneWidget);
       expect(find.textContaining('leetcode --retest'), findsNothing);
-      expect(find.text('unknown'), findsWidgets);
+      expect(find.text(kUnknown), findsWidgets);
     });
 
     testWidgets(
@@ -60,7 +73,7 @@ void main() {
         expect(
           find.descendant(
             of: find.byKey(const Key('row-sliding-window')),
-            matching: find.text('unknown'),
+            matching: find.text(kUnknown),
           ),
           findsOneWidget,
         );
@@ -100,21 +113,17 @@ void main() {
     testWidgets('null coach: unknown plus why, nothing else', (tester) async {
       await pumpApp(tester, size: kTallCoach, answers: ['snapshot_nulls']);
       await openCoach(tester);
-      expect(find.text('unknown'), findsOneWidget);
-      expect(
-        find.text(
-          "The PC hasn't published coach data; is the harvester running?",
-        ),
-        findsOneWidget,
-      );
+      expect(_inTab(find.text(kUnknown)), findsOneWidget);
+      expect(byLabel(kCoachWhy), findsOneWidget);
+      expect(find.byIcon(Icons.sync_problem), findsOneWidget);
       expect(find.text('0'), findsNothing);
-      expect(find.text('How to start'), findsNothing);
+      expect(byLabel(kHowToTitle), findsNothing);
     });
 
     testWidgets('no snapshot at all reads as unknown too', (tester) async {
       await pumpApp(tester, size: kTallCoach, answers: [null]);
       await openCoach(tester);
-      expect(find.text('unknown'), findsOneWidget);
+      expect(_inTab(find.text(kUnknown)), findsOneWidget);
     });
   });
 }

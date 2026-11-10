@@ -49,6 +49,7 @@ class LeetGuardApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    // The app's proper noun, for the OS task switcher only (settled).
     title: 'LeetGuard',
     debugShowCheckedModeBanner: false,
     theme: buildDarkTheme(),
@@ -70,10 +71,13 @@ class _ShellState extends State<_Shell> {
 
   StatusController get _c => widget.app.controller;
 
-  static const List<(IconData, String)> _destinations = [
-    (Icons.shield_outlined, 'Status'),
-    (Icons.school_outlined, 'Coach'),
-    (Icons.person_outline, 'Profile'),
+  /// Outline icon, filled icon when selected, and the spoken name. The names
+  /// are never painted (textgate): the bar hides its labels, the rail keeps
+  /// them invisible for semantics only.
+  static const List<(IconData, IconData, String)> _destinations = [
+    (Icons.shield_outlined, Icons.shield, 'Status'),
+    (Icons.school_outlined, Icons.school, 'Coach'),
+    (Icons.person_outline, Icons.person, 'Profile'),
   ];
 
   @override
@@ -145,23 +149,18 @@ class _ShellState extends State<_Shell> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('LeetGuard'),
-            Text(
-              asOf(_c.freshAt),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        title: Text(
+          asOf(_c.freshAt),
+          style: Theme.of(context).textTheme.labelMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           if (settings != null)
             IconButton(
-              tooltip: 'Sync account',
-              icon: const Icon(Icons.manage_accounts_outlined),
+              icon: const Icon(
+                Icons.manage_accounts_outlined,
+                semanticLabel: 'Sync account',
+              ),
               onPressed: () => _openSettings(settings),
             ),
         ],
@@ -172,11 +171,12 @@ class _ShellState extends State<_Shell> {
                 NavigationRail(
                   selectedIndex: _tab,
                   onDestinationSelected: _select,
-                  labelType: NavigationRailLabelType.all,
+                  labelType: NavigationRailLabelType.none,
                   destinations: [
-                    for (final (icon, label) in _destinations)
+                    for (final (icon, selected, label) in _destinations)
                       NavigationRailDestination(
                         icon: Icon(icon),
+                        selectedIcon: Icon(selected),
                         label: Text(label),
                       ),
                   ],
@@ -190,9 +190,17 @@ class _ShellState extends State<_Shell> {
           : NavigationBar(
               selectedIndex: _tab,
               onDestinationSelected: _select,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
               destinations: [
-                for (final (icon, label) in _destinations)
-                  NavigationDestination(icon: Icon(icon), label: label),
+                for (final (icon, selected, label) in _destinations)
+                  NavigationDestination(
+                    icon: Icon(icon),
+                    selectedIcon: Icon(selected),
+                    label: label,
+                    // An empty tooltip is none: the default paints the label
+                    // on long-press.
+                    tooltip: '',
+                  ),
               ],
             ),
     );

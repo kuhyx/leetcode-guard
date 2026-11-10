@@ -50,6 +50,21 @@ Future<StatusController> pumpApp(
   return controller;
 }
 
+/// The tab icons, as the navigation bar or rail paints them unselected.
+const IconData kStatusTab = Icons.shield_outlined;
+const IconData kCoachTab = Icons.school_outlined;
+const IconData kProfileTab = Icons.person_outline;
+
+/// Switches to the tab whose navigation icon is [icon] (the tab names are
+/// spoken only, so tests tap the icon).
+Future<void> openTab(WidgetTester tester, IconData icon) async {
+  final nav = find.byWidgetPredicate(
+    (w) => w is NavigationBar || w is NavigationRail,
+  );
+  await tester.tap(find.descendant(of: nav, matching: find.byIcon(icon)));
+  await tester.pumpAndSettle();
+}
+
 /// Scrolls the visible list until [finder] is on screen.
 Future<void> reveal(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(
