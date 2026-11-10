@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._gate import GateState, decide
 from leetcode_guard._harvest import (
     SeedStamp,
@@ -115,7 +116,7 @@ def test_a_freshly_seeded_lock_offers_a_way_out_at_t0(
     opens = [
         call
         for call in tk_mock.Button.call_args_list
-        if call.kwargs.get("text") == "Open"
+        if call.kwargs.get("text") == g.OPEN
     ]
     assert len(opens) == len(guard._model.problems), (
         "every listed problem needs a control that opens it -- naming a problem "

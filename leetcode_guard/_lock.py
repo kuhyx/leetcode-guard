@@ -37,6 +37,7 @@ from gatelock import (
     wait_for_turn,
 )
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     POLL_INTERVAL_MS_DEMO,
     POLL_INTERVAL_MS_PRODUCTION,
@@ -211,7 +212,8 @@ class LeetcodeGuard(
         """A Tk callback raised. Say so on screen and keep polling."""
         _logger.exception("a Tk callback raised inside the lock")
         for view in self._frames.views.values():
-            view.status_line.configure(text="Something went wrong -- still watching.")
+            # A warning mark in the danger colour; the poller keeps watching.
+            view.status_line.configure(text=g.BLIND, fg=self._run.config.palette.danger)
 
     def on_close(self) -> None:
         """Runs on every exit path, including SIGTERM."""

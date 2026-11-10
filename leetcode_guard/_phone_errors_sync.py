@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Final
 
 from crdt_sync import ConfigError, FirebaseAuthError, RemoteSyncError
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._phone_errors import (
     parse_phone_errors,
     read_mirror,
@@ -40,7 +41,9 @@ APP_ERRORS_PATH: Final = "leetcode-guard/app_errors"
 
 NOTIFY_TIMEOUT_SECONDS: Final = 5.0
 
-TITLE: Final = "LeetGuard app error on the phone"
+TITLE: Final = "LeetGuard  ⚠"
+"""The app's proper noun and a warning mark; the body is the phone's own
+error report, shown as it arrived."""
 
 
 def fetch_phone_errors() -> object:
@@ -95,8 +98,8 @@ def sync_phone_errors(
     for error in new:
         notify(
             TITLE,
-            f"{error.message} (x{error.count}, first {error.first_seen}, "
-            f"device {error.device[:8]})",
+            f"{error.message}  {g.TIMES}{error.count}  {error.first_seen}  "
+            f"{error.device[:8]}",
         )
     return f"{len(errors)} kept, {len(new)} new"
 

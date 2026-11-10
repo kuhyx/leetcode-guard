@@ -17,9 +17,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
 from leetcode_guard._study import StudySession
-from leetcode_guard._study_strip import StripText, build_strip
+from leetcode_guard._study_strip import build_strip
+from leetcode_guard._study_strip_text import StripText
 
 if TYPE_CHECKING:
     from gatelock import OutputRect
@@ -67,10 +69,7 @@ class StudyMixin:
         4. Show the strip.
         """
         if find_opener() is None:
-            self._say(
-                "No browser launcher found, so this problem cannot be opened "
-                f"from here. Solve it at {url}"
-            )
+            self._say("no browser launcher found", url=url)
             _logger.warning("no browser to open %s with; the lock is unchanged", url)
             return
 
@@ -83,7 +82,7 @@ class StudyMixin:
 
         outcome = session.suspend()
         if not outcome.ok:
-            self._say(f"Could not stand the lock down ({outcome.reason}).")
+            self._say(f"could not stand the lock down ({outcome.reason})")
             return
 
         if not self._spawn(url):
@@ -105,10 +104,10 @@ class StudyMixin:
             result = launch(url)
         except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the browser launcher raised; treating as a failure")
-            self._say(f"Could not open a browser. Solve it at {url}")
+            self._say("the browser launcher raised", url=url)
             return False
         if not result.ok:
-            self._say(f"Could not open a browser ({result.reason}). Solve it at {url}")
+            self._say(f"could not open a browser ({result.reason})", url=url)
         return result.ok
 
     def _show_strip(self) -> None:
@@ -174,10 +173,7 @@ class StudyMixin:
         self._drop_strip()
         outcome = session.resume()
         if not outcome.ok:
-            self._say(
-                "The lock is back but could not re-take the input grab; it is "
-                "retrying every second."
-            )
+            self._say("the lock is back but could not re-take the input grab")
         return True
 
     def _drop_strip(self) -> None:
@@ -199,11 +195,16 @@ class StudyMixin:
             )
         return self._study
 
-    def _say(self, message: str) -> None:
-        """Put one sentence on every surface's status line.
+    def _say(self, message: str, *, url: str = "") -> None:
+        """Mark a failure on every surface's status line; log the sentence.
 
         The same channel ``on_callback_error`` uses: when something goes wrong
         while the lock is up, the screen is the only place the user is looking.
+        No words there (textgate): a warning mark in the danger colour, plus
+        the problem's URL when it could not be opened -- something the user
+        can still type into a browser by hand.
         """
+        _logger.warning("study mode: %s %s", message, url)
+        mark = f"{g.BLIND} {url}" if url else g.BLIND
         for view in self._frames.views.values():
-            view.status_line.configure(text=message)
+            view.status_line.configure(text=mark, fg=self._run.config.palette.danger)

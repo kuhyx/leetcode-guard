@@ -70,6 +70,7 @@ def fake_gatelock_widgets(monkeypatch: pytest.MonkeyPatch, fake: MagicMock) -> N
 
 TK_MODULES = (
     "leetcode_guard._view",
+    "leetcode_guard._view_icons",
     "leetcode_guard._view_problems",
     "leetcode_guard._view_scroll",
     "leetcode_guard._escape_form",

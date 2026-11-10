@@ -14,7 +14,9 @@ from unittest.mock import MagicMock
 
 from gatelock import LockConfig
 
-from leetcode_guard._study_strip import StripText, StudyStrip, build_strip
+from leetcode_guard import _glyphs as g
+from leetcode_guard._study_strip import StudyStrip, build_strip
+from leetcode_guard._study_strip_text import StripText
 
 CONFIG = LockConfig()
 
@@ -51,25 +53,21 @@ def test_the_elapsed_line_counts_up_and_never_down():
     gate does not actually apply."""
     text = StripText(elapsed_seconds=902.0, needed=1)
 
-    assert text.elapsed == "Studying for 15:02"
-    for forbidden in ("remaining", "left", "until", "deadline"):
-        assert forbidden not in text.elapsed.lower()
+    assert text.elapsed == "15:02"
+    assert "-" not in text.elapsed
 
 
 def test_the_elapsed_line_survives_a_clock_that_went_backwards():
-    assert StripText(elapsed_seconds=-5.0, needed=1).elapsed == "Studying for 00:00"
+    assert StripText(elapsed_seconds=-5.0, needed=1).elapsed == "00:00"
 
 
-def test_the_owed_line_is_singular_for_one():
-    assert StripText(elapsed_seconds=0, needed=1).owed == (
-        "Still need 1 accepted submission"
-    )
+def test_the_owed_line_draws_one_circle_per_solve():
+    assert StripText(elapsed_seconds=0, needed=1).owed == g.OWED
+    assert StripText(elapsed_seconds=0, needed=3).owed == g.OWED * 3
 
 
-def test_the_owed_line_is_plural_for_more():
-    assert StripText(elapsed_seconds=0, needed=3).owed == (
-        "Still need 3 accepted submissions"
-    )
+def test_nothing_owed_shows_the_check():
+    assert StripText(elapsed_seconds=0, needed=0).owed == g.SOLVED
 
 
 # -- construction ----------------------------------------------------------
@@ -111,7 +109,7 @@ def test_the_back_button_is_wired_and_is_not_styled_as_destructive(tk_mock):
     back = next(
         call
         for call in tk_mock.Button.call_args_list
-        if call.kwargs.get("text") == "Back to lock"
+        if call.kwargs.get("text") == g.BACK
     )
     back.kwargs["command"]()
 
@@ -124,9 +122,9 @@ def test_it_says_what_it_is_and_what_is_owed(tk_mock):
     build()
 
     texts = [str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list]
-    assert any("Study mode" in text for text in texts)
-    assert any("Studying for" in text for text in texts)
-    assert any("Still need" in text for text in texts)
+    assert g.WATCHING in texts
+    assert "00:00" in texts
+    assert g.OWED in texts
 
 
 # -- ticking ---------------------------------------------------------------
@@ -145,8 +143,8 @@ def test_the_tick_refreshes_the_labels_and_re_lifts():
         call.kwargs.get("text")
         for call in strip._elapsed_label.configure.call_args_list
     }
-    assert "Studying for 01:01" in written
-    assert "Still need 2 accepted submissions" in written
+    assert "01:01" in written
+    assert g.OWED * 2 in written
     strip.window.lift.assert_called()
 
 

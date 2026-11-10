@@ -47,8 +47,9 @@ DEFAULT_APP_LAUNCHER = (
 repo; the repo deploys from its working tree at this path."""
 APP_LAUNCHER = DEFAULT_APP_LAUNCHER
 NOTIFY_SEND = "/usr/bin/notify-send"
-NOTIFY_TITLE = "LeetCode Status"
-UNAVAILABLE = "leetcode-guard: status unavailable"
+# The app's proper noun only (settled decision 4); the body is glyphs.
+NOTIFY_TITLE = "LeetGuard"
+UNAVAILABLE = "⚠"
 REFRESH_INTERVAL_S = 60
 SUBPROCESS_TIMEOUT_S = 10
 
@@ -144,11 +145,11 @@ def show_popup_menu(icon: Gtk.StatusIcon, button: int, time: int) -> None:
     """Right-click: refresh, or quit the tray icon itself."""
     menu = Gtk.Menu()
 
-    refresh_item = Gtk.MenuItem(label="Refresh")
+    refresh_item = Gtk.MenuItem(label="⟳")  # Refresh
     refresh_item.connect("activate", lambda _widget: refresh(icon))
     menu.append(refresh_item)
 
-    quit_item = Gtk.MenuItem(label="Quit tray icon")
+    quit_item = Gtk.MenuItem(label="✕")  # Quit tray icon
     quit_item.connect("activate", lambda _widget: Gtk.main_quit())
     menu.append(quit_item)
 

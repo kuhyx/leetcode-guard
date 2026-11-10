@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import sickdays
 
 from leetcode_guard import _gate_today, _status_projection
+from leetcode_guard import _glyphs as g
 from leetcode_guard._daycost import day_cost
 from leetcode_guard._debt import compute_debt
 from leetcode_guard._gate import DayContext, GateState, decide
@@ -215,8 +216,8 @@ def test_the_window_says_sick_not_unlocked(hmac_key: Path):
         checked_at=CHECKED_AT,
     )
 
-    assert model.headline == "Sick day -- the gate stands down"
-    assert "free" not in model.headline
+    assert model.headline == g.SICK
+    assert model.headline != g.SOLVED
 
 
 def test_status_explains_a_sick_day(data_dir: Path, hmac_key: Path, monkeypatch):

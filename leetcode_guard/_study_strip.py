@@ -24,6 +24,7 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     STUDY_STRIP_HEIGHT_PX,
     STUDY_STRIP_TICK_MS,
@@ -35,52 +36,20 @@ if TYPE_CHECKING:
 
     from gatelock import LockConfig, OutputRect
 
+    from leetcode_guard._study_strip_text import StripText
+
 _logger: Final = logging.getLogger(__name__)
 
 _TOPMOST_ON = 1
 
 
-@dataclass
-class StripText:
-    """What the strip currently says."""
+@dataclass(frozen=True)
+class StripTitle:
+    """The heading label and its two colours (normal, instant check down)."""
 
-    elapsed_seconds: float
-    needed: int
-    verifying: bool = False
-    """The browser reported an Accepted verdict and LeetCode is being asked."""
-    fast_path_down: bool = False
-    """The browser doorbell is closed: a solve waits for the regular poll."""
-
-    @property
-    def title(self) -> str:
-        """The heading; it is where a dead instant check is admitted."""
-        if self.fast_path_down:
-            return "Study mode -- instant check OFF"
-        return "Study mode -- the lock is waiting"
-
-    @property
-    def headline(self) -> str:
-        """The accent line: the verdict being checked, else elapsed time.
-
-        The count below never moves on the browser's word alone; this line is
-        the only thing a ring changes, and only for as long as the burst runs.
-        """
-        if self.verifying:
-            return "Accepted seen -- verifying"
-        return self.elapsed
-
-    @property
-    def elapsed(self) -> str:
-        """``Studying for MM:SS`` -- elapsed only, never a target."""
-        total = max(0, int(self.elapsed_seconds))
-        return f"Studying for {total // 60:02d}:{total % 60:02d}"
-
-    @property
-    def owed(self) -> str:
-        """How many accepted submissions are still outstanding."""
-        if self.needed == 1:
-            return "Still need 1 accepted submission"
-        return f"Still need {self.needed} accepted submissions"
+    label: tk.Label
+    normal: str
+    warn: str
 
 
 class StudyStrip:
@@ -92,12 +61,12 @@ class StudyStrip:
         elapsed_label: tk.Label,
         needed_label: tk.Label,
         *,
-        title_label: tk.Label | None = None,
+        title: StripTitle | None = None,
         tick_ms: int = STUDY_STRIP_TICK_MS,
     ) -> None:
         """Wrap an already-built strip window."""
         self.window = window
-        self._title_label = title_label
+        self._title = title
         self._elapsed_label = elapsed_label
         self._needed_label = needed_label
         self._tick_ms = tick_ms
@@ -109,8 +78,11 @@ class StudyStrip:
         if self._destroyed:
             return
         try:
-            if self._title_label is not None:
-                self._title_label.configure(text=text.title)
+            if (title := self._title) is not None:
+                title.label.configure(
+                    text=text.title,
+                    fg=title.warn if text.fast_path_down else title.normal,
+                )
             self._elapsed_label.configure(text=text.headline)
             self._needed_label.configure(text=text.owed)
             self.window.lift()
@@ -184,7 +156,7 @@ def build_strip(
         window,
         text=text.title,
         font=config.font("label", bold=True),
-        fg=config.palette.fg,
+        fg=config.palette.warning if text.fast_path_down else config.palette.fg,
         bg=config.palette.field_bg,
     )
     title.pack(pady=(config.space("sm"), 0))
@@ -201,7 +173,7 @@ def build_strip(
     needed_label = tk.Label(
         window,
         text=text.owed,
-        font=config.font("caption"),
+        font=config.font("body"),
         fg=config.palette.muted,
         bg=config.palette.field_bg,
     )
@@ -209,8 +181,9 @@ def build_strip(
 
     back = tk.Button(
         window,
-        text="Back to lock",
-        font=config.font("caption"),
+        text=g.BACK,
+        font=config.font("body"),
+        width=3,
         # accent, not danger: returning to the lock is the ordinary path, not a
         # destructive one. danger belongs to the escape hatch.
         fg=config.palette.on_fill,
@@ -220,7 +193,12 @@ def build_strip(
     )
     back.pack(pady=(config.space("xs"), config.space("sm")))
 
-    return StudyStrip(window, elapsed_label, needed_label, title_label=title)
+    return StudyStrip(
+        window,
+        elapsed_label,
+        needed_label,
+        title=StripTitle(title, config.palette.fg, config.palette.warning),
+    )
 
 
 def _geometry(config: LockConfig, rect: OutputRect) -> str:

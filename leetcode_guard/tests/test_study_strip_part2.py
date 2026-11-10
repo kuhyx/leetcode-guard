@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from leetcode_guard._study_strip import StripText, StudyStrip
-from leetcode_guard.tests.test_study_strip import build
+from leetcode_guard import _glyphs as g
+from leetcode_guard._study_strip import StudyStrip
+from leetcode_guard._study_strip_text import StripText
+from leetcode_guard.tests.test_study_strip import CONFIG, build
 
 
 def written(label: MagicMock) -> set[str]:
@@ -19,17 +21,17 @@ def written(label: MagicMock) -> set[str]:
 def test_a_ring_changes_the_headline_but_never_the_count():
     text = StripText(elapsed_seconds=61.0, needed=2, verifying=True)
 
-    assert text.headline == "Accepted seen -- verifying"
-    assert text.owed == "Still need 2 accepted submissions"
+    assert text.headline == f"{g.SOLVED} …"
+    assert text.owed == g.OWED * 2
 
 
 def test_without_a_ring_the_headline_is_the_elapsed_time():
-    assert StripText(elapsed_seconds=61.0, needed=2).headline == "Studying for 01:01"
+    assert StripText(elapsed_seconds=61.0, needed=2).headline == "01:01"
 
 
 def test_a_dead_doorbell_is_admitted_in_the_title():
-    assert "instant check OFF" in StripText(0, 1, fast_path_down=True).title
-    assert StripText(0, 1).title == "Study mode -- the lock is waiting"
+    assert StripText(0, 1, fast_path_down=True).title == f"{g.WATCHING} {g.NO_ENTRY}"
+    assert StripText(0, 1).title == g.WATCHING
 
 
 def test_the_tick_rewrites_the_title(tk_mock):
@@ -37,7 +39,9 @@ def test_the_tick_rewrites_the_title(tk_mock):
 
     strip.tick(StripText(elapsed_seconds=0, needed=1, fast_path_down=True))
 
-    assert "Study mode -- instant check OFF" in written(strip._title_label)
+    assert f"{g.WATCHING} {g.NO_ENTRY}" in written(strip._title.label)
+    colours = {c.kwargs.get("fg") for c in strip._title.label.configure.call_args_list}
+    assert CONFIG.palette.warning in colours
     assert tk_mock.Label.call_count >= 1
 
 
@@ -47,5 +51,5 @@ def test_a_strip_without_a_title_label_still_ticks():
 
     strip.tick(StripText(elapsed_seconds=0, needed=1, verifying=True))
 
-    assert written(elapsed) == {"Accepted seen -- verifying"}
-    assert written(needed) == {"Still need 1 accepted submission"}
+    assert written(elapsed) == {f"{g.SOLVED} …"}
+    assert written(needed) == {g.OWED}

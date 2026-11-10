@@ -13,7 +13,9 @@ from __future__ import annotations
 import tkinter as tk
 from typing import TYPE_CHECKING, Any, Final
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
+from leetcode_guard._view_types import RowWiring
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -30,8 +32,8 @@ INITIAL_ROWS: Final = 2 * PROBLEM_DISPLAY_LIMIT
 ROW_BATCH: Final = PROBLEM_DISPLAY_LIMIT
 """Rows added each time the list is scrolled near its end."""
 
-NO_PROBLEMS_TEXT = "Solve any LeetCode problem -- any accepted submission counts."
-"""Shown when there is nothing to suggest.
+NO_PROBLEMS_TEXT = f"{g.ANY}  {g.CREDIT}"
+"""Shown when there is nothing to suggest: any accepted submission earns.
 
 Shared with ``_view_update`` because the list can also empty out *while* the
 lock is up, once enough of it has been solved: the row widgets stay, so the
@@ -39,13 +41,22 @@ repaint has to be able to put this sentence back into one of them.
 """
 
 
+def mark_colour(config: LockConfig, difficulty: str) -> str:
+    """The weight mark's second channel: green, amber, red by difficulty."""
+    palette = config.palette
+    return {
+        "Easy": palette.success,
+        "Medium": palette.warning,
+        "Hard": palette.danger,
+    }.get(difficulty, palette.muted)
+
+
 def build_problem_rows(
     parent: tk.Misc,
     config: LockConfig,
     model: ViewModel,
     on_open: Callable[[str], None] | None,
-    *,
-    bind: Callable[[Any], None] | None = None,
+    wiring: RowWiring | None = None,
 ) -> tuple[list[Any], list[Any]]:
     """Render the first rows of the suggestion list, or a stand-in.
 
@@ -71,9 +82,7 @@ def build_problem_rows(
         )
         placeholder.pack(fill="x", padx=_PAD, pady=_PAD // 2)
         return [placeholder], []
-    return append_rows(
-        parent, config, model.problems[:INITIAL_ROWS], on_open, bind=bind
-    )
+    return append_rows(parent, config, model.problems[:INITIAL_ROWS], on_open, wiring)
 
 
 def append_rows(
@@ -81,8 +90,7 @@ def append_rows(
     config: LockConfig,
     lines: tuple[ProblemLine, ...],
     on_open: Callable[[str], None] | None,
-    *,
-    bind: Callable[[Any], None] | None = None,
+    wiring: RowWiring | None = None,
 ) -> tuple[list[Any], list[Any]]:
     """Build one row per line under ``parent``.
 
@@ -91,11 +99,12 @@ def append_rows(
         config: Fonts and palette.
         lines: What the new rows show.
         on_open: The Open handler, or ``None`` for a list without buttons.
-        bind: Called on every new widget, so the wheel scrolls over it.
+        wiring: The wheel binding and the mark sink; ``None`` for neither.
 
     Returns:
         The new labels and buttons, in list order.
     """
+    wiring = wiring if wiring is not None else RowWiring()
     labels: list[Any] = []
     buttons: list[Any] = []
     for line in lines:
@@ -112,12 +121,22 @@ def append_rows(
         )
         label.pack(side="left", fill="x", expand=True)
         labels.append(label)
-        widgets: list[Any] = [row, label]
+        mark = tk.Label(
+            row,
+            text=line.mark,
+            font=config.font("body"),
+            fg=mark_colour(config, line.difficulty),
+            bg=config.palette.field_bg,
+        )
+        mark.pack(side="left", padx=_PAD // 2)
+        wiring.marks.append(mark)
+        widgets: list[Any] = [row, label, mark]
         if on_open is not None:
             button = tk.Button(
                 row,
-                text="Open",
-                font=config.font("body"),
+                text=g.OPEN,
+                width=3,
+                font=config.font("subtitle", bold=True),
                 # on_fill on an accent fill, per the module note.
                 fg=config.palette.on_fill,
                 bg=config.palette.accent,
@@ -130,7 +149,7 @@ def append_rows(
             button.pack(side="right", padx=_PAD // 2)
             buttons.append(button)
             widgets.append(button)
-        if bind is not None:
+        if wiring.bind is not None:
             for widget in widgets:
-                bind(widget)
+                wiring.bind(widget)
     return labels, buttons

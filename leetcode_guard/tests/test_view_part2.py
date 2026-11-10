@@ -210,7 +210,8 @@ def test_the_form_omits_the_history_block_when_there_is_none(
 
 def test_every_escape_field_is_labelled(tmp_path: Path, hmac_key: Path, tk_mock):
     """The reason box shipped unlabelled: three inputs, one caption, and no way
-    to tell what the first one wanted. Found by screenshotting, not asserting."""
+    to tell what the first one wanted. Found by screenshotting, not asserting.
+    Each input now has its own glyph (textgate: no captions)."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, CONFIG, on_granted=lambda _r: None)
     parent = MagicMock()
@@ -220,6 +221,5 @@ def test_every_escape_field_is_labelled(tmp_path: Path, hmac_key: Path, tk_mock)
     captions = [
         str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list
     ]
-    assert any("What is the problem" in c for c in captions)
-    assert any("When did this start" in c for c in captions)
-    assert any("full explanation" in c for c in captions)
+    for glyph in ("✎", "◷", "¶"):
+        assert glyph in captions

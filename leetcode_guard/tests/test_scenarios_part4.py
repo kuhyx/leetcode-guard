@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
 from leetcode_guard.tests._guard_factories import create_guard, pool_of, probe_of
 from leetcode_guard.tests._ledger_fixtures import FRIDAY, MONDAY, NOW, submission
@@ -55,9 +56,7 @@ def owing_guard(tmp_path: Path, hmac_key: Path, *, poll_probe: SolveProbe):
 
 def titles(guard) -> list[str]:
     """The problem names currently on the surface, in display order."""
-    return [
-        line.label.split(". ", 1)[1].split("  --")[0] for line in guard._model.problems
-    ]
+    return [line.label.split("  ", 1)[1] for line in guard._model.problems]
 
 
 def test_a_problem_solved_mid_lock_stops_being_suggested(
@@ -78,7 +77,7 @@ def test_a_problem_solved_mid_lock_stops_being_suggested(
 
     assert guard._decision().locked, "one solve of the two owed must not unlock"
     assert titles(guard) == ["Beta", "Gamma"]
-    assert guard._model.problems[0].label.startswith("1. Beta")
+    assert guard._model.problems[0].label == "1  Beta"
 
 
 def test_the_solve_is_credited_where_the_row_used_to_be(
@@ -90,7 +89,8 @@ def test_the_solve_is_credited_where_the_row_used_to_be(
 
     guard._on_poll_result(guard._check())
 
-    assert guard._model.status_line.startswith("Accepted: Alpha -- need 1 more solve")
+    assert guard._model.status_line.startswith(f"{g.SOLVED} Alpha{g.SEP}")
+    assert guard._model.headline == g.OWED
 
 
 def test_a_solve_outside_the_suggestions_leaves_the_list_alone(

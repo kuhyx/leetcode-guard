@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 from gatelock import LockConfig
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import STOP_COMMAND
 from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_group import FrameGroup
@@ -149,7 +150,7 @@ def test_each_open_button_carries_its_own_url(tk_mock):
     commands = [
         call.kwargs["command"]
         for call in tk_mock.Button.call_args_list
-        if call.kwargs.get("text") == "Open"
+        if call.kwargs.get("text") == g.OPEN
     ]
     for command in commands:
         command()
@@ -204,7 +205,7 @@ def test_an_empty_pool_still_gets_no_buttons():
 def test_the_breakglass_instructions_are_always_present(tk_mock):
     view = build_guard_view(MagicMock(), CONFIG, model(), output_name="DP-0")
 
-    assert view.breakglass_label is not None
+    assert view.decor.breakglass is not None
     texts = [str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list]
     assert any(STOP_COMMAND in text for text in texts)
 
@@ -217,4 +218,4 @@ def test_no_repaint_can_hide_the_breakglass_instructions():
     apply_viewmodel([view], model(show_escape=True))
     apply_viewmodel([view], model(show_escape=False))
 
-    view.breakglass_label.pack_forget.assert_not_called()
+    view.decor.breakglass.pack_forget.assert_not_called()

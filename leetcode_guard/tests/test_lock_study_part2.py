@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard.tests._guard_factories import UNVERIFIABLE, create_guard, probe_of
 
 if TYPE_CHECKING:
@@ -84,8 +85,8 @@ def test_the_strip_text_reports_what_is_still_owed(
     text = guard._strip_text()
 
     assert text.needed >= 1
-    assert "Still need" in text.owed
-    assert "Studying for" in text.elapsed
+    assert text.owed.startswith(g.OWED)
+    assert text.elapsed.count(":") == 1
 
 
 def test_the_strip_falls_back_to_the_first_output_when_none_is_primary(

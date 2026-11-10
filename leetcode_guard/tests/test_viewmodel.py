@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._auth import AuthState, Cookies
 from leetcode_guard._gate import GateState, decide
 from leetcode_guard._ledger import LedgerEntry
@@ -58,16 +59,17 @@ def model_for(ledger: Ledger, *, day=MONDAY, probe=OK_PROBE, key_file=None, **kw
 def test_locked_headline_names_the_shortfall(hmac_key: Path):
     model = model_for(Ledger(), key_file=hmac_key)
 
-    assert model.headline == "Solve 1 LeetCode problem to unlock"
+    assert model.headline == g.OWED
+    assert model.needed == 1
     assert not model.unlocked
 
 
 def test_a_weekend_shortfall_is_pluralised(hmac_key: Path):
     model = model_for(Ledger(), day=SATURDAY, key_file=hmac_key)
 
-    assert model.headline == "Solve 2 LeetCode problems to unlock"
-    assert "Saturday costs 2" in model.balance_line
-    assert "need 2 more" in model.balance_line
+    assert model.headline == g.OWED * 2
+    assert f"{g.TODAY} 2" in model.balance_line
+    assert model.needed == 2
 
 
 def test_unlocked_headline_reports_what_is_left(hmac_key: Path):
@@ -75,9 +77,10 @@ def test_unlocked_headline_reports_what_is_left(hmac_key: Path):
         ledger_with_credits(3, day=MONDAY, key_file=hmac_key), key_file=hmac_key
     )
 
-    assert model.headline == "Unlocked -- 2 credits left"
+    assert model.headline == g.SOLVED
     assert model.unlocked
-    assert "need" not in model.balance_line
+    assert model.balance_line.startswith(f"{g.CREDIT} 2")
+    assert model.needed == 0
 
 
 def test_one_remaining_credit_is_singular(hmac_key: Path):
@@ -85,7 +88,7 @@ def test_one_remaining_credit_is_singular(hmac_key: Path):
         ledger_with_credits(2, day=MONDAY, key_file=hmac_key), key_file=hmac_key
     )
 
-    assert model.headline == "Unlocked -- 1 credit left"
+    assert model.balance_line.startswith(f"{g.CREDIT} 1")
 
 
 def test_a_rolled_back_clock_gets_its_own_headline_and_note(hmac_key: Path):
@@ -94,45 +97,46 @@ def test_a_rolled_back_clock_gets_its_own_headline_and_note(hmac_key: Path):
 
     model = model_for(ledger, key_file=hmac_key)
 
-    assert model.headline == "Locked -- the system clock moved backwards"
-    assert any("earlier than" in note for note in model.notes)
+    assert model.headline == g.CLOCK_BACK
+    assert not model.unlocked
 
 
 def test_an_unverifiable_probe_says_so_rather_than_saying_not_solved(hmac_key: Path):
-    """A blind gate must never render the same sentence a working one would."""
+    """A blind gate must never render the same mark a working one would."""
     model = model_for(Ledger(), probe=BLIND_PROBE, key_file=hmac_key)
 
-    assert "Cannot check LeetCode" in model.status_line
-    assert "cannot reach LeetCode: down" in model.status_line
-    assert "12:04:31" in model.status_line
+    assert model.status_line == f"{g.BLIND} 12:04:31"
+    assert not model.status_ok
 
 
 def test_a_working_probe_reports_watching(hmac_key: Path):
     model = model_for(Ledger(), key_file=hmac_key)
 
-    assert model.status_line.startswith("Watching for an accepted submission")
+    assert model.status_line == f"{g.WATCHING} 12:04:31"
+    assert model.status_ok
 
 
-def test_the_auth_note_is_always_present(hmac_key: Path):
+def test_signed_out_is_marked(hmac_key: Path):
     model = model_for(Ledger(), key_file=hmac_key)
 
-    assert "signed out note" in model.notes
+    assert g.SIGNED_OUT in model.notes
 
 
-def test_the_auth_note_is_not_duplicated(hmac_key: Path):
+def test_pool_sentences_stay_off_the_lock(hmac_key: Path):
+    """They are in the status snapshot; the lock keeps only warning marks."""
     model = model_for(
         Ledger(), key_file=hmac_key, pool=pool_of(notes=("signed out note", "other"))
     )
 
-    assert list(model.notes).count("signed out note") == 1
+    assert model.notes == (g.SIGNED_OUT,)
 
 
-def test_signed_in_note_is_carried(hmac_key: Path):
+def test_signed_in_shows_no_mark(hmac_key: Path):
     signed_in = AuthState(cookies=Cookies("s", "c"), note="signed in note")
 
     model = model_for(Ledger(), key_file=hmac_key, auth=signed_in)
 
-    assert "signed in note" in model.notes
+    assert model.notes == ()
 
 
 def test_an_unreadable_integrity_key_is_announced(missing_key: Path):
@@ -140,7 +144,7 @@ def test_an_unreadable_integrity_key_is_announced(missing_key: Path):
     # Ledger() defaults to True regardless of what key you pass downstream.
     model = model_for(Ledger(integrity_ok=False), key_file=missing_key)
 
-    assert any("integrity key is unreadable" in note for note in model.notes)
+    assert g.UNSIGNED in model.notes
 
 
 def test_refused_credits_are_announced(tmp_path: Path, hmac_key: Path):
@@ -151,15 +155,15 @@ def test_refused_credits_are_announced(tmp_path: Path, hmac_key: Path):
 
     model = model_for(load_ledger(path, key_file=hmac_key), key_file=hmac_key)
 
-    assert any("1 ledger credits were refused" in note for note in model.notes)
+    assert f"{g.REFUSED} 1" in model.notes
 
 
 def test_problem_lines_carry_difficulty_acceptance_and_url():
     lines, dropped = build_problem_lines(pool_of("two-sum"), limit=10)
 
-    assert lines[0].label.startswith("1. Two Sum")
-    assert "Easy" in lines[0].label
-    assert "50.0% acceptance" in lines[0].label
+    assert lines[0].label == "1  Two Sum"
+    assert lines[0].difficulty == "Easy"
+    assert lines[0].mark == f"{g.CREDIT}  50%"
     assert lines[0].url == "https://leetcode.com/problems/two-sum/"
     assert dropped == ()
 
@@ -185,7 +189,7 @@ def test_marker_entries_do_not_affect_the_headline(hmac_key: Path):
 
     model = model_for(ledger, key_file=hmac_key)
 
-    assert model.headline == "Solve 1 LeetCode problem to unlock"
+    assert model.headline == g.OWED
 
 
 def test_an_already_charged_day_reads_as_unlocked(hmac_key: Path):
@@ -201,8 +205,8 @@ def test_an_already_charged_day_reads_as_unlocked(hmac_key: Path):
 def test_the_not_in_force_state_says_so_rather_than_claiming_an_unlock(
     hmac_key: Path, monkeypatch
 ):
-    """It fell through to "Unlocked -- 0 credits left", which is true and
-    useless: it never mentions that the gate has not started."""
+    """It fell through to the plain unlocked mark, which is true and useless:
+    it never shows that the gate has not started."""
     from datetime import timedelta
 
     from leetcode_guard import _gate
@@ -211,6 +215,5 @@ def test_the_not_in_force_state_says_so_rather_than_claiming_an_unlock(
 
     model = model_for(Ledger(), key_file=hmac_key)
 
-    assert model.headline == "Not in force yet"
+    assert model.headline == g.NOT_STARTED
     assert model.unlocked
-    assert any("does not start until" in note for note in model.notes)

@@ -20,15 +20,36 @@ window, so surplus rows are hidden from the tail and never need re-showing.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
-from leetcode_guard._view_problems import NO_PROBLEMS_TEXT
+from gatelock import LockConfig
+
+from leetcode_guard import _glyphs as g
+from leetcode_guard._view_problems import NO_PROBLEMS_TEXT, mark_colour
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from leetcode_guard._view import GuardView
     from leetcode_guard._viewmodel import ProblemLine, ViewModel
+
+_DEFAULT_CONFIG: Final = LockConfig()
+"""Colours for a view built without one (the tests' hand-made views)."""
+
+
+def status_colour(config: LockConfig, model: ViewModel) -> str:
+    """Muted while watching, danger while LeetCode cannot be checked."""
+    return config.palette.muted if model.status_ok else config.palette.danger
+
+
+def join_notes(notes: tuple[str, ...]) -> str:
+    """The warning marks on one line."""
+    return g.SEP.join(notes)
+
+
+def _config_of(view: GuardView) -> LockConfig:
+    config = view.decor.config
+    return config if isinstance(config, LockConfig) else _DEFAULT_CONFIG
 
 
 def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
@@ -39,10 +60,14 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
     """
     count = 0
     for view in views:
+        if view.decor.padlock is not None:
+            view.decor.padlock.draw(locked=not model.unlocked)
         view.headline.configure(text=model.headline)
         view.balance_line.configure(text=model.balance_line)
-        view.status_line.configure(text=model.status_line)
-        view.notes_label.configure(text="\n".join(model.notes))
+        view.status_line.configure(
+            text=model.status_line, fg=status_colour(_config_of(view), model)
+        )
+        view.notes_label.configure(text=join_notes(model.notes))
         view.problems.lines = model.problems
         _apply_problem_rows(view, model.problems)
         _apply_escape_visibility(view, model)
@@ -60,12 +85,19 @@ def _apply_problem_rows(view: GuardView, lines: tuple[ProblemLine, ...]) -> None
         # stand-in sentence -- which is where it already is when the list was
         # empty from the start, so this branch handles both.
         labels[0].configure(text=NO_PROBLEMS_TEXT)
+        if view.problems.marks:
+            view.problems.marks[0].configure(text="")
         _hide_open_button(view, 0)
         _hide_rows_from(view, 1)
         return
     visible = lines[: len(labels)]
+    marks = view.problems.marks
     for index, line in enumerate(visible):
         labels[index].configure(text=line.label)
+        if index < len(marks):
+            marks[index].configure(
+                text=line.mark, fg=mark_colour(_config_of(view), line.difficulty)
+            )
         _rebind_open_button(view, index, line.url)
     _hide_rows_from(view, len(visible))
 

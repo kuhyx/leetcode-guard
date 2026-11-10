@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._submissions import ProbeStatus
 from leetcode_guard.tests._guard_factories import (
@@ -34,7 +35,8 @@ def test_a_crashed_poll_counts_as_unverifiable(tmp_path: Path, hmac_key: Path):
     guard._on_poll_result(None)
 
     assert guard._poller.state.consecutive_unverifiable == 1
-    assert "Cannot check LeetCode" in guard._model.status_line
+    assert guard._model.status_line.startswith(g.BLIND)
+    assert not guard._model.status_ok
 
 
 def test_demo_mode_writes_nothing_when_told_not_to(tmp_path: Path, hmac_key: Path):
@@ -137,5 +139,6 @@ def test_the_poll_probe_status_drives_the_status_line(tmp_path: Path, hmac_key: 
 
     guard._on_poll_result(UNVERIFIABLE)
 
-    assert "Cannot check LeetCode" in guard._model.status_line
+    assert guard._model.status_line.startswith(g.BLIND)
+    assert not guard._model.status_ok
     assert guard._check().status is ProbeStatus.UNVERIFIABLE

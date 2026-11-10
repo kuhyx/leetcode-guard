@@ -18,6 +18,7 @@ import tkinter as tk
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._view_problems import ROW_BATCH, append_rows
+from leetcode_guard._view_types import RowWiring
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -143,7 +144,7 @@ def grow_rows(view: GuardView, config: LockConfig) -> int:
         config,
         extra,
         view.hooks.on_open,
-        bind=view.problems.scroll.bind_wheel,
+        RowWiring(bind=view.problems.scroll.bind_wheel, marks=view.problems.marks),
     )
     view.problems.labels.extend(labels)
     view.problems.buttons.extend(buttons)

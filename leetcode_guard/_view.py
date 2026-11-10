@@ -19,13 +19,22 @@ broken -- still holds.
 from __future__ import annotations
 
 import tkinter as tk
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import breakglass_lines
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
+from leetcode_guard._view_icons import Padlock
 from leetcode_guard._view_problems import build_problem_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
-from leetcode_guard._view_types import GuardView, ProblemList, ViewHooks
+from leetcode_guard._view_types import (
+    GuardView,
+    ProblemList,
+    RowWiring,
+    SurfaceDecor,
+    ViewHooks,
+)
+from leetcode_guard._view_update import join_notes, status_colour
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -64,8 +73,9 @@ def _build_problems(
     """The scrolling suggestion list, with an Open button per row if wired."""
     scroll = ScrollArea(inner, config, on_near_end=lambda: [g() for g in grow])
     scroll.outer.pack(pady=(0, _PAD), padx=_PAD, fill="x")
+    wiring = RowWiring(bind=scroll.bind_wheel)
     labels, buttons = build_problem_rows(
-        scroll.inner, config, model, hooks.on_open, bind=scroll.bind_wheel
+        scroll.inner, config, model, hooks.on_open, wiring
     )
     scroll.fit_rows(len(labels), PROBLEM_DISPLAY_LIMIT)
     return ProblemList(
@@ -74,7 +84,53 @@ def _build_problems(
         buttons=buttons,
         scroll=scroll,
         lines=model.problems,
+        marks=wiring.marks,
     )
+
+
+class _Header(NamedTuple):
+    padlock: Padlock
+    headline: tk.Label
+    balance_line: tk.Label
+
+
+def _build_header(inner: tk.Misc, config: LockConfig, model: ViewModel) -> _Header:
+    """The drawn padlock, the headline marks beside it, the balance below."""
+    header = tk.Frame(inner, bg=config.palette.bg)
+    header.pack(pady=(0, _PAD))
+    padlock = Padlock(header, config)
+    padlock.canvas.pack(side="left", padx=(0, _PAD))
+    padlock.draw(locked=not model.unlocked)
+    headline = tk.Label(
+        header,
+        text=model.headline,
+        font=config.font("display", bold=True),
+        fg=config.palette.fg,
+        bg=config.palette.bg,
+    )
+    headline.pack(side="left")
+    balance_line = tk.Label(
+        inner,
+        text=model.balance_line,
+        font=config.font("subtitle"),
+        fg=config.palette.accent,
+        bg=config.palette.bg,
+    )
+    balance_line.pack(pady=(0, _PAD))
+    return _Header(padlock, headline, balance_line)
+
+
+def _build_status(
+    inner: tk.Misc, config: LockConfig, model: ViewModel
+) -> tuple[tk.Label, tk.Label]:
+    """The poller's mark (red while blind) and the warning marks under it."""
+    status_line = _label(inner, config, model.status_line, font="body")
+    status_line.configure(fg=status_colour(config, model))
+    status_line.pack(pady=(0, _PAD // 2))
+    notes_label = _label(inner, config, join_notes(model.notes), font="body")
+    notes_label.configure(fg=config.palette.warning)
+    notes_label.pack()
+    return status_line, notes_label
 
 
 def _add_escape_button(
@@ -83,8 +139,9 @@ def _add_escape_button(
     """The hatch button, built whenever a hatch is wired and hidden if not due."""
     view.escape_button = tk.Button(
         inner,
-        text="I cannot do this right now",
-        font=config.font("caption"),
+        text=g.ESCAPE,
+        font=config.font("title"),
+        width=3,
         # on_fill, not fg: near-white on the danger fill measures about
         # 2.5:1, while the dark ink measures about 5.8:1.
         fg=config.palette.on_fill,
@@ -125,53 +182,35 @@ def build_guard_view(
     inner = tk.Frame(container, bg=config.palette.bg)
     inner.place(relx=0.5, rely=0.5, anchor="center")
 
-    headline = tk.Label(
-        inner,
-        text=model.headline,
-        font=config.font("display", bold=True),
-        fg=config.palette.fg,
-        bg=config.palette.bg,
-    )
-    headline.pack(pady=(0, _PAD))
-
-    balance_line = tk.Label(
-        inner,
-        text=model.balance_line,
-        font=config.font("subtitle"),
-        fg=config.palette.accent,
-        bg=config.palette.bg,
-    )
-    balance_line.pack(pady=(0, _PAD))
+    header = _build_header(inner, config, model)
 
     grow: list[Callable[[], object]] = []
     problems = _build_problems(inner, config, model, hooks, grow)
 
-    status_line = _label(inner, config, model.status_line, font="body")
-    status_line.pack(pady=(0, _PAD // 2))
-
-    notes_label = _label(inner, config, "\n".join(model.notes), font="caption")
-    notes_label.pack()
+    status_line, notes_label = _build_status(inner, config, model)
 
     # Permanent, and never unpacked. This is the only instruction on the screen
     # that keeps working when everything else in this package is wrong, and its
     # absence is why the 2026-08-05 lockout needed a terminal that happened to
     # already be open. `apply_viewmodel` does not touch it, so no repaint can
     # quietly hide it.
-    breakglass_label = _label(
+    breakglass = _label(
         inner, config, "\n".join(breakglass_lines(config)), font="caption"
     )
-    breakglass_label.pack(pady=(_PAD, 0))
+    breakglass.pack(pady=(_PAD, 0))
 
     view = GuardView(
         output_name=output_name,
         container=container,
-        headline=headline,
-        balance_line=balance_line,
+        headline=header.headline,
+        balance_line=header.balance_line,
         status_line=status_line,
         notes_label=notes_label,
-        breakglass_label=breakglass_label,
         problems=problems,
         hooks=hooks,
+        decor=SurfaceDecor(
+            padlock=header.padlock, breakglass=breakglass, config=config
+        ),
     )
     grow.append(lambda: grow_rows(view, config))
 
@@ -195,7 +234,9 @@ def install_demo_close_button(
     """
     button = tk.Button(
         parent,
-        text="X Close Demo",
+        text=g.CLOSE,
+        font=config.font("title"),
+        width=2,
         fg=config.palette.on_fill,
         bg=config.palette.danger,
         command=on_close,

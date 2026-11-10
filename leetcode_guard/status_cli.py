@@ -14,6 +14,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._status_full import gather_full
 
 if TYPE_CHECKING:
@@ -39,17 +40,20 @@ def state_word(full: FullStatus) -> str:
 
 
 def summary_line(full: FullStatus) -> str:
-    """One line for the tray tooltip."""
+    """One line of glyphs for the tray tooltip (textgate: no words).
+
+    ``○○  │  ◆ 0  │  ☀ 2  │  ▼ 3`` when locked (one circle per solve still
+    owed), ``✓  │  ◆ 3  │  ☀ 2`` when not, ``◷`` before the gate starts. The
+    same vocabulary as the lock surface (:mod:`leetcode_guard._glyphs`).
+    """
     gate = full.gate
-    costs = f"{gate.weekday} costs {gate.cost}"
-    if gate.debt.outstanding:
-        costs += f", debt {gate.debt.outstanding}"
-    if gate.verdict.locked:
-        plural = "" if gate.verdict.needed == 1 else "s"
-        return f"LOCKED - solve {gate.verdict.needed} problem{plural} ({costs})"
     if gate.verdict.state == "not-started":
-        return f"leetcode-guard: {gate.verdict.reason}"
-    return f"Unlocked - {gate.balance.available} credit(s) left ({costs})"
+        return g.NOT_STARTED
+    head = g.dots(gate.verdict.needed) if gate.verdict.locked else g.SOLVED
+    parts = [head, f"{g.CREDIT} {gate.balance.available}", f"{g.TODAY} {gate.cost}"]
+    if gate.debt.outstanding:
+        parts.append(f"{g.DEBT} {gate.debt.outstanding}")
+    return g.SEP.join(parts)
 
 
 def main(argv: list[str] | None = None) -> int:

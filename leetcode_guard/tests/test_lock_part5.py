@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard.tests._guard_factories import UNVERIFIABLE, create_guard, probe_of
 from leetcode_guard.tests._ledger_fixtures import MONDAY
@@ -74,7 +75,7 @@ def test_the_outage_reason_is_shown_on_the_lock(tmp_path: Path, hmac_key: Path):
 
     guard._on_poll_result(UNVERIFIABLE)
 
-    assert any("no internet on this machine" in note for note in guard._model.notes)
+    assert any(note.startswith(g.OFFLINE) for note in guard._model.notes)
 
 
 def test_the_network_is_classified_once_not_every_tick(tmp_path: Path, hmac_key: Path):

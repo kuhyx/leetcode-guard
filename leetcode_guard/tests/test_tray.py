@@ -125,7 +125,7 @@ def test_an_unavailable_summary_still_notifies(
 
     tray.open_app(MagicMock())
 
-    assert recorder.ran[1][-1] == "leetcode-guard: status unavailable"
+    assert recorder.ran[1][-1] == tray.UNAVAILABLE
 
 
 def test_a_failed_notification_is_a_warning(

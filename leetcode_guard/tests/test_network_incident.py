@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from gatelock import EscapeDraft
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     NETWORK_INCIDENT_LOCKOUT_CAP_SECONDS,
     NETWORK_INCIDENT_LOCKOUT_SECONDS,
@@ -47,7 +48,7 @@ def test_a_remote_outage_unlocks_with_no_form(tmp_path: Path, hmac_key: Path, ca
     assert policy.unlock_now
     assert not policy.require_form
     assert policy.wait_seconds == 0
-    assert "LeetCode is down" in policy.message
+    assert policy.message == f"{g.SITE_DOWN}  {g.SOLVED}"
     assert any(record.levelno == logging.ERROR for record in caplog.records)
 
 
@@ -62,7 +63,8 @@ def test_a_local_outage_holds_and_demands_an_explanation(
     assert not policy.unlock_now
     assert policy.require_form
     assert policy.wait_seconds == NETWORK_INCIDENT_LOCKOUT_SECONDS
-    assert "written down what happened" in policy.message
+    assert policy.message.startswith(g.OFFLINE)
+    assert policy.message.endswith(g.ESCAPE)
 
 
 def test_tampering_is_treated_exactly_like_being_offline(
@@ -90,7 +92,7 @@ def test_being_online_neither_unlocks_nor_demands_a_form(
 
     assert not policy.unlock_now
     assert not policy.require_form
-    assert "reachable again" in policy.message
+    assert policy.message == g.SITE_UP
 
 
 def test_the_wait_escalates_with_repeat_incidents(tmp_path: Path, hmac_key: Path):

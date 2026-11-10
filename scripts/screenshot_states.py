@@ -56,6 +56,8 @@ from leetcode_guard._ledger_io import Ledger, append, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps, GuardSeams
+from leetcode_guard._netcheck import NetworkDiagnosis, NetworkVerdict
+from leetcode_guard._network_incident import decide_policy
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import rank_pool
@@ -207,13 +209,20 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
     elif state == "escape":
         guard._open_escape()
     elif state == "outage":
-        guard._outage.note = (
-            "This machine has no working internet connection -- none of 3 "
-            "independent hosts responded.\nReconnect and the gate carries on as "
-            "normal. If you cannot, the machine unlocks after 5 minute(s) -- but "
-            "only once you have written down what happened to the network."
+        # The real policy, so the frame shows what the lock paints rather than
+        # a sentence this harness made up (it did, until the textgate rework).
+        offline = NetworkDiagnosis(
+            verdict=NetworkVerdict.LOCAL_OFFLINE,
+            reason="none of 3 hosts responded",
+            anchors_reachable=0,
+            addresses=(),
         )
-        guard._model = guard._build_model(probe())
+        guard._outage.note = decide_policy(offline, guard._escape.incidents).message
+        guard._model = guard._build_model(
+            SolveProbe(
+                status=ProbeStatus.UNVERIFIABLE, submissions=(), reason="offline"
+            )
+        )
         apply_viewmodel(guard._frames.views.values(), guard._model)
 
     return guard

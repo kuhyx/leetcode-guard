@@ -13,6 +13,7 @@ import pytest
 import sickdays
 
 from leetcode_guard import _focus, _gate_today, _sick, _status_projection
+from leetcode_guard import _glyphs as g
 from leetcode_guard._debt import compute_debt, cost_phrase
 from leetcode_guard._gate import DayContext, GateState, decide
 from leetcode_guard._ledger_io import Ledger
@@ -197,7 +198,7 @@ def test_the_window_and_status_name_the_focus_day(
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     lines = explain_not_triggered(full_for(data_dir, hmac_key, Ledger()))
 
-    assert model.headline == "Focus day -- the gate stands down"
+    assert model.headline == g.FOCUS
     assert "day        " in format_status(snapshot)
     assert "costs 0" in format_status(snapshot)
     assert "focus-day -- focus day: Test project" in format_status(snapshot)

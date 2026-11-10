@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 
 from gatelock import LockConfig, measure_fit, report_fit
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._view import build_guard_view
@@ -62,27 +63,30 @@ HEIGHT = 768
 # surface shears equal amounts off the top *and* the bottom, so overflow costs
 # the headline and the escape button together.
 _MODEL = ViewModel(
-    headline="Solve 1 LeetCode problem to unlock",
-    balance_line="Credits 0  |  Saturday costs 3 (2 +1 debt)  |  need 3 more",
-    # The worst the status line gets: two solves named, the rest counted, the
-    # shortfall spelled out, and the watching sentence behind it. Measured
-    # because this line is now variable-length -- see ``ACCEPTED_NAMES``.
+    headline=g.dots(g.DOT_CAP),
+    balance_line=g.SEP.join(
+        (f"{g.CREDIT} 0", f"{g.TODAY} 4 (3+1{g.DEBT})", f"{g.DEBT} 22")
+    ),
+    # The worst the status line gets: two long titles named, the rest counted,
+    # then the watching mark. Measured because it is variable-length -- see
+    # ``ACCEPTED_NAMES``.
     status_line=(
-        "Accepted: Minimum Operations to Make Array Sum Divisible by K, "
-        "Longest Substring Without Repeating Characters and 6 more -- need 3 "
-        "more solves  |  Watching for an accepted submission... last checked "
-        "14:32:07"
+        f"{g.SOLVED} Minimum Operations to Make Array Sum Divisible by K, "
+        f"Longest Substring Without Repeating Characters +6{g.SEP}"
+        f"{g.WATCHING} 14:32:07"
     ),
     notes=(
-        "Yesterday's solve landed after the daily cutoff and counted for today.",
-        "The escape hatch becomes available again in 12 minutes.",
-        "Debt: 22 credits outstanding (18 missed days owed 22, 0 repaid) "
-        "-- +1 per day until repaid",
+        g.SIGNED_OUT,
+        g.UNSIGNED,
+        f"{g.REFUSED} 3",
+        f"{g.OFFLINE}  {g.NOT_STARTED} 40{g.MINUTES}  {g.ESCAPE}",
     ),
     problems=tuple(
         ProblemLine(
-            label=f"{n}. Longest Substring Without Repeating Characters (Medium)",
+            label=f"{n}  Longest Substring Without Repeating Characters",
             url=f"https://leetcode.com/problems/problem-{n}/",
+            mark=f"{g.weight_mark('Hard')}  12%",
+            difficulty="Hard",
         )
         for n in range(1, PROBLEM_DISPLAY_LIMIT + 1)
     ),

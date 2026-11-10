@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Final
 
 from gatelock import EscapeDraft, EscapePolicy, EscapeTracker
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     HISTORY_REVIEW_COUNT,
     JUSTIFICATION_MIN_CHARS,
@@ -111,10 +112,8 @@ def decide_policy(
             unlock_now=True,
             require_form=False,
             wait_seconds=0,
-            message=(
-                f"{diagnosis.reason}\n"
-                "Today has been settled automatically. This is recorded."
-            ),
+            # LeetCode down, this machine online: settled for free, recorded.
+            message=f"{g.SITE_DOWN}  {g.SOLVED}",
         )
 
     if diagnosis.verdict is NetworkVerdict.ONLINE:
@@ -122,21 +121,18 @@ def decide_policy(
             unlock_now=False,
             require_form=False,
             wait_seconds=0,
-            message="LeetCode is reachable again -- still watching for a solve.",
+            message=g.SITE_UP,
         )
 
     wait = lockout_seconds(tracker)
     minutes = max(1, wait // 60)
+    _logger.warning("this machine looks offline: %s", diagnosis.reason)
+    # Offline here: reconnect, or wait this long and then fill the form.
     return IncidentPolicy(
         unlock_now=False,
         require_form=True,
         wait_seconds=wait,
-        message=(
-            f"{diagnosis.reason}\n"
-            f"Reconnect and the gate carries on as normal. If you cannot, the "
-            f"machine unlocks after {minutes} minute(s) -- but only once you "
-            "have written down what happened to the network."
-        ),
+        message=f"{g.OFFLINE}  {g.NOT_STARTED} {minutes}{g.MINUTES}  {g.ESCAPE}",
     )
 
 

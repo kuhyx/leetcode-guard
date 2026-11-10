@@ -23,12 +23,13 @@ from typing import TYPE_CHECKING, Final
 
 from gatelock import EscapeDraft, EscapePolicy, EscapeTracker
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     HISTORY_REVIEW_COUNT,
     JUSTIFICATION_MIN_CHARS,
     UNVERIFIABLE_HATCH_SECONDS,
 )
-from leetcode_guard._escape_form import EscapeForm, build_escape_form
+from leetcode_guard._escape_form import EscapeForm, build_escape_form, flag_refusal
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -146,10 +147,12 @@ class EscapeHatch:
         )
         complaint = self._tracker.validate(draft)
         if complaint is not None:
-            form.complaint.configure(text=complaint)
+            # The sentence goes to the log; the form shows which field.
+            _logger.warning("escape form refused: %s", complaint)
+            flag_refusal(form, draft, self._config)
             return False
         if not self._tracker.record(draft):
-            form.complaint.configure(text="Could not record the escape -- try again.")
+            form.complaint.configure(text=g.BLIND)
             _logger.error("failed to record an escape-hatch use")
             return False
         _logger.warning("escape hatch used: %s", draft.reason)

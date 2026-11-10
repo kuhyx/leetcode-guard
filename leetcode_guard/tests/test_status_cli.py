@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from leetcode_guard import _glyphs as g
 from leetcode_guard import status_cli
 from leetcode_guard.tests._ledger_fixtures import MONDAY, ledger_with_credits
 from leetcode_guard.tests.test_status_gather import full_for
@@ -45,11 +46,11 @@ def test_the_state_word_warns_with_nothing_banked(data_dir: Path, hmac_key: Path
 def test_summary_line_names_the_shortfall(data_dir: Path, hmac_key: Path):
     line = status_cli.summary_line(full_for(data_dir, hmac_key))
 
-    assert line.startswith("LOCKED")
-    assert "solve 1 problem" in line
+    assert line.startswith(f"{g.OWED}{g.SEP}")
+    assert f"{g.CREDIT} 0" in line
 
 
-def test_summary_line_pluralises(data_dir: Path, hmac_key: Path):
+def test_summary_line_draws_a_circle_per_solve(data_dir: Path, hmac_key: Path):
     full = full_for(data_dir, hmac_key)
     saturday = replace(
         full.gate,
@@ -59,7 +60,9 @@ def test_summary_line_pluralises(data_dir: Path, hmac_key: Path):
     )
     combined = replace(full, gate=saturday)
 
-    assert "solve 2 problems" in status_cli.summary_line(combined)
+    line = status_cli.summary_line(combined)
+    assert line.startswith(f"{g.OWED * 2}{g.SEP}")
+    assert f"{g.TODAY} 2" in line
 
 
 def test_summary_line_when_unlocked(data_dir: Path, hmac_key: Path):
@@ -67,7 +70,7 @@ def test_summary_line_when_unlocked(data_dir: Path, hmac_key: Path):
         data_dir, hmac_key, ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
     )
 
-    assert status_cli.summary_line(full).startswith("Unlocked")
+    assert status_cli.summary_line(full).startswith(f"{g.SOLVED}{g.SEP}")
 
 
 def test_summary_line_names_the_debt(data_dir: Path, hmac_key: Path):
@@ -76,7 +79,7 @@ def test_summary_line_names_the_debt(data_dir: Path, hmac_key: Path):
     owing = replace(full.gate, debt=replace(debt, owed=debt.repaid + 9))
     combined = replace(full, gate=owing)
 
-    assert "debt 9" in status_cli.summary_line(combined)
+    assert status_cli.summary_line(combined).endswith(f"{g.DEBT} 9")
 
 
 def test_the_summary_line_reports_a_gate_not_yet_in_force(
@@ -88,7 +91,7 @@ def test_the_summary_line_reports_a_gate_not_yet_in_force(
     )
     combined = replace(full, gate=replace(full.gate, verdict=verdict))
 
-    assert status_cli.summary_line(combined) == "leetcode-guard: not yet"
+    assert status_cli.summary_line(combined) == g.NOT_STARTED
 
 
 def test_the_flags_print_one_line_each(

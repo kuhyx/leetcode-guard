@@ -25,6 +25,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard import _glyphs as g
+
 if TYPE_CHECKING:
     from gatelock import LockConfig
 
@@ -32,11 +34,20 @@ STOP_COMMAND: Final = "systemctl --user stop leetcode-guard.service"
 """The route that always works, from any shell that can reach this user's
 session. Asserted verbatim in the tests."""
 
-_RESTORE_VT_COMMAND: Final = 'setxkbmap -option ""'
+RESTORE_VT_COMMAND: Final = 'setxkbmap -option ""'
+"""Re-enables VT switching -- and clears every other xkb option with it."""
+
+CONSOLE_KEYS: Final = "Ctrl+Alt+F2"
+DESKTOP_KEYS: Final = "Ctrl+Alt+F1"
 
 
 def breakglass_lines(config: LockConfig) -> tuple[str, ...]:
-    """The recovery instructions for the lock as it is currently configured.
+    """The recovery route for the lock as it is currently configured.
+
+    No prose (textgate): the command and the key chords are what the user
+    types, so they stay verbatim; everything around them is a glyph. A chord
+    this process disabled is shown struck out (``⊘``) rather than omitted, so
+    the user does not burn an attempt on it -- the honesty rule above.
 
     Args:
         config: The live lock configuration. Read for ``resolved_disable_vt``,
@@ -45,16 +56,15 @@ def breakglass_lines(config: LockConfig) -> tuple[str, ...]:
     Returns:
         Lines to render verbatim, in order.
     """
+    command = f"{g.PROMPT} {STOP_COMMAND}"
     if config.resolved_disable_vt():
         return (
-            "Stuck? This lock has disabled VT switching, so Ctrl+Alt+F2 will not work.",
-            "From a terminal that is already open, or over SSH from another machine:",
-            STOP_COMMAND,
-            f"({_RESTORE_VT_COMMAND} restores VT switching, but clears every "
-            "other xkb option.)",
+            f"{g.CONSOLE} {CONSOLE_KEYS} {g.NO_ENTRY}",
+            command,
+            f"{g.RESTORE} {RESTORE_VT_COMMAND}  {g.BLIND}",
         )
     return (
-        "Stuck? Switch to a console with Ctrl+Alt+F2 and run:",
-        STOP_COMMAND,
-        "Ctrl+Alt+F1 returns to the desktop.",
+        f"{g.CONSOLE} {CONSOLE_KEYS}",
+        command,
+        f"{g.BACK} {DESKTOP_KEYS}",
     )

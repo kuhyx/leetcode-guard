@@ -21,11 +21,11 @@ def test_a_problem_solved_since_the_pool_was_resolved_is_dropped():
         pool_of("a", "b", "c"), limit=2, solved_slugs=frozenset({"a"})
     )
 
-    assert [line.label.split(". ", 1)[1].split("  --")[0] for line in lines] == [
+    assert [line.label.split("  ", 1)[1] for line in lines] == [
         "B",
         "C",
     ]
-    assert [line.label.split(".")[0] for line in lines] == ["1", "2"]
+    assert [line.label.split("  ")[0] for line in lines] == ["1", "2"]
     assert dropped == ("A",)
 
 

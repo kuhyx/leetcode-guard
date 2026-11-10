@@ -1,8 +1,15 @@
-"""Everything the lock says, as pure text.
+"""Everything the lock shows, as glyphs and numbers.
 
 No Tk here. The whole surface is derived from a decision, a pool and a probe by
-plain functions, so every sentence the user will read is unit-testable without
+plain functions, so every mark the user will see is unit-testable without
 opening a window.
+
+**No words** (kuhy's textgate rule, 2026-11-08): the vocabulary is
+:mod:`leetcode_guard._glyphs`. What a sentence used to explain now goes to the
+log or to the status snapshot the phone app reads; the lock keeps the numbers.
+State that a glyph alone would carry ambiguously is exposed as a field too
+(``status_ok``, ``needed``) so the view can add a second channel (colour) and
+tests can assert state rather than strings.
 """
 
 from __future__ import annotations
@@ -10,9 +17,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
-from leetcode_guard._debt import cost_phrase, debt_line
+from leetcode_guard import _glyphs as g
 from leetcode_guard._gate import GateDecision, GateState
 from leetcode_guard._submissions import ProbeStatus
+from leetcode_guard._viewmodel_marks import accepted_prefix, notes_for
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -27,14 +35,19 @@ class ProblemLine:
     """One suggested problem, ready to render."""
 
     label: str
+    """Row number and the problem's title (LeetCode's content)."""
     url: str
     slug: str = ""
     """Which problem this is, so rows revealed by scrolling can be verified."""
+    mark: str = ""
+    """Credit weight and acceptance rate: ``◆◆  48%``."""
+    difficulty: str = ""
+    """``Easy``/``Medium``/``Hard``: picks the mark's colour, never painted."""
 
 
 @dataclass(frozen=True)
 class ViewModel:
-    """The full text of the lock surface at one moment."""
+    """The full content of the lock surface at one moment."""
 
     headline: str
     balance_line: str
@@ -43,6 +56,13 @@ class ViewModel:
     problems: tuple[ProblemLine, ...]
     unlocked: bool
     show_escape: bool
+    status_ok: bool = True
+    """False when LeetCode cannot be checked: the status line turns red.
+
+    A blind gate must never look like a watching one -- that is the
+    "cannot check is not not-solved" rule, and a glyph swap alone is too
+    quiet to carry it."""
+    needed: int = 0
 
 
 def build_problem_lines(
@@ -83,36 +103,37 @@ def build_problem_lines(
             continue
         lines.append(
             ProblemLine(
-                label=(
-                    f"{len(lines) + 1}. {problem.title}  --  {problem.difficulty}, "
-                    f"{problem.ac_rate:.1f}% acceptance"
-                ),
+                label=f"{len(lines) + 1}  {problem.title}",
                 url=problem.url,
                 slug=problem.title_slug,
+                mark=f"{g.weight_mark(problem.difficulty)}  {problem.ac_rate:.0f}%",
+                difficulty=problem.difficulty,
             )
         )
     return tuple(lines), tuple(dropped)
 
 
+_FREE_DAY_MARKS: Final = {
+    GateState.UNLOCKED_NOT_STARTED: g.NOT_STARTED,
+    GateState.UNLOCKED_SICK_DAY: g.SICK,
+    GateState.UNLOCKED_FOCUS_DAY: g.FOCUS,
+}
+
+
 def _headline(decision: GateDecision) -> str:
-    """The single biggest line on the screen."""
-    if decision.state is GateState.UNLOCKED_NOT_STARTED:
-        # Without its own branch this fell through to "Unlocked -- 0 credits
-        # left", which is technically true and tells the reader nothing about
-        # why the gate is not doing anything.
-        return "Not in force yet"
-    if decision.state is GateState.UNLOCKED_SICK_DAY:
-        return "Sick day -- the gate stands down"
-    if decision.state is GateState.UNLOCKED_FOCUS_DAY:
-        return "Focus day -- the gate stands down"
+    """The single biggest mark on the screen, beside the drawn padlock.
+
+    Locked: one hollow circle per accepted submission still owed. A free day
+    names *which* free day by its own glyph, so the stood-down gate never reads
+    as "unlocked by credit".
+    """
+    if (mark := _FREE_DAY_MARKS.get(decision.state)) is not None:
+        return mark
     if not decision.locked:
-        left = _remaining_after_today(decision)
-        plural = "" if left == 1 else "s"
-        return f"Unlocked -- {left} credit{plural} left"
+        return g.SOLVED
     if decision.state is GateState.LOCKED_CLOCK_UNTRUSTED:
-        return "Locked -- the system clock moved backwards"
-    plural = "" if decision.needed == 1 else "s"
-    return f"Solve {decision.needed} LeetCode problem{plural} to unlock"
+        return g.CLOCK_BACK
+    return g.dots(decision.needed)
 
 
 def _remaining_after_today(decision: GateDecision) -> int:
@@ -129,57 +150,33 @@ def _remaining_after_today(decision: GateDecision) -> int:
 
 
 def _balance_line(decision: GateDecision) -> str:
-    """Where the credits stand, and what today costs."""
-    costs = cost_phrase(decision.day, decision.cost, decision.debt)
-    base = f"Credits {_remaining_after_today(decision)}  |  {costs}"
-    if decision.needed:
-        return f"{base}  |  need {decision.needed} more"
-    return base
+    """``◆ 0  │  ☀ 2 (1+1▼)  │  ▼ 7``: credits, today's price, debt.
+
+    The surcharge stays spelled out as numbers, because a quota that silently
+    doubled reads as a bug.
+    """
+    cost = decision.cost
+    surcharge = min(decision.debt.surcharge_on(decision.day), cost)
+    today = f"{g.TODAY} {cost}"
+    if surcharge:
+        today = f"{today} ({cost - surcharge}+{surcharge}{g.DEBT})"
+    parts = [f"{g.CREDIT} {_remaining_after_today(decision)}", today]
+    if decision.debt.outstanding:
+        parts.append(f"{g.DEBT} {decision.debt.outstanding}")
+    return g.SEP.join(parts)
 
 
 def _status_line(probe: SolveProbe, *, checked_at: datetime) -> str:
-    """What the poller last saw.
+    """What the poller last saw, and when.
 
-    An unverifiable probe says so in as many words. It must never render as
-    "not solved yet", which is the same sentence a *working* check would
-    produce and would leave the user with no idea the gate is blind.
+    An unverifiable probe gets its own glyph *and* (in the view) the danger
+    colour. It must never render like a watching one, which would leave the
+    user with no idea the gate is blind; the reason goes to the log.
     """
     stamp = checked_at.strftime("%H:%M:%S")
     if probe.status is ProbeStatus.UNVERIFIABLE:
-        return f"Cannot check LeetCode ({probe.reason}) -- last tried {stamp}"
-    return f"Watching for an accepted submission... last checked {stamp}"
-
-
-ACCEPTED_NAMES: Final = 2
-"""How many solved problems the status line names before it starts counting.
-
-Bounded because the acknowledgement persists for the rest of the lock and
-problem titles run to fifty characters ("Minimum Operations to Make Array Sum
-Divisible by K"). A day eight credits deep into debt would otherwise grow a
-status line wider than the screen -- and the lock surface is a ``place``-centred
-frame, which shears off *both* edges when it overflows rather than clipping one.
-"""
-
-
-def _accepted_prefix(dropped: tuple[str, ...], *, needed: int) -> str:
-    """Credit the solves that just emptied a row, or say nothing.
-
-    The row itself vanishes immediately -- the slot is the scarce thing -- so
-    the confirmation moves here, where it costs no space. It keeps saying so
-    for the rest of the lock, because the solved set only grows and an
-    acknowledgement that expires after one tick is one the user can miss
-    entirely while looking at the browser.
-    """
-    if not dropped:
-        return ""
-    named = ", ".join(dropped[:ACCEPTED_NAMES])
-    if len(dropped) > ACCEPTED_NAMES:
-        named = f"{named} and {len(dropped) - ACCEPTED_NAMES} more"
-    accepted = f"Accepted: {named}"
-    if needed:
-        plural = "" if needed == 1 else "s"
-        return f"{accepted} -- need {needed} more solve{plural}  |  "
-    return f"{accepted}  |  "
+        return f"{g.BLIND} {stamp}"
+    return f"{g.WATCHING} {stamp}"
 
 
 def build_viewmodel(
@@ -201,41 +198,20 @@ def build_viewmodel(
         show_escape: Whether the escape hatch button is currently offered.
 
     Returns:
-        The rendered text.
+        The rendered marks.
     """
-    pool, auth = source.pool, source.auth
-    notes = list(pool.notes)
-    if auth.note not in notes:
-        notes.insert(0, auth.note)
-    if decision.state in {
-        GateState.LOCKED_CLOCK_UNTRUSTED,
-        GateState.UNLOCKED_NOT_STARTED,
-    }:
-        notes.append(decision.reason)
-    if not decision.balance.integrity_ok:
-        notes.append(
-            "The ledger integrity key is unreadable, so signatures are not "
-            "being checked."
-        )
-    if decision.balance.discounted:
-        notes.append(
-            f"{decision.balance.discounted} ledger credits were refused "
-            "(bad signature, or written by another device)."
-        )
-    if decision.debt.outstanding:
-        notes.append(debt_line(decision.debt))
-
     problems, dropped = build_problem_lines(
-        pool, limit=source.limit, solved_slugs=source.solved_slugs
+        source.pool, limit=source.limit, solved_slugs=source.solved_slugs
     )
-    prefix = _accepted_prefix(dropped, needed=decision.needed)
-
     return ViewModel(
         headline=_headline(decision),
         balance_line=_balance_line(decision),
-        status_line=prefix + _status_line(probe, checked_at=checked_at),
-        notes=tuple(notes),
+        status_line=accepted_prefix(dropped)
+        + _status_line(probe, checked_at=checked_at),
+        notes=notes_for(decision, source),
         problems=problems,
         unlocked=not decision.locked,
         show_escape=show_escape,
+        status_ok=probe.status is not ProbeStatus.UNVERIFIABLE,
+        needed=decision.needed,
     )

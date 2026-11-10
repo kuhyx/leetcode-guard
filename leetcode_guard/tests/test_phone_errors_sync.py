@@ -59,7 +59,7 @@ def test_a_new_error_notifies_once(tmp_path: Path):
     assert first == "1 kept, 1 new"
     assert second == "1 kept, 0 new"
     [(title, body)] = notify.sent
-    assert "phone" in title.lower()
+    assert title == _phone_errors_sync.TITLE
     assert "Offline: can't reach Firebase" in body
     errors, notified = read_mirror(path)
     assert errors[0].count == 9
