@@ -11,7 +11,7 @@
 # and the sizes are never close.
 #
 # Usage: scripts/screenshot_lock.sh [OUT.png] [-- <python -m leetcode_guard args>]
-#   DISPLAY   the Xvfb display to use (default :81); start it yourself with
+#   SHOT_DISPLAY  the Xvfb display to use (default :81); start it yourself with
 #             `Xvfb :81 -screen 0 1600x1200x24 &`
 #   SAMPLES   how many frames to try (default 90, one per ~second; a cold pool
 #             fetch alone is ~40 pages at 0.5 s before anything paints)
@@ -21,7 +21,13 @@
 
 set -euo pipefail
 
-readonly DISPLAY="${DISPLAY:-:81}"
+# Deliberately NOT ${DISPLAY}: every desktop shell exports DISPLAY=:0, and
+# inheriting it ran the demo lock on kuhy's live screen (2026-11-10).
+readonly DISPLAY="${SHOT_DISPLAY:-:81}"
+if [[ "$DISPLAY" == ":0" || "$DISPLAY" == ":0.0" ]]; then
+    echo "error: refusing to run the demo on the live display $DISPLAY" >&2
+    exit 2
+fi
 readonly SAMPLES="${SAMPLES:-90}"
 OUT="/tmp/lock.png"
 if [[ $# -gt 0 && "$1" != "--" ]]; then
