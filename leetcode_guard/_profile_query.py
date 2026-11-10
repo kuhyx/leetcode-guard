@@ -9,18 +9,12 @@ from __future__ import annotations
 
 from typing import Final
 
-PROFILE_QUERY: Final = """
-query profile($username: String!) {
-  allQuestionsCount {
-    difficulty
-    count
-  }
-  matchedUser(username: $username) {
-    submitStatsGlobal {
-      acSubmissionNum {
-        difficulty
-        count
-        submissions
+from leetcode_guard._queries import SOLVED_COUNTS_HEAD
+
+PROFILE_QUERY: Final = (
+    "\nquery profile($username: String!) {"
+    + SOLVED_COUNTS_HEAD
+    + """        submissions
       }
       totalSubmissionNum {
         difficulty
@@ -36,6 +30,7 @@ query profile($username: String!) {
   }
 }
 """
+)
 """Difficulty split, submission calendar and acceptance, in one public request.
 
 A superset of :data:`~leetcode_guard._queries.PROGRESS_QUERY`, so

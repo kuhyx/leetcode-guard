@@ -22,12 +22,12 @@ Three things are deliberate:
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard._atomic_json import write_json
 from leetcode_guard._queries import PROGRESS_QUERY, progress_variables
+from leetcode_guard._read_json import MISSING, read_json
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -158,12 +158,8 @@ def write_progress_cache(path: Path, progress: Progress) -> bool:
 
 def read_progress_cache(path: Path) -> Progress | None:
     """Load the mirrored counts, or ``None`` if there is no usable file."""
-    if not path.exists():
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        _logger.warning("progress cache at %s is unreadable: %s", path, exc)
+    raw = read_json(path, _logger, "progress cache at %s is unreadable: %s", path)
+    if raw is MISSING:
         return None
     if not isinstance(raw, dict) or raw.get("version") != _VERSION:
         _logger.warning(

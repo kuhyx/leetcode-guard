@@ -14,11 +14,11 @@ transport failure is NOT recorded: it says nothing about the problem.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._atomic_json import write_json
+from leetcode_guard._read_json import MISSING, read_json
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,12 +31,8 @@ RETRY_SECONDS: Final = 24 * 3600
 
 def load_unresolved(path: Path) -> dict[str, float]:
     """``slug -> epoch seconds`` of its last unresolved answer; junk reads as none."""
-    if not path.exists():
-        return {}
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        _logger.warning("ignoring the unresolved-difficulty marks: %s", exc)
+    raw = read_json(path, _logger, "ignoring the unresolved-difficulty marks: %s")
+    if raw is MISSING:
         return {}
     if not isinstance(raw, dict):
         return {}

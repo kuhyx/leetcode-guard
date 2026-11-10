@@ -53,6 +53,14 @@ jobs:
         with:
           python-version: "3.x"
 
+      # The pylint hook pins `language_version: python3.14`. setup-python's
+      # 3.x is 3.15 here, so that name resolves to the image's own
+      # /usr/bin/python3.14, which ships without tkinter: every Tk module
+      # scored an import-error and the 10.00 gate failed only in CI.
+      - name: Give the image's python3.14 its tkinter (pylint)
+        if: matrix.group == 'pylint'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-tk
+
       # One uv cache per group: the groups install different sets, and a
       # shared key would hold whichever saved first.
       - uses: astral-sh/setup-uv@v10.2.0

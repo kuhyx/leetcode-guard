@@ -14,7 +14,6 @@ only a profile never fetched at all is ``None``. Display only, like
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING, Any, Final, TypeIs
 
@@ -23,6 +22,7 @@ from leetcode_guard._constants import DATA_DIR, PROGRESS_CACHE_FILE
 from leetcode_guard._profile import Profile, parse_profile
 from leetcode_guard._profile_query import PROFILE_QUERY, profile_variables
 from leetcode_guard._progress import DIFFICULTIES, parse_progress, write_progress_cache
+from leetcode_guard._read_json import MISSING, read_json
 from leetcode_guard._settings import build_client
 
 if TYPE_CHECKING:
@@ -114,12 +114,8 @@ def _profile_from(raw: dict[str, Any]) -> Profile | None:
 
 def read_profile_cache(path: Path) -> Profile | None:
     """Load the mirror, or ``None`` if there is no usable file."""
-    if not path.exists():
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        _logger.warning("profile cache at %s is unreadable: %s", path, exc)
+    raw = read_json(path, _logger, "profile cache at %s is unreadable: %s", path)
+    if raw is MISSING:
         return None
     profile = (
         _profile_from(raw)

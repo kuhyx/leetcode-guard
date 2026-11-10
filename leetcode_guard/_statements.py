@@ -17,7 +17,6 @@ raised.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
@@ -28,6 +27,7 @@ from leetcode_guard._queries import (
     question_of,
     statement_variables,
 )
+from leetcode_guard._read_json import MISSING, read_json
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -168,12 +168,8 @@ def read_statements(path: Path) -> dict[str, Statement]:
     Every corruption mode returns an empty mapping with a warning: an
     unreadable statement cache costs offline reading, nothing more.
     """
-    if not path.exists():
-        return {}
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        _logger.warning("statement cache at %s is unreadable: %s", path, exc)
+    raw = read_json(path, _logger, "statement cache at %s is unreadable: %s", path)
+    if raw is MISSING:
         return {}
     if not isinstance(raw, dict) or raw.get("version") != _VERSION:
         _logger.warning("statement cache at %s has an unusable shape", path)

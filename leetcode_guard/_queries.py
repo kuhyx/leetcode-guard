@@ -160,8 +160,7 @@ def recent_ac_variables(username: str) -> dict[str, object]:
     return {"username": username, "limit": RECENT_AC_LIMIT}
 
 
-PROGRESS_QUERY: Final = """
-query progress($username: String!) {
+SOLVED_COUNTS_HEAD: Final = """
   allQuestionsCount {
     difficulty
     count
@@ -171,11 +170,22 @@ query progress($username: String!) {
       acSubmissionNum {
         difficulty
         count
-      }
+"""
+"""The selection the progress and profile queries open with, verbatim.
+
+The profile query is a superset of the progress one, so both start here and
+:func:`~leetcode_guard._progress.parse_progress` reads either answer.
+"""
+
+PROGRESS_QUERY: Final = (
+    "\nquery progress($username: String!) {"
+    + SOLVED_COUNTS_HEAD
+    + """      }
     }
   }
 }
 """
+)
 """Solved and total per difficulty, as the public profile page shows them.
 
 Public, no cookie. ``acSubmissionNum`` counts *distinct* problems solved, not

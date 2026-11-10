@@ -19,18 +19,17 @@ Run as a *module*, for the same reason ``verify_screen_fits`` does: ``-m`` puts
 the repo root on ``sys.path``, so ``leetcode_guard`` resolves from the checkout
 rather than from wherever it happens to be installed.
 
-Never ``pkill -f leetcode_guard`` afterwards -- that pattern matches the shell
-running it. Kill by the recorded PID.
+Never ``pkill -f leetcode_guard`` afterwards (it matches the shell running
+it); kill by the recorded PID.
 
 The check that matters most is step 4. A grab that comes *back* a second after
 being released is the original bug wearing the fix as a disguise, and it is the
 single most likely thing to regress when gatelock is bumped.
 """
 
-# Reaches gatelock and lock privates on purpose: it checks the adapter's own
-# assumptions on a real X server, so routing it through ``_gatelock_internals``
-# would be marking its own homework (CLAUDE.md). Same access as its ruff
-# ``SLF001`` exemption, declared here because pylint has no per-file-ignores.
+# Reaches gatelock and lock privates on purpose: routing a check of the
+# adapter's own assumptions through ``_gatelock_internals`` would be marking its
+# own homework (CLAUDE.md). Mirrors its ruff ``SLF001`` per-file exemption.
 # pylint: disable=protected-access
 
 from __future__ import annotations
@@ -67,9 +66,8 @@ _logger: Final = logging.getLogger(__name__)
 NOW: Final = datetime.now(tz=UTC).astimezone()
 PROBLEM_URL: Final = "https://example.invalid/problems/two-sum/"
 SETTLE_TICKS: Final = 20
-"""``update()`` pumps between assertions. Twenty at ~100ms of real work each is
-comfortably past ``recovery_tick_ms`` (1s), which is the point: a stopped
-recovery loop must stay stopped across at least one tick it would have used."""
+"""``update()`` pumps between assertions: twenty at ~100ms each outlast
+``recovery_tick_ms`` (1s), so a stopped recovery loop must stay stopped."""
 
 
 class _Inline:
@@ -88,11 +86,9 @@ class _Inline:
 def _build_production_guard(workdir: Path) -> LeetcodeGuard:
     """A real production lock: global grab, VT disabled, no ledger writes.
 
-    Deliberately built here rather than imported from ``screenshot_states``.
-    ``scripts/`` is not a package and must not become one (see
-    ``pyproject.toml``), so a ``from scripts.x import y`` makes mypy see that
-    file under two module names and fail -- which it did, in CI, on a clean
-    cache, while a warm local cache stayed quiet.
+    Built here, not imported from ``screenshot_states``: ``scripts/`` is not a
+    package (see ``pyproject.toml``), and such an import made mypy see one file
+    under two module names -- failing in CI on a clean cache only.
 
     Today is pinned to an ordinary day: on a real free or sick day the first
     poll rightly unlocks and ends study mode (2026-10-16 failed so). The poller
@@ -138,8 +134,7 @@ class _Recorder:
         self.detached = False
 
     def __call__(self, args: Sequence[str], *, start_new_session: bool) -> object:
-        # Recorded rather than ignored: detaching is the property that keeps a
-        # browser alive across `systemctl --user stop`, so it is worth seeing.
+        # Recorded: detaching is what keeps a browser alive past a unit stop.
         self.detached = start_new_session
         self.urls.append(args[-1])
         return object()
@@ -171,8 +166,7 @@ def main() -> int:
 
     workdir = Path(tempfile.mkdtemp(prefix="lg-grab-check-"))
     guard = _build_production_guard(workdir)
-    # Resolve and "launch" without starting anything real: this harness is
-    # about the grab, and a browser opening on the developer's desk is noise.
+    # "Launch" without starting anything real: this harness is about the grab.
     spawn = _Recorder()
     lock_study.find_opener = lambda: "/bin/true"
     lock_study.launch = lambda url: browser.launch(url, spawn=spawn)
@@ -190,8 +184,7 @@ def main() -> int:
 
         guard._open_problem(PROBLEM_URL)
         _pump(guard)
-        # The assertion the entire feature rests on. If this is True the
-        # browser receives no keystrokes and the fix does not work.
+        # The feature rests on this: while held, the browser gets no keystrokes.
         _check(
             results,
             "study mode released the grab",
@@ -241,10 +234,9 @@ def main() -> int:
 def _surfaces_mapped(guard: LeetcodeGuard) -> bool:
     """Whether every surface came back visible and on its own output.
 
-    The mis-placement this guards against only happens on a real X server:
-    gatelock's own recovery path sets override-redirect *after* mapping, so a
-    surface revived that way can return window-manager-managed and on the wrong
-    monitor.
+    The mis-placement this guards against needs a real X server: gatelock's
+    recovery path sets override-redirect *after* mapping, so a surface revived
+    that way can come back window-manager-managed, on the wrong monitor.
     """
     surfaces = guard._lock.surfaces
     for info in surfaces.infos():

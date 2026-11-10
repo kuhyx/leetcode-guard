@@ -11,12 +11,12 @@ previous cache intact rather than a truncated one.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard._atomic_json import write_json
 from leetcode_guard._problem import Problem, parse_problem
+from leetcode_guard._read_json import MISSING, read_json
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -90,12 +90,8 @@ def write_cache(path: Path, pool: CachedPool) -> bool:
 
 def _read_object(path: Path) -> dict[str, Any] | None:
     """The cache file's top-level JSON object, or ``None`` with a WARNING."""
-    if not path.exists():
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        _logger.warning("pool cache at %s is unreadable: %s", path, exc)
+    raw = read_json(path, _logger, "pool cache at %s is unreadable: %s", path)
+    if raw is MISSING:
         return None
     if not isinstance(raw, dict):
         _logger.warning("pool cache at %s is not a JSON object", path)

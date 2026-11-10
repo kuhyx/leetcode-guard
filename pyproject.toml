@@ -289,18 +289,6 @@ min-public-methods = 0
 max-module-lines = 1000
 max-attributes = 10
 
-[tool.pylint.similarities]
-# The fleet default (diet-guard uses the same). Below 8 the only hits are the
-# cache readers' mirrored load shape -- `if not path.exists(): return ...`,
-# `json.loads(path.read_text(...))`, `except (OSError, ValueError)` -- in
-# `_pool_cache`, `_progress`, `_profile_cache`, `_difficulty_negative` and
-# `_statements`, plus the GraphQL `allQuestionsCount`/`matchedUser` selection
-# that `_profile_query` and `_queries` each send. Each reader validates a
-# different schema and fails to a different empty value, so a shared helper
-# would be a five-way parameter bag. This is a threshold, not a disable:
-# a copied block of 8+ lines still fails the gate.
-min-similarity-lines = 8
-
 [tool.pylint.typecheck]
 # PyGObject is a system package (pacman: python-gobject) that pip cannot
 # build inside pylint's hook venv without the GI development headers, and
