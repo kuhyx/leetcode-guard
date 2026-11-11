@@ -243,6 +243,7 @@ deploy from the working tree.
 ## Commands
 
 - run: `python3 -m leetcode_guard._web_server`
+- deploy: `scripts/deploy.sh`
 - test: `python3 -m pytest -n auto -q --dist worksteal`
 - test-changed: `scripts/test_changed.sh`
 - lint: `uvx ruff@0.15.2 check .`
