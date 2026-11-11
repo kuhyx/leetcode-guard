@@ -42,7 +42,7 @@ dependencies:
   sync_settings_ui:
     git:
       url: https://github.com/kuhyx/utils
-      ref: sync_settings_ui-v0.6.2
+      ref: sync_settings_ui-v0.7.0
       path: sync_settings_ui
   # Opens a suggestion's problem page in the browser: the app's one action.
   url_launcher: 6.3.3
