@@ -129,7 +129,7 @@ def test_the_scrollbar_drives_the_canvas() -> None:
 @pytest.mark.usefixtures("_block_real_tk")
 def test_the_viewport_widens_but_never_narrows(*, current: int, widened: bool) -> None:
     area = ScrollArea(MagicMock(), CONFIG, on_near_end=lambda: None)
-    area.canvas.cget.return_value = current
+    area.canvas.winfo_pixels.return_value = current
     area.canvas.configure.reset_mock()
 
     area._on_inner_resized(None)

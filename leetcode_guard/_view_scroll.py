@@ -121,7 +121,9 @@ class ScrollArea:
         sideways as rows are rebound or built.
         """
         wanted = self.inner.winfo_reqwidth()
-        if wanted > int(self.canvas.cget("width")):
+        # ``cget`` answers in Tk screen units ("10c" until first widened), so
+        # Tk converts it to pixels; ``int()`` on it crashed every real build.
+        if wanted > self.canvas.winfo_pixels(self.canvas.cget("width")):
             self.canvas.configure(width=wanted)
 
     def _on_canvas_resized(self, event: tk.Event[tk.Canvas]) -> None:

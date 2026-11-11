@@ -56,7 +56,7 @@ def fake_gatelock_widgets(monkeypatch: pytest.MonkeyPatch, fake: MagicMock) -> N
     canvas.winfo_width.return_value = _FAKE_VIEWPORT_PX
     canvas.winfo_screenwidth.return_value = _FAKE_SCREEN_PX
     canvas.winfo_screenheight.return_value = _FAKE_SCREEN_PX
-    canvas.cget.return_value = 0
+    canvas.winfo_pixels.return_value = 0
     canvas.bbox.return_value = (0, 0, _FAKE_VIEWPORT_PX, _FAKE_CONTENT_PX)
     frame = fake.Frame.return_value
     frame.winfo_reqheight.return_value = _FAKE_CONTENT_PX
