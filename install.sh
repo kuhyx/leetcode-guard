@@ -42,6 +42,7 @@ preserve_editable() {
     if [[ ! -d "$src" ]]; then
         return
     fi
+    drop_shadow_dir "$module"
     local resolved
     resolved="$(cd / && "$SYSTEM_PYTHON" -P -c "import $module; print($module.__file__)" 2>/dev/null || true)"
     if [[ "$resolved" == "$src"* ]]; then
@@ -51,6 +52,21 @@ preserve_editable() {
     log "restoring the editable $module install at $src"
     "$SYSTEM_PYTHON" -m pip install --user --break-system-packages -q --no-deps -e "$src" \
         || fail "could not restore the editable $module"
+    drop_shadow_dir "$module"
+}
+
+drop_shadow_dir() {
+    # pip's uninstall of a non-editable copy can leave an empty <module>/ dir
+    # (only __pycache__) in user site. As a namespace package it shadows the
+    # editable finder: `import gatelock` succeeds but has no members, so
+    # verify_imports passes while every lock and harvest run dies on import
+    # (2026-11-11). Remove it only when it holds no source files.
+    local dir
+    dir="$("$SYSTEM_PYTHON" -m site --user-site)/$1"
+    if [[ -d "$dir" && -z "$(find "$dir" -type f -not -path '*/__pycache__/*' -print -quit)" ]]; then
+        log "removing empty shadow dir $dir"
+        rm -rf "$dir"
+    fi
 }
 
 verify_imports() {

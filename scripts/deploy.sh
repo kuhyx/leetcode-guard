@@ -82,8 +82,8 @@ check_imports() {
     # The interpreter systemd runs must load the package from the live clone;
     # anything else means the units run code this deploy did not update.
     local where live
-    where="$(cd / && "$SYSTEM_PYTHON" -P -c 'import leetcode_guard; print(leetcode_guard.__file__)')" \
-        || fail "health: imports -- leetcode_guard does not import with $SYSTEM_PYTHON"
+    where="$(cd / && "$SYSTEM_PYTHON" -P -c 'import leetcode_guard, leetcode_guard._cli, gatelock; print(leetcode_guard.__file__)')" \
+        || fail "health: imports -- leetcode_guard (or its _cli / gatelock) does not import with $SYSTEM_PYTHON"
     live="$(cd "$LIVE_DIR" && pwd -P)"
     [[ "$where" == "$live"/* ]] \
         || fail "health: imports -- leetcode_guard loads from $where, not $live"
