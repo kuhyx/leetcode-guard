@@ -45,6 +45,7 @@ def test_only_solves_inside_the_display_window_are_reported():
 
 
 def test_a_wholly_solved_pool_yields_no_lines():
+    """A pool whose every slug is solved yields no lines and drops them all."""
     lines, dropped = build_problem_lines(
         pool_of("a", "b"), limit=8, solved_slugs=frozenset({"a", "b"})
     )

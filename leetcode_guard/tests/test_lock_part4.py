@@ -5,18 +5,19 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
+from gatelock import EscapeDraft
+
+from leetcode_guard._escape_flow import build_tracker
 from leetcode_guard._netcheck import NetworkDiagnosis, NetworkVerdict
+from leetcode_guard.tests._blind_fixtures import (
+    blind_guard,
+    blind_offline,
+)
 from leetcode_guard.tests._guard_factories import UNVERIFIABLE, create_guard, probe_of
 from leetcode_guard.tests._ledger_fixtures import MONDAY
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-from leetcode_guard.tests.test_lock_part3 import (
-    blind_guard,
-    blind_offline,
-)
 
 
 def test_the_incident_form_is_not_offered_before_its_wait(
@@ -27,22 +28,23 @@ def test_the_incident_form_is_not_offered_before_its_wait(
     form, which costs no budget."""
     guard = blind_offline(tmp_path, hmac_key)
 
-    assert not guard._incident_form_due()
+    assert not guard.incident_form_due()
 
-    guard._open_escape()
+    guard.open_escape()
 
-    assert guard._escape.hatch.open
-    assert not guard._escape.incident_hatch.open
+    assert guard.escape.hatch.open
+    assert not guard.escape.incident_hatch.open
 
 
 def test_the_incident_form_is_offered_once_the_wait_elapses(
     tmp_path: Path, hmac_key: Path
 ):
+    """Once the offline wait has elapsed, the incident form is due and offered."""
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage.since = time.monotonic() - 10_000
+    guard.outage.since = time.monotonic() - 10_000
 
-    assert guard._incident_form_due()
-    assert guard._should_offer_escape()
+    assert guard.incident_form_due()
+    assert guard.should_offer_escape()
 
 
 def test_the_offline_path_has_an_exit_even_with_the_escape_budget_spent(
@@ -51,31 +53,27 @@ def test_the_offline_path_has_an_exit_even_with_the_escape_budget_spent(
     """The bug this closes: LOCAL_OFFLINE plus a spent escape budget left the
     lock holding the keyboard while promising on screen that writing down what
     happened would release it. There was no form to write it in."""
-    from gatelock import EscapeDraft
-
-    from leetcode_guard._escape_flow import build_tracker
-
     spent = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     spent.record(
         EscapeDraft(reason="used", onset="y", severity=1, description="x" * 200)
     )
 
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage.since = time.monotonic() - 10_000
+    guard.outage.since = time.monotonic() - 10_000
 
-    assert guard._escape.tracker.is_budget_exhausted()
-    assert guard._should_offer_escape()
+    assert guard.escape.tracker.is_budget_exhausted()
+    assert guard.should_offer_escape()
 
-    guard._open_escape()
-    assert guard._escape.incident_hatch.open
-    assert not guard._escape.hatch.open
+    guard.open_escape()
+    assert guard.escape.incident_hatch.open
+    assert not guard.escape.hatch.open
 
-    form = guard._escape.incident_hatch._form
+    form = guard.escape.incident_hatch.form
     form.reason.get.return_value = "the router died and the ISP is down"
     form.description.get.return_value = "y" * 200
 
-    assert guard._escape.incident_hatch.submit()
-    assert not guard._decision().locked
+    assert guard.escape.incident_hatch.submit()
+    assert not guard.decision().locked
 
 
 def test_an_incident_unlock_is_tagged_apart_from_an_escape(
@@ -85,55 +83,58 @@ def test_an_incident_unlock_is_tagged_apart_from_an_escape(
     face it today", and does not consume the escape budget."""
     guard = blind_offline(tmp_path, hmac_key)
 
-    guard._on_incident_recorded("the router died")
+    guard.on_incident_recorded("the router died")
 
-    charge = guard._ledger.entries[f"charge:{MONDAY.isoformat()}"]
+    charge = guard.ledger.entries[f"charge:{MONDAY.isoformat()}"]
     assert charge.detail["source"] == "network-incident"
 
 
 def test_the_ordinary_hatch_is_used_when_the_gate_is_not_offline(
     tmp_path: Path, hmac_key: Path
 ):
+    """Without an offline diagnosis, escaping opens the ordinary hatch only."""
     guard, _ = create_guard(tmp_path, key_file=hmac_key)
 
-    guard._open_escape()
+    guard.open_escape()
 
-    assert guard._escape.hatch.open
-    assert not guard._escape.incident_hatch.open
+    assert guard.escape.hatch.open
+    assert not guard.escape.incident_hatch.open
 
 
 def test_opening_a_form_twice_is_a_no_op(tmp_path: Path, hmac_key: Path):
+    """A second open keeps the same incident form instead of building a new one."""
     guard = blind_offline(tmp_path, hmac_key)
-    guard._outage.since = time.monotonic() - 10_000
-    guard._open_escape()
-    first = guard._escape.incident_hatch._form
+    guard.outage.since = time.monotonic() - 10_000
+    guard.open_escape()
+    first = guard.escape.incident_hatch.form
 
-    guard._open_escape()
+    guard.open_escape()
 
-    assert guard._escape.incident_hatch._form is first
+    assert guard.escape.incident_hatch.form is first
 
 
 def test_a_recovered_network_clears_the_stale_banner(tmp_path: Path, hmac_key: Path):
     """The banner outlived the outage, telling the user they had no internet
     long after they had reconnected."""
     guard = blind_offline(tmp_path, hmac_key)
-    assert guard._outage.note is not None
+    assert guard.outage.note is not None
 
-    guard._on_poll_result(probe_of("solved-after-reconnect"))
+    guard.on_poll_result(probe_of("solved-after-reconnect"))
 
-    assert guard._outage.diagnosis is None
-    assert guard._outage.note is None
-    assert guard._outage.policy is None
+    assert guard.outage.diagnosis is None
+    assert guard.outage.note is None
+    assert guard.outage.policy is None
 
 
 def test_clearing_an_outage_that_never_happened_is_a_no_op(
     tmp_path: Path, hmac_key: Path
 ):
+    """Clearing with no outage recorded leaves the outage state empty."""
     guard, _ = create_guard(tmp_path, key_file=hmac_key)
 
     guard.clear_outage()
 
-    assert guard._outage.diagnosis is None
+    assert guard.outage.diagnosis is None
 
 
 def test_a_recovered_leetcode_neither_unlocks_nor_demands_a_form(
@@ -149,8 +150,8 @@ def test_a_recovered_leetcode_neither_unlocks_nor_demands_a_form(
     )
     guard = blind_guard(tmp_path, hmac_key, lambda: online)
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert guard._decision().locked
-    assert guard._outage.policy is None
-    assert not guard._incident_form_due()
+    assert guard.decision().locked
+    assert guard.outage.policy is None
+    assert not guard.incident_form_due()

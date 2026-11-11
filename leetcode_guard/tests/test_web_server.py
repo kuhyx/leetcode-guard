@@ -65,8 +65,8 @@ def _get(port: int, path: str) -> tuple[int, bytes]:
         conn.close()
 
 
-@pytest.fixture
-def live_server() -> Iterator[int]:
+@pytest.fixture(name="live_server")
+def fixture_live_server() -> Iterator[int]:
     """A real server on an ephemeral loopback port.
 
     Yields:

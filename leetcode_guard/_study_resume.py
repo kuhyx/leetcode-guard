@@ -50,7 +50,7 @@ class ResumeMixin:
     breaks on a refactor and says nothing until runtime.
     """
 
-    _lock: Any
+    lock: Any
     _config: LockConfig
     _withdrawn: list[Any]
     _on_fail_closed: Callable[[str], None]
@@ -93,8 +93,8 @@ class ResumeMixin:
         the mapping take effect rather than sit in the queue behind us.
         """
         try:
-            self._lock.root.deiconify()
-            self._lock.root.update_idletasks()
+            self.lock.root.deiconify()
+            self.lock.root.update_idletasks()
         except tk.TclError:
             # Not fatal here: the re-grab below is what actually matters, and
             # its own failure path is the one that reports.
@@ -148,12 +148,12 @@ class ResumeMixin:
         a grab of its own, which it will drop.
         """
         try:
-            self._lock.root.focus_force()
-            self._lock.root.grab_set_global()
+            self.lock.root.focus_force()
+            self.lock.root.grab_set_global()
         except tk.TclError:
             _logger.warning("the global grab is not available yet", exc_info=True)
             return False
-        self._lock.report_grab_held(held=True)
+        self.lock.report_grab_held(held=True)
         return True
 
     def _start_watchers(self, steps: list[str]) -> None:
@@ -168,7 +168,7 @@ class ResumeMixin:
             ("recovery", start_recovery),
         ):
             try:
-                start(self._lock)
+                start(self.lock)
             except tk.TclError:
                 _logger.exception("could not restart the %s loop", name)
                 continue
@@ -181,7 +181,7 @@ class ResumeMixin:
         will never fire a second time and the app has to do this itself.
         """
         try:
-            surfaces = self._lock.surfaces
+            surfaces = self.lock.surfaces
             surfaces.focus_surface(surfaces.preferred_focus_index())
         except tk.TclError:
             _logger.warning("could not re-focus a surface", exc_info=True)

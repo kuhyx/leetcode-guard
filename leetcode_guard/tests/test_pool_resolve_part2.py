@@ -13,16 +13,16 @@ from leetcode_guard.tests._net_fixtures import (
     problem_row,
     status_result,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 from leetcode_guard.tests.test_pool_resolve import (
     SIGNED_IN,
     SIGNED_OUT,
     cached,
     path_of,
+    resolve_done_and_todo,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_a_live_check_drops_a_solve_the_stored_data_missed(tmp_path: Path):
@@ -144,6 +144,7 @@ def test_status_never_triggers_a_live_check(tmp_path: Path):
 
 
 def test_a_clean_live_check_says_so(tmp_path: Path):
+    """A live check that finds nothing solved says so in the notes."""
     write_cache(path_of(tmp_path), cached("a"))
     post = fake_post(status_result("a", "notac"))
 
@@ -159,21 +160,14 @@ def test_a_clean_live_check_says_so(tmp_path: Path):
 
 
 def test_signed_in_hides_solved_problems(tmp_path: Path):
-    post = fake_post(
-        pool_result(
-            [problem_row("done", status="ac"), problem_row("todo", status="notac")],
-            total=2,
-        )
-    )
-
-    resolution = resolve_pool(
-        post, tmp_path / "pool.json", now=0.0, solved=SolvedKnowledge(auth=SIGNED_IN)
-    )
+    """Signed in, problems the pool marks accepted are hidden."""
+    resolution = resolve_done_and_todo(tmp_path, SIGNED_IN)
 
     assert [p.title_slug for p in resolution.problems] == ["todo"]
 
 
 def test_a_pool_of_only_premium_problems_reports_no_suggestions(tmp_path: Path):
+    """A premium-only pool is empty and explains any solve counts."""
     post = fake_post(pool_result([problem_row("premium", paid_only=True)], total=1))
 
     resolution = resolve_pool(

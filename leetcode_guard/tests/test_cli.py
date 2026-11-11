@@ -13,6 +13,7 @@ from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._settings import Client
+from leetcode_guard.tests._cli_fixtures import assert_production_exits_unarmed
 from leetcode_guard.tests._ledger_fixtures import NOW, add_charge
 from leetcode_guard.tests._net_fixtures import (
     fake_post,
@@ -59,7 +60,9 @@ def stub_client(monkeypatch: pytest.MonkeyPatch, *results: GraphQLResult) -> Non
     )
 
 
-def test_probe_prints_submissions_and_suggestions(monkeypatch, capsys, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_probe_prints_submissions_and_suggestions(monkeypatch, capsys):
+    """--probe prints the username, recent solves and suggested problems."""
     stub_client(
         monkeypatch,
         recent_ac_result([submission_row("42", "two-sum", timestamp=1_700_000_000)]),
@@ -78,6 +81,7 @@ def test_probe_prints_submissions_and_suggestions(monkeypatch, capsys, data_dir:
 
 
 def test_probe_exits_nonzero_when_the_probe_is_unverifiable(monkeypatch, capsys):
+    """A probe whose every request fails exits 2 and says unverifiable."""
     stub_client(
         monkeypatch,
         GraphQLResult(transport_error="down"),
@@ -93,6 +97,7 @@ def test_probe_exits_nonzero_when_the_probe_is_unverifiable(monkeypatch, capsys)
 
 
 def test_probe_prints_pool_notes(monkeypatch, capsys):
+    """The probe surfaces the auth note alongside the pool result."""
     stub_client(
         monkeypatch,
         recent_ac_result([]),
@@ -105,17 +110,21 @@ def test_probe_prints_pool_notes(monkeypatch, capsys):
     assert "note: signed out" in out
 
 
-def test_bare_invocation_opens_a_demo_lock(monkeypatch, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_bare_invocation_opens_a_demo_lock(monkeypatch):
     """Demo is the default; --production opts out. A new locker that hard-grabs
     on its first ever run is how an afternoon gets lost."""
     built: dict = {}
 
     class FakeGuard:
+        """Records how the CLI built and ran the guard."""
+
         def __init__(self, *, demo_mode, deps):
             built["demo_mode"] = demo_mode
             built["deps"] = deps
 
         def run(self):
+            """Mark that the CLI started the lock."""
             built["ran"] = True
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
@@ -128,15 +137,18 @@ def test_bare_invocation_opens_a_demo_lock(monkeypatch, data_dir: Path):
 
 
 def test_production_opts_out_of_demo(monkeypatch, data_dir: Path):
+    """--production builds a non-demo guard on the real ledger file."""
     built: dict = {}
 
     class FakeGuard:
+        """Records how the CLI built the guard."""
+
         def __init__(self, *, demo_mode, deps):
             built["demo_mode"] = demo_mode
             built["deps"] = deps
 
         def run(self):
-            pass
+            """Do nothing: only construction is under test."""
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
     patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
@@ -192,11 +204,13 @@ def test_the_run_that_creates_the_ledger_does_not_arm(monkeypatch, capsys, data_
     built: dict = {}
 
     class FakeGuard:
-        def __init__(self, **kwargs):
+        """Records whether the CLI built a guard at all."""
+
+        def __init__(self, **_kwargs):
             built["built"] = True
 
         def run(self):
-            pass
+            """Do nothing: only construction is under test."""
 
     stub_client(
         monkeypatch,
@@ -214,17 +228,13 @@ def test_the_run_that_creates_the_ledger_does_not_arm(monkeypatch, capsys, data_
     assert not ledger.of_kind("charge"), "a deferral must not be a charge"
 
 
+@pytest.mark.usefixtures("data_dir")
 def test_production_exits_without_a_window_when_today_is_settled(
-    monkeypatch, capsys, data_dir: Path, hmac_key: Path
+    monkeypatch, capsys, hmac_key: Path
 ):
     """What makes the afternoon retry free: a settled day costs milliseconds
     and draws nothing."""
     ledger = Ledger()
     add_charge(ledger, local_today(), key_file=hmac_key)
     patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
-    monkeypatch.setattr(
-        _cli, "LeetcodeGuard", lambda **kwargs: pytest.fail("should not have armed")
-    )
-
-    assert _cli.main(["--production"]) == 0
-    assert "already unlocked" in capsys.readouterr().out
+    assert_production_exits_unarmed(monkeypatch, capsys)

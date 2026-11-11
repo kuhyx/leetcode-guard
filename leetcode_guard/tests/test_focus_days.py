@@ -12,14 +12,20 @@ from typing import TYPE_CHECKING
 import pytest
 import sickdays
 
-from leetcode_guard import _focus, _gate_today, _sick, _status_projection
+from leetcode_guard import _focus, _gate_today, _sick
 from leetcode_guard import _glyphs as g
 from leetcode_guard._debt import compute_debt, cost_phrase
-from leetcode_guard._gate import DayContext, GateState, decide
+
+# Imported directly so the names keep the real functions: the autouse stub
+# replaces the module attributes per test.
+from leetcode_guard._focus import project_name as real_project_name
+from leetcode_guard._focus import stands_down as real_stands_down
+from leetcode_guard._gate import DayContext, GateState
 from leetcode_guard._ledger_io import Ledger
+from leetcode_guard._status import format_status, gather_status
 from leetcode_guard._status_full import explain_not_triggered
-from leetcode_guard._viewmodel import build_viewmodel
-from leetcode_guard._viewmodel_source import ViewSource
+from leetcode_guard._status_projection import _is_off_day
+from leetcode_guard.tests._gate_fixtures import decide_with, view_of
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -29,25 +35,18 @@ from leetcode_guard.tests._ledger_fixtures import (
 )
 from leetcode_guard.tests.test_projection import never_free
 from leetcode_guard.tests.test_status_gather import full_for
-from leetcode_guard.tests.test_viewmodel import (
-    CHECKED_AT,
-    OK_PROBE,
-    SIGNED_OUT,
-    pool_of,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
 NEXT_MONDAY = MONDAY + timedelta(days=7)
-REAL_STANDS_DOWN = _focus.stands_down
-REAL_PROJECT_NAME = _focus.project_name
-"""Captured at import: the autouse stub replaces the module attribute per test."""
 
 
-@pytest.fixture
-def focus_on(monkeypatch: pytest.MonkeyPatch) -> Callable[..., list[tuple[str, date]]]:
+@pytest.fixture(name="focus_on")
+def fixture_focus_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Callable[..., list[tuple[str, date]]]:
     """Declare focus days; returns the (gate, day) questions asked."""
     asked: list[tuple[str, date]] = []
 
@@ -63,10 +62,12 @@ def focus_on(monkeypatch: pytest.MonkeyPatch) -> Callable[..., list[tuple[str, d
 
 
 def stands_down_on(*days: date):
+    """Build a ``sickdays.stands_down`` stub that is true on ``days`` only."""
     return lambda _locker, day=None, **_kw: day in days
 
 
 def test_a_focus_day_is_a_stand_down_day(focus_on):
+    """A declared focus day stands the leetcode gate down, other days do not."""
     asked = focus_on(MONDAY)
 
     assert _sick.leetcode_stands_down(MONDAY) is True
@@ -75,12 +76,14 @@ def test_a_focus_day_is_a_stand_down_day(focus_on):
 
 
 def test_a_sick_day_still_stands_down_without_focus(monkeypatch):
+    """A sick day still stands the gate down when no focus project is active."""
     monkeypatch.setattr(sickdays, "stands_down", lambda *_a, **_k: True)
 
     assert _sick.leetcode_stands_down(MONDAY) is True
 
 
 def test_a_focus_day_adds_nothing_to_the_debt(focus_on):
+    """Focus days are left out of the missed days, so the debt owed shrinks."""
     plain = compute_debt(Ledger(), day=NEXT_MONDAY, is_free=never_free, start=MONDAY)
     focus_on(MONDAY, SATURDAY)
     focused = compute_debt(
@@ -96,6 +99,7 @@ def test_a_focus_day_adds_nothing_to_the_debt(focus_on):
 
 
 def test_decide_today_on_a_focus_day_charges_and_locks_nothing(focus_on, debt_starts):
+    """On a focus day the gate is unlocked with no charge, no need and no debt."""
     debt_starts(MONDAY)
     focus_on(MONDAY, TUESDAY, WEDNESDAY)
 
@@ -108,31 +112,35 @@ def test_decide_today_on_a_focus_day_charges_and_locks_nothing(focus_on, debt_st
 
 
 def test_the_status_projection_skips_focus_days(focus_on):
+    """The status projection treats a focus day as an off day."""
     focus_on(SATURDAY)
 
-    assert _status_projection._is_off_day(SATURDAY) is True
-    assert _status_projection._is_off_day(MONDAY) is False
+    assert _is_off_day(SATURDAY) is True
+    assert _is_off_day(MONDAY) is False
 
 
 def test_no_focus_day_by_default():
+    """With no project declared, no day is a focus day."""
     assert _focus.stands_down("leetcode", MONDAY) is False
 
 
 def test_stands_down_asks_the_package(monkeypatch):
+    """``stands_down`` returns what the ``focus_project`` package answers."""
     fake = SimpleNamespace(stands_down=lambda gate, day: (gate, day) == ("x", MONDAY))
     monkeypatch.setitem(sys.modules, "focus_project", fake)
 
-    assert REAL_STANDS_DOWN("x", MONDAY) is True
-    assert REAL_STANDS_DOWN("x", NEXT_MONDAY) is False
+    assert real_stands_down("x", MONDAY) is True
+    assert real_stands_down("x", NEXT_MONDAY) is False
 
 
 def test_a_missing_package_fails_closed_and_logs_once(monkeypatch, caplog):
+    """Without ``focus_project`` no day stands down and one error is logged."""
     monkeypatch.setitem(sys.modules, "focus_project", None)
     monkeypatch.setattr(_focus, "_warned", set())
 
     with caplog.at_level(logging.ERROR, logger=_focus.__name__):
-        assert REAL_STANDS_DOWN("leetcode", MONDAY) is False
-        assert REAL_STANDS_DOWN("leetcode", WEDNESDAY) is False
+        assert real_stands_down("leetcode", MONDAY) is False
+        assert real_stands_down("leetcode", WEDNESDAY) is False
 
     errors = [r for r in caplog.records if r.levelno == logging.ERROR]
     assert len(errors) == 1
@@ -140,6 +148,7 @@ def test_a_missing_package_fails_closed_and_logs_once(monkeypatch, caplog):
 
 
 def test_a_focus_day_says_focus_not_sick(focus_on, debt_starts):
+    """A focus day reports the focus-day state and names the project."""
     debt_starts(MONDAY)
     focus_on(WEDNESDAY)
 
@@ -152,6 +161,7 @@ def test_a_focus_day_says_focus_not_sick(focus_on, debt_starts):
 
 
 def test_a_focus_day_costs_nothing_even_with_debt(focus_on, debt_starts):
+    """Outstanding debt still makes a focus day cost 0."""
     debt_starts(MONDAY)
     plain = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
     focus_on(TUESDAY, WEDNESDAY)
@@ -166,6 +176,7 @@ def test_a_focus_day_costs_nothing_even_with_debt(focus_on, debt_starts):
 def test_a_real_sick_day_keeps_its_text_when_focus_also_applies(
     focus_on, debt_starts, monkeypatch
 ):
+    """A day that is both sick and focus keeps the sick-day state and reason."""
     debt_starts(MONDAY)
     focus_on(WEDNESDAY)
     monkeypatch.setattr(sickdays, "stands_down", stands_down_on(WEDNESDAY))
@@ -179,22 +190,10 @@ def test_a_real_sick_day_keeps_its_text_when_focus_also_applies(
 def test_the_window_and_status_name_the_focus_day(
     monkeypatch, hmac_key: Path, data_dir: Path
 ):
-    from leetcode_guard._status import format_status, gather_status
-
+    """The window headline, status text and explanation all name the focus day."""
     monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: True)
-    decision = decide(
-        Ledger(),
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(focus_day="Prep"),
-    )
-    model = build_viewmodel(
-        decision,
-        ViewSource(pool_of(), SIGNED_OUT, limit=10),
-        OK_PROBE,
-        checked_at=CHECKED_AT,
-    )
+    decision = decide_with(Ledger(), hmac_key, DayContext(focus_day="Prep"))
+    model = view_of(decision)
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     lines = explain_not_triggered(full_for(data_dir, hmac_key, Ledger()))
 
@@ -206,11 +205,12 @@ def test_the_window_and_status_name_the_focus_day(
 
 
 def test_the_project_name_comes_from_the_package(monkeypatch):
+    """The project name comes from the package, with a fallback when absent."""
     project = SimpleNamespace(name="HackerRank prep")
     fake = SimpleNamespace(active=lambda day: project if day == MONDAY else None)
     monkeypatch.setitem(sys.modules, "focus_project", fake)
 
-    assert REAL_PROJECT_NAME(MONDAY) == "HackerRank prep"
-    assert REAL_PROJECT_NAME(WEDNESDAY) == "focus project"
+    assert real_project_name(MONDAY) == "HackerRank prep"
+    assert real_project_name(WEDNESDAY) == "focus project"
     monkeypatch.setitem(sys.modules, "focus_project", None)
-    assert REAL_PROJECT_NAME(MONDAY) == "focus project"
+    assert real_project_name(MONDAY) == "focus project"

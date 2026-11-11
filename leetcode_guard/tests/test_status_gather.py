@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard._ledger_io import save_ledger
+from leetcode_guard._escape_flow import build_tracker
+from leetcode_guard._ledger import LedgerEntry
+from leetcode_guard._ledger_io import Ledger, append, save_ledger
 from leetcode_guard._status_extra import (
     gather_budget,
     gather_cache,
@@ -43,6 +45,7 @@ def full_for(data_dir: Path, hmac_key: Path, ledger=None):
 
 
 def test_ledger_stats_count_everything(hmac_key: Path):
+    """Ledger stats count credits, charges, today, the week and charged days."""
     ledger = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
     add_charge(ledger, MONDAY, key_file=hmac_key)
 
@@ -57,6 +60,7 @@ def test_ledger_stats_count_everything(hmac_key: Path):
 
 
 def test_solves_outside_the_week_are_not_counted_as_recent(hmac_key: Path):
+    """Solves 30 days old count as earned but not as today or this week."""
     ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
 
     stats = gather_ledger_stats(ledger, today=MONDAY + timedelta(days=30))
@@ -66,10 +70,9 @@ def test_solves_outside_the_week_are_not_counted_as_recent(hmac_key: Path):
     assert stats.solves_last_7_days == 0
 
 
-def test_an_unparsable_day_does_not_break_the_counts(hmac_key: Path):
-    from leetcode_guard._ledger import LedgerEntry
-    from leetcode_guard._ledger_io import Ledger, append
-
+@pytest.mark.usefixtures("hmac_key")
+def test_an_unparsable_day_does_not_break_the_counts():
+    """A credit with a garbage day still counts as earned, just not as today."""
     ledger = Ledger()
     append(ledger, [LedgerEntry("ac:x", "credit", "not-a-date", "", 1)])
 
@@ -80,6 +83,7 @@ def test_an_unparsable_day_does_not_break_the_counts(hmac_key: Path):
 
 
 def test_the_recent_solve_list_is_capped_and_newest_first(hmac_key: Path):
+    """The recent-solves list stops at the requested limit."""
     ledger = ledger_with_credits(20, day=MONDAY, key_file=hmac_key)
 
     stats = gather_ledger_stats(ledger, today=MONDAY, limit=5)
@@ -88,8 +92,7 @@ def test_the_recent_solve_list_is_capped_and_newest_first(hmac_key: Path):
 
 
 def test_budget_reports_usage_against_the_policy(tmp_path: Path, hmac_key: Path):
-    from leetcode_guard._escape_flow import build_tracker
-
+    """A fresh escape budget reports 0 of 1 used per 7 days."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
 
     budget = gather_budget(tracker, "Escape hatch")
@@ -101,6 +104,7 @@ def test_budget_reports_usage_against_the_policy(tmp_path: Path, hmac_key: Path)
 
 
 def test_a_missing_cache_reports_absent(tmp_path: Path):
+    """An absent cache file reports exists=False and 'none'."""
     status = gather_cache(tmp_path / "absent.json", "Pool", "problems", now=0.0)
 
     assert not status.exists
@@ -108,6 +112,7 @@ def test_a_missing_cache_reports_absent(tmp_path: Path):
 
 
 def test_a_cache_reports_size_and_age(tmp_path: Path):
+    """A cache reports its entry count and age in days."""
     path = tmp_path / "pool.json"
     path.write_text(
         json.dumps({"fetched_at": 0.0, "problems": [1, 2, 3]}), encoding="utf-8"
@@ -124,6 +129,7 @@ def test_a_cache_reports_size_and_age(tmp_path: Path):
     "content", ["not json", '["a"]', '{"problems": [1], "fetched_at": "soon"}']
 )
 def test_a_corrupt_cache_degrades_rather_than_raising(tmp_path: Path, content: str):
+    """A corrupt cache still exists but has no known age."""
     path = tmp_path / "pool.json"
     path.write_text(content, encoding="utf-8")
 
@@ -139,6 +145,7 @@ def test_timer_status_is_read_from_systemctl_show():
     calls: list[list[str]] = []
 
     def fake(args: list[str]) -> str:
+        """Answer systemctl is-enabled and show like a live enabled timer."""
         calls.append(args)
         if args[0] == "is-enabled":
             return "enabled\n"
@@ -152,6 +159,7 @@ def test_timer_status_is_read_from_systemctl_show():
 
 
 def test_a_missing_systemctl_degrades_to_unknown():
+    """No systemctl output reads as disabled with an unknown next fire."""
     timer = gather_timer(run=lambda _args: None)
 
     assert not timer.enabled

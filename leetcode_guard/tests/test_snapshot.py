@@ -20,6 +20,7 @@ from leetcode_guard._progress import Progress
 from leetcode_guard._snapshot import SCHEMA_VERSION, build_snapshot
 from leetcode_guard._snapshot_projection import build_projections, projection_targets
 from leetcode_guard._status_full import gather_full
+from leetcode_guard._status_projection import ProjectionInputs, build_report
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     add_charge,
@@ -57,6 +58,7 @@ def _timer(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def a_full(data_dir: Path, hmac_key: Path):
+    """Gather full status over a ledger with five Monday credits and a charge."""
     path = data_dir / "ledger.json"
     ledger = ledger_with_credits(5, day=MONDAY, key_file=hmac_key)
     add_charge(ledger, MONDAY, key_file=hmac_key)
@@ -65,12 +67,14 @@ def a_full(data_dir: Path, hmac_key: Path):
 
 
 def a_snapshot(data_dir: Path, hmac_key: Path, **overrides):
+    """Build a snapshot of ``a_full`` with the given section overrides."""
     kwargs = {"progress": PROGRESS, "profile": PROFILE, "coach": None}
     kwargs.update(overrides)
     return build_snapshot(a_full(data_dir, hmac_key), now=MONDAY_NOON, **kwargs)
 
 
 def test_the_envelope(data_dir: Path, hmac_key: Path):
+    """The envelope carries schema 1, a local timestamp, and is strict JSON."""
     snap = a_snapshot(data_dir, hmac_key)
 
     assert snap["schema"] == SCHEMA_VERSION == 1
@@ -82,6 +86,7 @@ def test_the_envelope(data_dir: Path, hmac_key: Path):
 
 
 def test_verdict_and_credits_sections(data_dir: Path, hmac_key: Path):
+    """The verdict and credits sections carry every field the window shows."""
     status = a_snapshot(data_dir, hmac_key)["status"]
 
     assert status["day"] == "2026-08-10"
@@ -103,6 +108,7 @@ def test_verdict_and_credits_sections(data_dir: Path, hmac_key: Path):
 
 
 def test_solves_days_and_budgets_sections(data_dir: Path, hmac_key: Path):
+    """The solves, days and budgets sections count Monday's credits and charge."""
     status = a_snapshot(data_dir, hmac_key)["status"]
 
     assert status["solves"]["today"] == 5
@@ -118,6 +124,7 @@ def test_solves_days_and_budgets_sections(data_dir: Path, hmac_key: Path):
 
 
 def test_integrity_environment_and_suggestions_sections(data_dir: Path, hmac_key: Path):
+    """The integrity, environment and suggestions sections reflect the test setup."""
     status = a_snapshot(data_dir, hmac_key)["status"]
 
     integrity = status["integrity"]
@@ -138,6 +145,7 @@ def test_integrity_environment_and_suggestions_sections(data_dir: Path, hmac_key
 
 
 def test_progress_and_profile(data_dir: Path, hmac_key: Path):
+    """Progress and profile carry counts, totals, streaks and the calendar."""
     snap = a_snapshot(data_dir, hmac_key)
 
     assert snap["progress"]["solved"] == {"Easy": 10, "Medium": 5, "Hard": 1}
@@ -155,6 +163,7 @@ def test_progress_and_profile(data_dir: Path, hmac_key: Path):
 
 
 def test_unknown_sections_are_null_never_zero(data_dir: Path, hmac_key: Path):
+    """Missing progress and profile arrive as null, and so does the projection."""
     snap = a_snapshot(data_dir, hmac_key, progress=None, profile=None)
 
     assert snap["progress"] is None
@@ -166,6 +175,7 @@ def test_unknown_sections_are_null_never_zero(data_dir: Path, hmac_key: Path):
 def test_a_profile_without_a_calendar_has_unknown_streaks(
     data_dir: Path, hmac_key: Path
 ):
+    """A profile without a calendar reports null streaks, not zero."""
     profile = Profile(
         solved=PROFILE.solved,
         total=PROFILE.total,
@@ -183,6 +193,7 @@ def test_a_profile_without_a_calendar_has_unknown_streaks(
 
 
 def test_projection_targets_are_90_days_plus_12_month_ends():
+    """Targets are 90 daily dates plus the following month ends, unique."""
     targets = projection_targets(date(2026, 10, 23))
 
     assert targets[0] == date(2026, 10, 23)
@@ -206,8 +217,6 @@ def test_projection_targets_are_90_days_plus_12_month_ends():
 
 def test_projections_match_the_window_arithmetic(data_dir: Path, hmac_key: Path):
     """Same numbers as the tkinter "Project" button, at the live price."""
-    from leetcode_guard._status_projection import ProjectionInputs, build_report
-
     full = a_full(data_dir, hmac_key)
     projections = build_projections(full.gate, PROGRESS)
     report = build_report(

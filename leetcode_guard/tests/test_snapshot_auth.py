@@ -32,6 +32,7 @@ OLD_ID, FRESH_ID, ROTATED = "old", "fresh", "rotated"
 
 
 def seed(root: Path, app: str, refresh: str) -> Path:
+    """Write a cached session for ``app`` under ``root`` and return its path."""
     path = root / app / "firebase_auth.json"
     FileCredentialStore(path).save(
         FirebaseCredentials(id_token=OLD_ID, refresh_token=refresh, expires_at=LATER)
@@ -40,6 +41,7 @@ def seed(root: Path, app: str, refresh: str) -> Path:
 
 
 def minted(refresh_token: str) -> FirebaseCredentials:
+    """Fake mint: tokens starting with ``dead`` are rejected, others succeed."""
     if refresh_token.startswith("dead"):
         message = "TOKEN_EXPIRED"
         raise FirebaseAuthError(message)
@@ -51,6 +53,7 @@ def minted(refresh_token: str) -> FirebaseCredentials:
 
 
 def test_a_live_sibling_seeds_our_own_cache(tmp_path: Path):
+    """The first sibling whose token still mints is copied into our cache."""
     seed(tmp_path, "aaa_dead", "dead-1")
     seed(tmp_path, "wake_alarm", "live-2")
     (tmp_path / "broken").mkdir()
@@ -65,6 +68,7 @@ def test_a_live_sibling_seeds_our_own_cache(tmp_path: Path):
 
 
 def test_our_own_cache_is_never_its_own_donor(tmp_path: Path):
+    """Our own app directory is skipped when looking for a donor."""
     seed(tmp_path, APP, "live-own")
 
     assert adopt_sibling_session(APP, config_root=tmp_path, mint=minted) is None
@@ -73,6 +77,7 @@ def test_our_own_cache_is_never_its_own_donor(tmp_path: Path):
 def test_every_dead_sibling_means_no_session(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """With every sibling rejected there is no donor, and each is logged."""
     seed(tmp_path, "a", "dead-1")
     seed(tmp_path, "b", "dead-2")
 
@@ -80,25 +85,27 @@ def test_every_dead_sibling_means_no_session(
     assert caplog.text.count("was rejected") == 2
 
 
-def test_connect_uses_the_cached_session_first(tmp_path: Path):
-    calls: list[str] = []
+def test_connect_uses_the_cached_session_first():
+    """A working cached session is used as is, with no sibling lookup."""
+    calls: list[tuple[str, float]] = []
 
     def client_for(app: str, *, timeout_seconds: float) -> object:
-        calls.append(app)
+        calls.append((app, timeout_seconds))
         return "client"
 
     assert connect(APP, timeout_seconds=1.0, client_for=client_for) == "client"
-    assert calls == [APP]
+    assert calls == [(APP, 1.0)]
 
 
 def test_connect_heals_from_a_sibling_after_a_failed_sign_in(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """A rejected sign-in borrows a sibling session and builds again."""
     seed(tmp_path, "diet_guard", "live-9")
-    attempts: list[str] = []
+    attempts: list[tuple[str, float]] = []
 
     def client_for(app: str, *, timeout_seconds: float) -> object:
-        attempts.append(app)
+        attempts.append((app, timeout_seconds))
         if len(attempts) == 1:
             message = "failed to sign in: HTTP 400 (INVALID_LOGIN_CREDENTIALS)"
             raise FirebaseAuthError(message)
@@ -113,12 +120,17 @@ def test_connect_heals_from_a_sibling_after_a_failed_sign_in(
     )
 
     assert result == "healed"
+    assert attempts == [(APP, 1.0), (APP, 1.0)]
     assert "INVALID_LOGIN_CREDENTIALS" in caplog.text
     assert "diet_guard" in caplog.text
 
 
 def test_connect_reraises_when_no_sibling_can_help(tmp_path: Path):
-    def client_for(app: str, *, timeout_seconds: float) -> object:
+    """With no live sibling, connect raises an auth error naming the root."""
+    timeouts: list[float] = []
+
+    def client_for(_app: str, *, timeout_seconds: float) -> object:
+        timeouts.append(timeout_seconds)
         message = "missing firebase.json"
         raise ConfigError(message)
 
@@ -130,11 +142,13 @@ def test_connect_reraises_when_no_sibling_can_help(tmp_path: Path):
             config_root=tmp_path,
             mint=minted,
         )
+    assert timeouts == [1.0]
 
 
 def test_the_real_mint_exchanges_through_the_public_provider(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
+    """The real mint refreshes through FirebaseTokenProvider and reads back."""
     config = tmp_path / "firebase.json"
     config.write_text(
         json.dumps(
@@ -152,11 +166,14 @@ def test_the_real_mint_exchanges_through_the_public_provider(
     seen: dict[str, object] = {}
 
     class FakeProvider:
+        """Records the refresh it is asked for and stores rotated tokens."""
+
         def __init__(self, api_key: str, store: object) -> None:
             seen["api_key"] = api_key
             self.store = store
 
         def id_token(self) -> str:
+            """Note the stored session, then save a rotated one."""
             old = self.store.load()
             seen["refreshing"] = old.refresh_token
             seen["expired"] = old.is_expired_at(datetime.now(tz=UTC))
@@ -176,13 +193,18 @@ def test_the_real_mint_exchanges_through_the_public_provider(
 
 
 def test_a_provider_that_stores_nothing_is_an_auth_error(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
 ):
+    """A provider that leaves the store empty makes the mint fail."""
+
     class Forgetful:
-        def __init__(self, api_key: str, store: object) -> None:
+        """Provider that clears the store instead of saving a session."""
+
+        def __init__(self, _api_key: str, store: object) -> None:
             self.store = store
 
         def id_token(self) -> str:
+            """Clear the store and return no token."""
             self.store.clear()
             return ""
 

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 
 def question_result(difficulty: str) -> GraphQLResult:
+    """Wrap a question-difficulty reply as a GraphQL result."""
     return GraphQLResult(data={"question": {"difficulty": difficulty}})
 
 
@@ -59,6 +60,7 @@ def test_a_fresh_credit_is_priced_before_the_gate_decides(
 def test_a_failed_pricing_still_records_the_credit(
     monkeypatch, capsys, data_dir: Path, hmac_key: Path
 ):
+    """A pricing call that fails still banks the credit at the default weight of 1."""
     seeded_ledger(data_dir / "ledger.json", hmac_key)
     stub_client(
         monkeypatch,
@@ -76,6 +78,7 @@ def test_a_failed_pricing_still_records_the_credit(
 def test_an_idle_tick_backfills_credited_problems_from_the_pool(
     monkeypatch, data_dir: Path, hmac_key: Path
 ):
+    """A tick with no new solves backfills Hard weight for already credited problems."""
     path = data_dir / "ledger.json"
     seeded_ledger(path, hmac_key)
     ledger = load_ledger(path, key_file=hmac_key)
@@ -124,7 +127,7 @@ def test_a_focus_day_still_records_credits_but_charges_nothing(
 
 
 def fake_lock(key_file: Path | None, *, write_ledger: bool) -> SimpleNamespace:
-    """Just the ``_deps`` the poll mixin's ``_check`` reads; no window built."""
+    """Just the ``deps`` the poll mixin's ``check`` reads; no window built."""
     deps = SimpleNamespace(
         post=fake_post(),
         username="k",
@@ -132,10 +135,11 @@ def fake_lock(key_file: Path | None, *, write_ledger: bool) -> SimpleNamespace:
         write_ledger=write_ledger,
         moment=lambda: NOW,
     )
-    return SimpleNamespace(_deps=deps)
+    return SimpleNamespace(deps=deps)
 
 
 def test_the_lock_prices_new_submissions_on_the_executor(monkeypatch, hmac_key: Path):
+    """The lock's check prices new submissions once, against its key file."""
     asked: list[dict[str, object]] = []
     monkeypatch.setattr(
         _lock_poll, "fetch_recent_ac", lambda _post, _user: probe_of("a")
@@ -144,7 +148,7 @@ def test_the_lock_prices_new_submissions_on_the_executor(monkeypatch, hmac_key: 
         _lock_poll, "resolve_probe", lambda probe, **kw: asked.append(kw)
     )
 
-    probe = _lock_poll.PollMixin._check(fake_lock(hmac_key, write_ledger=True))
+    probe = _lock_poll.PollMixin.check(fake_lock(hmac_key, write_ledger=True))
 
     assert probe.submissions
     assert len(asked) == 1
@@ -152,6 +156,7 @@ def test_the_lock_prices_new_submissions_on_the_executor(monkeypatch, hmac_key: 
 
 
 def test_the_demo_lock_never_writes_difficulty_rows(monkeypatch):
+    """The demo lock checks submissions without ever writing difficulty rows."""
     monkeypatch.setattr(
         _lock_poll, "fetch_recent_ac", lambda _post, _user: probe_of("a")
     )
@@ -161,6 +166,6 @@ def test_the_demo_lock_never_writes_difficulty_rows(monkeypatch):
         lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("demo wrote")),
     )
 
-    probe = _lock_poll.PollMixin._check(fake_lock(None, write_ledger=False))
+    probe = _lock_poll.PollMixin.check(fake_lock(None, write_ledger=False))
 
     assert probe.submissions

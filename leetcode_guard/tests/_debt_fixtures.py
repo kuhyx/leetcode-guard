@@ -11,6 +11,9 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
+import sickdays
+
+from leetcode_guard import _debt
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,8 +26,6 @@ def _no_sick_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     The twin of ``_no_free_days_by_default``: a real sick day marked on this
     machine would silently stand the gate down in every scenario below.
     """
-    import sickdays
-
     isolated = sickdays.Paths.under(tmp_path / "sickdays")
     # Every sickdays module binds its own ``resolve_paths`` by name (_api,
     # _keep_api for set_kept_lockers, _audit, _sync, _conflict), so patching
@@ -58,7 +59,6 @@ def debt_starts(monkeypatch: pytest.MonkeyPatch):
     Counterpart to ``_no_debt_by_default``. Returns a callable so the epoch
     is chosen inside the test, next to the days it reasons about.
     """
-    from leetcode_guard import _debt
 
     def _set(day: date) -> date:
         monkeypatch.setattr(_debt, "DEBT_START_DATE", day)

@@ -20,6 +20,7 @@ from leetcode_guard._queries import (
 
 
 def test_pool_query_requests_every_field_the_parser_reads():
+    """The pool query asks for every field the problem parser reads."""
     for field in (
         "titleSlug",
         "difficulty",
@@ -45,20 +46,24 @@ def test_pool_query_takes_no_inline_difficulty_literal():
 
 
 def test_recent_ac_query_requests_the_id_the_ledger_keys_on():
+    """The recent-AC query asks for the submission id, timestamp and slug."""
     assert "id" in RECENT_AC_QUERY
     assert "timestamp" in RECENT_AC_QUERY
     assert "titleSlug" in RECENT_AC_QUERY
 
 
 def test_statement_query_requests_content():
+    """The statement query asks for the problem content."""
     assert "content" in STATEMENT_QUERY
 
 
 def test_pool_variables():
+    """pool_variables passes skip and limit through unchanged."""
     assert pool_variables(skip=200, limit=100) == {"skip": 200, "limit": 100}
 
 
 def test_recent_ac_variables_pin_the_server_cap():
+    """recent_ac_variables pins the limit to the server's 20-item cap."""
     variables = recent_ac_variables("kuchy")
 
     assert variables == {"username": "kuchy", "limit": RECENT_AC_LIMIT}
@@ -66,4 +71,5 @@ def test_recent_ac_variables_pin_the_server_cap():
 
 
 def test_statement_variables():
+    """statement_variables keys the slug as titleSlug."""
     assert statement_variables("two-sum") == {"titleSlug": "two-sum"}

@@ -12,6 +12,9 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, PropertyMock, patch
 
+import pytest
+
+from leetcode_guard._gatelock_internals import arming, set_arming, set_surface_map
 from leetcode_guard.tests._guard_factories import create_guard, probe_of
 
 if TYPE_CHECKING:
@@ -33,8 +36,9 @@ def locked_guard(tmp_path: Path, hmac_key: Path, **kwargs):
     )
     # Both are read-only handles onto the frozen arming bundle, so the bundle
     # is swapped for one carrying mocks.
-    guard._lock._arming = replace(
-        guard._lock._arming, recovery=MagicMock(), detector=MagicMock()
+    set_arming(
+        guard.lock,
+        replace(arming(guard.lock), recovery=MagicMock(), detector=MagicMock()),
     )
     return guard
 
@@ -45,11 +49,11 @@ def test_open_stands_the_lock_down_and_launches(
     """The whole point: the grab has to come off or the browser gets no keys."""
     guard = locked_guard(tmp_path, hmac_key)
 
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
-    guard._lock.root.grab_release.assert_called_once()
+    guard.lock.root.grab_release.assert_called_once()
     assert no_spawn == [URL]
-    assert guard._session().active
+    assert guard.session().active
 
 
 def test_no_browser_means_the_lock_is_never_weakened(
@@ -59,12 +63,12 @@ def test_no_browser_means_the_lock_is_never_weakened(
     monkeypatch.setattr("leetcode_guard._lock_study.find_opener", lambda: None)
     guard = locked_guard(tmp_path, hmac_key)
 
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
-    guard._lock.recovery.stop.assert_not_called()
-    guard._lock.root.grab_release.assert_not_called()
-    assert not guard._session().active
-    for view in guard._frames.views.values():
+    guard.lock.recovery.stop.assert_not_called()
+    guard.lock.root.grab_release.assert_not_called()
+    assert not guard.session().active
+    for view in guard.frames.views.values():
         view.status_line.configure.assert_called()
 
 
@@ -73,12 +77,12 @@ def test_a_failed_suspend_does_not_launch_a_browser(
 ):
     """A browser we cannot type into is worse than none: refuse instead."""
     guard = locked_guard(tmp_path, hmac_key)
-    guard._lock.root.grab_release.side_effect = tk.TclError("held elsewhere")
+    guard.lock.root.grab_release.side_effect = tk.TclError("held elsewhere")
 
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
     assert no_spawn == []
-    assert not guard._session().active
+    assert not guard.session().active
 
 
 def test_a_failed_launch_after_suspend_puts_the_lock_back(
@@ -94,10 +98,10 @@ def test_a_failed_launch_after_suspend_puts_the_lock_back(
     )
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
 
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
-    assert not guard._session().active
-    guard._lock.root.grab_set_global.assert_called()
+    assert not guard.session().active
+    guard.lock.root.grab_set_global.assert_called()
 
 
 def test_a_second_problem_while_studying_does_not_re_suspend(
@@ -106,29 +110,28 @@ def test_a_second_problem_while_studying_does_not_re_suspend(
     """Opening another problem mid-session is legitimate and must tear nothing
     down -- including the elapsed clock."""
     guard = locked_guard(tmp_path, hmac_key)
-    guard._open_problem(URL)
+    guard.open_problem(URL)
     other = "https://leetcode.com/problems/valid-parentheses/"
 
-    guard._open_problem(other)
+    guard.open_problem(other)
 
-    guard._lock.root.grab_release.assert_called_once()
-    guard._lock.recovery.stop.assert_called_once()
+    guard.lock.root.grab_release.assert_called_once()
+    guard.lock.recovery.stop.assert_called_once()
     assert no_spawn == [URL, other]
 
 
-def test_the_strip_goes_up_on_the_primary_output(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_the_strip_goes_up_on_the_primary_output(tmp_path: Path, hmac_key: Path):
+    """Opening a problem raises the study strip."""
     guard = locked_guard(tmp_path, hmac_key)
 
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
-    assert guard._strip is not None
+    assert guard.strip is not None
 
 
-def test_no_output_means_no_strip_but_study_still_runs(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_no_output_means_no_strip_but_study_still_runs(tmp_path: Path, hmac_key: Path):
     """Zero live outputs: the poller still watches and a real solve still
     unlocks, so this is degraded rather than broken."""
     guard = locked_guard(tmp_path, hmac_key)
@@ -136,50 +139,50 @@ def test_no_output_means_no_strip_but_study_still_runs(
     # surface set is swapped rather than one return value.
     empty = MagicMock()
     empty.infos.return_value = ()
-    empty._surfaces = {}
-    with patch.object(type(guard._lock), "surfaces", new_callable=PropertyMock) as prop:
+    set_surface_map(empty, {})
+    with patch.object(type(guard.lock), "surfaces", new_callable=PropertyMock) as prop:
         prop.return_value = empty
-        guard._open_problem(URL)
+        guard.open_problem(URL)
 
-    assert guard._strip is None
-    assert guard._session().active
+    assert guard.strip is None
+    assert guard.session().active
 
 
-def test_back_to_lock_re_grabs_and_drops_the_strip(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_back_to_lock_re_grabs_and_drops_the_strip(tmp_path: Path, hmac_key: Path):
+    """Back-to-lock re-takes the grab, destroys the strip and ends the session."""
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
-    guard._open_problem(URL)
-    strip = guard._strip
+    guard.open_problem(URL)
+    strip = guard.strip
 
-    guard._back_to_lock()
+    guard.back_to_lock()
 
-    guard._lock.root.grab_set_global.assert_called()
+    guard.lock.root.grab_set_global.assert_called()
     strip.window.destroy.assert_called_once()
-    assert guard._strip is None
-    assert not guard._session().active
+    assert guard.strip is None
+    assert not guard.session().active
 
 
 def test_back_to_lock_when_not_studying_is_harmless(tmp_path: Path, hmac_key: Path):
+    """Back-to-lock outside study mode touches no grab."""
     guard = locked_guard(tmp_path, hmac_key)
 
-    guard._back_to_lock()
+    guard.back_to_lock()
 
-    guard._lock.root.grab_set_global.assert_not_called()
+    guard.lock.root.grab_set_global.assert_not_called()
 
 
-def test_a_failed_regrab_is_reported_on_the_surface(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_a_failed_regrab_is_reported_on_the_surface(tmp_path: Path, hmac_key: Path):
     """A degraded lock must say so rather than look identical to a working
     one."""
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
-    guard._open_problem(URL)
-    guard._lock.root.grab_set_global.side_effect = tk.TclError("taken")
-    for view in guard._frames.views.values():
+    guard.open_problem(URL)
+    guard.lock.root.grab_set_global.side_effect = tk.TclError("taken")
+    for view in guard.frames.views.values():
         view.status_line.configure.reset_mock()
 
-    guard._back_to_lock()
+    guard.back_to_lock()
 
-    for view in guard._frames.views.values():
+    for view in guard.frames.views.values():
         view.status_line.configure.assert_called()

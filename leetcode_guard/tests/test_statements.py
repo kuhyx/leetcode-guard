@@ -24,12 +24,14 @@ if TYPE_CHECKING:
 
 
 def problem(slug: str) -> Problem:
+    """Parse a pool row for ``slug`` into a Problem."""
     parsed = parse_problem(problem_row(slug))
     assert parsed is not None
     return parsed
 
 
 def statement_result(slug: str, content: str = "<p>Do the thing.</p>") -> GraphQLResult:
+    """A GraphQL answer carrying one statement for ``slug``."""
     return GraphQLResult(
         data={
             "question": {
@@ -43,6 +45,7 @@ def statement_result(slug: str, content: str = "<p>Do the thing.</p>") -> GraphQ
 
 
 def test_a_statement_is_fetched_and_parsed():
+    """A fetched statement is parsed and asked for by its slug."""
     post = fake_post(statement_result("two-sum"))
 
     fetched = fetch_statements(post, [problem("two-sum")])
@@ -64,6 +67,7 @@ def test_one_request_per_problem():
 
 
 def test_a_failed_fetch_is_skipped_not_fatal():
+    """A failed fetch drops that problem and marks the batch incomplete."""
     post = fake_post(
         statement_result("good"),
         GraphQLResult(transport_error="down"),
@@ -89,6 +93,7 @@ def test_a_premium_problem_returns_no_content_and_is_logged(caplog):
 
 
 def test_an_empty_request_list_is_complete_and_free():
+    """Asking for nothing is complete and sends no request."""
     post = fake_post(statement_result("x"))
 
     fetched = fetch_statements(post, [])
@@ -111,10 +116,12 @@ def test_an_empty_request_list_is_complete_and_free():
     ],
 )
 def test_unusable_payloads_parse_to_none(payload: Any):
+    """Every malformed statement payload parses to None."""
     assert parse_statement(payload) is None
 
 
 def test_the_title_falls_back_to_the_slug():
+    """A payload without a title uses the slug and an empty difficulty."""
     parsed = parse_statement({"question": {"titleSlug": "two-sum", "content": "x"}})
 
     assert parsed is not None
@@ -123,6 +130,7 @@ def test_the_title_falls_back_to_the_slug():
 
 
 def test_round_trip_through_disk(tmp_path: Path):
+    """Written statements read back keyed by slug, fields intact."""
     path = tmp_path / "statements.json"
     statements = (
         Statement("two-sum", "Two Sum", "Easy", "<p>a</p>"),
@@ -138,6 +146,7 @@ def test_round_trip_through_disk(tmp_path: Path):
 
 
 def test_writing_creates_the_parent_directory(tmp_path: Path):
+    """Writing creates a missing parent directory."""
     path = tmp_path / "nested" / "statements.json"
 
     assert write_statements(path, (), fetched_at=0.0)
@@ -145,6 +154,7 @@ def test_writing_creates_the_parent_directory(tmp_path: Path):
 
 
 def test_a_failed_write_is_reported_not_raised(tmp_path: Path):
+    """An unwritable path returns False instead of raising."""
     blocker = tmp_path / "blocker"
     blocker.write_text("file", encoding="utf-8")
 
@@ -152,6 +162,7 @@ def test_a_failed_write_is_reported_not_raised(tmp_path: Path):
 
 
 def test_a_missing_cache_reads_empty(tmp_path: Path):
+    """A missing cache file reads as no statements."""
     assert read_statements(tmp_path / "absent.json") == {}
 
 
@@ -166,6 +177,7 @@ def test_a_missing_cache_reads_empty(tmp_path: Path):
     ],
 )
 def test_every_corruption_mode_reads_empty(tmp_path: Path, content: str):
+    """Every corrupt cache shape reads as no statements."""
     path = tmp_path / "statements.json"
     path.write_text(content, encoding="utf-8")
 
@@ -173,6 +185,7 @@ def test_every_corruption_mode_reads_empty(tmp_path: Path, content: str):
 
 
 def test_an_unreadable_cache_path_reads_empty(tmp_path: Path):
+    """A directory at the cache path reads as no statements."""
     path = tmp_path / "statements.json"
     path.mkdir()
 
@@ -180,6 +193,7 @@ def test_an_unreadable_cache_path_reads_empty(tmp_path: Path):
 
 
 def test_a_corrupt_row_is_skipped_not_fatal(tmp_path: Path, caplog):
+    """A corrupt row is skipped while good rows still load."""
     path = tmp_path / "statements.json"
     path.write_text(
         json.dumps(

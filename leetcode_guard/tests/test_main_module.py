@@ -11,6 +11,7 @@ import importlib
 
 
 def test_entry_point_module_imports_and_exposes_main():
+    """python -m leetcode_guard imports cleanly and exposes the CLI main."""
     module = importlib.import_module("leetcode_guard.__main__")
 
     assert module.main.__module__ == "leetcode_guard._cli"

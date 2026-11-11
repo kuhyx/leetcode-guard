@@ -193,21 +193,21 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
     )
 
     if state == "unlocked":
-        guard._on_poll_result(probe("fresh-solve"))
+        guard.on_poll_result(probe("fresh-solve"))
     elif state == "solved-one":
         # ``write_ledger`` is off, so the solve earns no credit and the gate
         # stays shut -- which is exactly the shape of a debt day: one accepted
         # submission in, still locked, and the list has to have moved on.
-        guard._on_poll_result(solved_top_of(pool))
+        guard.on_poll_result(solved_top_of(pool))
         # Then freeze. The poller is still running against this harness's stub
         # network and every tick repaints; with no ledger to remember the solve
         # (``write_ledger`` is off) the next empty probe puts the row straight
         # back. The first run of this state photographed exactly that and
         # looked like the bug was unfixed. Reassigning ``_check`` does not help
         # -- the poller bound the method at construction.
-        guard._poller.stop()
+        guard.poller.stop()
     elif state == "escape":
-        guard._open_escape()
+        guard.open_escape()
     elif state == "outage":
         # The real policy, so the frame shows what the lock paints rather than
         # a sentence this harness made up (it did, until the textgate rework).
@@ -217,13 +217,13 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             anchors_reachable=0,
             addresses=(),
         )
-        guard._outage.note = decide_policy(offline, guard._escape.incidents).message
-        guard._model = guard._build_model(
+        guard.outage.note = decide_policy(offline, guard.escape.incidents).message
+        guard.model = guard._build_model(
             SolveProbe(
                 status=ProbeStatus.UNVERIFIABLE, submissions=(), reason="offline"
             )
         )
-        apply_viewmodel(guard._frames.views.values(), guard._model)
+        apply_viewmodel(guard.frames.views.values(), guard.model)
 
     return guard
 

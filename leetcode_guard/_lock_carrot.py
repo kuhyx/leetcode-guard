@@ -58,34 +58,34 @@ class CarrotMixin:
     than assumed, as the other mixins do.
     """
 
-    _deps: GuardDeps
-    _run: RunState
+    deps: GuardDeps
+    run_state: RunState
     _last_probe: SolveProbe
     root: Any
     _say: Callable[[str], None]
     _release: Callable[[SolveProbe], None]
-    _carrot_job: str | None = None
+    carrot_job: str | None = None
 
     def _start_carrot_watch(self) -> None:
         """Begin polling, unless this is the demo (it never reads live state)."""
-        if self._run.demo:
+        if self.run_state.demo:
             return
-        self._carrot_job = self.root.after(CARROT_POLL_MS, self._carrot_tick)
+        self.carrot_job = self.root.after(CARROT_POLL_MS, self.carrot_tick)
 
     def _stop_carrot_watch(self) -> None:
         """Cancel the pending check. Idempotent."""
-        job, self._carrot_job = self._carrot_job, None
+        job, self.carrot_job = self.carrot_job, None
         if job is not None:
             self.root.after_cancel(job)
 
-    def _carrot_tick(self) -> None:
+    def carrot_tick(self) -> None:
         """One check; reschedules itself unless the lock is going away."""
-        self._carrot_job = None
-        if self._run.closed:
+        self.carrot_job = None
+        if self.run_state.closed:
             return
         # Rescheduled first so a crash below can never end the watch.
-        self._carrot_job = self.root.after(CARROT_POLL_MS, self._carrot_tick)
-        now = self._deps.moment()
+        self.carrot_job = self.root.after(CARROT_POLL_MS, self.carrot_tick)
+        now = self.deps.moment()
         if not in_carrot_window(now):
             return
         try:

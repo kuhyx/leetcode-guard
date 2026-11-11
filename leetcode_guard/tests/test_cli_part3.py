@@ -13,21 +13,18 @@ from leetcode_guard.tests._net_fixtures import (
     recent_ac_result,
     submission_row,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
 from leetcode_guard.tests.test_cli import (
     _seeded_ledger,
     patch_cli,
     stub_client,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def test_the_recent_feed_hides_solved_problems_even_with_no_ledger(
-    monkeypatch, data_dir: Path
-):
+
+@pytest.mark.usefixtures("data_dir")
+def test_the_recent_feed_hides_solved_problems_even_with_no_ledger(monkeypatch):
     """A screenshot of the demo surface caught this one.
 
     The demo deletes its ledger on every run to force a genuinely fresh solve,
@@ -40,11 +37,13 @@ def test_the_recent_feed_hides_solved_problems_even_with_no_ledger(
     captured: dict[str, object] = {}
 
     class FakeGuard:
+        """Stand-in guard that records the problem pool it was handed."""
+
         def __init__(self, **kwargs):
             captured["pool"] = kwargs["deps"].pool
 
         def run(self):
-            pass
+            """Return at once instead of entering the lock loop."""
 
     stub_client(
         monkeypatch,
@@ -77,12 +76,14 @@ def test_the_lock_is_wired_to_the_right_paths_for_its_mode(
     captured: dict[str, object] = {}
 
     class FakeGuard:
+        """Stand-in guard that records its deps and demo flag."""
+
         def __init__(self, **kwargs):
             captured["deps"] = kwargs["deps"]
             captured["demo_mode"] = kwargs["demo_mode"]
 
         def run(self):
-            pass
+            """Return at once instead of entering the lock loop."""
 
     stub_client(
         monkeypatch,
@@ -121,11 +122,13 @@ def test_a_demo_run_wipes_its_own_ledger(monkeypatch, data_dir: Path):
     demo_ledger.write_text('{"version": 1, "entries": []}', encoding="utf-8")
 
     class FakeGuard:
+        """Stand-in guard that accepts anything and does nothing."""
+
         def __init__(self, **kwargs):
             pass
 
         def run(self):
-            pass
+            """Return at once instead of entering the lock loop."""
 
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
     patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)

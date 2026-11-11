@@ -1,13 +1,24 @@
 """Tests for study mode: the private-API pin and the suspend half.
 
-Resume lives in ``test_study_part2.py``. Helpers in ``_study_fixtures``.
+Resume lives in ``test_study_part2.py``, failing suspend steps in
+``test_study_suspend_errors.py``. Helpers in ``_study_fixtures``.
 """
 
 from __future__ import annotations
 
-import logging
-import tkinter as tk
+import ast
+import pathlib
 
+from gatelock import LockWindow
+from gatelock._recovery import RecoveryLoop
+from gatelock._surfaces import SurfaceSet
+
+from leetcode_guard._gatelock_internals import (
+    holds_grab,
+    surface_map,
+    surface_windows,
+    vt_disabled,
+)
 from leetcode_guard.tests._study_fixtures import (
     DEMO,
     PRODUCTION,
@@ -20,22 +31,18 @@ from leetcode_guard.tests._study_fixtures import (
 
 
 def test_the_private_gatelock_attributes_still_exist():
-    """``_vt_disabled`` and ``SurfaceSet._surfaces`` have no public equivalent
+    """``_vt_disabled``, ``_arming`` and ``SurfaceSet._surfaces`` have no public equivalent
     (``recovery`` / ``detector`` became public in gatelock 0.8.1). If a bump
     renames one, this fails here rather than inside a live lock with the
     screen grabbed."""
-    from gatelock import LockWindow
-    from gatelock._surfaces import SurfaceSet
-
     assert isinstance(LockWindow.recovery, property)
     assert isinstance(LockWindow.detector, property)
     assert "_vt_disabled" in LockWindow.__init__.__code__.co_names
+    assert "_arming" in LockWindow.__init__.__code__.co_names
     assert "_surfaces" in SurfaceSet.__init__.__code__.co_names
     assert hasattr(SurfaceSet, "focus_surface")
     assert hasattr(SurfaceSet, "preferred_focus_index")
     # RecoveryLoop's members the study adapter and the grab harness call.
-    from gatelock._recovery import RecoveryLoop
-
     assert hasattr(RecoveryLoop, "holds_grab")
     assert hasattr(RecoveryLoop, "stop")
     assert hasattr(RecoveryLoop, "start")
@@ -45,9 +52,6 @@ def test_every_private_gatelock_read_goes_through_the_adapter():
     """The coupling is deliberately concentrated in one file so it has exactly
     one place to audit and one lint exemption. If a study module starts reaching
     into gatelock directly again, that intent has been lost."""
-    import ast
-    import pathlib
-
     root = pathlib.Path(__file__).resolve().parent.parent
     private = {"_recovery", "_detector", "_vt_disabled", "_surfaces"}
     for name in ("_study.py", "_study_resume.py", "_lock_study.py"):
@@ -105,110 +109,27 @@ def test_suspend_releases_the_grab_because_hiding_surfaces_is_not_enough():
 
 
 def test_suspend_withdraws_every_surface():
-    _parent, lock = wired("DP-0", "HDMI-0")
+    """Suspend withdraws every output's surface window and the root."""
+    parent, lock = wired("DP-0", "HDMI-0")
 
     session(lock).suspend()
 
+    # wired() hangs each surface window off the parent as ``surf_<output>``.
     for name in ("DP-0", "HDMI-0"):
-        lock.surfaces._surfaces[name].window.withdraw.assert_called_once()
+        getattr(parent, f"surf_{name}").withdraw.assert_called_once()
     lock.root.withdraw.assert_called_once()
 
 
 def test_production_hands_back_vt_switching_and_demo_has_none_to_hand_back():
+    """Production restores VT switching on suspend; demo never disabled it."""
     _parent, lock = wired()
     outcome = session(lock, PRODUCTION).suspend()
     assert "vt-restored" in outcome.steps
     # gatelock's own flag must follow, or its close() skips the restore.
-    assert lock._vt_disabled is False
+    assert vt_disabled(lock) is False
 
     _parent2, lock2 = wired()
     assert "vt-restored" not in session(lock2, DEMO).suspend().steps
-
-
-def test_a_grab_that_will_not_release_aborts_the_whole_suspend(caplog):
-    """Refusing is the right answer: a browser we cannot type into is worse
-    than no browser, and the lock is still fully asserted afterwards."""
-    _parent, lock = wired()
-    lock.root.grab_release.side_effect = tk.TclError("grab is held elsewhere")
-
-    with caplog.at_level(logging.ERROR):
-        outcome = session(lock).suspend()
-
-    assert outcome.ok is False
-    lock.recovery.start.assert_called_once()
-    lock.detector.start.assert_called_once()
-    lock.surfaces._surfaces["DP-0"].window.withdraw.assert_not_called()
-    assert caplog.records
-
-
-def test_a_recovery_loop_that_will_not_stop_aborts_before_the_grab(caplog):
-    _parent, lock = wired()
-    lock.recovery.stop.side_effect = tk.TclError("timer is wedged")
-
-    with caplog.at_level(logging.ERROR):
-        outcome = session(lock).suspend()
-
-    assert outcome.ok is False
-    lock.root.grab_release.assert_not_called()
-
-
-def test_suspend_is_idempotent(caplog):
-    _parent, lock = wired()
-    study = session(lock)
-    study.suspend()
-
-    with caplog.at_level(logging.WARNING):
-        second = study.suspend()
-
-    assert second.ok
-    assert second.reason == "already studying"
-    lock.root.grab_release.assert_called_once()
-
-
-def test_a_surface_that_will_not_withdraw_does_not_abort_the_others(caplog):
-    _parent, lock = wired("DP-0", "HDMI-0")
-    lock.surfaces._surfaces["DP-0"].window.withdraw.side_effect = tk.TclError("gone")
-
-    with caplog.at_level(logging.WARNING):
-        outcome = session(lock).suspend()
-
-    assert outcome.ok
-    lock.surfaces._surfaces["HDMI-0"].window.withdraw.assert_called_once()
-    assert "surfaces-withdrawn:1" in outcome.steps
-
-
-def test_a_root_that_will_not_withdraw_is_only_cosmetic(caplog):
-    _parent, lock = wired()
-    lock.root.withdraw.side_effect = tk.TclError("nope")
-
-    with caplog.at_level(logging.WARNING):
-        outcome = session(lock).suspend()
-
-    assert outcome.ok
-    assert "root-withdrawn" not in outcome.steps
-
-
-def test_zero_live_outputs_still_releases_the_grab():
-    """With no surface the user cannot see the lock anyway; the grab is the
-    only thing still trapping them."""
-    _parent, lock = wired()
-    lock.surfaces.infos.return_value = ()
-    lock.surfaces._surfaces = {}
-
-    outcome = session(lock).suspend()
-
-    lock.root.grab_release.assert_called_once()
-    assert outcome.ok
-
-
-def test_a_surface_missing_from_the_set_is_skipped():
-    _parent, lock = wired("DP-0")
-    lock.surfaces._surfaces = {}
-
-    outcome = session(lock).suspend()
-
-    assert outcome.ok
-    assert "surfaces-withdrawn:0" in outcome.steps
 
 
 # -- the adapter -----------------------------------------------------------
@@ -217,8 +138,6 @@ def test_a_surface_missing_from_the_set_is_skipped():
 def test_the_adapter_answers_whether_the_grab_is_held():
     """The question ``verify_study_grab`` asks on a real X server, and the one
     member here reached through a private handle but a *public* method."""
-    from leetcode_guard._gatelock_internals import holds_grab
-
     _parent, lock = wired()
     lock.recovery.holds_grab.return_value = True
     assert holds_grab(lock) is True
@@ -230,10 +149,8 @@ def test_the_adapter_answers_whether_the_grab_is_held():
 def test_the_adapter_skips_a_surface_missing_from_the_private_map():
     """A surface we cannot find is one we cannot hide, and the grab being
     released is the part that matters."""
-    from leetcode_guard._gatelock_internals import surface_windows
-
     _parent, lock = wired("DP-0", "HDMI-0")
-    del lock.surfaces._surfaces["DP-0"]
+    del surface_map(lock.surfaces)["DP-0"]
 
     found = [info.output_name for info, _window in surface_windows(lock)]
 

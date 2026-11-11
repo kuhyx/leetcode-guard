@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 def test_backfill_resolves_reports_and_leaves_the_ledger_alone(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], hmac_key: Path
 ):
+    """Backfill fetches up to the cap, reports the split, and never rewrites the ledger."""
     ledger = Ledger()
     append(
         ledger,

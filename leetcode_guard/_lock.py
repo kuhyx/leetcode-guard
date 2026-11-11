@@ -93,8 +93,8 @@ class LeetcodeGuard(
             deps: Injected collaborators.
         """
         assert_not_under_pytest("the leetcode-guard lock")
-        self._deps = deps
-        self._frames = FrameGroup()
+        self.deps = deps
+        self.frames = FrameGroup()
         config = LockConfig(
             mode="hard",
             # Per-output placement is impossible without it, in demo too.
@@ -106,7 +106,7 @@ class LeetcodeGuard(
             app_name="leetcode_guard",
             rank=RANK_LEETCODE_GUARD,
         )
-        self._run = RunState(
+        self.run_state = RunState(
             demo=demo_mode,
             started=time.monotonic(),
             poll_interval=(
@@ -115,7 +115,7 @@ class LeetcodeGuard(
             config=config,
         )
 
-        self._ledger = load_ledger(deps.ledger_path, key_file=deps.key_file)
+        self.ledger = load_ledger(deps.ledger_path, key_file=deps.key_file)
         self._maybe_seed()
 
         tracker = build_tracker(deps.escape_path, key_file=deps.key_file)
@@ -125,29 +125,29 @@ class LeetcodeGuard(
             else deps.escape_path.with_name("network_incidents.json"),
             key_file=deps.key_file,
         )
-        self._escape = EscapeKit(
+        self.escape = EscapeKit(
             tracker=tracker,
             incidents=incidents,
-            hatch=EscapeHatch(tracker, config, on_granted=self._on_escape_granted),
+            hatch=EscapeHatch(tracker, config, on_granted=self.on_escape_granted),
             incident_hatch=EscapeHatch(
-                incidents, config, on_granted=self._on_incident_recorded
+                incidents, config, on_granted=self.on_incident_recorded
             ),
         )
-        self._outage = OutageState()
+        self.outage = OutageState()
 
         self.root = GateRoot()
         self.root.title("LeetCode Guard" + (" [DEMO]" if demo_mode else ""))
 
-        self._model = self._build_model(deps.probe)
-        self._start_reveal()
+        self.model = self._build_model(deps.probe)
+        self.start_reveal()
         # ``_study`` and ``_strip`` are built lazily by StudyMixin: the session
         # needs the LockWindow, which does not exist until further down.
 
         arbiter = Arbiter(
             "leetcode_guard",
             RANK_LEETCODE_GUARD,
-            grab=self._run.config.resolved_grab(),
-            disable_vt=self._run.config.resolved_disable_vt(),
+            grab=self.run_state.config.resolved_grab(),
+            disable_vt=self.run_state.config.resolved_disable_vt(),
         )
         arbiter.publish()
         if deps.seams.wait_turn:
@@ -157,24 +157,24 @@ class LeetcodeGuard(
             wait_for_turn(arbiter)
         arbiter.acquire_holder()
 
-        self._lock = LockWindow(
-            self.root, self._run.config, hooks=self, arbiter=arbiter
+        self.lock = LockWindow(
+            self.root, self.run_state.config, hooks=self, arbiter=arbiter
         )
-        self._lock.setup()
+        self.lock.setup()
 
-        self._poller = SolvePoller(
+        self.poller = SolvePoller(
             self.root,
             PollerSettings(
-                interval_ms=self._run.poll_interval,
-                work=self._check,
-                on_result=self._on_poll_result,
+                interval_ms=self.run_state.poll_interval,
+                work=self.check,
+                on_result=self.on_poll_result,
                 executor=deps.seams.executor,
             ),
         )
-        self._poller.start()
-        self._start_nudges(deps.seams.nudge_port)
+        self.poller.start()
+        self.start_nudges(deps.seams.nudge_port)
         self._start_carrot_watch()
-        self._lock.grab_input()
+        self.lock.grab_input()
 
     # -- gatelock hooks ---------------------------------------------------
 
@@ -182,24 +182,24 @@ class LeetcodeGuard(
         """Paint one output. Pure rendering; nothing is fetched or decided."""
         view = build_guard_view(
             parent,
-            self._run.config,
-            self._model,
+            self.run_state.config,
+            self.model,
             output_name=surface.output_name,
             hooks=ViewHooks(
-                on_escape=self._open_escape,
-                on_open=self._open_problem,
-                on_reveal=self._on_reveal,
+                on_escape=self.open_escape,
+                on_open=self.open_problem,
+                on_reveal=self.on_reveal,
             ),
         )
-        self._frames.views[surface.output_name] = view
-        self._frames.add(surface.output_name, parent)
-        if self._run.demo:
-            install_demo_close_button(parent, self._run.config, self.close)
+        self.frames.views[surface.output_name] = view
+        self.frames.add(surface.output_name, parent)
+        if self.run_state.demo:
+            install_demo_close_button(parent, self.run_state.config, self.close)
 
     def teardown_surface(self, surface: SurfaceInfo) -> None:
         """Drop a monitor that has gone away."""
-        self._frames.views.pop(surface.output_name, None)
-        self._frames.discard(surface.output_name)
+        self.frames.views.pop(surface.output_name, None)
+        self.frames.discard(surface.output_name)
 
     def on_focus_ready(self, surface: SurfaceInfo | None) -> None:
         """Nothing to focus: the lock has no input field until the hatch opens.
@@ -211,9 +211,11 @@ class LeetcodeGuard(
     def on_callback_error(self) -> None:
         """A Tk callback raised. Say so on screen and keep polling."""
         _logger.exception("a Tk callback raised inside the lock")
-        for view in self._frames.views.values():
+        for view in self.frames.views.values():
             # A warning mark in the danger colour; the poller keeps watching.
-            view.status_line.configure(text=g.BLIND, fg=self._run.config.palette.danger)
+            view.status_line.configure(
+                text=g.BLIND, fg=self.run_state.config.palette.danger
+            )
 
     def on_close(self) -> None:
         """Runs on every exit path, including SIGTERM."""
@@ -223,22 +225,22 @@ class LeetcodeGuard(
         # machine does not exit with VT switching still disabled.
         self._end_study()
         self._stop_carrot_watch()
-        self._stop_nudges()
-        self._stop_reveal()
-        self._poller.stop()
-        if self._deps.write_ledger and self._deps.seams.sync_on_close:
+        self.stop_nudges()
+        self.stop_reveal()
+        self.poller.stop()
+        if self.deps.write_ledger and self.deps.seams.sync_on_close:
             # Best-effort and last: a sync failure must never abort teardown
             # and leave the screen grabbed.
-            sync_quietly(self._deps.ledger_path, key_file=self._deps.key_file)
+            sync_quietly(self.deps.ledger_path, key_file=self.deps.key_file)
 
     # -- internals --------------------------------------------------------
     def close(self) -> None:
         """Release the lock. Idempotent."""
-        if self._run.closed:
+        if self.run_state.closed:
             return
-        self._run.closed = True
-        self._lock.close()
+        self.run_state.closed = True
+        self.lock.close()
 
     def run(self) -> None:
         """Hand control to Tk until the lock releases."""
-        self._lock.run()
+        self.lock.run()

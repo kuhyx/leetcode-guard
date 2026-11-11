@@ -12,6 +12,7 @@ from datetime import date
 import json
 from typing import TYPE_CHECKING
 
+from gatelock import log_integrity
 from gatelock.log_integrity import compute_entry_hmac
 import pytest
 import sickdays
@@ -20,7 +21,9 @@ from leetcode_guard import _gate_today, _status_projection, _workday_penalty
 from leetcode_guard._daycost import day_cost
 from leetcode_guard._gate import GateState
 from leetcode_guard._ledger_io import Ledger
+from leetcode_guard._status import gather_status
 from leetcode_guard._status_full import explain_not_triggered
+from leetcode_guard._status_projection import _is_off_day
 from leetcode_guard._workday_penalty import workday_penalty_for
 from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW, TUESDAY, WEDNESDAY
 from leetcode_guard.tests.test_projection import SAT
@@ -69,14 +72,12 @@ def every_day_sick(monkeypatch: pytest.MonkeyPatch, keep: frozenset[str]) -> Non
     monkeypatch.setattr(sickdays, "is_sick_day", lambda *_a, **_k: True)
 
 
-@pytest.fixture
-def penalty_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+@pytest.fixture(name="penalty_file")
+def fixture_penalty_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     """Write wake-alarm's signed penalty file: ``penalty_file(penalty, issued)``."""
     key = tmp_path / "hmac.key"
     key.write_bytes(b"1" * 32)
-    import gatelock.log_integrity
-
-    monkeypatch.setattr(gatelock.log_integrity, "DEFAULT_HMAC_KEY_FILE", key)
+    monkeypatch.setattr(log_integrity, "DEFAULT_HMAC_KEY_FILE", key)
 
     def _write(penalty: date, issued: date) -> None:
         entry: dict[str, object] = {
@@ -90,6 +91,7 @@ def penalty_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
 
 
 def test_a_sick_day_keeping_leetcode_locks_like_any_day():
+    """A sick day that keeps leetcode locks as on an ordinary day."""
     today = date.today()
     sickdays.add_sick_day(today, keep=KEEP_LEETCODE, is_free=lambda _day: False)
 
@@ -100,6 +102,7 @@ def test_a_sick_day_keeping_leetcode_locks_like_any_day():
 
 
 def test_a_sick_day_keeping_only_other_lockers_still_stands_down():
+    """Keeping other lockers but not leetcode still stands this gate down."""
     today = date.today()
     keep = (sickdays.LOCKER_WORKOUT, sickdays.LOCKER_ALARM)
     sickdays.add_sick_day(today, keep=keep, is_free=lambda _day: False)
@@ -110,6 +113,7 @@ def test_a_sick_day_keeping_only_other_lockers_still_stands_down():
 
 
 def test_a_kept_past_sick_day_with_no_charge_is_owed(debt_starts, monkeypatch):
+    """A past sick day that kept leetcode is owed like a missed day."""
     debt_starts(MONDAY)
     sick_with(monkeypatch, {MONDAY: KEEP_LEETCODE, TUESDAY: KEEP_ALARM})
 
@@ -122,6 +126,7 @@ def test_a_kept_past_sick_day_with_no_charge_is_owed(debt_starts, monkeypatch):
 def test_a_missed_ring_on_a_sick_day_keeping_the_alarm_still_penalises(
     penalty_file, monkeypatch
 ):
+    """The missed-ring date follows the alarm switch, not the leetcode one."""
     penalty_file(WEDNESDAY, TUESDAY)
 
     sick_with(monkeypatch, {TUESDAY: KEEP_ALARM})
@@ -132,6 +137,7 @@ def test_a_missed_ring_on_a_sick_day_keeping_the_alarm_still_penalises(
 
 
 def test_the_penalty_day_follows_the_leetcode_switch(penalty_file, monkeypatch):
+    """The penalty day is charged only when the sick day keeps leetcode."""
     penalty_file(WEDNESDAY, TUESDAY)
     plain = _gate_today.decide_today(Ledger(), day=WEDNESDAY, now=NOW)
 
@@ -150,17 +156,17 @@ def test_the_penalty_day_follows_the_leetcode_switch(penalty_file, monkeypatch):
     ("keep", "off"), [(KEEP_LEETCODE, False), (KEEP_ALARM, True), (KEEP_NOTHING, True)]
 )
 def test_the_what_if_counts_a_kept_day_as_gated(monkeypatch, keep, off):
+    """The what-if treats a sick day as off only when leetcode is not kept."""
     every_day_sick(monkeypatch, keep)
     monkeypatch.setattr(_status_projection.freedays, "is_free_day", lambda _d: False)
 
-    assert _status_projection._is_off_day(SAT) is off
+    assert _is_off_day(SAT) is off
 
 
 def test_the_projection_counts_a_kept_sick_day_as_gated(
     data_dir: Path, hmac_key: Path, monkeypatch
 ):
-    from leetcode_guard._status import gather_status
-
+    """Sick days that keep leetcode stay gated in the status projection."""
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     every_day_sick(monkeypatch, KEEP_LEETCODE)
 
@@ -177,6 +183,7 @@ def test_the_projection_counts_a_kept_sick_day_as_gated(
 def test_status_says_a_kept_sick_day_is_ordinary(
     data_dir: Path, hmac_key: Path, monkeypatch, keep, said
 ):
+    """Status says a sick day is ordinary only when it keeps leetcode."""
     sick_with(monkeypatch, {MONDAY: keep})
 
     lines = explain_not_triggered(full_for(data_dir, hmac_key))
@@ -185,6 +192,7 @@ def test_status_says_a_kept_sick_day_is_ordinary(
 
 
 def test_a_keep_edit_never_reaches_the_real_pool(tmp_path: Path):
+    """Keep-set edits land in the isolated sickdays pool under tmp_path."""
     today = date.today()
     sickdays.add_sick_day(today, is_free=lambda _day: False)
     sickdays.set_kept_lockers(today, KEEP_LEETCODE)

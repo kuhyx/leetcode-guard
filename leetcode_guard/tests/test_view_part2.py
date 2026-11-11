@@ -9,54 +9,30 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
-from gatelock import LockConfig
-
 from leetcode_guard._escape_flow import (
     ESCAPE_OFFER_AFTER_SECONDS,
     EscapeHatch,
     build_tracker,
     is_offerable,
 )
-from leetcode_guard._view import GuardView
 from leetcode_guard._view_update import apply_viewmodel
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard.tests._view_fixtures import CONFIG, mock_view, model
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-CONFIG = LockConfig()
-
-
-def model(**kwargs) -> ViewModel:
-    base = {
-        "headline": "Solve 1 LeetCode problem to unlock",
-        "balance_line": "Credits 0  |  Monday costs 1",
-        "status_line": "Watching...",
-        "notes": ("a note",),
-        "problems": (ProblemLine(label="1. Two Sum", url="https://x/"),),
-        "unlocked": False,
-        "show_escape": False,
-    }
-    base.update(kwargs)
-    return ViewModel(**base)
-
+    from leetcode_guard._view import GuardView
 
 # -- apply_viewmodel -------------------------------------------------------
 
 
 def make_view(*, with_button: bool = False) -> GuardView:
-    return GuardView(
-        output_name="DP-0",
-        container=MagicMock(),
-        headline=MagicMock(),
-        balance_line=MagicMock(),
-        status_line=MagicMock(),
-        notes_label=MagicMock(),
-        escape_button=MagicMock() if with_button else None,
-    )
+    """A surface view built from mocks, with an escape button only on request."""
+    return mock_view(escape_button=MagicMock() if with_button else None)
 
 
 def test_applying_a_model_updates_every_surface():
+    """Applying a model configures each surface and returns how many it touched."""
     views = [make_view(), make_view()]
 
     assert apply_viewmodel(views, model(headline="Unlocked")) == 2
@@ -66,6 +42,7 @@ def test_applying_a_model_updates_every_surface():
 
 
 def test_applying_a_model_toggles_the_escape_button():
+    """show_escape packs the escape button and its absence unpacks it."""
     view = make_view(with_button=True)
 
     apply_viewmodel([view], model(show_escape=True))
@@ -76,6 +53,7 @@ def test_applying_a_model_toggles_the_escape_button():
 
 
 def test_a_surface_without_an_escape_button_is_skipped():
+    """A surface with no escape button still counts and does not fail."""
     view = make_view(with_button=False)
 
     assert apply_viewmodel([view], model(show_escape=True)) == 1
@@ -105,6 +83,7 @@ def test_the_budget_is_what_makes_the_hatch_expensive(tmp_path: Path, hmac_key: 
 
 
 def test_a_blind_gate_reveals_the_hatch_far_sooner(tmp_path: Path, hmac_key: Path):
+    """Five blind minutes offer the hatch one second into the lock."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
 
     assert is_offerable(tracker, elapsed_seconds=1, unverifiable_seconds=300)
@@ -119,6 +98,7 @@ def test_an_exhausted_budget_removes_the_hatch_entirely(tmp_path: Path, hmac_key
 
 
 def test_a_short_justification_is_rejected(tmp_path: Path, hmac_key: Path):
+    """A too-short explanation is refused, nothing is granted, and the form complains."""
     granted: list[str] = []
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, CONFIG, on_granted=granted.append)
@@ -133,6 +113,7 @@ def test_a_short_justification_is_rejected(tmp_path: Path, hmac_key: Path):
 
 
 def test_a_full_justification_is_recorded_and_grants(tmp_path: Path, hmac_key: Path):
+    """A complete form is accepted, grants with its reason, and closes."""
     granted: list[str] = []
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, CONFIG, on_granted=granted.append)
@@ -150,6 +131,7 @@ def test_a_full_justification_is_recorded_and_grants(tmp_path: Path, hmac_key: P
 
 
 def test_submitting_with_no_form_open_is_a_no_op(tmp_path: Path, hmac_key: Path):
+    """submit() without a shown form grants nothing."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, CONFIG, on_granted=lambda _r: None)
 
@@ -157,6 +139,7 @@ def test_submitting_with_no_form_open_is_a_no_op(tmp_path: Path, hmac_key: Path)
 
 
 def test_closing_twice_is_safe(tmp_path: Path, hmac_key: Path):
+    """A second close() on the hatch does not raise."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, CONFIG, on_granted=lambda _r: None)
     hatch.show(MagicMock())
@@ -170,6 +153,7 @@ def test_closing_twice_is_safe(tmp_path: Path, hmac_key: Path):
 def test_a_failed_record_is_reported_not_silently_granted(
     tmp_path: Path, hmac_key: Path
 ):
+    """A record that fails to persist refuses the grant."""
     granted: list[str] = []
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     tracker.record = lambda *_a, **_k: False

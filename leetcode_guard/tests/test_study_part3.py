@@ -14,9 +14,11 @@ from leetcode_guard.tests._study_fixtures import (
     session,
     wired,
 )
+from leetcode_guard.tests._study_regrab import resume_without_grab
 
 
 def test_a_watcher_that_will_not_restart_is_logged_not_raised(caplog):
+    """A watcher that fails to restart on resume is logged and resume still succeeds."""
     _parent, lock = wired()
     study = session(lock)
     study.suspend()
@@ -30,6 +32,7 @@ def test_a_watcher_that_will_not_restart_is_logged_not_raised(caplog):
 
 
 def test_a_refocus_failure_is_cosmetic(caplog):
+    """A surface that cannot take focus back does not fail the resume."""
     _parent, lock = wired()
     study = session(lock)
     study.suspend()
@@ -43,6 +46,7 @@ def test_a_refocus_failure_is_cosmetic(caplog):
 
 
 def test_the_session_reports_whether_the_lock_is_stood_down():
+    """``active`` is true only between suspend and resume."""
     _parent, lock = wired()
     study = session(lock)
 
@@ -54,6 +58,7 @@ def test_the_session_reports_whether_the_lock_is_stood_down():
 
 
 def test_elapsed_uses_the_injected_clock_and_is_zero_when_locked():
+    """Elapsed time reads the injected clock and stays zero while locked."""
     _parent, lock = wired()
     study = session(lock, clock=[100.0, 142.0])
 
@@ -76,6 +81,7 @@ def test_the_outcome_carries_an_audit_trail():
 
 
 def test_the_state_enum_says_what_it_means():
+    """Each study state's value is its plain name."""
     assert StudyState.LOCKED.value == "locked"
     assert StudyState.STUDYING.value == "studying"
 
@@ -102,6 +108,7 @@ def test_a_non_tk_failure_mid_suspend_puts_the_lock_back(caplog):
 
 
 def test_the_emergency_restore_leaves_the_session_locked():
+    """A suspend that blows up mid-way leaves the session inactive."""
     _parent, lock = wired()
     lock.surfaces.infos.side_effect = RuntimeError("boom")
     study = session(lock)
@@ -148,17 +155,10 @@ def test_a_regrab_that_never_succeeds_exhausts_its_attempts(caplog):
     """The bounded retry only closes the gap faster than the recovery tick; it
     is not the guarantee, so running out is a reported degradation and not a
     crash."""
-    _parent, lock = wired()
-    lock.root.grab_set_global.side_effect = tk.TclError("permanently held")
-    told: list[str] = []
-    study = session(lock, on_fail=told.append)
-    study.suspend()
+    failed = resume_without_grab(caplog, "permanently held")
 
-    with caplog.at_level(logging.ERROR):
-        outcome = study.resume()
-
-    assert outcome.ok is False
-    assert told == ["the input grab could not be re-taken"]
+    assert failed.outcome.ok is False
+    assert failed.told == ["the input grab could not be re-taken"]
 
 
 def test_the_emergency_restore_leaves_vt_alone_in_demo():

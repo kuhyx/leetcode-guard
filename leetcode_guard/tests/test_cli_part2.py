@@ -9,11 +9,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard import _cli, _cli_commands
+from leetcode_guard import _cli
+from leetcode_guard._cli_commands import _format_timestamp
 from leetcode_guard._daycost import day_cost, local_today
 from leetcode_guard._ledger_entries import bootstrap_entry
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._leetcode import GraphQLResult
+from leetcode_guard._sync import SyncResult
+from leetcode_guard.tests._cli_fixtures import assert_production_exits_unarmed
 from leetcode_guard.tests._ledger_fixtures import NOW, ledger_paying_for_today
 from leetcode_guard.tests._net_fixtures import (
     recent_ac_result,
@@ -25,7 +28,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_status_reads_from_disk_without_touching_the_network(capsys, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_status_reads_from_disk_without_touching_the_network(capsys):
     """The suite blocks real HTTP, so this passing is the proof."""
     exit_code = _cli.main(["--status"])
     out = capsys.readouterr().out
@@ -38,6 +42,7 @@ def test_status_reads_from_disk_without_touching_the_network(capsys, data_dir: P
 def test_check_prints_the_decision_trace_and_writes_nothing(
     monkeypatch, capsys, data_dir: Path
 ):
+    """--check shows how it would decide, then leaves the ledger unwritten."""
     ledger_file = data_dir / "ledger.json"
     stub_client(
         monkeypatch,
@@ -59,7 +64,9 @@ def test_check_prints_the_decision_trace_and_writes_nothing(
     assert not ledger_file.exists()
 
 
-def test_check_reports_an_unverifiable_probe(monkeypatch, capsys, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_check_reports_an_unverifiable_probe(monkeypatch, capsys):
+    """A probe that cannot reach LeetCode is shown as unverifiable, minting nothing."""
     stub_client(monkeypatch, GraphQLResult(transport_error="down"))
 
     exit_code = _cli.main(["--check"])
@@ -73,6 +80,7 @@ def test_check_reports_an_unverifiable_probe(monkeypatch, capsys, data_dir: Path
 def test_check_reports_an_unlocked_day(
     monkeypatch, capsys, data_dir: Path, hmac_key: Path
 ):
+    """A bootstrapped ledger whose credit pays for today reads as charged."""
     ledger = ledger_paying_for_today(key_file=hmac_key)
     # Bootstrapped, as any ledger that has ever run the gate would be. Without
     # the marker `needs_seeding` is correctly True even though credits exist.
@@ -92,9 +100,11 @@ def test_check_reports_an_unlocked_day(
     assert "seeding" not in out
 
 
+@pytest.mark.usefixtures("data_dir")
 def test_check_reports_an_unreadable_integrity_key(
-    monkeypatch, capsys, data_dir: Path, missing_key: Path
+    monkeypatch, capsys, missing_key: Path
 ):
+    """A missing signing key shows up as integrity OFF in --check."""
     patch_cli(
         monkeypatch,
         "load_ledger",
@@ -108,6 +118,7 @@ def test_check_reports_an_unreadable_integrity_key(
 
 
 def test_parser_flags():
+    """Every documented flag parses to its own attribute."""
     args = _cli.build_parser().parse_args(
         ["--production", "--probe", "--status", "--check", "--verbose"]
     )
@@ -120,12 +131,14 @@ def test_parser_flags():
 
 
 def test_timestamps_render_in_local_time():
-    rendered = _cli_commands._format_timestamp(0)
+    """Epoch zero renders as a 19xx local date, not a raw number."""
+    rendered = _format_timestamp(0)
 
     assert rendered.startswith("19")
 
 
-def test_a_second_concurrent_run_stands_down(monkeypatch, capsys, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_a_second_concurrent_run_stands_down(monkeypatch, capsys):
     """The afternoon retry must not stack a second waiter behind the morning
     run -- that would clear the gate twice."""
     patch_cli(monkeypatch, "acquire_instance", lambda _path: None)
@@ -134,9 +147,9 @@ def test_a_second_concurrent_run_stands_down(monkeypatch, capsys, data_dir: Path
     assert "already active" in capsys.readouterr().err
 
 
-def test_sync_reports_what_it_did(monkeypatch, capsys, data_dir: Path):
-    from leetcode_guard._sync import SyncResult
-
+@pytest.mark.usefixtures("data_dir")
+def test_sync_reports_what_it_did(monkeypatch, capsys):
+    """--sync prints the push and the record and merge counts."""
     patch_cli(
         monkeypatch,
         "sync_ledger",
@@ -163,11 +176,6 @@ def test_production_persists_the_charge_when_banked_credit_pays_for_today(
     ledger_path = data_dir / "ledger.json"
     patch_cli(monkeypatch, "LEDGER_FILE", ledger_path)
     patch_cli(monkeypatch, "load_ledger", lambda *a, **k: ledger)
-    monkeypatch.setattr(
-        _cli, "LeetcodeGuard", lambda **kwargs: pytest.fail("should not have armed")
-    )
-
-    assert _cli.main(["--production"]) == 0
-    assert "already unlocked" in capsys.readouterr().out
+    assert_production_exits_unarmed(monkeypatch, capsys)
     on_disk = load_ledger(ledger_path)
     assert on_disk.has(f"charge:{local_today().isoformat()}")

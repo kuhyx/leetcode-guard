@@ -118,17 +118,17 @@ class EscapeHatch:
         self._tracker = tracker
         self._config = config
         self._on_granted = on_granted
-        self._form: EscapeForm | None = None
+        self.form: EscapeForm | None = None
 
     @property
     def open(self) -> bool:
         """Whether a form is currently showing."""
-        return self._form is not None
+        return self.form is not None
 
     def show(self, parent: tk.Misc) -> EscapeForm:
         """Build the form over ``parent``."""
-        self._form = build_escape_form(parent, self._config, self._tracker, self.submit)
-        return self._form
+        self.form = build_escape_form(parent, self._config, self._tracker, self.submit)
+        return self.form
 
     def submit(self) -> bool:
         """Validate and, if acceptable, record the escape.
@@ -136,7 +136,7 @@ class EscapeHatch:
         Returns:
             Whether the escape was granted.
         """
-        form = self._form
+        form = self.form
         if form is None:
             return False
         draft = EscapeDraft(
@@ -162,7 +162,7 @@ class EscapeHatch:
 
     def close(self) -> None:
         """Tear the form down."""
-        if self._form is None:
+        if self.form is None:
             return
-        self._form.frame.destroy()
-        self._form = None
+        self.form.frame.destroy()
+        self.form = None

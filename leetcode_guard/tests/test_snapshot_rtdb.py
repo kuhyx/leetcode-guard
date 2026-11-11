@@ -16,6 +16,7 @@ import pytest
 import requests
 
 from leetcode_guard import _snapshot_push, _snapshot_rtdb
+from leetcode_guard._snapshot_push import _firebase_client
 from leetcode_guard._snapshot_rtdb import SilentStore
 
 if TYPE_CHECKING:
@@ -25,6 +26,8 @@ PATH = "leetcode-guard/status"
 
 
 class FakeResponse:
+    """The slice of ``requests.Response`` the store reads."""
+
     def __init__(self, status: int, text: str = "") -> None:
         self.status_code = status
         self.ok = status < 400
@@ -32,9 +35,11 @@ class FakeResponse:
 
 
 def test_the_write_asks_for_no_echo(monkeypatch: pytest.MonkeyPatch):
+    """The PUT goes to the node's .json URL with ``print=silent``."""
     seen: dict[str, object] = {}
 
     def fake_put(url: str, **kwargs: object) -> FakeResponse:
+        """Record the PUT and answer 204."""
         seen["url"] = url
         seen.update(kwargs)
         return FakeResponse(204)
@@ -51,6 +56,7 @@ def test_the_write_asks_for_no_echo(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_a_rejected_write_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
+    """An HTTP error on write raises FirebaseSyncError with the status."""
     monkeypatch.setattr(
         _snapshot_rtdb.requests,
         "put",
@@ -63,7 +69,10 @@ def test_a_rejected_write_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_a_network_error_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
+    """A connection error on write raises FirebaseSyncError."""
+
     def refuse(*_a: object, **_k: object) -> FakeResponse:
+        """Fail the request with a connection reset."""
         message = "connection reset"
         raise requests.ConnectionError(message)
 
@@ -77,6 +86,7 @@ def test_a_network_error_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
 def test_the_default_store_wraps_the_signed_in_client(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
+    """The default client is a SilentStore over the signed-in session."""
     config = tmp_path / "firebase.json"
     config.write_text(
         json.dumps(
@@ -94,7 +104,7 @@ def test_the_default_store_wraps_the_signed_in_client(
     client = SimpleNamespace(auth=SimpleNamespace(id_token=lambda: "tok"))
     monkeypatch.setattr(_snapshot_push, "sign_in", lambda *_a, **_k: client)
 
-    store = _snapshot_push._firebase_client()
+    store = _firebase_client()
 
     assert isinstance(store, SilentStore)
     assert store.database_url == "https://db.example"
@@ -102,9 +112,11 @@ def test_the_default_store_wraps_the_signed_in_client(
 
 
 def test_get_json_reads_a_node(monkeypatch: pytest.MonkeyPatch):
+    """``get_json`` reads the node's .json URL and parses the body."""
     seen: dict[str, object] = {}
 
     def fake_get(url: str, **kwargs: object) -> FakeResponse:
+        """Record the GET and answer a small node."""
         seen["url"] = url
         seen.update(kwargs)
         return FakeResponse(200, '{"a": "x"}')
@@ -121,7 +133,10 @@ def test_get_json_reads_a_node(monkeypatch: pytest.MonkeyPatch):
 def test_rtdb_failures_never_carry_the_token(
     monkeypatch: pytest.MonkeyPatch, verb: str
 ):
+    """Neither read nor write failures leak the auth token."""
+
     def refuse(url: str, **_k: object) -> FakeResponse:
+        """Fail with an error message that embeds the token."""
         message = f"Max retries exceeded with url: {url}?auth=SECRET"
         raise requests.ConnectionError(message)
 
@@ -140,6 +155,7 @@ def test_rtdb_failures_never_carry_the_token(
 
 
 def test_a_rejected_read_is_a_sync_error(monkeypatch: pytest.MonkeyPatch):
+    """An HTTP error on read raises FirebaseSyncError."""
     monkeypatch.setattr(
         _snapshot_rtdb.requests, "get", lambda *_a, **_k: FakeResponse(401, "no")
     )

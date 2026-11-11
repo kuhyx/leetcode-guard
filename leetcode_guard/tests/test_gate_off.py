@@ -33,12 +33,14 @@ def _free_on(monkeypatch: pytest.MonkeyPatch, *days: date) -> None:
 
 
 def test_an_ordinary_day_has_the_gate_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A day that is neither free nor sick keeps the gate on."""
     _free_on(monkeypatch)
     sick_with(monkeypatch, {})
     assert _gate_today.gate_off(SAT) is False
 
 
 def test_a_free_day_has_the_gate_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A free day stands the gate down."""
     _free_on(monkeypatch, SAT)
     sick_with(monkeypatch, {})
     assert _gate_today.gate_off(SAT) is True
@@ -47,6 +49,7 @@ def test_a_free_day_has_the_gate_off(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_sick_day_keeping_nothing_has_the_gate_off(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A sick day that keeps nothing stands the gate down."""
     _free_on(monkeypatch)
     sick_with(monkeypatch, {SAT: KEEP_NOTHING})
     assert _gate_today.gate_off(SAT) is True
@@ -55,6 +58,7 @@ def test_a_sick_day_keeping_nothing_has_the_gate_off(
 def test_a_sick_day_keeping_leetcode_has_the_gate_on(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A sick day that keeps leetcode leaves the gate on while still being sick."""
     _free_on(monkeypatch)
     sick_with(monkeypatch, {SAT: KEEP_LEETCODE})
     assert _gate_today.gate_off(SAT) is False
@@ -63,6 +67,7 @@ def test_a_sick_day_keeping_leetcode_has_the_gate_on(
 
 @pytest.mark.parametrize("off", [True, False])
 def test_the_endpoint_publishes_it(off: bool) -> None:
+    """The status endpoint publishes gate_off exactly as the gate reports it."""
     answer = SolvedToday(checked=True, solved=True, count=1, reason="1 today")
     with (
         patch("leetcode_guard._web_server.solved_today", return_value=answer),

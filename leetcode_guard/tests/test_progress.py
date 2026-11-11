@@ -43,6 +43,7 @@ def payload(solved=(55, 0, 0), total=(965, 2115, 975)) -> dict[str, object]:
 
 
 def a_progress(fetched_at: float = 1000.0) -> Progress:
+    """The Progress that ``payload()`` parses to."""
     return Progress(
         solved={"Easy": 55, "Medium": 0, "Hard": 0},
         total={"Easy": 965, "Medium": 2115, "Hard": 975},
@@ -51,6 +52,7 @@ def a_progress(fetched_at: float = 1000.0) -> Progress:
 
 
 def test_a_healthy_payload_parses_and_ignores_the_all_row():
+    """A healthy payload parses per difficulty and ignores the All row."""
     progress = parse_progress(payload(), fetched_at=7.0)
 
     assert progress == a_progress(7.0)
@@ -60,6 +62,7 @@ def test_a_healthy_payload_parses_and_ignores_the_all_row():
 
 
 def test_remaining_never_goes_negative():
+    """Solving more than the pool total leaves zero remaining, not negative."""
     progress = Progress(
         solved={"Easy": 9, "Medium": 0, "Hard": 0},
         total={"Easy": 5, "Medium": 0, "Hard": 0},
@@ -89,6 +92,7 @@ def test_an_unknown_user_is_unreadable_even_with_a_healthy_denominator():
     ],
 )
 def test_a_partial_payload_is_unreadable_rather_than_wrong(mutate):
+    """Any partial or mistyped payload is unreadable, never a wrong count."""
     data = payload()
     mutate(data)
 
@@ -96,10 +100,12 @@ def test_a_partial_payload_is_unreadable_rather_than_wrong(mutate):
 
 
 def test_a_non_object_payload_is_unreadable():
+    """A non-object payload is unreadable."""
     assert parse_progress(["nope"], fetched_at=0.0) is None
 
 
 def test_fetch_asks_the_progress_query_for_the_username():
+    """The fetch sends the progress query for the given username."""
     post = fake_post(GraphQLResult(data=payload()))
 
     progress = fetch_progress(post, "kuchy", now=3.0)
@@ -117,6 +123,7 @@ def test_fetch_asks_the_progress_query_for_the_username():
     ],
 )
 def test_every_failed_fetch_is_none_and_logged(result, phrase, caplog):
+    """Transport, GraphQL and null-payload failures return None and log why."""
     with caplog.at_level("WARNING"):
         assert fetch_progress(fake_post(result), "kuchy", now=0.0) is None
 
@@ -124,6 +131,7 @@ def test_every_failed_fetch_is_none_and_logged(result, phrase, caplog):
 
 
 def test_an_unreadable_answer_is_none_and_logged(caplog):
+    """An answer that does not parse returns None and logs it."""
     with caplog.at_level("WARNING"):
         assert fetch_progress(fake_post(GraphQLResult(data={})), "k", now=0.0) is None
 
@@ -131,6 +139,7 @@ def test_an_unreadable_answer_is_none_and_logged(caplog):
 
 
 def test_the_cache_round_trips(tmp_path: Path):
+    """A written progress cache reads back equal."""
     path = tmp_path / "progress_cache.json"
 
     assert write_progress_cache(path, a_progress(42.0))
@@ -138,6 +147,7 @@ def test_the_cache_round_trips(tmp_path: Path):
 
 
 def test_a_missing_cache_is_none(tmp_path: Path):
+    """A missing progress cache reads as None."""
     assert read_progress_cache(tmp_path / "absent.json") is None
 
 
@@ -169,6 +179,7 @@ def test_a_missing_cache_is_none(tmp_path: Path):
     ],
 )
 def test_a_corrupt_cache_is_none_and_logged(tmp_path: Path, content: str, caplog):
+    """Every corrupt cache shape reads as None and is logged."""
     path = tmp_path / "progress_cache.json"
     path.write_text(content, encoding="utf-8")
 
@@ -179,7 +190,10 @@ def test_a_corrupt_cache_is_none_and_logged(tmp_path: Path, content: str, caplog
 
 
 def test_a_failed_write_is_false_and_logged(tmp_path: Path, monkeypatch, caplog):
+    """A failed cache write returns False and logs the error."""
+
     def refuse(*_args, **_kwargs):
+        """Fail the write as a full disk would."""
         msg = "disk full"
         raise OSError(msg)
 
@@ -192,6 +206,7 @@ def test_a_failed_write_is_false_and_logged(tmp_path: Path, monkeypatch, caplog)
 
 
 def test_refresh_writes_the_fresh_answer(tmp_path: Path):
+    """A successful refresh returns and caches the fresh answer."""
     path = tmp_path / "progress_cache.json"
 
     fresh = refresh_progress(
@@ -203,6 +218,7 @@ def test_refresh_writes_the_fresh_answer(tmp_path: Path):
 
 
 def test_refresh_falls_back_to_the_cache_when_the_fetch_fails(tmp_path: Path):
+    """A failed refresh falls back to the cached answer."""
     path = tmp_path / "progress_cache.json"
     write_progress_cache(path, a_progress(1.0))
 

@@ -56,7 +56,7 @@ def owing_guard(tmp_path: Path, hmac_key: Path, *, poll_probe: SolveProbe):
 
 def titles(guard) -> list[str]:
     """The problem names currently on the surface, in display order."""
-    return [line.label.split("  ", 1)[1] for line in guard._model.problems]
+    return [line.label.split("  ", 1)[1] for line in guard.model.problems]
 
 
 def test_a_problem_solved_mid_lock_stops_being_suggested(
@@ -73,11 +73,11 @@ def test_a_problem_solved_mid_lock_stops_being_suggested(
     guard = owing_guard(tmp_path, hmac_key, poll_probe=accepted("alpha"))
     assert titles(guard) == ["Alpha", "Beta", "Gamma"]
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
-    assert guard._decision().locked, "one solve of the two owed must not unlock"
+    assert guard.decision().locked, "one solve of the two owed must not unlock"
     assert titles(guard) == ["Beta", "Gamma"]
-    assert guard._model.problems[0].label == "1  Beta"
+    assert guard.model.problems[0].label == "1  Beta"
 
 
 def test_the_solve_is_credited_where_the_row_used_to_be(
@@ -87,10 +87,10 @@ def test_the_solve_is_credited_where_the_row_used_to_be(
     debt_starts(MONDAY)
     guard = owing_guard(tmp_path, hmac_key, poll_probe=accepted("alpha"))
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
-    assert guard._model.status_line.startswith(f"{g.SOLVED} Alpha{g.SEP}")
-    assert guard._model.headline == g.OWED
+    assert guard.model.status_line.startswith(f"{g.SOLVED} Alpha{g.SEP}")
+    assert guard.model.headline == g.OWED
 
 
 def test_a_solve_outside_the_suggestions_leaves_the_list_alone(
@@ -104,7 +104,7 @@ def test_a_solve_outside_the_suggestions_leaves_the_list_alone(
     debt_starts(MONDAY)
     guard = owing_guard(tmp_path, hmac_key, poll_probe=accepted("something-else"))
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
     assert titles(guard) == ["Alpha", "Beta", "Gamma"]
-    assert "Accepted:" not in guard._model.status_line
+    assert "Accepted:" not in guard.model.status_line

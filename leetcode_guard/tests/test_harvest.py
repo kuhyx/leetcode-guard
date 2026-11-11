@@ -13,32 +13,20 @@ from leetcode_guard._harvest import (
     seed_ledger,
 )
 from leetcode_guard._ledger_io import Ledger, load_ledger
-from leetcode_guard._submissions import ProbeStatus, SolveProbe
+from leetcode_guard._submissions import ProbeStatus
+from leetcode_guard.tests._guard_factories import UNVERIFIABLE, probe_of
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
     ledger_with_credits,
-    submission,
 )
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-def probe_of(*ids: str) -> SolveProbe:
-    return SolveProbe(
-        status=ProbeStatus.OK,
-        submissions=tuple(submission(item) for item in ids),
-        reason=f"{len(ids)} recent",
-    )
-
-
-UNVERIFIABLE = SolveProbe(
-    status=ProbeStatus.UNVERIFIABLE, submissions=(), reason="cannot reach LeetCode"
-)
-
-
 def test_every_unseen_submission_becomes_one_credit(hmac_key: Path):
+    """Each unseen accepted submission mints exactly one credit with an ac: id."""
     result = harvest(
         Ledger(), probe_of("a", "b", "c"), day=MONDAY, now=NOW, key_file=hmac_key
     )
@@ -59,6 +47,7 @@ def test_an_unverifiable_probe_mints_nothing_and_keeps_its_status(hmac_key: Path
 
 
 def test_an_empty_but_ok_probe_is_a_real_zero(hmac_key: Path):
+    """An OK probe with no submissions is a genuine zero gain, not a failure."""
     result = harvest(Ledger(), probe_of(), day=MONDAY, now=NOW, key_file=hmac_key)
 
     assert result.gained == 0
@@ -66,6 +55,7 @@ def test_an_empty_but_ok_probe_is_a_real_zero(hmac_key: Path):
 
 
 def test_harvest_does_not_mutate_the_ledger(hmac_key: Path):
+    """harvest only computes credits; the passed ledger stays untouched."""
     ledger = Ledger()
 
     harvest(ledger, probe_of("a"), day=MONDAY, now=NOW, key_file=hmac_key)
@@ -74,6 +64,7 @@ def test_harvest_does_not_mutate_the_ledger(hmac_key: Path):
 
 
 def test_commit_persists_and_is_a_no_op_when_empty(tmp_path: Path, hmac_key: Path):
+    """commit_harvest persists new credits and reports False when nothing is new."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
     result = harvest(ledger, probe_of("a"), day=MONDAY, now=NOW, key_file=hmac_key)
@@ -95,6 +86,7 @@ def test_needs_seeding_is_true_for_an_empty_but_present_ledger(hmac_key: Path):
 def test_seeding_marks_submissions_without_granting_credit(
     tmp_path: Path, hmac_key: Path, caplog
 ):
+    """Seeding marks the feed as known without minting credits and logs why."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
 
@@ -137,6 +129,7 @@ def test_seeding_refuses_an_unverifiable_probe(tmp_path: Path, hmac_key: Path, c
 
 
 def test_seeding_an_empty_feed_still_records_the_marker(tmp_path: Path, hmac_key: Path):
+    """Seeding an empty but OK feed still writes the bootstrap marker."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
 
@@ -153,6 +146,7 @@ def test_seeding_an_empty_feed_still_records_the_marker(tmp_path: Path, hmac_key
 
 
 def test_seeded_markers_survive_a_reload(tmp_path: Path, hmac_key: Path):
+    """Seed markers persist on disk, untampered, and still block re-harvest."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
     seed_ledger(

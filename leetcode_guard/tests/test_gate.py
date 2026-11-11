@@ -10,11 +10,10 @@ from leetcode_guard._gate import (
     GateState,
     apply_decision,
     decide,
-    settle_day,
 )
 from leetcode_guard._ledger import SOURCE_ESCAPE, LedgerEntry
-from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger
+from leetcode_guard.tests._gate_fixtures import settle_escape
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -29,6 +28,7 @@ if TYPE_CHECKING:
 
 
 def test_enough_credit_charges_the_day(hmac_key: Path):
+    """Enough credit unlocks the day by charging it now."""
     ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
 
     decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key)
@@ -40,6 +40,7 @@ def test_enough_credit_charges_the_day(hmac_key: Path):
 
 
 def test_an_existing_charge_short_circuits(hmac_key: Path):
+    """A day already charged unlocks without a second charge."""
     ledger = Ledger()
     add_charge(ledger, MONDAY, key_file=hmac_key)
 
@@ -50,6 +51,7 @@ def test_an_existing_charge_short_circuits(hmac_key: Path):
 
 
 def test_too_little_credit_locks(hmac_key: Path):
+    """No credit locks the day and reports one solve needed."""
     decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key)
 
     assert decision.state is GateState.LOCKED_INSUFFICIENT
@@ -59,6 +61,7 @@ def test_too_little_credit_locks(hmac_key: Path):
 
 
 def test_the_weekend_shortfall_is_reported_correctly(hmac_key: Path):
+    """A Saturday costing 2 with 1 banked reports a shortfall of 1."""
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
 
     decision = decide(ledger, day=SATURDAY, now=NOW, key_file=hmac_key)
@@ -98,6 +101,7 @@ def test_the_clock_check_runs_before_the_charge_shortcut(hmac_key: Path):
 
 
 def test_the_same_day_as_the_latest_charge_is_still_trusted(hmac_key: Path):
+    """A clock on the latest charged day is not treated as rewound."""
     ledger = Ledger()
     add_charge(ledger, MONDAY, key_file=hmac_key)
 
@@ -105,6 +109,7 @@ def test_the_same_day_as_the_latest_charge_is_still_trusted(hmac_key: Path):
 
 
 def test_an_empty_ledger_trusts_the_clock():
+    """With nothing charged yet the clock is trusted."""
     verdict = check_clock(Ledger(), day=MONDAY)
 
     assert verdict.trusted
@@ -126,6 +131,7 @@ def test_latest_charged_day_ignores_unparsable_dates(hmac_key: Path, caplog):
 
 
 def test_apply_decision_persists_the_charge(tmp_path: Path, hmac_key: Path):
+    """Applying an unlocking decision saves its charge to disk."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
     decision = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key)
@@ -137,6 +143,7 @@ def test_apply_decision_persists_the_charge(tmp_path: Path, hmac_key: Path):
 def test_apply_decision_writes_nothing_for_a_locked_decision(
     tmp_path: Path, hmac_key: Path
 ):
+    """Applying a locked decision returns False and writes no file."""
     path = tmp_path / "ledger.json"
     decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key)
 
@@ -150,11 +157,7 @@ def test_settle_day_forgives_a_day_and_leaves_the_debt(tmp_path: Path, hmac_key:
     path = tmp_path / "ledger.json"
     ledger = Ledger()
 
-    assert settle_day(
-        ledger,
-        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
-        path,
-    )
+    assert settle_escape(ledger, path, hmac_key)
 
     monday = decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key)
     tuesday = decide(ledger, day=TUESDAY, now=NOW, key_file=hmac_key)

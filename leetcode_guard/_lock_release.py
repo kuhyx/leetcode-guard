@@ -55,13 +55,13 @@ class ReleaseMixin:
     makes the contract checkable.
     """
 
-    _poller: SolvePoller[SolveProbe]
-    _run: RunState
-    _deps: GuardDeps
-    _ledger: Ledger
-    _escape: EscapeKit
-    _outage: OutageState
-    _frames: FrameGroup
+    poller: SolvePoller[SolveProbe]
+    run_state: RunState
+    deps: GuardDeps
+    ledger: Ledger
+    escape: EscapeKit
+    outage: OutageState
+    frames: FrameGroup
 
     def _release(self, probe: SolveProbe) -> None:
         """Provided by the host class."""
@@ -70,7 +70,9 @@ class ReleaseMixin:
     def _blind_seconds(self) -> float:
         """How long every check in a row has failed."""
         return (
-            self._poller.state.consecutive_unverifiable * self._run.poll_interval / 1000
+            self.poller.state.consecutive_unverifiable
+            * self.run_state.poll_interval
+            / 1000
         )
 
     def _blind_for_long_enough(self) -> bool:
@@ -84,14 +86,14 @@ class ReleaseMixin:
         lookup on every tick would be noise, and the answer does not change
         between ticks -- a network that is down stays down.
         """
-        if self._outage.diagnosis is not None:
+        if self.outage.diagnosis is not None:
             return
-        seam = self._deps.seams.diagnose
+        seam = self.deps.seams.diagnose
         diagnose = seam if seam is not None else classify
         diagnosis: NetworkDiagnosis = diagnose()
-        self._outage.diagnosis = diagnosis
-        policy = decide_policy(diagnosis, self._escape.incidents)
-        self._outage.note = policy.message
+        self.outage.diagnosis = diagnosis
+        policy = decide_policy(diagnosis, self.escape.incidents)
+        self.outage.note = policy.message
 
         if policy.unlock_now:
             self._settle_and_release(SOURCE_OUTAGE)
@@ -101,8 +103,8 @@ class ReleaseMixin:
             # Recording the policy is what makes that promise true -- without
             # it the offline path had no exit at all once the ordinary escape
             # budget was spent, which is a trapped keyboard.
-            self._outage.policy = policy
-            self._outage.since = time.monotonic()
+            self.outage.policy = policy
+            self.outage.since = time.monotonic()
 
     def clear_outage(self) -> None:
         """Forget the diagnosis once LeetCode answers again.
@@ -110,27 +112,27 @@ class ReleaseMixin:
         Without this the banner outlives the outage and keeps telling the user
         they have no internet long after they reconnected.
         """
-        if self._outage.diagnosis is None:
+        if self.outage.diagnosis is None:
             return
         _logger.info("LeetCode is reachable again -- clearing the outage banner")
-        self._outage.diagnosis = None
-        self._outage.note = None
-        self._outage.policy = None
-        self._outage.since = None
+        self.outage.diagnosis = None
+        self.outage.note = None
+        self.outage.policy = None
+        self.outage.since = None
 
-    def _incident_form_due(self) -> bool:
+    def incident_form_due(self) -> bool:
         """Whether the mandatory network-incident form may be submitted yet."""
-        policy = self._outage.policy
-        if policy is None or self._outage.since is None:
+        policy = self.outage.policy
+        if policy is None or self.outage.since is None:
             return False
-        return time.monotonic() - self._outage.since >= policy.wait_seconds
+        return time.monotonic() - self.outage.since >= policy.wait_seconds
 
-    def _on_incident_recorded(self, reason: str) -> None:
+    def on_incident_recorded(self, reason: str) -> None:
         """Settle the day once the written network account is accepted."""
         _logger.warning("unlocking via a recorded network incident: %s", reason)
         self._settle_and_release(SOURCE_NETWORK_INCIDENT)
 
-    def _open_escape(self) -> None:
+    def open_escape(self) -> None:
         """Show whichever form applies on the primary surface.
 
         The network-incident form takes precedence: when the gate is blind
@@ -138,13 +140,13 @@ class ReleaseMixin:
         it must not consume the ordinary escape budget.
         """
         hatch = (
-            self._escape.incident_hatch
-            if self._incident_form_due()
-            else self._escape.hatch
+            self.escape.incident_hatch
+            if self.incident_form_due()
+            else self.escape.hatch
         )
-        if hatch.open or self._escape.hatch.open or self._escape.incident_hatch.open:
+        if hatch.open or self.escape.hatch.open or self.escape.incident_hatch.open:
             return
-        first = next(iter(self._frames), None)
+        first = next(iter(self.frames), None)
         if first is None:
             # Legitimate: with zero live outputs the lock still holds the grab
             # and has nowhere to draw. Say so rather than crash the lock.
@@ -152,20 +154,20 @@ class ReleaseMixin:
             return
         hatch.show(first)
 
-    def _on_escape_granted(self, reason: str) -> None:
+    def on_escape_granted(self, reason: str) -> None:
         """Settle today without spending credits, then unlock."""
         _logger.warning("unlocking via the escape hatch: %s", reason)
         self._settle_and_release(SOURCE_ESCAPE)
 
     def _settle_and_release(self, source: str) -> None:
         """Mark today paid for by ``source`` and let the lock go."""
-        if self._deps.write_ledger:
-            moment = self._deps.moment()
+        if self.deps.write_ledger:
+            moment = self.deps.moment()
             entry = charge_entry(
                 local_today(now=moment),
                 now=moment,
                 source=source,
-                key_file=self._deps.key_file,
+                key_file=self.deps.key_file,
             )
-            settle_day(self._ledger, entry, self._deps.ledger_path)
-        self._release(self._deps.probe)
+            settle_day(self.ledger, entry, self.deps.ledger_path)
+        self._release(self.deps.probe)

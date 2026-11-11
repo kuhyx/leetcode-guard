@@ -17,6 +17,7 @@ def _reset():
 
 
 def test_configures_once(monkeypatch: pytest.MonkeyPatch):
+    """configure_logging is idempotent: a second call does not reconfigure."""
     calls: list[dict] = []
     monkeypatch.setattr(
         _logging_setup.logging, "basicConfig", lambda **kwargs: calls.append(kwargs)
@@ -40,6 +41,7 @@ def test_logs_to_stderr_never_stdout(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_verbose_selects_debug(monkeypatch: pytest.MonkeyPatch):
+    """verbose=True selects the DEBUG level."""
     captured: dict = {}
     monkeypatch.setattr(_logging_setup.logging, "basicConfig", captured.update)
 
@@ -49,6 +51,7 @@ def test_verbose_selects_debug(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_default_selects_warning(monkeypatch: pytest.MonkeyPatch):
+    """Without verbose, the level is WARNING."""
     captured: dict = {}
     monkeypatch.setattr(_logging_setup.logging, "basicConfig", captured.update)
 

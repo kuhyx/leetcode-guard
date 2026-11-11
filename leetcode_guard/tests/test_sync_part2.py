@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from crdt_sync import ConfigError, Record
+from crdt_sync import ConfigError, Hlc, Record
+import pytest
 
 from leetcode_guard import _sync
+from leetcode_guard._balance import compute_balance
 from leetcode_guard._ledger import to_json
 from leetcode_guard._ledger_io import Ledger, load_ledger, save_ledger
 from leetcode_guard._sync import (
@@ -17,16 +18,12 @@ from leetcode_guard._sync import (
     sync_ledger,
     sync_quietly,
 )
+from leetcode_guard._sync_records import decode_log, encode_log
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     forged_credit,
     ledger_with_credits,
 )
-
-if TYPE_CHECKING:
-    import pytest
-
-
 from leetcode_guard.tests.test_sync import (
     FakeSyncClient,
     fake_sync_log,
@@ -38,10 +35,6 @@ def test_a_synced_credit_still_has_to_verify_before_it_counts(
 ):
     """The sync repo is a user-writable channel. Committing JSON must not be a
     way to mint credits."""
-    from crdt_sync import Hlc
-
-    from leetcode_guard._balance import compute_balance
-
     path = tmp_path / "ledger.json"
     save_ledger(path, Ledger())
     forged = forged_credit("ac:committed-by-hand")
@@ -63,6 +56,7 @@ def test_a_synced_credit_still_has_to_verify_before_it_counts(
 def test_syncing_an_unchanged_ledger_merges_nothing(
     tmp_path: Path, hmac_key: Path, monkeypatch
 ):
+    """Re-syncing a ledger the remote already holds pulls in no new entries."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(2, day=MONDAY, key_file=hmac_key))
     fake_sync_log(monkeypatch)
@@ -89,7 +83,9 @@ def test_sync_quietly_swallows_anything(tmp_path: Path, monkeypatch, caplog):
     assert result.reason == "sync raised"
 
 
-def test_sync_quietly_passes_a_success_through(tmp_path: Path, hmac_key: Path):
+@pytest.mark.usefixtures("hmac_key")
+def test_sync_quietly_passes_a_success_through(tmp_path: Path):
+    """A non-raising sync's result comes back unchanged (here: no token)."""
     result = sync_quietly(tmp_path / "ledger.json", token_path=tmp_path / "absent")
 
     assert not result.pushed
@@ -99,8 +95,6 @@ def test_sync_quietly_passes_a_success_through(tmp_path: Path, hmac_key: Path):
 def test_the_encode_decode_pair_round_trips(hmac_key: Path):
     """These are handed to crdt_sync as callbacks, so nothing else exercises
     them -- but a mismatch would corrupt every device file."""
-    from leetcode_guard._sync_records import decode_log, encode_log
-
     log = records_from_ledger(ledger_with_credits(2, day=MONDAY, key_file=hmac_key))
 
     restored = decode_log(encode_log(log))

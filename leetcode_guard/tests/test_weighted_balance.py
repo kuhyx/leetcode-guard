@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard import _constants
 from leetcode_guard._balance import compute_balance
 from leetcode_guard._daycost import day_cost
@@ -25,12 +27,11 @@ from leetcode_guard.tests._ledger_fixtures import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import pytest
-
 LEVELS = {"easy-p": "Easy", "medium-p": "Medium", "hard-p": "Hard"}
 
 
 def solved(ledger: Ledger, key: Path, *slugs: str) -> None:
+    """Append one signed Monday credit per slug to the ledger."""
     append(
         ledger,
         [
@@ -46,6 +47,7 @@ def solved(ledger: Ledger, key: Path, *slugs: str) -> None:
 
 
 def test_easy_medium_hard_are_worth_one_two_four(hmac_key: Path):
+    """Easy, Medium and Hard solves weigh one, two and four credits."""
     ledger = Ledger()
     solved(ledger, hmac_key, "easy-p", "medium-p", "hard-p", "medium-p")
 
@@ -56,6 +58,7 @@ def test_easy_medium_hard_are_worth_one_two_four(hmac_key: Path):
 
 
 def test_without_a_table_every_credit_is_flat_one(hmac_key: Path):
+    """With no weight table every credit counts as one."""
     ledger = Ledger()
     solved(ledger, hmac_key, "medium-p", "hard-p")
 
@@ -65,6 +68,7 @@ def test_without_a_table_every_credit_is_flat_one(hmac_key: Path):
 def test_unknown_difficulty_counts_as_easy_with_one_warning(
     hmac_key: Path, caplog: pytest.LogCaptureFixture
 ):
+    """An unknown difficulty weighs one credit and logs a single warning."""
     ledger = Ledger()
     solved(ledger, hmac_key, "a", "b", "c")
     table = WeightTable(levels={"a": "Hard"})
@@ -82,6 +86,7 @@ def test_unknown_difficulty_counts_as_easy_with_one_warning(
 
 
 def test_seen_markers_stay_worth_nothing(hmac_key: Path):
+    """Seen markers earn no credit even on a Hard problem."""
     ledger = Ledger()
     append(
         ledger,
@@ -99,6 +104,7 @@ def test_seen_markers_stay_worth_nothing(hmac_key: Path):
 
 
 def test_a_forged_hard_credit_is_discounted_not_weighted(hmac_key: Path):
+    """A forged credit is discounted instead of weighted."""
     ledger = Ledger()
     solved(ledger, hmac_key, "hard-p")
     forged = forged_credit()
@@ -112,6 +118,7 @@ def test_a_forged_hard_credit_is_discounted_not_weighted(hmac_key: Path):
 
 
 def test_a_credit_without_a_slug_keeps_its_own_amount(hmac_key: Path):
+    """A legacy credit with no slug keeps its stored amount."""
     ledger = Ledger()
     append(
         ledger,
@@ -136,6 +143,7 @@ def test_a_credit_without_a_slug_keeps_its_own_amount(hmac_key: Path):
 
 
 def test_the_stored_amount_is_never_rewritten(hmac_key: Path):
+    """A Hard credit is still stored as amount one; weighting happens at read time."""
     entry = credit_entry(
         submission("1", "hard-p"), day=MONDAY, now=NOW, key_file=hmac_key
     )
@@ -143,9 +151,8 @@ def test_the_stored_amount_is_never_rewritten(hmac_key: Path):
     assert entry.amount == 1
 
 
-def test_decide_today_prices_credits_from_the_signed_cache(
-    data_dir: Path, hmac_key: Path
-):
+@pytest.mark.usefixtures("data_dir")
+def test_decide_today_prices_credits_from_the_signed_cache(hmac_key: Path):
     """A Medium solve covers a 2-credit day; priced flat it would not."""
     day = SATURDAY
     ledger = Ledger()

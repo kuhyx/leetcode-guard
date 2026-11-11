@@ -18,6 +18,7 @@ from leetcode_guard.tests._net_fixtures import (
 
 
 def rows(count: int, *, start: int = 0) -> list[dict]:
+    """Build `count` distinct problem rows starting at index `start`."""
     return [problem_row(f"problem-{index}") for index in range(start, start + count)]
 
 
@@ -38,6 +39,7 @@ def test_advances_by_rows_returned_not_by_requested_page_size():
 
 
 def test_stops_once_the_advertised_total_is_reached():
+    """The pager stops after one page once the advertised total is in hand."""
     post = fake_post(pool_result(rows(50), total=50))
 
     result = fetch_pool(post, page_size=100, max_pages=10)
@@ -48,6 +50,7 @@ def test_stops_once_the_advertised_total_is_reached():
 
 
 def test_stops_on_an_empty_page_when_no_total_was_advertised():
+    """Without a total, an empty page ends the pool as complete."""
     post = fake_post(pool_result(rows(10)), pool_result([]))
 
     result = fetch_pool(post, page_size=100, max_pages=10)
@@ -59,6 +62,7 @@ def test_stops_on_an_empty_page_when_no_total_was_advertised():
 
 
 def test_transport_failure_returns_a_partial_pool():
+    """A transport error mid-pager keeps the rows so far and flags incomplete."""
     post = fake_post(
         pool_result(rows(10), total=100),
         GraphQLResult(transport_error="connection reset"),
@@ -72,6 +76,7 @@ def test_transport_failure_returns_a_partial_pool():
 
 
 def test_graphql_errors_return_a_partial_pool():
+    """GraphQL errors make an incomplete pool that quotes every error."""
     post = fake_post(GraphQLResult(errors=("Rate limited", "Try later")))
 
     result = fetch_pool(post, page_size=100, max_pages=10)
@@ -82,6 +87,7 @@ def test_graphql_errors_return_a_partial_pool():
 
 
 def test_null_data_returns_a_partial_pool():
+    """A null data payload makes an incomplete pool saying no data."""
     post = fake_post(null_data_result())
 
     result = fetch_pool(post, page_size=100, max_pages=10)
@@ -103,6 +109,7 @@ def test_page_guard_stops_a_pager_that_never_finishes():
 
 
 def test_malformed_rows_are_dropped_but_do_not_shift_the_pager():
+    """Junk rows are dropped without breaking completion."""
     post = fake_post(
         pool_result([problem_row("good"), "junk"], total=2),
         pool_result([], total=2),

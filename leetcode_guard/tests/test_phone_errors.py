@@ -47,6 +47,7 @@ def node(*errors: dict, device: str = DEVICE) -> dict[str, object]:
 
 
 def test_a_string_leaf_per_device_parses():
+    """A per-device JSON string leaf parses into a PhoneError with a stable key."""
     [error] = parse_phone_errors(node(entry()))
 
     assert error == PhoneError(
@@ -60,6 +61,7 @@ def test_a_string_leaf_per_device_parses():
 
 
 def test_junk_is_skipped_not_fatal():
+    """Malformed leaves and entries are skipped and the rest still parse."""
     raw = {
         "a": "not json",
         "b": json.dumps({"errors": "nope"}),
@@ -78,6 +80,7 @@ def test_junk_is_skipped_not_fatal():
 
 
 def test_a_secret_from_the_phone_is_scrubbed_anyway():
+    """URLs and auth tokens are scrubbed from phone messages."""
     [error] = parse_phone_errors(
         node(entry("boom https://db.example/x.json?auth=SECRET auth=TOKEN2"))
     )
@@ -88,6 +91,7 @@ def test_a_secret_from_the_phone_is_scrubbed_anyway():
 
 
 def test_the_mirror_round_trips(tmp_path: Path):
+    """Written errors and notified keys read back unchanged."""
     path = tmp_path / "phone_errors.json"
     errors = parse_phone_errors(node(entry()))
 
@@ -99,6 +103,7 @@ def test_the_mirror_round_trips(tmp_path: Path):
 def test_a_missing_or_corrupt_mirror_reads_empty(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """A missing or corrupt mirror reads as empty and logs it."""
     path = tmp_path / "phone_errors.json"
     assert read_mirror(path) == ([], set())
     path.write_text("{not json", encoding="utf-8")
@@ -111,6 +116,7 @@ def test_a_missing_or_corrupt_mirror_reads_empty(
 def test_an_unwritable_mirror_is_false(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """An unwritable mirror path returns False and logs it."""
     blocker = tmp_path / "file"
     blocker.write_text("", encoding="utf-8")
 
@@ -119,6 +125,7 @@ def test_an_unwritable_mirror_is_false(
 
 
 def test_status_lines_show_recent_errors_newest_first(tmp_path: Path):
+    """Status lists last-week errors newest first and drops stale ones."""
     path = tmp_path / "phone_errors.json"
     old = entry("stale one", last_seen="2026-10-01T09:00:00.000Z")
     newer = entry("newer", last_seen="2026-10-24T11:25:00.000Z")
@@ -135,6 +142,7 @@ def test_status_lines_show_recent_errors_newest_first(tmp_path: Path):
 
 
 def test_status_lines_are_empty_with_nothing_recent(tmp_path: Path):
+    """No mirror or only unparsable times give no status lines."""
     path = tmp_path / "phone_errors.json"
     assert status_lines(path=path, now=NOW) == []
     bad_time = entry(last_seen="yesterday")
@@ -145,6 +153,7 @@ def test_status_lines_are_empty_with_nothing_recent(tmp_path: Path):
 def test_status_prints_the_phone_errors(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
+    """--status prints the phone error section."""
     write_mirror(parse_phone_errors(node(entry())), set())
     monkeypatch.setattr(_phone_errors, "_now", lambda: NOW)
 

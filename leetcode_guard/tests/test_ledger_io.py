@@ -14,12 +14,11 @@ from leetcode_guard._ledger_io import (
     append,
     load_ledger,
     save_ledger,
-    solved_slugs,
 )
+from leetcode_guard.tests._forgery_fixtures import reload_with_forgery
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
-    forged_credit,
     ledger_with_credits,
 )
 
@@ -28,6 +27,7 @@ if TYPE_CHECKING:
 
 
 def test_round_trip(tmp_path: Path, hmac_key: Path):
+    """A saved ledger reloads with every entry verified."""
     path = tmp_path / "ledger.json"
     original = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
 
@@ -41,6 +41,7 @@ def test_round_trip(tmp_path: Path, hmac_key: Path):
 
 
 def test_a_missing_ledger_loads_empty(tmp_path: Path, hmac_key: Path):
+    """A missing ledger loads empty with integrity intact."""
     ledger = load_ledger(tmp_path / "absent.json", key_file=hmac_key)
 
     assert ledger.entries == {}
@@ -66,6 +67,7 @@ def test_a_corrupt_ledger_loads_empty_and_logs_at_error(
 
 
 def test_an_unreadable_ledger_path_loads_empty(tmp_path: Path, hmac_key: Path):
+    """A directory at the ledger path loads empty."""
     path = tmp_path / "ledger.json"
     path.mkdir()
 
@@ -75,6 +77,7 @@ def test_an_unreadable_ledger_path_loads_empty(tmp_path: Path, hmac_key: Path):
 def test_unparsable_rows_are_counted_not_silently_dropped(
     tmp_path: Path, hmac_key: Path
 ):
+    """Rows that do not parse are counted in ``unparsable``."""
     path = tmp_path / "ledger.json"
     path.write_text(
         json.dumps({"version": 1, "entries": [{"junk": True}, {"also": "junk"}]}),
@@ -90,12 +93,7 @@ def test_a_forged_entry_is_kept_and_counted_as_tampering(
     tmp_path: Path, hmac_key: Path
 ):
     """The inherited gatelock rule: never drop what you cannot verify."""
-    path = tmp_path / "ledger.json"
-    ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
-    append(ledger, [forged_credit()])
-    save_ledger(path, ledger)
-
-    reloaded = load_ledger(path, key_file=hmac_key)
+    reloaded = reload_with_forgery(tmp_path, hmac_key)
 
     assert reloaded.tampered == 1
     assert len(reloaded.entries) == 2
@@ -105,6 +103,7 @@ def test_a_forged_entry_is_kept_and_counted_as_tampering(
 def test_an_unreadable_key_reports_integrity_off_without_flagging_tampering(
     tmp_path: Path, hmac_key: Path, missing_key: Path, caplog
 ):
+    """A missing key turns integrity off and logs it, without calling entries tampered."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(2, day=MONDAY, key_file=hmac_key))
 
@@ -119,13 +118,16 @@ def test_an_unreadable_key_reports_integrity_off_without_flagging_tampering(
 
 
 def test_saving_creates_the_parent_directory(tmp_path: Path, hmac_key: Path):
+    """Saving creates a missing parent directory."""
     path = tmp_path / "nested" / "ledger.json"
 
     assert save_ledger(path, ledger_with_credits(1, day=MONDAY, key_file=hmac_key))
     assert path.exists()
 
 
-def test_a_failed_save_is_reported_not_raised(tmp_path: Path, hmac_key: Path):
+@pytest.mark.usefixtures("hmac_key")
+def test_a_failed_save_is_reported_not_raised(tmp_path: Path):
+    """An unwritable path returns False instead of raising."""
     blocker = tmp_path / "blocker"
     blocker.write_text("file", encoding="utf-8")
 
@@ -133,6 +135,7 @@ def test_a_failed_save_is_reported_not_raised(tmp_path: Path, hmac_key: Path):
 
 
 def test_append_skips_ids_already_present():
+    """Appending an existing id is a no-op that keeps the first entry."""
     ledger = Ledger()
     first = LedgerEntry("ac:1", "credit", "2026-08-10", "", 1)
     duplicate = LedgerEntry("ac:1", "credit", "2026-07-28", "", 99)
@@ -143,6 +146,7 @@ def test_append_skips_ids_already_present():
 
 
 def test_of_kind_filters():
+    """``of_kind`` returns only entries of the asked kind."""
     ledger = Ledger()
     append(
         ledger,
@@ -158,6 +162,7 @@ def test_of_kind_filters():
 
 
 def test_has():
+    """``has`` reports whether an entry id is present."""
     ledger = Ledger()
     append(ledger, [LedgerEntry("ac:1", "credit", "2026-08-10", "", 1)])
 
@@ -165,71 +170,8 @@ def test_has():
     assert not ledger.has("ac:2")
 
 
-def test_solved_slugs_collects_credits_and_seen_alike():
-    """A `seen` entry is a solve that predates the gate, not a failure.
-
-    It is worth zero credits on purpose, but for *suggestions* it means solved
-    exactly as much as a credit does -- and on a freshly seeded ledger it is
-    where nearly every known slug comes from, so dropping it would gut the
-    filter.
-    """
-    ledger = Ledger()
-    append(
-        ledger,
-        [
-            LedgerEntry(
-                "ac:1", "credit", "2026-08-12", "", 1, detail={"title_slug": "a"}
-            ),
-            LedgerEntry(
-                "ac:2", "seen", "2026-08-05", "", 0, detail={"title_slug": "b"}
-            ),
-        ],
-    )
-
-    assert solved_slugs(ledger) == frozenset({"a", "b"})
-
-
-def test_solved_slugs_ignores_entries_that_name_no_problem():
-    """Charge and bootstrap entries carry no `title_slug` at all."""
-    ledger = Ledger()
-    append(
-        ledger,
-        [
-            LedgerEntry("charge:2026-08-12", "charge", "2026-08-12", "", 1),
-            LedgerEntry("bootstrap:2026-08-05", "bootstrap", "2026-08-05", "", 0),
-            LedgerEntry(
-                "ac:3", "credit", "2026-08-12", "", 1, detail={"title_slug": ""}
-            ),
-        ],
-    )
-
-    assert solved_slugs(ledger) == frozenset()
-
-
-def test_solved_slugs_of_an_empty_ledger_is_empty():
-    assert solved_slugs(Ledger()) == frozenset()
-
-
-def test_solved_slugs_deduplicates_repeated_solves():
-    """Re-solving mints a fresh credit under a new submission id; the
-    suggestion filter cares about the problem, not the attempt count."""
-    ledger = Ledger()
-    append(
-        ledger,
-        [
-            LedgerEntry(
-                "ac:1", "credit", "2026-08-12", "", 1, detail={"title_slug": "a"}
-            ),
-            LedgerEntry(
-                "ac:2", "credit", "2026-08-13", "", 1, detail={"title_slug": "a"}
-            ),
-        ],
-    )
-
-    assert solved_slugs(ledger) == frozenset({"a"})
-
-
 def test_saved_entries_keep_their_created_at(tmp_path: Path, hmac_key: Path):
+    """A saved entry keeps its ``created_at`` across a reload."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(1, day=MONDAY, key_file=hmac_key))
 

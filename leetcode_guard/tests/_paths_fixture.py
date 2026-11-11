@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from leetcode_guard import _constants
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -31,8 +33,6 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     data = tmp_path / "data"
     config.mkdir()
     data.mkdir()
-
-    from leetcode_guard import _constants
 
     overrides = {
         "CONFIG_DIR": config,

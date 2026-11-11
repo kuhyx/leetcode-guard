@@ -24,6 +24,7 @@ TODAY = date(2026, 10, 23)
 
 
 def test_a_healthy_payload_reads_every_field():
+    """A complete payload fills every profile field."""
     calendar = calendar_text({TODAY: 2, TODAY - timedelta(days=1): 31})
 
     profile = parse_profile(
@@ -40,15 +41,18 @@ def test_a_healthy_payload_reads_every_field():
 
 
 def test_an_unknown_user_is_none_not_zeros():
+    """An unknown handle parses to None rather than a zeroed profile."""
     assert parse_profile(unknown_user_data(), fetched_at=0.0) is None
 
 
 @pytest.mark.parametrize("data", [None, [], {"allQuestionsCount": []}])
 def test_an_unreadable_payload_is_none(data: object):
+    """Payloads of the wrong shape parse to None."""
     assert parse_profile(data, fetched_at=0.0) is None
 
 
 def test_no_submissions_is_an_unknown_rate_not_zero():
+    """Zero submissions leave the acceptance rate unknown, not 0%."""
     profile = parse_profile(
         profile_data(ac_submissions=0, all_submissions=0), fetched_at=0.0
     )
@@ -58,6 +62,7 @@ def test_no_submissions_is_an_unknown_rate_not_zero():
 
 
 def test_missing_submission_rows_leave_the_rate_unknown():
+    """Without submission totals the acceptance rate is unknown."""
     data = profile_data()
     del data["matchedUser"]["submitStatsGlobal"]["totalSubmissionNum"]
 
@@ -68,6 +73,7 @@ def test_missing_submission_rows_leave_the_rate_unknown():
 
 
 def test_a_malformed_all_row_leaves_the_rate_unknown():
+    """A non-numeric or junk All row leaves the acceptance rate unknown."""
     data = profile_data()
     stats = data["matchedUser"]["submitStatsGlobal"]
     stats["acSubmissionNum"][0]["submissions"] = "213"
@@ -80,6 +86,7 @@ def test_a_malformed_all_row_leaves_the_rate_unknown():
 
 
 def test_no_all_row_leaves_the_rate_unknown():
+    """Without an All row the acceptance rate is unknown."""
     data = profile_data()
     stats = data["matchedUser"]["submitStatsGlobal"]
     stats["acSubmissionNum"] = stats["acSubmissionNum"][1:]
@@ -91,6 +98,7 @@ def test_no_all_row_leaves_the_rate_unknown():
 
 
 def test_an_unreadable_calendar_keeps_the_rest():
+    """A broken calendar is None while the other fields still parse."""
     profile = parse_profile(profile_data(calendar="{not json"), fetched_at=0.0)
 
     assert profile is not None
@@ -99,6 +107,7 @@ def test_an_unreadable_calendar_keeps_the_rest():
 
 
 def test_the_calendar_merges_same_utc_day_keys():
+    """Timestamps on the same UTC day are summed into one date."""
     key = day_seconds(TODAY)
     later = str(int(key) + 3600)
 
@@ -120,10 +129,12 @@ def test_the_calendar_merges_same_utc_day_keys():
     ],
 )
 def test_a_malformed_calendar_is_none(raw: object):
+    """Any malformed calendar value parses to None."""
     assert parse_calendar(raw) is None
 
 
 def test_current_streak_counts_back_from_today():
+    """Consecutive days ending today form both the current and best streak."""
     active = {TODAY - timedelta(days=offset): 1 for offset in range(3)}
 
     assert streaks(_iso(active), TODAY) == (3, 3)
@@ -137,20 +148,24 @@ def test_a_streak_ending_yesterday_is_still_current():
 
 
 def test_a_gap_before_yesterday_ends_the_current_streak():
+    """A missed yesterday resets the current streak but not the best one."""
     active = {TODAY - timedelta(days=offset): 1 for offset in (2, 3, 4, 5, 9)}
 
     assert streaks(_iso(active), TODAY) == (0, 4)
 
 
 def test_zero_count_days_do_not_count():
+    """A day with zero submissions is not an active day."""
     assert streaks({TODAY.isoformat(): 0}, TODAY) == (0, 0)
 
 
 def test_the_query_asks_for_everything_parsed():
+    """The GraphQL query requests every field the parser reads."""
     for field in ("submissionCalendar", "totalSubmissionNum", "matchedUser"):
         assert field in PROFILE_QUERY
     assert profile_variables("k") == {"username": "k"}
 
 
 def _iso(days: dict[date, int]) -> dict[str, int]:
+    """Key a day-count map by ISO date strings."""
     return {day.isoformat(): count for day, count in days.items()}

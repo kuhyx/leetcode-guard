@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard._constants import DEFAULT_USERNAME
 from leetcode_guard._settings import build_client, load_username
 
@@ -12,6 +14,7 @@ if TYPE_CHECKING:
 
 
 def test_reads_the_configured_username(tmp_path: Path):
+    """The username file's first line is read with surrounding whitespace stripped."""
     path = tmp_path / "username"
     path.write_text("  someone  \n", encoding="utf-8")
 
@@ -19,6 +22,7 @@ def test_reads_the_configured_username(tmp_path: Path):
 
 
 def test_only_the_first_line_is_used(tmp_path: Path):
+    """Only the first line of a multi-line username file is used."""
     path = tmp_path / "username"
     path.write_text("first\nsecond\n", encoding="utf-8")
 
@@ -26,10 +30,12 @@ def test_only_the_first_line_is_used(tmp_path: Path):
 
 
 def test_missing_file_falls_back_to_the_default(tmp_path: Path):
+    """A missing username file yields the default username."""
     assert load_username(tmp_path / "absent") == DEFAULT_USERNAME
 
 
 def test_empty_file_falls_back_to_the_default(tmp_path: Path):
+    """A whitespace-only username file yields the default username."""
     path = tmp_path / "username"
     path.write_text("   \n", encoding="utf-8")
 
@@ -37,6 +43,7 @@ def test_empty_file_falls_back_to_the_default(tmp_path: Path):
 
 
 def test_unreadable_file_falls_back_to_the_default(tmp_path: Path):
+    """A username path that cannot be read as a file yields the default username."""
     path = tmp_path / "username"
     path.mkdir()
 
@@ -52,6 +59,7 @@ def test_default_path_is_resolved_at_call_time(config_dir: Path):
 
 
 def test_build_client_wires_username_and_auth(tmp_path: Path):
+    """build_client uses the configured username and no auth when cookies are absent."""
     username_file = tmp_path / "username"
     username_file.write_text("configured", encoding="utf-8")
 
@@ -64,7 +72,9 @@ def test_build_client_wires_username_and_auth(tmp_path: Path):
     assert callable(client.post)
 
 
-def test_build_client_uses_the_isolated_defaults(config_dir: Path):
+@pytest.mark.usefixtures("config_dir")
+def test_build_client_uses_the_isolated_defaults():
+    """With no arguments, build_client reads the isolated config dir's defaults."""
     client = build_client()
 
     assert client.username == DEFAULT_USERNAME

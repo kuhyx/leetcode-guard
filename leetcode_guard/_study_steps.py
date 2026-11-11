@@ -40,7 +40,7 @@ class SuspendStepsMixin:
     nothing until runtime.
     """
 
-    _lock: Any
+    lock: Any
     _config: LockConfig
     _state: StudyState
     _vt_restored: bool
@@ -81,7 +81,7 @@ class SuspendStepsMixin:
         self._restore_surfaces([])
         self._raise_root([])
         if self._vt_restored:
-            mark_vt(self._lock, disabled=disable_vt_switching())
+            mark_vt(self.lock, disabled=disable_vt_switching())
             self._vt_restored = False
 
     def _regrab_quietly(self) -> None:
@@ -108,7 +108,7 @@ class SuspendStepsMixin:
             ("detector", stop_detector),
         ):
             try:
-                stop(self._lock)
+                stop(self.lock)
             except tk.TclError:
                 _logger.exception(
                     "could not stop the %s loop; refusing to enter study mode "
@@ -131,7 +131,7 @@ class SuspendStepsMixin:
         rollback. The caller has already logged the exception. The grab never
         left, so ``grab_held`` (cleared just before the attempt) is restored.
         """
-        self._lock.report_grab_held(held=True)
+        self.lock.report_grab_held(held=True)
         self._start_watchers([])
         return SuspendOutcome(
             ok=False,
@@ -152,7 +152,7 @@ class SuspendStepsMixin:
         # Keep gatelock's own bookkeeping truthful in BOTH directions -- see
         # `mark_vt`. Clearing it here without setting it again on resume is how
         # the machine ends up exiting with VT switching still disabled.
-        mark_vt(self._lock, disabled=False)
+        mark_vt(self.lock, disabled=False)
         steps.append("vt-restored")
 
     def _withdraw_surfaces(self, steps: list[str]) -> None:
@@ -163,7 +163,7 @@ class SuspendStepsMixin:
         into the escape form.
         """
         self._withdrawn = []
-        for info, window in surface_windows(self._lock):
+        for info, window in surface_windows(self.lock):
             try:
                 window.withdraw()
             except tk.TclError:
@@ -180,7 +180,7 @@ class SuspendStepsMixin:
         steps.append(f"surfaces-withdrawn:{len(self._withdrawn)}")
 
         try:
-            self._lock.root.withdraw()
+            self.lock.root.withdraw()
         except tk.TclError:
             _logger.warning("could not withdraw the backdrop root", exc_info=True)
             return

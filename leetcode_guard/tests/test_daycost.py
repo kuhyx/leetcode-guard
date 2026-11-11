@@ -45,6 +45,7 @@ WEEKEND_COST = 2
     ],
 )
 def test_day_cost_across_a_full_week_before_the_reprice(day: date, expected: int):
+    """Weekdays cost 1 and weekend days 2 under the original prices."""
     assert day_cost(day) == expected
 
 
@@ -95,11 +96,13 @@ def test_each_day_keeps_the_price_of_the_era_it_fell_in():
 
 
 def test_the_current_prices_are_the_tiers_around_the_current_base():
+    """The current pricing is exactly the tiers built from base 2."""
     assert CURRENT_BASE == 2
     assert tiered(CURRENT_BASE) == CURRENT_PRICING
 
 
 def test_tiers_are_base_then_one_more_then_twice_the_base():
+    """Tiers price Tue-Thu at base, Mon/Fri at base+1, weekends at twice base."""
     for base in (1, 2, 3, 7):
         pricing = tiered(base)
         assert pricing.cost(date(2026, 10, 13)) == base  # Tuesday
@@ -145,10 +148,12 @@ def test_what_if_reprices_only_the_current_era():
 def test_the_debt_surcharge_never_applies_on_tuesday_to_thursday(
     day: date, expected: bool
 ):
+    """The debt surcharge applies Mon and Fri-Sun but never Tue-Thu."""
     assert surcharge_applies(day) is expected
 
 
 def test_losing_the_tue_thu_discount_prices_a_day_like_a_friday_never_below_its_own():
+    """A penalised day costs at least Friday's price and never less than its own."""
     pricing = CURRENT_PRICING
 
     assert pricing.penalised_cost(date(2026, 10, 14)) == 3  # Wednesday -> Friday's
@@ -157,6 +162,7 @@ def test_losing_the_tue_thu_discount_prices_a_day_like_a_friday_never_below_its_
 
 
 def test_describe_names_the_days_on_each_side():
+    """Each pricing describes its day groups and their costs."""
     assert CURRENT_PRICING.describe() == (
         "Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4"
     )
@@ -177,6 +183,7 @@ def test_the_weekend_boundary_follows_local_time_not_utc():
 
 
 def test_early_saturday_local_is_already_the_weekend():
+    """Just after local midnight on Saturday the weekend price applies."""
     plus_two = timezone(timedelta(hours=2))
     saturday_early = datetime(2026, 8, 1, 0, 30, tzinfo=plus_two)
 
@@ -186,20 +193,24 @@ def test_early_saturday_local_is_already_the_weekend():
 
 
 def test_injected_now_is_returned_verbatim():
+    """An injected now is returned as the same object."""
     moment = datetime(2026, 7, 27, 9, 0, tzinfo=UTC)
 
     assert local_now(now=moment) is moment
 
 
 def test_default_now_is_timezone_aware():
+    """The default local now carries a timezone."""
     assert local_now().tzinfo is not None
 
 
 def test_default_today_is_a_date():
+    """The default local today is a date."""
     assert isinstance(local_today(), date)
 
 
 def test_day_key_round_trips():
+    """A day key is ISO text that parses back to the same date."""
     day = date(2026, 7, 27)
 
     assert day_key(day) == "2026-07-27"
@@ -214,5 +225,6 @@ def test_unparsable_days_return_none_rather_than_raising(text: str):
 
 
 def test_weekday_name():
+    """Weekday names are the full English day names."""
     assert weekday_name(date(2026, 7, 27)) == "Monday"
     assert weekday_name(date(2026, 8, 1)) == "Saturday"

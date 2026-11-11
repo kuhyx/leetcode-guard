@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard import _constants
 from leetcode_guard._difficulty import difficulty_row
 from leetcode_guard._ledger_entries import credit_entry
@@ -16,23 +18,28 @@ if TYPE_CHECKING:
 
 
 def test_no_solves_no_line():
+    """With zero solves of every difficulty, no weighting line is shown."""
     assert weighting_line({"Easy": 0, "Medium": 0, "Hard": 0, "unknown": 0}) is None
 
 
 def test_the_line_names_each_weight():
+    """The weighting line lists each difficulty's multiplier and solve count."""
     line = weighting_line({"Easy": 3, "Medium": 2, "Hard": 1, "unknown": 0})
 
     assert line == "priced     Easy x1: 3, Medium x2: 2, Hard x4: 1"
 
 
 def test_unknown_difficulty_is_called_out():
+    """Solves with no known difficulty are called out as counted Easy."""
     line = weighting_line({"Easy": 1, "Medium": 0, "Hard": 0, "unknown": 2})
 
     assert line is not None
     assert line.endswith("no difficulty yet (counted Easy): 2")
 
 
-def test_status_prices_credits_from_the_signed_cache(data_dir: Path, hmac_key: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_status_prices_credits_from_the_signed_cache(hmac_key: Path):
+    """--status prices credits from the signed difficulty cache, unknown as Easy."""
     ledger = Ledger()
     append(
         ledger,

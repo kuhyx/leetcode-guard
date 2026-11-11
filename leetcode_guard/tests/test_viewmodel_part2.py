@@ -45,6 +45,7 @@ def test_the_surface_explains_a_surcharged_price(hmac_key):
 
 
 def test_no_debt_note_when_on_track(hmac_key):
+    """A day with nothing owed from earlier carries no debt note."""
     decision = decide(
         Ledger(), day=MONDAY + timedelta(days=1), now=NOW, key_file=hmac_key
     )
@@ -90,6 +91,7 @@ def test_the_status_line_credits_a_solve_that_freed_a_slot(hmac_key):
 
 
 def test_the_last_owed_solve_leaves_one_circle(hmac_key):
+    """A solve that leaves one owed shows exactly one circle."""
     decision = decide(Ledger(), day=MONDAY, now=NOW, key_file=hmac_key)
 
     model = build_viewmodel(

@@ -19,11 +19,13 @@ if TYPE_CHECKING:
 
 
 def write(path: Path, payload: object) -> Path:
+    """Write payload as JSON to path and return it."""
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path
 
 
 def test_valid_cookies_load(tmp_path: Path):
+    """A complete cookie file loads without promising filtering."""
     path = write(tmp_path / "c.json", {"LEETCODE_SESSION": "sess", "csrftoken": "tok"})
 
     state = load_cookies(path)
@@ -41,6 +43,7 @@ def test_valid_cookies_load(tmp_path: Path):
 
 
 def test_missing_file_is_normal_not_an_error(tmp_path: Path):
+    """A missing file is not present and warns that solves are not filtered."""
     state = load_cookies(tmp_path / "absent.json")
 
     assert not state.present
@@ -48,6 +51,7 @@ def test_missing_file_is_normal_not_an_error(tmp_path: Path):
 
 
 def test_unreadable_file_degrades(tmp_path: Path):
+    """A path that cannot be read degrades to not present."""
     path = tmp_path / "c.json"
     path.mkdir()
 
@@ -58,6 +62,7 @@ def test_unreadable_file_degrades(tmp_path: Path):
 
 
 def test_invalid_json_degrades(tmp_path: Path):
+    """Malformed JSON degrades to not present."""
     path = tmp_path / "c.json"
     path.write_text("{not json", encoding="utf-8")
 
@@ -68,6 +73,7 @@ def test_invalid_json_degrades(tmp_path: Path):
 
 
 def test_non_object_json_degrades(tmp_path: Path):
+    """A JSON array degrades with a not-an-object note."""
     state = load_cookies(write(tmp_path / "c.json", ["a", "b"]))
 
     assert not state.present
@@ -87,6 +93,7 @@ def test_non_object_json_degrades(tmp_path: Path):
     ],
 )
 def test_incomplete_cookies_degrade(tmp_path: Path, payload: dict):
+    """A missing, empty or non-string cookie degrades with a missing note."""
     state = load_cookies(write(tmp_path / "c.json", payload))
 
     assert not state.present
@@ -94,6 +101,7 @@ def test_incomplete_cookies_degrade(tmp_path: Path, payload: dict):
 
 
 def test_rejected_state_names_the_fix():
+    """The rejected state tells the user which cookie expired and how to fix it."""
     state = rejected_state()
 
     assert not state.present

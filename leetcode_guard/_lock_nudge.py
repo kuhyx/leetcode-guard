@@ -55,9 +55,9 @@ class NudgeMixin:
     """
 
     root: Any
-    _poller: SolvePoller[Any]
-    _run: RunState
-    _refresh_strip: Callable[[], None]
+    poller: SolvePoller[Any]
+    run_state: RunState
+    refresh_strip: Callable[[], None]
 
     nudge_verifying: bool = False
     """A ring started a burst that has neither credited nor run out yet."""
@@ -65,65 +65,65 @@ class NudgeMixin:
     nudge_down: bool = False
     """The doorbell could not open, so solves wait for the regular poll."""
 
-    def _start_nudges(self, port: int | None) -> None:
+    def start_nudges(self, port: int | None) -> None:
         """Open the doorbell on ``port`` and watch it on the Tk thread.
 
         ``None`` opens nothing: the lock still works, solves just wait for
         the regular poll.
         """
-        self._bell = threading.Event()
-        self._burst_jobs: list[str] = []
+        self.bell = threading.Event()
+        self.burst_jobs: list[str] = []
         self._last_burst = -NUDGE_COOLDOWN_SECONDS
-        self._nudge_server: NudgeServer | None = None
+        self.nudge_server: NudgeServer | None = None
         if port is None:
             return
-        self._nudge_server = NudgeServer(self._bell.set, port=port)
-        self.nudge_down = not self._nudge_server.start()
-        self.root.after(POLL_DRAIN_MS, self._watch_bell)
+        self.nudge_server = NudgeServer(self.bell.set, port=port)
+        self.nudge_down = not self.nudge_server.start()
+        self.root.after(POLL_DRAIN_MS, self.watch_bell)
 
-    def _stop_nudges(self) -> None:
+    def stop_nudges(self) -> None:
         """Close the port and drop any pending burst. Idempotent."""
-        if self._nudge_server is not None:
-            self._nudge_server.stop()
+        if self.nudge_server is not None:
+            self.nudge_server.stop()
         self._end_burst()
 
-    def _watch_bell(self) -> None:
+    def watch_bell(self) -> None:
         """Start a burst when the bell rang and the cooldown has passed."""
-        if self._run.closed:
+        if self.run_state.closed:
             return
-        if self._bell.is_set():
-            self._bell.clear()
+        if self.bell.is_set():
+            self.bell.clear()
             now = time.monotonic()
             if now - self._last_burst >= NUDGE_COOLDOWN_SECONDS:
                 self._last_burst = now
                 _logger.info("browser nudge: checking LeetCode now")
-                self._poller.check_now()
-                self._burst_jobs = [
-                    self.root.after(delay, self._poller.poke)
+                self.poller.check_now()
+                self.burst_jobs = [
+                    self.root.after(delay, self.poller.poke)
                     for delay in NUDGE_BURST_RETRY_MS
                 ]
-                self._burst_jobs.append(
+                self.burst_jobs.append(
                     self.root.after(
                         NUDGE_BURST_RETRY_MS[-1] + NUDGE_VERIFY_GRACE_MS,
-                        self._burst_ran_out,
+                        self.burst_ran_out,
                     )
                 )
                 self.nudge_verifying = True
-                self._refresh_strip()
-        self.root.after(POLL_DRAIN_MS, self._watch_bell)
+                self.refresh_strip()
+        self.root.after(POLL_DRAIN_MS, self.watch_bell)
 
-    def _burst_ran_out(self) -> None:
+    def burst_ran_out(self) -> None:
         """No probe in the burst credited anything: drop the note."""
-        self._burst_jobs.clear()
+        self.burst_jobs.clear()
         self.nudge_verifying = False
-        self._refresh_strip()
+        self.refresh_strip()
 
     def _end_burst(self) -> None:
         """Cancel the rest of a burst: the credit it was waiting for landed.
 
         Does not repaint: the caller is mid-repaint already.
         """
-        for job in self._burst_jobs:
+        for job in self.burst_jobs:
             self.root.after_cancel(job)
-        self._burst_jobs.clear()
+        self.burst_jobs.clear()
         self.nudge_verifying = False

@@ -36,6 +36,7 @@ NOW = 1_800_000_000.0
 
 
 def a_profile(*, fetched_at: float = NOW, credit_count: int = 3) -> Profile:
+    """A full profile fetched at `fetched_at` with `credit_count` credits."""
     return Profile(
         solved={"Easy": 1, "Medium": 2, "Hard": 3},
         total={"Easy": 10, "Medium": 20, "Hard": 30},
@@ -47,12 +48,14 @@ def a_profile(*, fetched_at: float = NOW, credit_count: int = 3) -> Profile:
 
 
 def builder(post: FakePost):
+    """A client factory that answers through `post`, signed out."""
     return lambda: Client(
         post=post, auth=AuthState(cookies=None, note="signed out"), username="k"
     )
 
 
 def test_the_cache_round_trips(tmp_path: Path):
+    """A written profile reads back unchanged."""
     path = tmp_path / "profile.json"
 
     assert write_profile_cache(path, a_profile())
@@ -60,6 +63,7 @@ def test_the_cache_round_trips(tmp_path: Path):
 
 
 def test_a_cache_without_a_calendar_round_trips(tmp_path: Path):
+    """A profile with no calendar or rate round-trips with its Nones."""
     path = tmp_path / "profile.json"
     profile = Profile(
         solved={"Easy": 1, "Medium": 2, "Hard": 3},
@@ -75,6 +79,7 @@ def test_a_cache_without_a_calendar_round_trips(tmp_path: Path):
 
 
 def test_an_unwritable_cache_is_reported_not_raised(tmp_path: Path):
+    """Writing under a regular file returns False instead of raising."""
     blocker = tmp_path / "file"
     blocker.write_text("x", encoding="utf-8")
 
@@ -103,6 +108,7 @@ def test_an_unwritable_cache_is_reported_not_raised(tmp_path: Path):
     ],
 )
 def test_an_unusable_cache_is_none(tmp_path: Path, text: str):
+    """Corrupt, wrong-version or mistyped cache files read as None."""
     path = tmp_path / "profile.json"
     path.write_text(text, encoding="utf-8")
 
@@ -110,10 +116,12 @@ def test_an_unusable_cache_is_none(tmp_path: Path, text: str):
 
 
 def test_a_missing_cache_is_none(tmp_path: Path):
+    """An absent cache file reads as None."""
     assert read_profile_cache(tmp_path / "absent.json") is None
 
 
 def test_a_fresh_cache_is_served_without_a_request(tmp_path: Path):
+    """A cache inside the TTL with no new credit sends no request."""
     path = tmp_path / "profile.json"
     write_profile_cache(path, a_profile(fetched_at=NOW - 60))
     post = fake_post(profile_result())
@@ -126,7 +134,8 @@ def test_a_fresh_cache_is_served_without_a_request(tmp_path: Path):
     assert post.calls == []
 
 
-def test_a_new_credit_refetches_at_once(tmp_path: Path, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_a_new_credit_refetches_at_once(tmp_path: Path):
     """A solve should reach the Profile tab within the minute, not the TTL."""
     path = tmp_path / "profile.json"
     write_profile_cache(path, a_profile(fetched_at=NOW - 60, credit_count=3))
@@ -142,6 +151,7 @@ def test_a_new_credit_refetches_at_once(tmp_path: Path, data_dir: Path):
 
 
 def test_a_stale_cache_refetches_and_mirrors_progress(tmp_path: Path, data_dir: Path):
+    """A cache at the TTL refetches and also mirrors the progress cache."""
     path = tmp_path / "profile.json"
     write_profile_cache(path, a_profile(fetched_at=NOW - PROFILE_TTL_SECONDS))
     post = fake_post(profile_result())
@@ -158,7 +168,9 @@ def test_a_stale_cache_refetches_and_mirrors_progress(tmp_path: Path, data_dir: 
     assert progress.solved["Easy"] == 142
 
 
-def test_a_cache_from_the_future_is_not_trusted(tmp_path: Path, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_a_cache_from_the_future_is_not_trusted(tmp_path: Path):
+    """A cache dated after now is refetched."""
     path = tmp_path / "profile.json"
     write_profile_cache(path, a_profile(fetched_at=NOW + 600))
     post = fake_post(profile_result())
@@ -171,6 +183,7 @@ def test_a_cache_from_the_future_is_not_trusted(tmp_path: Path, data_dir: Path):
 def test_a_failed_fetch_serves_the_dated_cache(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """A failed refresh returns the stale cache and logs the failure."""
     path = tmp_path / "profile.json"
     stale = a_profile(fetched_at=NOW - 2 * PROFILE_TTL_SECONDS)
     write_profile_cache(path, stale)
@@ -183,6 +196,7 @@ def test_a_failed_fetch_serves_the_dated_cache(
 
 
 def test_a_failed_fetch_with_no_cache_is_none(tmp_path: Path):
+    """A failed refresh with nothing cached returns None."""
     post = fake_post(GraphQLResult())
 
     assert (
@@ -196,6 +210,7 @@ def test_a_failed_fetch_with_no_cache_is_none(tmp_path: Path):
 def test_defaults_resolve_to_the_redirected_paths(
     monkeypatch: pytest.MonkeyPatch, data_dir: Path
 ):
+    """Default paths and client write into the redirected data dir."""
     post = fake_post(profile_result())
     monkeypatch.setattr(_profile_cache, "build_client", builder(post))
 

@@ -18,10 +18,12 @@ if TYPE_CHECKING:
 
 
 def question_result(difficulty: str) -> GraphQLResult:
+    """A ``question`` envelope reporting only the given difficulty."""
     return GraphQLResult(data={"question": {"difficulty": difficulty}})
 
 
 def write_rows(path: Path, key: Path, rows: dict[str, str]) -> None:
+    """Save a ledger holding one signed difficulty row per slug."""
     ledger = Ledger()
     append(
         ledger,
@@ -34,6 +36,7 @@ def write_rows(path: Path, key: Path, rows: dict[str, str]) -> None:
 
 
 def seed_pool(rows: dict[str, str]) -> None:
+    """Write a complete pool cache holding one problem per slug."""
     problems = tuple(
         parsed
         for slug, level in rows.items()

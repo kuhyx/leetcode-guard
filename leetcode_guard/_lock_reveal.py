@@ -41,86 +41,86 @@ class RevealMixin:
     """Owns the reveal depth, the checked set and the one in-flight batch."""
 
     root: Any
-    _deps: GuardDeps
-    _frames: FrameGroup
-    _model: ViewModel
-    _run: RunState
+    deps: GuardDeps
+    frames: FrameGroup
+    model: ViewModel
+    run_state: RunState
     _build_model: Callable[[SolveProbe], ViewModel]
 
-    def _start_reveal(self) -> None:
+    def start_reveal(self) -> None:
         """Record what the pool resolution already verified."""
         self._checked = {
-            p.title_slug for p in self._deps.pool.problems[:SUGGESTION_COUNT]
+            p.title_slug for p in self.deps.pool.problems[:SUGGESTION_COUNT]
         }
         self._reveal_depth = 0
-        self._reveal_blind = False
-        self._reveal_future: Future[LiveSolved] | None = None
+        self.reveal_blind = False
+        self.reveal_future: Future[LiveSolved] | None = None
         self._reveal_slugs: list[str] = []
-        self._last_probe = self._deps.probe
-        self._reveal_executor: Executor = (
-            self._deps.seams.executor
-            if self._deps.seams.executor is not None
+        self._last_probe = self.deps.probe
+        self.reveal_executor: Executor = (
+            self.deps.seams.executor
+            if self.deps.seams.executor is not None
             else ThreadPoolExecutor(max_workers=1)
         )
 
-    def _stop_reveal(self) -> None:
+    def stop_reveal(self) -> None:
         """Release the executor if it is ours."""
-        if self._deps.seams.executor is None:
-            self._reveal_executor.shutdown(wait=False)
+        if self.deps.seams.executor is None:
+            self.reveal_executor.shutdown(wait=False)
 
-    def _on_reveal(self, depth: int) -> None:
+    def on_reveal(self, depth: int) -> None:
         """A surface now has ``depth`` rows; make sure they are checked."""
         self._reveal_depth = max(self._reveal_depth, depth)
         self._request_reveal_check()
 
     def _request_reveal_check(self) -> None:
         """Submit the next unchecked batch, if any and if nothing is in flight."""
-        if self._run.closed or self._reveal_blind or self._reveal_future is not None:
+        if self.run_state.closed or self.reveal_blind or self.reveal_future is not None:
             return
         unchecked = [
             line.slug
-            for line in self._model.problems[: self._reveal_depth]
+            for line in self.model.problems[: self._reveal_depth]
             if line.slug and line.slug not in self._checked
         ]
         slugs = unchecked[:ROW_BATCH]
         if not slugs:
             return
-        post = self._deps.post
+        post = self.deps.post
         self._reveal_slugs = slugs
-        self._reveal_future = self._reveal_executor.submit(
+        self.reveal_future = self.reveal_executor.submit(
             lambda: check_solved(post, slugs)
         )
-        self.root.after(POLL_DRAIN_MS, self._drain_reveal)
+        self.root.after(POLL_DRAIN_MS, self.drain_reveal)
 
-    def _drain_reveal(self) -> None:
+    def drain_reveal(self) -> None:
         """On the Tk thread: fold a finished batch in and ask for the next."""
-        future = self._reveal_future
-        if self._run.closed or future is None:
+        future = self.reveal_future
+        if self.run_state.closed or future is None:
             return
         if not future.done():
-            self.root.after(POLL_DRAIN_MS, self._drain_reveal)
+            self.root.after(POLL_DRAIN_MS, self.drain_reveal)
             return
-        self._reveal_future = None
+        self.reveal_future = None
         try:
             evidence = future.result()
         except Exception:  # pylint: disable=broad-exception-caught
             _logger.exception("the scrolled-row solved-check raised; stopping it")
-            self._reveal_blind = True
+            self.reveal_blind = True
             return
         self._checked.update(self._reveal_slugs)
         if not evidence.signed_in:
             # Nothing answered, so further batches would be just as blind --
             # the same rule ``verify_live`` stops on. Rows stay as ranked.
-            self._reveal_blind = True
+            self.reveal_blind = True
             return
         if evidence.solved:
-            pool = self._deps.pool
-            self._deps.pool = replace(
+            pool = self.deps.pool
+            self.deps.pool = replace(
                 pool,
                 problems=tuple(
                     p for p in pool.problems if p.title_slug not in evidence.solved
                 ),
             )
-            self._model = self._build_model(self._last_probe)
-            apply_viewmodel(self._frames.views.values(), self._model)
+            self.model = self._build_model(self._last_probe)
+            apply_viewmodel(self.frames.views.values(), self.model)
         self._request_reveal_check()

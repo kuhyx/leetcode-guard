@@ -25,18 +25,21 @@ NOW = datetime(2026, 10, 17, 22, 30).astimezone()
 def _stamp(when: str) -> None:
     """Write the redirected stamp for a LOCAL wall-clock time."""
     epoch = int(datetime.fromisoformat(when).astimezone().timestamp())
-    _night_lockdown.NIGHT_LOCKDOWN_STAMP.write_text(f"{epoch}\n")
+    _night_lockdown.NIGHT_LOCKDOWN_STAMP.write_text(f"{epoch}\n", encoding="utf-8")
 
 
 def test_the_stamp_is_redirected_off_the_real_one(data_dir: Path) -> None:
+    """The stamp path points into the test data dir, never the real stamp."""
     assert data_dir / "locked_at_epoch" == _night_lockdown.NIGHT_LOCKDOWN_STAMP
 
 
 def test_missing_stamp_does_not_defer() -> None:
+    """No stamp file means the gate arms as usual."""
     assert defer_for_evening_lockdown(NOW) is None
 
 
 def test_tonights_evening_lockdown_defers() -> None:
+    """An evening stamp from tonight defers arming and names the lock time."""
     _stamp("2026-10-17T21:05")
     assert defer_for_evening_lockdown(NOW) == (
         "night lockdown already locked tonight at 21:05; the gate does not "
@@ -45,33 +48,40 @@ def test_tonights_evening_lockdown_defers() -> None:
 
 
 def test_the_0401_morning_relock_does_not_defer() -> None:
+    """The 04:01 morning relock stamp is not an evening lockdown."""
     _stamp("2026-10-17T04:01")
     assert defer_for_evening_lockdown(NOW) is None
 
 
 def test_yesterdays_evening_lockdown_does_not_defer() -> None:
+    """Yesterday's evening stamp no longer defers tonight."""
     _stamp("2026-10-16T21:05")
     assert defer_for_evening_lockdown(NOW) is None
 
 
 def test_garbage_stamp_does_not_defer(caplog: pytest.LogCaptureFixture) -> None:
-    _night_lockdown.NIGHT_LOCKDOWN_STAMP.write_text("garbage")
+    """An unparsable stamp is logged and ignored rather than deferring."""
+    _night_lockdown.NIGHT_LOCKDOWN_STAMP.write_text("garbage", encoding="utf-8")
     assert defer_for_evening_lockdown(NOW) is None
     assert "not a unix epoch" in caplog.text
 
 
 class _FakeGuard:
+    """Stand-in LeetcodeGuard that only records whether it was built."""
+
     built = False
 
-    def __init__(self, **kwargs: object) -> None:
+    def __init__(self, **_kwargs: object) -> None:
         type(self).built = True
 
     def run(self) -> None:
-        pass
+        """Do nothing: arming is proved by construction alone."""
 
 
-@pytest.fixture
-def armable(monkeypatch: pytest.MonkeyPatch, data_dir: Path) -> type[_FakeGuard]:
+@pytest.fixture(name="armable")
+def fixture_armable(
+    monkeypatch: pytest.MonkeyPatch, data_dir: Path
+) -> type[_FakeGuard]:
     """A production run that would arm: seeded ledger, nothing solved today."""
     _FakeGuard.built = False
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
@@ -85,6 +95,7 @@ def test_production_does_not_arm_after_tonights_lockdown(
     capsys: pytest.CaptureFixture[str],
     armable: type[_FakeGuard],
 ) -> None:
+    """--production asks the deferral once and skips building the guard."""
     seen: list[datetime] = []
 
     def _defer(now: datetime) -> str:
@@ -103,6 +114,7 @@ def test_production_does_not_arm_after_tonights_lockdown(
 def test_production_after_the_morning_relock_still_arms(
     armable: type[_FakeGuard],
 ) -> None:
+    """A morning-relock stamp leaves --production free to arm."""
     _stamp(f"{datetime.now(tz=UTC).astimezone():%Y-%m-%d}T04:01")
     assert _cli.main(["--production"]) == 0
     assert armable.built
@@ -111,6 +123,7 @@ def test_production_after_the_morning_relock_still_arms(
 def test_demo_ignores_tonights_lockdown(
     monkeypatch: pytest.MonkeyPatch, armable: type[_FakeGuard]
 ) -> None:
+    """Demo mode never consults the night lockdown and always arms."""
     patch_cli(
         monkeypatch,
         "defer_for_evening_lockdown",
@@ -123,6 +136,7 @@ def test_demo_ignores_tonights_lockdown(
 def test_check_reports_tonights_lockdown(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """check prints the evening deferral reason when one applies."""
     monkeypatch.setattr(
         _cli_commands, "defer_for_evening_lockdown", lambda now: "locked at 21:05"
     )
@@ -134,6 +148,7 @@ def test_check_reports_tonights_lockdown(
 def test_check_reports_no_lockdown(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """check says no lockdown yet when nothing defers."""
     stub_client(monkeypatch, recent_ac_result([]), pool_result([], total=0))
     _cli_commands.cmd_check()
     assert "evening    no lockdown yet tonight" in capsys.readouterr().out

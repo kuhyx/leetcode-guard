@@ -5,7 +5,7 @@ the right seam anyway -- this is the whole "let them actually reach a problem"
 surface in one place, which is the part worth reading before changing anything
 about the 2026-08-05 fix.
 
-The ordering that matters is in :meth:`StudyMixin._open_problem`: **find the
+The ordering that matters is in :meth:`StudyMixin.open_problem`: **find the
 browser before touching the grab.** The common failure is having no browser
 installed at all, and discovering that after standing the lock down would leave
 the machine unguarded for nothing. A lock weakened for a browser that never
@@ -45,20 +45,20 @@ class StudyMixin:
     """
 
     _study: StudySession | None = None
-    _strip: StudyStrip | None = None
-    _frames: FrameGroup
-    _run: RunState
-    _lock: Any
+    strip: StudyStrip | None = None
+    frames: FrameGroup
+    run_state: RunState
+    lock: Any
     nudge_verifying: bool
     nudge_down: bool
 
-    def _decision(self) -> GateDecision:
+    def decision(self) -> GateDecision:
         """Provided by the host class."""
         raise NotImplementedError
 
     # -- entering ---------------------------------------------------------
 
-    def _open_problem(self, url: str) -> None:
+    def open_problem(self, url: str) -> None:
         """Open one problem, standing the lock down so it can be used.
 
         Order is deliberate and each step can refuse:
@@ -73,7 +73,7 @@ class StudyMixin:
             _logger.warning("no browser to open %s with; the lock is unchanged", url)
             return
 
-        session = self._session()
+        session = self.session()
         if session.active:
             # A second problem while already studying is a legitimate thing to
             # want. Nothing to tear down, and the elapsed clock keeps running.
@@ -112,25 +112,25 @@ class StudyMixin:
 
     def _show_strip(self) -> None:
         """Put the study strip up on the primary output, if there is one."""
-        rect = self._primary_rect()
+        rect = self.primary_rect()
         if rect is None:
             # Zero live outputs: nothing to place it on. The poller still runs
             # and a real solve still unlocks, so this is a degraded study
             # session rather than a broken one.
             _logger.warning("no output to place the study strip on")
             return
-        self._strip = build_strip(
-            self._lock.root,
-            self._run.config,
-            self._strip_text(),
+        self.strip = build_strip(
+            self.lock.root,
+            self.run_state.config,
+            self.strip_text(),
             rect=rect,
-            on_back=self._back_to_lock,
+            on_back=self.back_to_lock,
         )
-        self._strip.schedule(self._strip_text)
+        self.strip.schedule(self.strip_text)
 
-    def _primary_rect(self) -> OutputRect | None:
+    def primary_rect(self) -> OutputRect | None:
         """The primary output's rectangle, or the first, or ``None``."""
-        infos = self._lock.surfaces.infos()
+        infos = self.lock.surfaces.infos()
         if not infos:
             return None
         for info in infos:
@@ -138,24 +138,24 @@ class StudyMixin:
                 return info.rect
         return infos[0].rect
 
-    def _strip_text(self) -> StripText:
+    def strip_text(self) -> StripText:
         """What the strip should say right now."""
-        session = self._session()
+        session = self.session()
         return StripText(
             elapsed_seconds=session.elapsed_seconds(),
-            needed=max(1, self._decision().needed),
+            needed=max(1, self.decision().needed),
             verifying=self.nudge_verifying,
             fast_path_down=self.nudge_down,
         )
 
-    def _refresh_strip(self) -> None:
+    def refresh_strip(self) -> None:
         """Repaint the strip now, not on its next one-second tick."""
-        if self._strip is not None:
-            self._strip.tick(self._strip_text())
+        if self.strip is not None:
+            self.strip.tick(self.strip_text())
 
     # -- leaving ----------------------------------------------------------
 
-    def _back_to_lock(self) -> None:
+    def back_to_lock(self) -> None:
         """Put the lock back, by request."""
         self._end_study()
 
@@ -167,30 +167,30 @@ class StudyMixin:
             *before* the resume, so a stale tick can never fire against a
             re-grabbed screen.
         """
-        session = self._session()
+        session = self.session()
         if not session.active:
             return False
-        self._drop_strip()
+        self.drop_strip()
         outcome = session.resume()
         if not outcome.ok:
             self._say("the lock is back but could not re-take the input grab")
         return True
 
-    def _drop_strip(self) -> None:
+    def drop_strip(self) -> None:
         """Destroy the strip if there is one."""
-        if self._strip is None:
+        if self.strip is None:
             return
-        self._strip.destroy()
-        self._strip = None
+        self.strip.destroy()
+        self.strip = None
 
     # -- helpers ----------------------------------------------------------
 
-    def _session(self) -> StudySession:
+    def session(self) -> StudySession:
         """The study session, built on first use."""
         if self._study is None:
             self._study = StudySession(
-                self._lock,
-                self._run.config,
+                self.lock,
+                self.run_state.config,
                 on_fail_closed=self._say,
             )
         return self._study
@@ -206,5 +206,7 @@ class StudyMixin:
         """
         _logger.warning("study mode: %s %s", message, url)
         mark = f"{g.BLIND} {url}" if url else g.BLIND
-        for view in self._frames.views.values():
-            view.status_line.configure(text=mark, fg=self._run.config.palette.danger)
+        for view in self.frames.views.values():
+            view.status_line.configure(
+                text=mark, fg=self.run_state.config.palette.danger
+            )

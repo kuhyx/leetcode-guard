@@ -16,6 +16,7 @@ from leetcode_guard._constants import (
     NETWORK_INCIDENT_LOCKOUT_CAP_SECONDS,
     NETWORK_INCIDENT_LOCKOUT_SECONDS,
 )
+from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
 from leetcode_guard._netcheck import NetworkDiagnosis, NetworkVerdict
 from leetcode_guard._network_incident import (
     build_tracker,
@@ -29,16 +30,19 @@ if TYPE_CHECKING:
 
 
 def diagnosis(verdict: NetworkVerdict, reason: str = "because") -> NetworkDiagnosis:
+    """Build a network diagnosis with the given verdict and reason."""
     return NetworkDiagnosis(
         verdict=verdict, reason=reason, anchors_reachable=3, addresses=("1.2.3.4",)
     )
 
 
 def tracker_for(tmp_path: Path, hmac_key: Path):
+    """Build an incident tracker stored under tmp_path."""
     return build_tracker(tmp_path / "incidents.json", key_file=hmac_key)
 
 
 def test_a_remote_outage_unlocks_with_no_form(tmp_path: Path, hmac_key: Path, caplog):
+    """A LeetCode-side outage unlocks at once with no form and logs an error."""
     with caplog.at_level(logging.ERROR):
         policy = decide_policy(
             diagnosis(NetworkVerdict.REMOTE_OUTAGE, "LeetCode is down"),
@@ -55,6 +59,7 @@ def test_a_remote_outage_unlocks_with_no_form(tmp_path: Path, hmac_key: Path, ca
 def test_a_local_outage_holds_and_demands_an_explanation(
     tmp_path: Path, hmac_key: Path
 ):
+    """A local outage keeps the lock and demands a form after the base wait."""
     policy = decide_policy(
         diagnosis(NetworkVerdict.LOCAL_OFFLINE, "no internet"),
         tracker_for(tmp_path, hmac_key),
@@ -86,6 +91,7 @@ def test_tampering_is_treated_exactly_like_being_offline(
 def test_being_online_neither_unlocks_nor_demands_a_form(
     tmp_path: Path, hmac_key: Path
 ):
+    """Being online neither unlocks nor asks for a form."""
     policy = decide_policy(
         diagnosis(NetworkVerdict.ONLINE), tracker_for(tmp_path, hmac_key)
     )
@@ -96,6 +102,7 @@ def test_being_online_neither_unlocks_nor_demands_a_form(
 
 
 def test_the_wait_escalates_with_repeat_incidents(tmp_path: Path, hmac_key: Path):
+    """A recorded incident makes the next wait longer than the first."""
     tracker = tracker_for(tmp_path, hmac_key)
     first = lockout_seconds(tracker)
 
@@ -136,6 +143,7 @@ def test_the_budget_never_exhausts(tmp_path: Path, hmac_key: Path):
 
 
 def test_a_short_explanation_is_refused(tmp_path: Path, hmac_key: Path):
+    """A too-short description is refused with a character-count complaint."""
     tracker = tracker_for(tmp_path, hmac_key)
     draft = EscapeDraft(reason="wifi", onset="now", severity=1, description="short")
 
@@ -146,6 +154,7 @@ def test_a_short_explanation_is_refused(tmp_path: Path, hmac_key: Path):
 
 
 def test_a_blank_onset_is_refused(tmp_path: Path, hmac_key: Path):
+    """A blank onset is refused."""
     tracker = tracker_for(tmp_path, hmac_key)
     draft = EscapeDraft(reason="wifi", onset="", severity=1, description="z" * 200)
 
@@ -155,6 +164,7 @@ def test_a_blank_onset_is_refused(tmp_path: Path, hmac_key: Path):
 def test_a_complete_explanation_is_accepted_and_recorded(
     tmp_path: Path, hmac_key: Path, caplog
 ):
+    """A complete explanation is recorded and logged as a warning."""
     tracker = tracker_for(tmp_path, hmac_key)
     draft = EscapeDraft(
         reason="the router died", onset="08:15", severity=1, description="z" * 200
@@ -173,6 +183,7 @@ def test_a_complete_explanation_is_accepted_and_recorded(
 def test_a_failed_save_is_reported_not_silently_accepted(
     tmp_path: Path, hmac_key: Path
 ):
+    """A save that fails returns a complaint asking to try again."""
     tracker = tracker_for(tmp_path, hmac_key)
     tracker.record = lambda *_a, **_k: False
     draft = EscapeDraft(reason="r", onset="o", severity=1, description="z" * 200)
@@ -188,8 +199,6 @@ def test_incidents_are_kept_apart_from_the_ordinary_escape_budget(
 ):
     """A week of bad wifi must not consume the allowance meant for "I genuinely
     cannot do this today"."""
-    from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
-
     incidents = tracker_for(tmp_path, hmac_key)
     escapes = build_escape_tracker(tmp_path / "escape.json", key_file=hmac_key)
     incidents.record(

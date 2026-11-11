@@ -17,9 +17,11 @@ from leetcode_guard._view_problems import NO_PROBLEMS_TEXT
 from leetcode_guard._view_types import ProblemList, ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard.tests._view_fixtures import mock_view
 
 
 def model(*lines: ProblemLine) -> ViewModel:
+    """A locked view model listing ``lines``."""
     return ViewModel(
         headline="Solve 2 LeetCode problems to unlock",
         balance_line="Credits 0  |  Monday costs 2",
@@ -33,13 +35,7 @@ def model(*lines: ProblemLine) -> ViewModel:
 
 def rows_view(count: int, *, buttons: int | None = None, on_open=None) -> GuardView:
     """A surface whose list was built with ``count`` rows."""
-    return GuardView(
-        output_name="DP-0",
-        container=MagicMock(),
-        headline=MagicMock(),
-        balance_line=MagicMock(),
-        status_line=MagicMock(),
-        notes_label=MagicMock(),
+    return mock_view(
         problems=ProblemList(
             labels=[MagicMock() for _ in range(count)],
             frame=MagicMock(),
@@ -137,6 +133,7 @@ def test_a_row_without_a_button_is_repainted_anyway():
 
 
 def test_an_empty_list_with_no_buttons_still_gets_the_stand_in():
+    """An empty pool shows the no-problems text even with no Open buttons."""
     view = rows_view(1, buttons=0, on_open=MagicMock())
 
     apply_viewmodel([view], model())

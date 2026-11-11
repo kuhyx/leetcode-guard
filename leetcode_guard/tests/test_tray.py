@@ -20,8 +20,9 @@ import pytest
 TRAY_PATH = Path(__file__).resolve().parents[2] / "scripts" / "leetcode_guard_tray.py"
 
 
-@pytest.fixture
-def tray(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
+@pytest.fixture(name="tray")
+def fixture_tray(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
+    """The tray script loaded from its path with GTK mocked out."""
     gi = MagicMock()
     monkeypatch.setitem(sys.modules, "gi", gi)
     monkeypatch.setitem(sys.modules, "gi.repository", gi.repository)
@@ -43,11 +44,13 @@ class Recorder:
         self.summary = summary
 
     def popen(self, command: list[str], **kwargs: object) -> object:
+        """Record a detached start and pretend it succeeded."""
         assert kwargs.get("start_new_session") is True
         self.started.append(command)
         return SimpleNamespace(pid=1)
 
     def run(self, command: list[str], **_kwargs: object) -> object:
+        """Record a blocking call and return the canned summary."""
         self.ran.append(command)
         return SimpleNamespace(stdout=f"{self.summary}\n", returncode=0)
 
@@ -60,6 +63,7 @@ def _wire(monkeypatch: pytest.MonkeyPatch, tray: ModuleType) -> Recorder:
 
 
 def test_the_launcher_is_the_status_apps(tray: Any):
+    """The tray points at the status app's launcher script."""
     assert TRAY_PATH.is_file()
     assert tray.APP_LAUNCHER.name == "leetcode_guard_app.sh"
     assert tray.DEFAULT_APP_LAUNCHER.parts[-3:] == (
@@ -70,10 +74,12 @@ def test_the_launcher_is_the_status_apps(tray: Any):
 
 
 def test_the_status_cli_is_the_new_module(tray: Any):
+    """The summary command runs the status_cli module."""
     assert tray.STATUS_CMD[-2:] == ["-m", "leetcode_guard.status_cli"]
 
 
 def test_a_click_launches_the_app(monkeypatch: pytest.MonkeyPatch, tray: Any):
+    """With the launcher present, a click starts it and runs nothing else."""
     tray.APP_LAUNCHER.write_text("#!/bin/bash\n", encoding="utf-8")
     recorder = _wire(monkeypatch, tray)
 
@@ -86,6 +92,7 @@ def test_a_click_launches_the_app(monkeypatch: pytest.MonkeyPatch, tray: Any):
 def test_a_missing_launcher_warns_and_notifies_the_summary(
     monkeypatch: pytest.MonkeyPatch, tray: Any, caplog: pytest.LogCaptureFixture
 ):
+    """A missing launcher logs a warning and notifies the status summary."""
     recorder = _wire(monkeypatch, tray)
 
     tray.open_app(MagicMock())
@@ -102,6 +109,7 @@ def test_a_missing_launcher_warns_and_notifies_the_summary(
 def test_a_launcher_that_will_not_start_falls_back_too(
     monkeypatch: pytest.MonkeyPatch, tray: Any, caplog: pytest.LogCaptureFixture
 ):
+    """A launcher that fails to start falls back to the summary notification."""
     tray.APP_LAUNCHER.write_text("#!/bin/bash\n", encoding="utf-8")
     recorder = _wire(monkeypatch, tray)
 
@@ -120,6 +128,7 @@ def test_a_launcher_that_will_not_start_falls_back_too(
 def test_an_unavailable_summary_still_notifies(
     monkeypatch: pytest.MonkeyPatch, tray: Any
 ):
+    """An empty summary still sends a fixed status-unavailable notification."""
     recorder = _wire(monkeypatch, tray)
     recorder.summary = ""
 
@@ -131,6 +140,8 @@ def test_an_unavailable_summary_still_notifies(
 def test_a_failed_notification_is_a_warning(
     monkeypatch: pytest.MonkeyPatch, tray: Any, caplog: pytest.LogCaptureFixture
 ):
+    """A notify-send timeout is logged as a warning, not raised."""
+
     def run(command: list[str], **_kwargs: object) -> object:
         if command[0].endswith("notify-send"):
             raise subprocess.TimeoutExpired(command, 5)

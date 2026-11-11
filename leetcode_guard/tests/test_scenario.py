@@ -49,10 +49,12 @@ ALL_FREE_EASY = Goal({"Easy": 837})
 
 
 def never_free(_day: date) -> bool:
+    """A calendar with no free days."""
     return False
 
 
 def worked(price: int, goal: Goal = ALL_FREE_EASY, progress: Progress = PROGRESS):
+    """Project to TARGET at ``price`` and build the scenario for ``goal``."""
     projection = project(
         TARGET, POSITION, is_free=never_free, progress=progress, cost_of=what_if(price)
     )
@@ -62,6 +64,7 @@ def worked(price: int, goal: Goal = ALL_FREE_EASY, progress: Progress = PROGRESS
 
 
 def test_the_original_question_at_price_one():
+    """At price 1 the Easy goal falls 33 short and lands in January 2028."""
     scenario, _ = worked(1)
 
     assert scenario.needed == 779
@@ -74,6 +77,7 @@ def test_the_original_question_at_price_one():
 
 
 def test_the_original_question_at_price_two():
+    """At price 2 the Easy goal has no shortfall and lands at the minimal day."""
     scenario, _ = worked(2)
 
     assert scenario.forced == 1325
@@ -82,6 +86,7 @@ def test_the_original_question_at_price_two():
 
 
 def test_the_lines_for_the_original_question():
+    """The scenario and price lines read exactly as the original question's answer."""
     scenario, _ = worked(1)
 
     lines = scenario_lines(scenario, ALL_FREE_EASY, PROGRESS)
@@ -100,6 +105,7 @@ def test_the_lines_for_the_original_question():
 
 
 def test_a_price_that_makes_it_says_so_without_a_shortfall():
+    """A price that reaches the goal reports no shortfall."""
     scenario, _ = worked(2)
 
     lines = scenario_lines(scenario, ALL_FREE_EASY, PROGRESS)
@@ -111,6 +117,7 @@ def test_a_price_that_makes_it_says_so_without_a_shortfall():
 
 
 def test_a_goal_already_met_needs_nothing():
+    """A goal already met needs nothing and says it is reached."""
     done = Goal({"Easy": 50})
     scenario, projection = worked(2, done)
 
@@ -123,6 +130,7 @@ def test_a_goal_already_met_needs_nothing():
 
 
 def test_a_goal_beyond_the_site_is_named_and_not_worked():
+    """A goal larger than the site's pool names each impossible difficulty."""
     too_many = Goal({"Easy": 1000, "Medium": 3000})
     scenario, _ = worked(2, too_many)
 
@@ -135,6 +143,7 @@ def test_a_goal_beyond_the_site_is_named_and_not_worked():
 
 
 def test_goals_across_difficulties_sum_their_shortfalls_and_say_so():
+    """A mixed-difficulty goal sums its weighted needs and adds the beyond-Easy note."""
     mixed = Goal({"Easy": 837, "Hard": 10})
     scenario, _ = worked(2, mixed)
 
@@ -181,6 +190,7 @@ def test_a_target_with_no_priced_day_has_no_price():
 
 
 def test_a_calendar_that_is_all_free_never_lands():
+    """With every day free the goal never lands within the horizon."""
     projection = project(TARGET, POSITION, is_free=lambda _d: True, progress=None)
 
     assert (
@@ -196,6 +206,7 @@ def test_a_calendar_that_is_all_free_never_lands():
 
 @pytest.mark.parametrize("price", [1, 2, 3])
 def test_the_minimal_price_lands_on_or_before_the_target(price: int):
+    """The minimal whole price always lands by the target."""
     scenario, _ = worked(price)
 
     assert scenario.minimal_lands_on is not None
@@ -203,6 +214,7 @@ def test_the_minimal_price_lands_on_or_before_the_target(price: int):
 
 
 def test_a_medium_goal_is_priced_at_two_credits_a_solve():
+    """Each Medium solve a goal needs costs two credits."""
     goal = Goal({"Medium": PROGRESS.solved["Medium"] + 5})
 
     assert goal.needed(PROGRESS) == 10

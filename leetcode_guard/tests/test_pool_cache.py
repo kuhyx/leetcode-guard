@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 
 def make_pool(*, fetched_at: float = 1000.0, complete: bool = True) -> CachedPool:
+    """A two-problem cached pool."""
     rows = [
         problem_row("two-sum", ac_rate=57.9, topics=["array"]),
         problem_row("add-two"),
@@ -25,6 +26,7 @@ def make_pool(*, fetched_at: float = 1000.0, complete: bool = True) -> CachedPoo
 
 
 def test_round_trip_preserves_every_field(tmp_path: Path):
+    """A written pool reads back with every field intact."""
     path = tmp_path / "pool.json"
     original = make_pool()
 
@@ -39,6 +41,7 @@ def test_round_trip_preserves_every_field(tmp_path: Path):
 
 
 def test_write_creates_the_parent_directory(tmp_path: Path):
+    """Writing creates missing parent directories."""
     path = tmp_path / "nested" / "deeper" / "pool.json"
 
     assert write_cache(path, make_pool())
@@ -46,6 +49,7 @@ def test_write_creates_the_parent_directory(tmp_path: Path):
 
 
 def test_write_failure_is_reported_not_raised(tmp_path: Path):
+    """An unwritable path returns False instead of raising."""
     blocker = tmp_path / "blocker"
     blocker.write_text("not a directory", encoding="utf-8")
 
@@ -53,6 +57,7 @@ def test_write_failure_is_reported_not_raised(tmp_path: Path):
 
 
 def test_missing_file_reads_as_none(tmp_path: Path):
+    """A missing cache reads as None."""
     assert read_cache(tmp_path / "absent.json") is None
 
 
@@ -70,6 +75,7 @@ def test_missing_file_reads_as_none(tmp_path: Path):
     ],
 )
 def test_every_corruption_mode_reads_as_none(tmp_path: Path, content: str):
+    """Every corrupt cache shape reads as None."""
     path = tmp_path / "pool.json"
     path.write_text(content, encoding="utf-8")
 
@@ -77,6 +83,7 @@ def test_every_corruption_mode_reads_as_none(tmp_path: Path, content: str):
 
 
 def test_unreadable_file_reads_as_none(tmp_path: Path):
+    """A directory at the cache path reads as None."""
     path = tmp_path / "pool.json"
     path.mkdir()
 
@@ -84,6 +91,7 @@ def test_unreadable_file_reads_as_none(tmp_path: Path):
 
 
 def test_malformed_problem_rows_are_skipped(tmp_path: Path):
+    """Malformed problem rows are dropped while good rows load."""
     path = tmp_path / "pool.json"
     path.write_text(
         json.dumps(
@@ -104,6 +112,7 @@ def test_malformed_problem_rows_are_skipped(tmp_path: Path):
 
 
 def test_complete_defaults_to_false_when_absent(tmp_path: Path):
+    """A cache without ``complete`` reads as incomplete."""
     path = tmp_path / "pool.json"
     path.write_text(
         json.dumps({"version": 1, "fetched_at": 5.0, "problems": []}), encoding="utf-8"
@@ -116,6 +125,7 @@ def test_complete_defaults_to_false_when_absent(tmp_path: Path):
 
 
 def test_freshness_window():
+    """A pool is fresh strictly inside its TTL."""
     pool = make_pool(fetched_at=1000.0)
 
     assert pool.is_fresh(now=1000.0, ttl=100.0)
@@ -124,6 +134,7 @@ def test_freshness_window():
 
 
 def test_a_backwards_clock_reads_as_stale_not_as_infinitely_fresh():
+    """A clock earlier than the fetch makes the pool stale."""
     pool = make_pool(fetched_at=1000.0)
 
     assert pool.age_seconds(500.0) < 0

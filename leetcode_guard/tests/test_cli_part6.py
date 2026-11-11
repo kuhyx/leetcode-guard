@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import pytest
 
 from leetcode_guard import _cli, _cli_commands
 from leetcode_guard._cli_commands import projection_inputs
@@ -14,11 +14,10 @@ from leetcode_guard._status_projection import (
 )
 from leetcode_guard.tests.test_projection import progress
 
-if TYPE_CHECKING:
-    from pathlib import Path
 
-
-def test_price_and_goal_print_the_what_if(monkeypatch, capsys, data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_price_and_goal_print_the_what_if(monkeypatch, capsys):
+    """--price and --goal print the prices, the goal and the landing price."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
 
     _cli.main(["--status", "--by", "31.12.2999", "--price", "1", "--goal", "Easy=100"])
@@ -30,7 +29,9 @@ def test_price_and_goal_print_the_what_if(monkeypatch, capsys, data_dir: Path):
     assert "Price that lands the goal exactly on 31.12.2999:" in out
 
 
-def test_price_or_goal_alone_implies_the_end_of_year(monkeypatch, capsys, data_dir):
+@pytest.mark.usefixtures("data_dir")
+def test_price_or_goal_alone_implies_the_end_of_year(monkeypatch, capsys):
+    """--price without --by projects to 31 December."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
 
     _cli.main(["--status", "--price", "3"])
@@ -40,16 +41,18 @@ def test_price_or_goal_alone_implies_the_end_of_year(monkeypatch, capsys, data_d
     assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri cost 4, Sat/Sun cost 6." in out
 
 
-def test_a_bad_price_is_exit_2(monkeypatch, capsys, data_dir):
+@pytest.mark.usefixtures("data_dir")
+def test_a_bad_price_is_exit_2(monkeypatch, capsys):
+    """A non-positive --price exits 2 with the bad-price message."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
 
     assert _cli.main(["--status", "--price", "0"]) == 2
     assert BAD_PRICE in capsys.readouterr().out
 
 
-def test_a_bad_goal_is_exit_2_but_the_projection_still_prints(
-    monkeypatch, capsys, data_dir
-):
+@pytest.mark.usefixtures("data_dir")
+def test_a_bad_goal_is_exit_2_but_the_projection_still_prints(monkeypatch, capsys):
+    """A malformed --goal exits 2 yet still prints the projection."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
 
     assert _cli.main(["--status", "--goal", "Easy"]) == 2
@@ -59,7 +62,9 @@ def test_a_bad_goal_is_exit_2_but_the_projection_still_prints(
     assert "The Easy goal must be a whole number, or blank." in out
 
 
-def test_a_goal_without_counts_says_what_it_needs(monkeypatch, capsys, data_dir):
+@pytest.mark.usefixtures("data_dir")
+def test_a_goal_without_counts_says_what_it_needs(monkeypatch, capsys):
+    """A goal with no solved counts exits 2 and names what is missing."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", lambda: None)
 
     assert _cli.main(["--status", "--goal", "Easy=100"]) == 2
@@ -67,6 +72,7 @@ def test_a_goal_without_counts_says_what_it_needs(monkeypatch, capsys, data_dir)
 
 
 def test_projection_inputs_mirror_the_flags():
+    """projection_inputs turns the raw flags into text fields and defaults."""
     assert projection_inputs("01.02.2030", 4, ["Easy=1", " Hard = 2 "]) == (
         ProjectionInputs("01.02.2030", "4", {"Easy": "1", "Hard": " 2 "})
     )

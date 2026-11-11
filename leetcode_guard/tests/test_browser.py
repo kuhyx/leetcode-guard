@@ -31,6 +31,7 @@ def _only(monkeypatch, available: dict[str, str | None]):
 
 
 def test_the_desktop_default_wins_when_it_exists(monkeypatch):
+    """xdg-open is chosen over other browsers when present."""
     _only(monkeypatch, {"xdg-open": "/usr/bin/xdg-open", "firefox": "/usr/bin/firefox"})
 
     assert find_opener() == "/usr/bin/xdg-open"
@@ -44,6 +45,7 @@ def test_it_falls_back_when_the_desktop_default_is_missing(monkeypatch):
 
 
 def test_no_opener_at_all_is_reported_not_raised(monkeypatch, caplog):
+    """With no opener installed, launch fails softly and names every candidate."""
     _only(monkeypatch, {})
 
     with caplog.at_level(logging.WARNING):
@@ -102,6 +104,7 @@ def test_an_opener_that_vanishes_mid_launch_is_reported(monkeypatch, caplog):
 
 
 def test_a_launch_result_says_which_opener_ran(monkeypatch):
+    """The launch result names the opener that ran."""
     _only(monkeypatch, {"x-www-browser": "/usr/bin/x-www-browser"})
 
     result = launch("https://example.invalid/", spawn=_Recorder())

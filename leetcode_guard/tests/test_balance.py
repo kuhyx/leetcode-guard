@@ -10,15 +10,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard._balance import compute_balance, counts_toward_balance
 from leetcode_guard._ledger import LedgerEntry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
+from leetcode_guard.tests._forgery_fixtures import reload_with_forgery
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
     add_charge,
     foreign_credit,
-    forged_credit,
     ledger_with_credits,
 )
 
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
 
 
 def test_valid_credits_count(hmac_key: Path):
+    """Signed credits all count toward the balance."""
     ledger = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
 
     balance = compute_balance(ledger)
@@ -37,6 +40,7 @@ def test_valid_credits_count(hmac_key: Path):
 
 
 def test_charges_are_subtracted(hmac_key: Path):
+    """A charge takes one credit off the available balance."""
     ledger = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
     add_charge(ledger, MONDAY, key_file=hmac_key)
 
@@ -50,12 +54,7 @@ def test_a_forged_credit_is_refused_but_kept_on_disk(tmp_path: Path, hmac_key: P
     """The whole point of signing. Appending
     ``{"kind": "credit", "amount": 1}`` by hand must not buy a day -- and the
     evidence must survive in the file."""
-    path = tmp_path / "ledger.json"
-    ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
-    append(ledger, [forged_credit()])
-    save_ledger(path, ledger)
-
-    reloaded = load_ledger(path, key_file=hmac_key)
+    reloaded = reload_with_forgery(tmp_path, hmac_key)
     balance = compute_balance(reloaded)
 
     assert balance.credits == 1
@@ -147,6 +146,7 @@ def test_an_unreadable_key_refuses_credits_from_another_device(
 def test_a_verified_foreign_credit_counts_when_the_key_is_readable(
     tmp_path: Path, hmac_key: Path
 ):
+    """A signed credit from another device counts when the key verifies it."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
     append(ledger, [foreign_credit(key_file=hmac_key)])
@@ -157,7 +157,9 @@ def test_a_verified_foreign_credit_counts_when_the_key_is_readable(
     assert balance.credits == 2
 
 
-def test_marker_kinds_contribute_nothing(hmac_key: Path):
+@pytest.mark.usefixtures("hmac_key")
+def test_marker_kinds_contribute_nothing():
+    """Seen and bootstrap markers add no credit."""
     ledger = Ledger()
     append(
         ledger,
@@ -197,6 +199,7 @@ def test_available_goes_negative_when_a_day_is_settled_without_credits(hmac_key:
 
 
 def test_counts_toward_balance_is_a_direct_reading_of_the_table():
+    """counts_toward_balance follows the kind, verification and integrity table."""
     valid = LedgerEntry("ac:1", "credit", "2026-08-10", "", 1, verified=True)
     invalid = LedgerEntry("ac:2", "credit", "2026-08-10", "", 1, verified=False)
     foreign = LedgerEntry("ac:3", "credit", "2026-08-10", "", 1, device="phone")

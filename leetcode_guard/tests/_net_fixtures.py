@@ -9,7 +9,7 @@ whole suite mocks exactly one thing: a two-argument function returning a
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, TypedDict, Unpack
 
 from leetcode_guard._leetcode import GraphQLResult
 
@@ -41,25 +41,32 @@ def fake_post(*results: GraphQLResult) -> FakePost:
     return FakePost(results)
 
 
-def problem_row(
-    slug: str,
-    *,
-    difficulty: str = "Easy",
-    ac_rate: float = 50.0,
-    paid_only: bool = False,
-    status: str | None = None,
-    frontend_id: str = "1",
-    topics: Sequence[str] = (),
-) -> dict[str, Any]:
-    """One row shaped exactly like the live ``questions`` array."""
+class RowOptions(TypedDict, total=False):
+    """The keyword options :func:`problem_row` takes; all are optional."""
+
+    difficulty: str
+    ac_rate: float
+    paid_only: bool
+    status: str | None
+    frontend_id: str
+    topics: Sequence[str]
+
+
+def problem_row(slug: str, **options: Unpack[RowOptions]) -> dict[str, Any]:
+    """One row shaped exactly like the live ``questions`` array.
+
+    Defaults: ``Easy``, 50% acceptance, free, never attempted, id ``"1"``,
+    no topics.
+    """
+    topics = options.get("topics", ())
     return {
-        "frontendQuestionId": frontend_id,
+        "frontendQuestionId": options.get("frontend_id", "1"),
         "title": slug.replace("-", " ").title(),
         "titleSlug": slug,
-        "difficulty": difficulty,
-        "acRate": ac_rate,
-        "paidOnly": paid_only,
-        "status": status,
+        "difficulty": options.get("difficulty", "Easy"),
+        "acRate": options.get("ac_rate", 50.0),
+        "paidOnly": options.get("paid_only", False),
+        "status": options.get("status"),
         "topicTags": [{"name": topic.title(), "slug": topic} for topic in topics],
     }
 

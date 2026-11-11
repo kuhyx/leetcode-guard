@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard import _push_trigger
 from leetcode_guard._ledger_io import Ledger, save_ledger
+from leetcode_guard._snapshot_local import LOCAL_SNAPSHOT_FILE
 
 if TYPE_CHECKING:
     import pytest
@@ -92,6 +93,7 @@ def _closure(roots: tuple[str, ...]) -> set[str]:
 
 
 def test_no_deciding_module_can_reach_the_snapshot():
+    """No deciding module reaches a snapshot module through any import chain."""
     reached = _closure(DECIDING)
 
     assert _push_trigger.__name__.rsplit(".", 1)[1] in reached
@@ -99,6 +101,7 @@ def test_no_deciding_module_can_reach_the_snapshot():
 
 
 def test_every_snapshot_module_is_named_in_the_boundary():
+    """Every snapshot, profile or coach module on disk is listed in the boundary."""
     on_disk = {
         path.stem
         for path in PACKAGE.glob("*.py")
@@ -115,8 +118,6 @@ def test_no_deciding_module_names_the_local_snapshot_file():
     ``DATA_DIR`` itself, so the sources of everything a decider reaches are
     searched for the file name and the constant too.
     """
-    from leetcode_guard._snapshot_local import LOCAL_SNAPSHOT_FILE
-
     for name in _closure(DECIDING):
         source = (PACKAGE / f"{name}.py").read_text(encoding="utf-8")
         assert LOCAL_SNAPSHOT_FILE.name not in source, name
@@ -124,12 +125,14 @@ def test_no_deciding_module_names_the_local_snapshot_file():
 
 
 def test_the_trigger_imports_only_constants():
+    """The push trigger imports nothing from the package but constants."""
     assert _imports("_push_trigger") == {"_constants"}
 
 
 def test_a_production_save_requests_a_push(
     monkeypatch: pytest.MonkeyPatch, data_dir: Path
 ):
+    """Saving the production ledger spawns exactly one snapshot push."""
     spawned: list[list[str]] = []
     monkeypatch.setattr(_push_trigger, "_spawn", spawned.append)
 
@@ -142,6 +145,7 @@ def test_a_production_save_requests_a_push(
 def test_a_demo_or_other_ledger_never_publishes(
     monkeypatch: pytest.MonkeyPatch, data_dir: Path
 ):
+    """Saving any other ledger file spawns no push."""
     spawned: list[list[str]] = []
     monkeypatch.setattr(_push_trigger, "_spawn", spawned.append)
 
@@ -153,6 +157,7 @@ def test_a_demo_or_other_ledger_never_publishes(
 def test_a_failed_save_requests_nothing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
+    """A save that fails to write spawns no push."""
     spawned: list[list[str]] = []
     monkeypatch.setattr(_push_trigger, "_spawn", spawned.append)
     blocker = tmp_path / "file"
@@ -181,6 +186,7 @@ def test_the_push_outlives_a_oneshot_via_systemd_run(monkeypatch: pytest.MonkeyP
 def test_without_systemd_run_the_child_is_spawned_directly(
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """Without systemd-run the push runs as a direct python child."""
     monkeypatch.setattr(_push_trigger.shutil, "which", lambda _name: None)
 
     assert _push_trigger.push_command()[1:] == [
@@ -193,6 +199,8 @@ def test_without_systemd_run_the_child_is_spawned_directly(
 def test_a_spawn_failure_is_a_warning_not_a_raise(
     monkeypatch: pytest.MonkeyPatch, data_dir: Path, caplog: pytest.LogCaptureFixture
 ):
+    """A spawn OSError is logged and reported as False, never raised."""
+
     def refuse(_command: list[str]) -> None:
         message = "no such file"
         raise OSError(message)
@@ -204,9 +212,12 @@ def test_a_spawn_failure_is_a_warning_not_a_raise(
 
 
 def test_the_real_spawn_detaches(monkeypatch: pytest.MonkeyPatch):
+    """The real spawn starts the push in a new session."""
     seen: dict[str, object] = {}
 
     class FakePopen:
+        """Popen stand-in that records the command and keyword arguments."""
+
         def __init__(self, command: list[str], **kwargs: object) -> None:
             seen["command"] = command
             seen.update(kwargs)

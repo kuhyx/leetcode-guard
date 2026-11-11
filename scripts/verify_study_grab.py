@@ -148,7 +148,7 @@ def _pump(guard: LeetcodeGuard, ticks: int = 2) -> None:
 
 def _holds_grab(guard: LeetcodeGuard) -> bool:
     """Gatelock's own answer, rather than a reimplementation that could drift."""
-    return bool(guard._lock.recovery.holds_grab())
+    return bool(guard.lock.recovery.holds_grab())
 
 
 def _check(results: list[bool], label: str, *, actual: bool, expected: bool) -> None:
@@ -174,7 +174,7 @@ def main() -> int:
     results: list[bool] = []
     try:
         _pump(guard)
-        if guard._run.config.resolved_grab() != "global":
+        if guard.run_state.config.resolved_grab() != "global":
             print("  [FAIL] this is not a production lock; nothing to prove")
             return 1
 
@@ -182,7 +182,7 @@ def main() -> int:
             results, "the lock holds the grab", actual=_holds_grab(guard), expected=True
         )
 
-        guard._open_problem(PROBLEM_URL)
+        guard.open_problem(PROBLEM_URL)
         _pump(guard)
         # The feature rests on this: while held, the browser gets no keystrokes.
         _check(
@@ -207,7 +207,7 @@ def main() -> int:
             expected=True,
         )
 
-        guard._back_to_lock()
+        guard.back_to_lock()
         _pump(guard)
         _check(
             results,
@@ -238,7 +238,7 @@ def _surfaces_mapped(guard: LeetcodeGuard) -> bool:
     recovery path sets override-redirect *after* mapping, so a surface revived
     that way can come back window-manager-managed, on the wrong monitor.
     """
-    surfaces = guard._lock.surfaces
+    surfaces = guard.lock.surfaces
     for info in surfaces.infos():
         surface = surfaces._surfaces.get(info.output_name)
         if surface is None or not surface.window.winfo_ismapped():

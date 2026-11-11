@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from typing import TYPE_CHECKING
 
@@ -34,6 +35,7 @@ if TYPE_CHECKING:
 
 
 def test_a_credit_is_keyed_on_the_submission_id(hmac_key: Path):
+    """A credit's id is ac:<submission id>, worth 1, and signed."""
     entry = credit_entry(submission("12345"), day=MONDAY, now=NOW, key_file=hmac_key)
 
     assert entry.entry_id == "ac:12345"
@@ -45,6 +47,7 @@ def test_a_credit_is_keyed_on_the_submission_id(hmac_key: Path):
 
 
 def test_a_charge_costs_what_the_day_costs(hmac_key: Path):
+    """A charge costs 1 on a weekday and 2 on a weekend."""
     weekday = charge_entry(MONDAY, now=NOW, key_file=hmac_key)
     weekend = charge_entry(SATURDAY, now=NOW, key_file=hmac_key)
 
@@ -55,12 +58,14 @@ def test_a_charge_costs_what_the_day_costs(hmac_key: Path):
 
 
 def test_a_charge_records_why_the_day_was_settled(hmac_key: Path):
+    """A charge records its source, e.g. the escape hatch."""
     entry = charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key)
 
     assert entry.detail["source"] == SOURCE_ESCAPE
 
 
 def test_seen_and_bootstrap_markers_are_worth_nothing(hmac_key: Path):
+    """Seen and bootstrap markers carry amount 0."""
     seen = seen_entry(submission("9"), day=MONDAY, now=NOW, key_file=hmac_key)
     boot = bootstrap_entry(day=MONDAY, now=NOW, seeded=20, key_file=hmac_key)
 
@@ -79,6 +84,7 @@ def test_a_seen_marker_shares_the_credit_id_so_it_blocks_harvesting(hmac_key: Pa
 
 
 def test_the_signature_covers_every_field_that_matters(hmac_key: Path):
+    """The signed payload holds exactly the meaningful fields."""
     entry = credit_entry(submission("1"), day=MONDAY, now=NOW, key_file=hmac_key)
     payload = entry_payload(entry)
 
@@ -106,29 +112,22 @@ def test_the_signature_covers_every_field_that_matters(hmac_key: Path):
     ],
 )
 def test_any_mutation_breaks_the_signature(hmac_key: Path, mutation: dict):
+    """Changing any signed field fails verification."""
     entry = credit_entry(submission("1"), day=MONDAY, now=NOW, key_file=hmac_key)
-    fields = {
-        "entry_id": entry.entry_id,
-        "kind": entry.kind,
-        "day": entry.day,
-        "created_at": entry.created_at,
-        "amount": entry.amount,
-        "device": entry.device,
-        "detail": dict(entry.detail),
-        "signature": entry.signature,
-    }
-    fields.update(mutation)
+    tampered = replace(entry, detail=dict(entry.detail), verified=False, **mutation)
 
-    assert not verify(LedgerEntry(**fields), key_file=hmac_key)
+    assert not verify(tampered, key_file=hmac_key)
 
 
 def test_an_unsigned_entry_never_verifies(hmac_key: Path):
+    """An entry without a signature never verifies."""
     assert not verify(
         LedgerEntry("ac:1", CREDIT, "2026-08-10", "", 1), key_file=hmac_key
     )
 
 
 def test_signing_without_a_key_yields_no_signature(missing_key: Path):
+    """Signing with a missing key leaves the entry unsigned."""
     entry = sign(LedgerEntry("ac:1", CREDIT, "2026-08-10", "", 1), key_file=missing_key)
 
     assert entry.signature is None
@@ -144,6 +143,7 @@ def test_key_available_separates_a_broken_key_from_a_forgery(
 
 
 def test_json_round_trip(hmac_key: Path):
+    """An entry survives to_json then from_json intact."""
     entry = credit_entry(
         submission("77", "add-two"), day=MONDAY, now=NOW, key_file=hmac_key
     )
@@ -172,10 +172,12 @@ def test_json_round_trip(hmac_key: Path):
     ],
 )
 def test_unusable_stored_rows_parse_to_none(raw: object):
+    """Malformed stored rows parse to None instead of raising."""
     assert from_json(raw) is None
 
 
 def test_missing_optional_fields_get_safe_defaults():
+    """Absent optional fields default to empty values."""
     entry = from_json(
         {"entry_id": "a", "kind": "credit", "day": "2026-08-10", "amount": 1}
     )
@@ -188,6 +190,7 @@ def test_missing_optional_fields_get_safe_defaults():
 
 
 def test_a_non_dict_detail_becomes_empty():
+    """A non-dict detail parses as an empty dict."""
     entry = from_json(
         {
             "entry_id": "a",
@@ -203,6 +206,7 @@ def test_a_non_dict_detail_becomes_empty():
 
 
 def test_detail_values_are_coerced_to_strings():
+    """Detail values are stored as strings."""
     entry = from_json(
         {
             "entry_id": "a",
@@ -218,6 +222,7 @@ def test_detail_values_are_coerced_to_strings():
 
 
 def test_a_non_string_signature_is_dropped():
+    """A non-string hmac parses as no signature."""
     entry = from_json(
         {"entry_id": "a", "kind": "credit", "day": "2026-08-10", "amount": 1, "hmac": 7}
     )
@@ -227,6 +232,7 @@ def test_a_non_string_signature_is_dropped():
 
 
 def test_the_day_stamped_on_a_credit_is_the_local_day_passed_in(hmac_key: Path):
+    """A credit's day is the day passed in, not derived from now."""
     entry = credit_entry(
         submission("1"), day=date(2026, 12, 31), now=NOW, key_file=hmac_key
     )

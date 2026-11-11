@@ -13,6 +13,7 @@ from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard.tests._guard_factories import (
     UNVERIFIABLE,
     create_guard,
+    guard_with_fresh_solves,
     probe_of,
 )
 from leetcode_guard.tests._ledger_fixtures import MONDAY
@@ -26,16 +27,17 @@ def test_demo_arms_with_a_local_grab_and_leaves_vt_alone(tmp_path: Path):
     lost, so demo is the default and it is genuinely weaker."""
     guard, _ = create_guard(tmp_path, demo_mode=True)
 
-    assert guard._run.config.resolved_grab() == "local"
-    assert guard._run.config.resolved_disable_vt() is False
-    assert guard._run.config.resolved_overrideredirect() is True
+    assert guard.run_state.config.resolved_grab() == "local"
+    assert guard.run_state.config.resolved_disable_vt() is False
+    assert guard.run_state.config.resolved_overrideredirect() is True
 
 
 def test_production_arms_with_a_global_grab_and_disables_vt(tmp_path: Path):
+    """Production mode grabs input globally and disables VT switching."""
     guard, _ = create_guard(tmp_path, demo_mode=False)
 
-    assert guard._run.config.resolved_grab() == "global"
-    assert guard._run.config.resolved_disable_vt() is True
+    assert guard.run_state.config.resolved_grab() == "global"
+    assert guard.run_state.config.resolved_disable_vt() is True
 
 
 def test_the_arbiter_rank_sits_between_diet_guard_and_screen_locker(tmp_path: Path):
@@ -43,7 +45,7 @@ def test_the_arbiter_rank_sits_between_diet_guard_and_screen_locker(tmp_path: Pa
     and force a re-pin across three live consumers."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._run.config.rank == 150
+    assert guard.run_state.config.rank == 150
 
 
 def test_overrideredirect_stays_on_even_in_demo(tmp_path: Path):
@@ -51,16 +53,16 @@ def test_overrideredirect_stays_on_even_in_demo(tmp_path: Path):
     would not be testing the real window at all."""
     guard, _ = create_guard(tmp_path, demo_mode=True)
 
-    assert guard._run.config.resolved_overrideredirect() is True
+    assert guard.run_state.config.resolved_overrideredirect() is True
 
 
 def test_colours_are_gatelocks_defaults_not_overrides(tmp_path: Path):
     """LockConfig's own defaults *are* the unified design system."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._run.config.palette.bg == "#211D1B"
-    assert guard._run.config.palette.accent == "#B8862E"
-    assert guard._run.config.palette.on_fill == "#211D1B"
+    assert guard.run_state.config.palette.bg == "#211D1B"
+    assert guard.run_state.config.palette.accent == "#B8862E"
+    assert guard.run_state.config.palette.on_fill == "#211D1B"
 
 
 def test_a_first_run_seeds_without_writing_a_charge(tmp_path: Path, hmac_key: Path):
@@ -79,15 +81,16 @@ def test_a_first_run_seeds_without_writing_a_charge(tmp_path: Path, hmac_key: Pa
     assert ledger.has("ac:old-1")
     assert ledger.entries["ac:old-1"].kind == "seen"
     assert not ledger.has(f"charge:{MONDAY.isoformat()}")
-    assert guard._decision().balance.available == 0
+    assert guard.decision().balance.available == 0
 
 
 def test_the_day_after_seeding_gates_normally(tmp_path: Path, hmac_key: Path):
+    """Once seeded, a day with no fresh solve stays locked."""
     guard, _ = create_guard(
         tmp_path, probe=probe_of("old-1", "old-2"), key_file=hmac_key, seeded=True
     )
 
-    assert guard._decision().locked
+    assert guard.decision().locked
 
 
 def test_fresh_solves_unlock(tmp_path: Path, hmac_key: Path):
@@ -98,21 +101,15 @@ def test_fresh_solves_unlock(tmp_path: Path, hmac_key: Path):
     -- that deferral is a loan, so the first solve back pays off Friday and the
     second buys today.
     """
-    guard, _ = create_guard(
-        tmp_path,
-        probe=probe_of("old-1"),
-        poll_probe=probe_of("brand-new", "also-new", "old-1"),
-        key_file=hmac_key,
-        seeded=True,
-    )
-    assert guard._decision().locked
+    guard = guard_with_fresh_solves(tmp_path, hmac_key)
+    assert guard.decision().locked
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
     ledger = load_ledger(tmp_path / "ledger.json", key_file=hmac_key)
     assert ledger.entries["ac:brand-new"].kind == "credit"
     assert ledger.has(f"charge:{MONDAY.isoformat()}")
-    assert not guard._decision().locked
+    assert not guard.decision().locked
 
 
 def test_an_unverifiable_poll_never_unlocks_and_never_mints(
@@ -127,23 +124,24 @@ def test_an_unverifiable_poll_never_unlocks_and_never_mints(
         seeded=True,
     )
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
-    assert guard._decision().locked
-    assert guard._poller.state.consecutive_unverifiable == 1
+    assert guard.decision().locked
+    assert guard.poller.state.consecutive_unverifiable == 1
 
 
 def test_consecutive_failures_accumulate_then_reset(tmp_path: Path, hmac_key: Path):
+    """Unverifiable polls count up, and one good poll resets the count."""
     guard, _ = create_guard(
         tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, key_file=hmac_key
     )
 
-    guard._on_poll_result(UNVERIFIABLE)
-    guard._on_poll_result(UNVERIFIABLE)
-    assert guard._poller.state.consecutive_unverifiable == 2
+    guard.on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
+    assert guard.poller.state.consecutive_unverifiable == 2
 
-    guard._on_poll_result(probe_of("fresh"))
-    assert guard._poller.state.consecutive_unverifiable == 0
+    guard.on_poll_result(probe_of("fresh"))
+    assert guard.poller.state.consecutive_unverifiable == 0
 
 
 class _FakeSurface:

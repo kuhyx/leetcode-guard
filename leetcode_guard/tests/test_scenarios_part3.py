@@ -100,6 +100,7 @@ def test_a_thursday_back_from_a_week_away_costs_its_plain_price(
 
 
 def test_one_solve_on_a_surcharged_weekday_still_locks(hmac_key: Path, debt_starts):
+    """With debt outstanding, one solve on a surcharged weekday is not enough."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
     solve(ledger, 1, day=NEXT_FRIDAY, key_file=hmac_key)
@@ -113,6 +114,7 @@ def test_one_solve_on_a_surcharged_weekday_still_locks(hmac_key: Path, debt_star
 def test_two_solves_on_a_surcharged_weekday_unlock_and_repay_one(
     tmp_path: Path, hmac_key: Path, debt_starts
 ):
+    """Two solves on a surcharged Friday unlock it and repay one credit of debt."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
     solve(ledger, 2, day=NEXT_FRIDAY, key_file=hmac_key)
@@ -181,6 +183,7 @@ def test_paying_one_extra_a_day_gets_back_on_track_and_the_price_drops(
 
 
 def test_a_free_day_inside_the_gap_is_not_owed(hmac_key: Path, debt_starts):
+    """A free day inside the missed gap is not counted as owed."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
     freedays.mark(SATURDAY, now=THURSDAY)
@@ -194,6 +197,7 @@ def test_a_free_day_inside_the_gap_is_not_owed(hmac_key: Path, debt_starts):
 def test_a_free_day_today_pauses_the_debt_without_repaying_it(
     hmac_key: Path, debt_starts
 ):
+    """A free day today unlocks without a charge and leaves the debt untouched."""
     debt_starts(MONDAY)
     ledger = a_week_away(hmac_key)
     freedays.mark(NEXT_THURSDAY, now=THURSDAY)

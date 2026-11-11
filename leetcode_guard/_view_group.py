@@ -25,33 +25,33 @@ class FrameGroup:
     """
 
     def __init__(self) -> None:
-        self._frames: dict[str, tk.Misc] = {}
+        self.frames: dict[str, tk.Misc] = {}
         self.views: dict[str, Any] = {}
         """The guard view built inside each container, keyed the same way."""
 
     def add(self, output_name: str, frame: tk.Misc) -> None:
         """Register one surface's container."""
-        self._frames[output_name] = frame
+        self.frames[output_name] = frame
 
     def discard(self, output_name: str) -> None:
         """Forget a surface that has gone away."""
-        self._frames.pop(output_name, None)
+        self.frames.pop(output_name, None)
 
     def clear(self) -> None:
         """Forget every surface."""
-        self._frames.clear()
+        self.frames.clear()
 
     def get(self, output_name: str) -> tk.Misc | None:
         """One surface's container, or ``None``."""
-        return self._frames.get(output_name)
+        return self.frames.get(output_name)
 
     @property
     def names(self) -> tuple[str, ...]:
         """Which outputs currently carry a surface."""
-        return tuple(self._frames)
+        return tuple(self.frames)
 
     def __len__(self) -> int:
-        return len(self._frames)
+        return len(self.frames)
 
     def __iter__(self) -> Iterator[tk.Misc]:
-        return iter(self._frames.values())
+        return iter(self.frames.values())

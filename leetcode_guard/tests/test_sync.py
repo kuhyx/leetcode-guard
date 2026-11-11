@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from crdt_sync import GitHubSyncError, Record
+from crdt_sync import GitHubSyncError, Hlc, Record
 
 from leetcode_guard._ledger import LedgerEntry, to_json
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
@@ -56,10 +56,12 @@ def fake_sync_log(monkeypatch, merged: dict | None = None, error=None) -> dict:
 
 
 def test_a_missing_token_disables_sync_without_complaint(tmp_path: Path):
+    """A missing token file reads as no token, so sync is off."""
     assert read_sync_token(tmp_path / "absent") is None
 
 
 def test_an_empty_token_is_refused(tmp_path: Path, caplog):
+    """A whitespace-only token file is treated as no token."""
     path = tmp_path / "sync_token"
     path.write_text("   \n", encoding="utf-8")
 
@@ -68,6 +70,7 @@ def test_an_empty_token_is_refused(tmp_path: Path, caplog):
 
 
 def test_an_unreadable_token_is_refused(tmp_path: Path):
+    """A token path that cannot be read as a file yields no token."""
     path = tmp_path / "sync_token"
     path.mkdir()
 
@@ -75,6 +78,7 @@ def test_an_unreadable_token_is_refused(tmp_path: Path):
 
 
 def test_a_token_is_read_and_never_logged(tmp_path: Path, caplog):
+    """The token value is returned stripped and never appears in any log record."""
     path = tmp_path / "sync_token"
     path.write_text("ghp_secretvalue\n", encoding="utf-8")
 
@@ -110,6 +114,7 @@ def test_the_clock_stamp_is_derived_from_the_entry_not_the_wall_clock(hmac_key: 
 
 
 def test_an_unparsable_created_at_still_gets_a_deterministic_stamp(caplog):
+    """A bad created_at gets a zero wall-time stamp and a warning."""
     ledger = Ledger()
     append(ledger, [LedgerEntry("ac:1", "credit", "2026-08-10", "not-a-time", 1)])
 
@@ -121,6 +126,7 @@ def test_an_unparsable_created_at_still_gets_a_deterministic_stamp(caplog):
 
 
 def test_records_round_trip_back_into_entries(hmac_key: Path):
+    """Converting a ledger to records and back keeps every entry id."""
     ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
 
     restored = entries_from_records(records_from_ledger(ledger))
@@ -140,6 +146,7 @@ def test_a_tombstoned_record_is_not_imported(hmac_key: Path):
 
 
 def test_a_record_with_no_payload_is_skipped(caplog):
+    """A record without an entry field imports nothing."""
     log = {"x": Record(id="x", fields={})}
 
     with caplog.at_level(logging.WARNING):
@@ -147,8 +154,7 @@ def test_a_record_with_no_payload_is_skipped(caplog):
 
 
 def test_a_record_that_is_not_an_entry_is_skipped(caplog):
-    from crdt_sync import Hlc
-
+    """A record whose payload is not a ledger entry imports nothing."""
     log = {"x": Record(id="x", fields={"entry": ({"junk": 1}, Hlc(0, 0, "pc"))})}
 
     with caplog.at_level(logging.WARNING):
@@ -156,6 +162,7 @@ def test_a_record_that_is_not_an_entry_is_skipped(caplog):
 
 
 def test_no_token_means_sync_is_simply_off(tmp_path: Path, hmac_key: Path):
+    """Without a token sync reports it did not push and says why."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(1, day=MONDAY, key_file=hmac_key))
 
@@ -168,6 +175,7 @@ def test_no_token_means_sync_is_simply_off(tmp_path: Path, hmac_key: Path):
 def test_a_successful_sync_reports_what_it_did(
     tmp_path: Path, hmac_key: Path, monkeypatch
 ):
+    """A successful sync reports the push, the record count and its target."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(2, day=MONDAY, key_file=hmac_key))
     seen = fake_sync_log(monkeypatch)
@@ -198,8 +206,7 @@ def test_a_github_failure_is_reported_not_raised(
 def test_remote_entries_are_merged_into_the_local_ledger(
     tmp_path: Path, hmac_key: Path, monkeypatch
 ):
-    from crdt_sync import Hlc
-
+    """Entries only the remote has are saved into the local ledger."""
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(1, day=MONDAY, key_file=hmac_key))
     remote_entry = LedgerEntry(

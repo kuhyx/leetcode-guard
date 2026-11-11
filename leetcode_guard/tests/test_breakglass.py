@@ -38,6 +38,7 @@ def test_production_does_not_send_the_user_at_a_key_it_disabled():
 
 
 def test_demo_offers_the_console_route_because_vt_switching_still_works():
+    """Demo mode keeps VT switching, so it offers the Ctrl+Alt+F2 console route."""
     lines = breakglass_lines(_DEMO)
     text = "\n".join(lines)
 
@@ -47,6 +48,7 @@ def test_demo_offers_the_console_route_because_vt_switching_still_works():
 
 
 def test_both_modes_give_the_command_that_always_works():
+    """Both production and demo list the always-working stop command."""
     for config in (_PRODUCTION, _DEMO):
         assert f"{g.PROMPT} {STOP_COMMAND}" in breakglass_lines(config)
 
@@ -61,6 +63,7 @@ def test_production_warns_that_restoring_vt_clears_other_xkb_options():
 
 
 def test_every_line_is_non_empty_and_renderable():
+    """Every break-glass line in both modes has visible text."""
     for config in (_PRODUCTION, _DEMO):
         lines = breakglass_lines(config)
         assert lines

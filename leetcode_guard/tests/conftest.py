@@ -20,10 +20,16 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+import freedays
+from freedays import _api as freedays_api
 import pytest
 import requests
 
+from leetcode_guard import _constants, _focus, _gate, _morning_session
+import leetcode_guard._cli_commands as cli_commands
 import leetcode_guard._leetcode as leetcode_module
+import leetcode_guard._lock as lock_module
+from leetcode_guard.tests._ledger_fixtures import make_hmac_key
 from leetcode_guard.tests._tk_stub import TK_MODULES, fake_gatelock_widgets
 
 if TYPE_CHECKING:
@@ -33,11 +39,11 @@ if TYPE_CHECKING:
 class _BlockedSession:
     """Stands in for :class:`requests.Session` and refuses to do anything."""
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
         self.headers: dict[str, str] = {}
         self.cookies = requests.cookies.RequestsCookieJar()
 
-    def mount(self, *args: object, **kwargs: object) -> None:
+    def mount(self, *_args: object, **_kwargs: object) -> None:
         """Accept adapter registration without doing anything.
 
         ``crdt_sync._http`` mounts a retry adapter while *building* a session,
@@ -46,7 +52,8 @@ class _BlockedSession:
         :meth:`post`, where a test actually tries to reach the network.
         """
 
-    def post(self, *args: object, **kwargs: object) -> object:
+    def post(self, *_args: object, **_kwargs: object) -> object:
+        """Fail the test: it reached for the network instead of a fake."""
         message = (
             "a test tried to reach the network; inject a fake PostFn "
             "(see leetcode_guard.tests._net_fixtures)"
@@ -74,8 +81,6 @@ def _no_live_progress(monkeypatch: pytest.MonkeyPatch) -> None:
     ``--sync`` and ``--status --by`` make it inline. Tests about the fetch
     itself rebind it explicitly.
     """
-    import leetcode_guard._cli_commands as cli_commands
-
     monkeypatch.setattr(cli_commands, "fetch_live_progress", lambda: None)
 
 
@@ -94,8 +99,6 @@ def _block_real_tk(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         module = importlib.import_module(name)
         monkeypatch.setattr(module, "tk", fake, raising=True)
     fake_gatelock_widgets(monkeypatch, fake)
-
-    import leetcode_guard._lock as lock_module
 
     monkeypatch.setattr(lock_module, "GateRoot", MagicMock(), raising=True)
     monkeypatch.setattr(
@@ -129,8 +132,6 @@ def _no_morning_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     on the enforce path a missing file inside 07:00-11:00 is retried for 30
     real seconds, which a test running in that window would silently pay.
     """
-    from leetcode_guard import _morning_session
-
     monkeypatch.setattr(_morning_session, "MORNING_RETRY_SECONDS", 0.0, raising=True)
 
 
@@ -143,13 +144,11 @@ def _no_free_days_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     suite. Tests that are *about* free days mark one into this redirected
     pool.
     """
-    import freedays._api
-
     # Built once: the projection tests ask is_free_day about ~700k days, and
     # rebuilding this (frozen, side-effect-free) bundle per call was a large
     # share of the suite's CI time.
     isolated = freedays.Paths.under(tmp_path / "freedays")
-    monkeypatch.setattr(freedays._api, "resolve_paths", lambda paths: paths or isolated)
+    monkeypatch.setattr(freedays_api, "resolve_paths", lambda paths: paths or isolated)
 
 
 @pytest.fixture(autouse=True)
@@ -159,8 +158,6 @@ def _no_focus_project_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     A live project would stand the gate down in every scenario of this suite.
     Tests about focus days replace ``_focus.stands_down`` themselves.
     """
-    from leetcode_guard import _focus
-
     monkeypatch.setattr(_focus, "stands_down", lambda *_a, **_k: False)
     monkeypatch.setattr(_focus, "project_name", lambda _day: "Test project")
 
@@ -174,8 +171,6 @@ def hmac_key(tmp_path: Path) -> Path:
     tests independent of a root-owned file *and* stops them producing entries
     that would verify against the live production key.
     """
-    from leetcode_guard.tests._ledger_fixtures import make_hmac_key
-
     return make_hmac_key(tmp_path)
 
 
@@ -203,8 +198,6 @@ def gate_starts(monkeypatch: pytest.MonkeyPatch):
 
     Counterpart to ``_gate_in_force``, which switches it off everywhere else.
     """
-    from leetcode_guard import _constants, _gate
-
     monkeypatch.setattr(_gate, "GATE_START_DATE", _constants.GATE_START_DATE)
     return _constants.GATE_START_DATE
 

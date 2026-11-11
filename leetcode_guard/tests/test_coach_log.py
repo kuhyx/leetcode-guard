@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 
 def write_log(directory: Path, name: str, *lines: object) -> Path:
+    """Write a JSONL session log, dumping non-string lines as JSON."""
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / name
     path.write_text(
@@ -31,6 +32,7 @@ def write_log(directory: Path, name: str, *lines: object) -> Path:
 
 
 def test_a_missing_directory_is_a_known_empty_coach(tmp_path: Path):
+    """A missing sessions dir reads as a coach with no problems and no retests."""
     coach = read_coach(tmp_path / "absent")
 
     assert coach is not None
@@ -39,6 +41,7 @@ def test_a_missing_directory_is_a_known_empty_coach(tmp_path: Path):
 
 
 def test_the_default_directory_is_redirected(tmp_path: Path):
+    """The default sessions dir points into the test tmp dir and reads empty."""
     assert _coach_log.COACH_SESSIONS_DIR.is_relative_to(tmp_path)
     coach = read_coach()
     assert coach is not None
@@ -46,6 +49,7 @@ def test_the_default_directory_is_redirected(tmp_path: Path):
 
 
 def test_a_full_session_is_summarised(tmp_path: Path):
+    """A complete session yields its problem row and cluster progress."""
     write_log(
         tmp_path,
         "2026-10-23-missing-number.jsonl",
@@ -86,6 +90,7 @@ def test_a_full_session_is_summarised(tmp_path: Path):
 
 
 def test_code_before_any_req_is_recorded_as_such(tmp_path: Path):
+    """Code logged before the requirements step records req_before_code False."""
     path = write_log(
         tmp_path,
         "2026-10-24-single-number.jsonl",
@@ -104,6 +109,7 @@ def test_code_before_any_req_is_recorded_as_such(tmp_path: Path):
 
 
 def test_no_code_yet_leaves_req_before_code_unknown(tmp_path: Path):
+    """Without a code event req_before_code stays None."""
     path = write_log(tmp_path, "2026-10-24-x.jsonl", {"event": "req"})
 
     problem = read_session(path)
@@ -113,6 +119,7 @@ def test_no_code_yet_leaves_req_before_code_unknown(tmp_path: Path):
 
 
 def test_a_name_without_a_date_keeps_the_whole_stem(tmp_path: Path):
+    """An undated file name becomes the slug with no day."""
     path = write_log(tmp_path, "two-sum.jsonl", {"event": "req"})
 
     problem = read_session(path)
@@ -122,6 +129,7 @@ def test_a_name_without_a_date_keeps_the_whole_stem(tmp_path: Path):
 
 
 def test_a_dated_shape_with_an_impossible_date_keeps_the_whole_stem(tmp_path: Path):
+    """An impossible date prefix is not split off the slug."""
     path = write_log(tmp_path, "2026-13-45-x.jsonl", {"event": "req"})
 
     problem = read_session(path)
@@ -133,6 +141,7 @@ def test_a_dated_shape_with_an_impossible_date_keeps_the_whole_stem(tmp_path: Pa
 def test_unknown_lines_are_skipped_with_one_warning(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """Bad lines are skipped and summed into one warning per file."""
     path = write_log(
         tmp_path,
         "2026-10-23-a.jsonl",
@@ -157,6 +166,7 @@ def test_unknown_lines_are_skipped_with_one_warning(
 
 
 def test_a_blank_cluster_is_ignored(tmp_path: Path):
+    """An empty cluster name does not override a later real one."""
     path = write_log(
         tmp_path,
         "2026-10-23-a.jsonl",
@@ -173,6 +183,7 @@ def test_a_blank_cluster_is_ignored(tmp_path: Path):
 def test_an_unreadable_file_is_skipped(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """A session path that cannot be read is skipped with a warning."""
     path = tmp_path / "2026-10-23-a.jsonl"
     path.mkdir(parents=True)
 
@@ -186,6 +197,7 @@ def test_an_unreadable_file_is_skipped(
 
 
 def test_due_retests_come_from_the_coach(tmp_path: Path):
+    """A finished old session schedules its first retest."""
     write_log(
         tmp_path,
         "2026-01-02-missing-number.jsonl",
@@ -204,6 +216,8 @@ def test_due_retests_come_from_the_coach(tmp_path: Path):
 def test_a_failing_coach_derivation_is_unknown_with_a_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ):
+    """A crashing cluster derivation reports clusters unknown and warns."""
+
     def boom(_folder: Path) -> object:
         message = "clusters.json is broken"
         raise ValueError(message)

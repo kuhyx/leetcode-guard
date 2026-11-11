@@ -24,10 +24,12 @@ PUBLIC = ("104.16.1.1",)
 
 
 def all_reachable(_host: str, _port: int) -> bool:
+    """A connect probe where every anchor answers."""
     return True
 
 
 def none_reachable(_host: str, _port: int) -> bool:
+    """A connect probe where nothing answers."""
     return False
 
 
@@ -42,6 +44,7 @@ def test_a_dead_connection_is_our_problem():
 
 
 def test_a_working_connection_with_a_dead_leetcode_is_a_remote_outage():
+    """Anchors up but LeetCode's identity failing is a remote outage that unlocks."""
     diagnosis = classify(
         connect=all_reachable, resolve=lambda _h: PUBLIC, identity_ok=lambda: False
     )
@@ -69,6 +72,7 @@ def test_one_reachable_anchor_is_enough_to_prove_we_are_online():
     calls = {"n": 0}
 
     def one_works(_host: str, _port: int) -> bool:
+        """Answer only on the first anchor probed."""
         calls["n"] += 1
         return calls["n"] == 1
 
@@ -96,6 +100,7 @@ def test_a_locally_answered_name_is_tampering_not_an_outage(addresses, caplog):
 
 
 def test_a_name_that_does_not_resolve_at_all_is_tampering():
+    """A LeetCode name that resolves to nothing counts as local tampering."""
     diagnosis = classify(connect=all_reachable, resolve=lambda _h: ())
 
     assert diagnosis.verdict is NetworkVerdict.LOCAL_TAMPERED
@@ -114,6 +119,7 @@ def test_a_portal_on_a_public_address_is_an_acknowledged_gap():
 
 
 def test_an_unparsable_address_is_skipped_not_trusted(caplog):
+    """An unparsable address is logged and ignored, not taken as proof."""
     with caplog.at_level(logging.WARNING):
         diagnosis = classify(
             connect=all_reachable,
@@ -126,6 +132,7 @@ def test_an_unparsable_address_is_skipped_not_trusted(caplog):
 
 
 def test_a_mixed_answer_containing_a_private_address_is_tampering():
+    """One private address among public ones still counts as tampering."""
     diagnosis = classify(
         connect=all_reachable,
         resolve=lambda _h: ("104.16.1.1", "127.0.0.1"),
@@ -143,12 +150,16 @@ def test_the_identity_probe_is_optional():
 
 
 def test_online_is_never_our_fault():
+    """Neither ONLINE nor REMOTE_OUTAGE blames the local machine."""
     assert not NetworkVerdict.ONLINE.is_our_fault
     assert not NetworkVerdict.REMOTE_OUTAGE.is_our_fault
 
 
 def test_tcp_reachable_reports_failure_rather_than_raising(monkeypatch):
+    """A refused connection returns False instead of raising."""
+
     def refuse(*_args, **_kwargs):
+        """Refuse the connection."""
         message = "refused"
         raise OSError(message)
 
@@ -158,7 +169,11 @@ def test_tcp_reachable_reports_failure_rather_than_raising(monkeypatch):
 
 
 def test_tcp_reachable_reports_success(monkeypatch):
+    """A connection that opens returns True."""
+
     class FakeSocket:
+        """A context-manager socket that opens fine."""
+
         def __enter__(self):
             return self
 
@@ -174,7 +189,10 @@ def test_tcp_reachable_reports_success(monkeypatch):
 
 
 def test_resolve_host_returns_empty_on_failure(monkeypatch, caplog):
+    """A DNS failure resolves to no addresses and is logged."""
+
     def fail(*_args, **_kwargs):
+        """Fail the DNS lookup."""
         message = "no such host"
         raise OSError(message)
 
@@ -187,6 +205,7 @@ def test_resolve_host_returns_empty_on_failure(monkeypatch, caplog):
 
 
 def test_resolve_host_deduplicates_and_sorts(monkeypatch):
+    """Resolved addresses come back unique and sorted."""
     monkeypatch.setattr(
         "leetcode_guard._netcheck.socket.getaddrinfo",
         lambda *a, **k: [
@@ -200,12 +219,14 @@ def test_resolve_host_deduplicates_and_sorts(monkeypatch):
 
 
 def test_the_default_connect_probe_is_used_when_none_is_injected(monkeypatch):
+    """Without an injected probe, classify uses tcp_reachable."""
     monkeypatch.setattr("leetcode_guard._netcheck.tcp_reachable", lambda *a, **k: False)
 
     assert classify(resolve=lambda _h: PUBLIC).verdict is NetworkVerdict.LOCAL_OFFLINE
 
 
 def test_the_default_resolver_is_used_when_none_is_injected(monkeypatch):
+    """Without an injected resolver, classify uses resolve_host."""
     monkeypatch.setattr("leetcode_guard._netcheck.resolve_host", lambda _h: ())
 
     diagnosis = classify(connect=all_reachable)

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from gatelock import LockConfig
-
 from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import STOP_COMMAND
 from leetcode_guard._view import GuardView, build_guard_view
@@ -19,28 +17,13 @@ from leetcode_guard._view_group import FrameGroup
 from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import ProblemLine, ViewModel
-
-CONFIG = LockConfig()
-
-
-def model(**kwargs) -> ViewModel:
-    base = {
-        "headline": "Solve 1 LeetCode problem to unlock",
-        "balance_line": "Credits 0  |  Monday costs 1",
-        "status_line": "Watching...",
-        "notes": ("a note",),
-        "problems": (ProblemLine(label="1. Two Sum", url="https://x/"),),
-        "unlocked": False,
-        "show_escape": False,
-    }
-    base.update(kwargs)
-    return ViewModel(**base)
-
+from leetcode_guard.tests._view_fixtures import CONFIG, model
 
 # -- FrameGroup -----------------------------------------------------------
 
 
 def test_frame_group_add_get_discard_clear():
+    """A FrameGroup tracks frames by output name through add, get, discard and clear."""
     group = FrameGroup()
     frame = MagicMock()
 
@@ -59,6 +42,7 @@ def test_frame_group_add_get_discard_clear():
 
 
 def test_discarding_an_unknown_output_is_harmless():
+    """Discarding an output that was never added leaves the group empty, no error."""
     group = FrameGroup()
 
     group.discard("nope")
@@ -70,6 +54,7 @@ def test_discarding_an_unknown_output_is_harmless():
 
 
 def test_a_view_is_built_for_one_surface():
+    """One surface's view carries its output name, no escape button, one problem row."""
     view = build_guard_view(MagicMock(), CONFIG, model(), output_name="DP-0")
 
     assert isinstance(view, GuardView)
@@ -86,6 +71,7 @@ def test_an_empty_pool_gets_a_placeholder_rather_than_nothing():
 
 
 def test_the_escape_button_is_built_but_hidden_until_offered():
+    """With an escape hook but no offer, the escape button exists yet is unpacked."""
     view = build_guard_view(
         MagicMock(),
         CONFIG,
@@ -99,6 +85,7 @@ def test_the_escape_button_is_built_but_hidden_until_offered():
 
 
 def test_the_escape_button_stays_packed_when_offered():
+    """When the escape is offered, the escape button is never unpacked."""
     view = build_guard_view(
         MagicMock(),
         CONFIG,
@@ -187,6 +174,7 @@ def test_the_url_is_not_printed_beside_the_button(tk_mock):
 
 
 def test_an_empty_pool_still_gets_no_buttons():
+    """An empty pool shows only the placeholder label and no Open buttons."""
     view = build_guard_view(
         MagicMock(),
         CONFIG,
@@ -203,6 +191,7 @@ def test_an_empty_pool_still_gets_no_buttons():
 
 
 def test_the_breakglass_instructions_are_always_present(tk_mock):
+    """Every built view shows a label containing the break-glass stop command."""
     view = build_guard_view(MagicMock(), CONFIG, model(), output_name="DP-0")
 
     assert view.decor.breakglass is not None

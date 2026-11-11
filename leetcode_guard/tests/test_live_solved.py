@@ -14,6 +14,7 @@ from leetcode_guard.tests._net_fixtures import fake_post, status_result
 
 
 def test_an_accepted_status_is_reported_as_solved():
+    """An ac status counts as a solve from a signed-in, complete sweep."""
     post = fake_post(status_result("two-sum", "ac"))
 
     evidence = check_solved(post, ["two-sum"])
@@ -26,6 +27,7 @@ def test_an_accepted_status_is_reported_as_solved():
 
 
 def test_an_unsolved_status_is_checked_but_not_solved():
+    """A notac status is checked and signed in but not solved."""
     post = fake_post(status_result("two-sum", "notac"))
 
     evidence = check_solved(post, ["two-sum"])
@@ -82,6 +84,7 @@ def test_a_missing_envelope_is_silence_not_an_answer():
 
 
 def test_a_transport_error_leaves_the_problem_unchecked():
+    """A transport error leaves the problem unchecked and the session unknown."""
     post = fake_post(GraphQLResult(transport_error="down"))
 
     evidence = check_solved(post, ["two-sum"])
@@ -91,6 +94,7 @@ def test_a_transport_error_leaves_the_problem_unchecked():
 
 
 def test_a_graphql_error_leaves_the_problem_unchecked():
+    """A GraphQL error leaves the problem unchecked and the session unknown."""
     post = fake_post(GraphQLResult(errors=("nope",)))
 
     evidence = check_solved(post, ["two-sum"])
@@ -100,6 +104,7 @@ def test_a_graphql_error_leaves_the_problem_unchecked():
 
 
 def test_one_failure_does_not_discard_the_others():
+    """One failed request keeps the other answers but marks the sweep incomplete."""
     post = fake_post(
         status_result("solved", "ac"),
         GraphQLResult(transport_error="down"),
@@ -116,6 +121,7 @@ def test_one_failure_does_not_discard_the_others():
 
 
 def test_checking_nothing_asks_nothing():
+    """An empty slug list sends no request and returns empty evidence."""
     post = fake_post(status_result("x", "ac"))
 
     evidence = check_solved(post, [])
@@ -125,6 +131,7 @@ def test_checking_nothing_asks_nothing():
 
 
 def test_one_request_is_sent_per_problem():
+    """Each slug gets its own request, in order."""
     post = fake_post(status_result("a", "notac"))
 
     check_solved(post, ["a", "b", "c"])
@@ -133,6 +140,7 @@ def test_one_request_is_sent_per_problem():
 
 
 def test_parse_status_rejects_unusable_payloads():
+    """parse_status returns None for every malformed payload and the status otherwise."""
     assert parse_status("not-an-object") is None
     assert parse_status({}) is None
     assert parse_status({"question": "not-an-object"}) is None

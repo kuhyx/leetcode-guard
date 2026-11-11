@@ -7,18 +7,17 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._ledger_io import load_ledger
+import leetcode_guard._lock as lock_module
+from leetcode_guard.tests._blind_fixtures import (
+    blind_guard,
+    local_offline,
+    remote_outage,
+)
 from leetcode_guard.tests._guard_factories import UNVERIFIABLE, create_guard, probe_of
 from leetcode_guard.tests._ledger_fixtures import MONDAY
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-from leetcode_guard.tests.test_lock_part2 import (
-    blind_guard,
-    local_offline,
-    remote_outage,
-)
 
 
 def test_a_brief_blind_spell_does_not_trigger_classification(
@@ -31,14 +30,15 @@ def test_a_brief_blind_spell_does_not_trigger_classification(
     calls = {"n": 0}
 
     def diagnose():
+        """Count each classification and report the machine offline."""
         calls["n"] += 1
         return local_offline()
 
-    guard._deps.seams = replace(guard._deps.seams, diagnose=diagnose)
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.deps.seams = replace(guard.deps.seams, diagnose=diagnose)
+    guard.on_poll_result(UNVERIFIABLE)
 
     assert calls["n"] == 0
-    assert guard._outage.diagnosis is None
+    assert guard.outage.diagnosis is None
 
 
 def test_leetcodes_own_outage_settles_the_day_and_releases(
@@ -48,21 +48,21 @@ def test_leetcodes_own_outage_settles_the_day_and_releases(
     written explanation."""
     guard = blind_guard(tmp_path, hmac_key, remote_outage)
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
     ledger = load_ledger(tmp_path / "ledger.json", key_file=hmac_key)
     charge = ledger.entries[f"charge:{MONDAY.isoformat()}"]
     assert charge.detail["source"] == "leetcode-outage"
-    assert not guard._decision().locked
+    assert not guard.decision().locked
 
 
 def test_our_own_dead_network_keeps_the_lock_shut(tmp_path: Path, hmac_key: Path):
     """The bypass this closes: unplug the cable, wait, walk away free."""
     guard = blind_guard(tmp_path, hmac_key, local_offline)
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert guard._decision().locked
+    assert guard.decision().locked
     # No charge for *today*. The seeding run settled its own day (an earlier
     # one), and that entry is not what this test is about.
     assert f"charge:{MONDAY.isoformat()}" not in (
@@ -71,11 +71,12 @@ def test_our_own_dead_network_keeps_the_lock_shut(tmp_path: Path, hmac_key: Path
 
 
 def test_the_outage_reason_is_shown_on_the_lock(tmp_path: Path, hmac_key: Path):
+    """A classified outage puts its reason in the lock's notes."""
     guard = blind_guard(tmp_path, hmac_key, local_offline)
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert any(note.startswith(g.OFFLINE) for note in guard._model.notes)
+    assert any(note.startswith(g.OFFLINE) for note in guard.model.notes)
 
 
 def test_the_network_is_classified_once_not_every_tick(tmp_path: Path, hmac_key: Path):
@@ -84,14 +85,15 @@ def test_the_network_is_classified_once_not_every_tick(tmp_path: Path, hmac_key:
     calls = {"n": 0}
 
     def diagnose():
+        """Count each classification and report the machine offline."""
         calls["n"] += 1
         return local_offline()
 
     guard = blind_guard(tmp_path, hmac_key, diagnose)
 
-    guard._on_poll_result(UNVERIFIABLE)
-    guard._on_poll_result(UNVERIFIABLE)
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
     assert calls["n"] == 1
 
@@ -101,7 +103,7 @@ def test_the_queue_wait_can_be_skipped(tmp_path: Path):
     lockers rather than drawing over them."""
     guard, _ = create_guard(tmp_path, wait_turn=False)
 
-    assert guard._run.config.rank == 150
+    assert guard.run_state.config.rank == 150
 
 
 def test_an_outage_unlock_stops_the_poll_handler_early(tmp_path: Path, hmac_key: Path):
@@ -110,19 +112,20 @@ def test_an_outage_unlock_stops_the_poll_handler_early(tmp_path: Path, hmac_key:
     guard = blind_guard(tmp_path, hmac_key, remote_outage)
     guard.close()
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert guard._run.closed
+    assert guard.run_state.closed
 
 
 def test_a_remote_outage_with_writes_disabled_still_releases(tmp_path: Path):
+    """A remote outage releases even when ledger writes are off."""
     guard, _ = create_guard(
         tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, write_ledger=False
     )
-    guard._deps.seams = replace(guard._deps.seams, diagnose=remote_outage)
-    guard._poller.state.consecutive_unverifiable = 999
+    guard.deps.seams = replace(guard.deps.seams, diagnose=remote_outage)
+    guard.poller.state.consecutive_unverifiable = 999
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
     assert not (tmp_path / "ledger.json").exists()
 
@@ -131,10 +134,8 @@ def test_production_pushes_the_ledger_on_close(tmp_path: Path, hmac_key: Path):
     """Best-effort and last, so a sync failure can never abort teardown and
     leave the screen grabbed."""
     guard, _ = create_guard(tmp_path, key_file=hmac_key)
-    guard._deps.seams = replace(guard._deps.seams, sync_on_close=True)
+    guard.deps.seams = replace(guard.deps.seams, sync_on_close=True)
     pushed = {"n": 0}
-
-    import leetcode_guard._lock as lock_module
 
     original = lock_module.sync_quietly
     lock_module.sync_quietly = lambda *a, **k: pushed.__setitem__("n", pushed["n"] + 1)

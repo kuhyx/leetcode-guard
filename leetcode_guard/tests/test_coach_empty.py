@@ -31,12 +31,14 @@ NAMES = [
 
 
 def known_empty(tmp_path: Path) -> dict[str, Any]:
+    """Read the coach with no sessions dir and insist it is known."""
     coach = read_coach(tmp_path / "never-created")
     assert coach is not None
     return coach
 
 
 def test_no_sessions_dir_is_a_known_empty_coach(tmp_path: Path):
+    """A missing sessions dir yields an empty coach with every cluster listed."""
     coach = known_empty(tmp_path)
 
     assert coach["problems"] == []
@@ -45,12 +47,14 @@ def test_no_sessions_dir_is_a_known_empty_coach(tmp_path: Path):
 
 
 def test_an_empty_sessions_dir_is_the_same_known_empty_coach(tmp_path: Path):
+    """An empty sessions dir reads the same as a missing one."""
     (tmp_path / "sessions").mkdir()
 
     assert read_coach(tmp_path / "sessions") == known_empty(tmp_path)
 
 
 def test_every_cluster_starts_at_zero_with_its_problems_and_next(tmp_path: Path):
+    """Each cluster starts unsolved, lists its problems and points at the first."""
     clusters = known_empty(tmp_path)["clusters"]
 
     first = clusters["bit-cancellation"]
@@ -82,6 +86,7 @@ def test_every_cluster_starts_at_zero_with_its_problems_and_next(tmp_path: Path)
 def test_how_to_carries_the_commands_the_method_and_the_first_command(
     tmp_path: Path,
 ):
+    """The how_to block carries the commands, the method steps and the first command."""
     block = known_empty(tmp_path)["how_to"]
 
     assert block == how_to.block("bit-cancellation")
@@ -101,6 +106,7 @@ def test_how_to_carries_the_commands_the_method_and_the_first_command(
 
 
 def test_the_empty_fixture_is_what_the_exporter_writes(tmp_path: Path):
+    """The app's empty-coach fixture matches what the exporter really writes."""
     # The app's empty-state fixture is copied from this output, never typed:
     # the fixture once spelled a key the exporter does not emit (done/solved).
     fixture = json.loads((APP_FIXTURES / "snapshot_coach_empty.json").read_text())
@@ -111,6 +117,7 @@ def test_the_empty_fixture_is_what_the_exporter_writes(tmp_path: Path):
 def test_sessions_keep_the_cluster_problem_lists_and_add_the_retest_command(
     tmp_path: Path,
 ):
+    """A solved session advances its cluster and queues a re-test command."""
     for name in ("2026-01-02-missing-number.jsonl",):
         (tmp_path / name).write_text(
             '{"event": "code"}\n{"event": "postmortem"}\n', encoding="utf-8"
@@ -131,6 +138,7 @@ def test_sessions_keep_the_cluster_problem_lists_and_add_the_retest_command(
 def test_a_failing_session_reader_is_unknown_with_a_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ):
+    """A crashing session reader makes the coach unknown and logs why."""
     (tmp_path / "2026-01-02-x.jsonl").write_text("{}\n", encoding="utf-8")
 
     def boom(_path: Path) -> object:
@@ -146,6 +154,8 @@ def test_a_failing_session_reader_is_unknown_with_a_warning(
 def test_a_failing_cluster_file_drops_the_derived_blocks_not_the_coach(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ):
+    """A missing cluster file nulls the derived blocks but keeps the coach."""
+
     def boom(_path: Path | None = None) -> object:
         message = "clusters.json is gone"
         raise OSError(message)

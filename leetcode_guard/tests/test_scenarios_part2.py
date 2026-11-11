@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING
 from leetcode_guard import _glyphs as g
 from leetcode_guard._gate import GateState, decide
 from leetcode_guard._harvest import (
-    SeedStamp,
     commit_harvest,
     harvest,
     needs_seeding,
-    seed_ledger,
 )
 from leetcode_guard._ledger_io import Ledger, load_ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -24,14 +22,13 @@ from leetcode_guard.tests._ledger_fixtures import (
     ledger_with_credits,
     submission,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
+from leetcode_guard.tests._seed_fixtures import seed_monday
 from leetcode_guard.tests.test_scenarios import (
     run_day,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_an_unverifiable_first_probe_settles_nothing(tmp_path: Path, hmac_key: Path):
@@ -42,15 +39,7 @@ def test_an_unverifiable_first_probe_settles_nothing(tmp_path: Path, hmac_key: P
         status=ProbeStatus.UNVERIFIABLE, submissions=(), reason="cannot reach LeetCode"
     )
 
-    assert (
-        seed_ledger(
-            ledger,
-            blind,
-            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-            path=path,
-        )
-        == -1
-    )
+    assert seed_monday(ledger, blind, path, hmac_key) == -1
 
     assert ledger.entries == {}
     assert needs_seeding(ledger)
@@ -65,12 +54,7 @@ def test_an_already_seeded_ledger_is_never_rewritten(tmp_path: Path, hmac_key: P
     probe = SolveProbe(
         status=ProbeStatus.OK, submissions=(submission("old-1"),), reason="1 recent"
     )
-    seed_ledger(
-        ledger,
-        probe,
-        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-        path=path,
-    )
+    seed_monday(ledger, probe, path, hmac_key)
     before = path.read_bytes()
 
     assert not needs_seeding(ledger)
@@ -97,12 +81,7 @@ def test_a_freshly_seeded_lock_offers_a_way_out_at_t0(
     # defers its own day, so a *fresh* ledger would not arm at all.
     path = tmp_path / "ledger.json"
     ledger = Ledger()
-    seed_ledger(
-        ledger,
-        probe_of("old-1", "old-2"),
-        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-        path=path,
-    )
+    seed_monday(ledger, probe_of("old-1", "old-2"), path, hmac_key)
     guard, _ = create_guard(
         tmp_path,
         probe=probe_of("old-1", "old-2"),
@@ -110,20 +89,20 @@ def test_a_freshly_seeded_lock_offers_a_way_out_at_t0(
         now=datetime.combine(TUESDAY, NOW.timetz()),
     )
 
-    assert guard._decision().locked, "this scenario has to be a locked gate"
-    assert guard._model.problems, "a lock that names no problem cannot be satisfied"
+    assert guard.decision().locked, "this scenario has to be a locked gate"
+    assert guard.model.problems, "a lock that names no problem cannot be satisfied"
 
     opens = [
         call
         for call in tk_mock.Button.call_args_list
         if call.kwargs.get("text") == g.OPEN
     ]
-    assert len(opens) == len(guard._model.problems), (
+    assert len(opens) == len(guard.model.problems), (
         "every listed problem needs a control that opens it -- naming a problem "
         "the user cannot reach is what made the lock unsatisfiable"
     )
 
-    assert guard._should_offer_escape(), (
+    assert guard.should_offer_escape(), (
         "the hatch must be reachable at t=0; one that appears after ten minutes "
         "is not a safety valve during those ten minutes"
     )
@@ -136,11 +115,11 @@ def test_a_solve_from_before_the_lock_engaged_still_counts(
     morning solve is not wasted."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
-    seed_ledger(
+    seed_monday(
         ledger,
         SolveProbe(status=ProbeStatus.OK, submissions=(), reason="none"),
-        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-        path=path,
+        path,
+        hmac_key,
     )
     early = SolveProbe(
         status=ProbeStatus.OK,
@@ -171,6 +150,7 @@ def test_harvesting_twice_mints_nothing_the_second_time(tmp_path: Path, hmac_key
 
 
 def test_the_ledger_survives_a_round_trip_through_disk(tmp_path: Path, hmac_key: Path):
+    """A saved ledger reloads untampered and decides the next day the same."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
     run_day(ledger, MONDAY, path, hmac_key)

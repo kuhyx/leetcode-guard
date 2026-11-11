@@ -60,6 +60,7 @@ def test_starting_the_harvester_loads_no_snapshot_code():
 
 
 def _a_fresh_solve(monkeypatch: pytest.MonkeyPatch, data_dir: Path, key: Path) -> Path:
+    """Seed the ledger and stub LeetCode with one new accepted solve."""
     path = data_dir / "ledger.json"
     seeded_ledger(path, key)
     stub_client(monkeypatch, recent_ac_result([submission_row("9", "two-sum")]))
@@ -73,6 +74,7 @@ def test_a_harvest_still_credits_with_crdt_sync_unimportable(
     capsys: pytest.CaptureFixture[str],
     caplog: pytest.LogCaptureFixture,
 ):
+    """A harvest credits the solve even when crdt_sync cannot be imported."""
     path = _a_fresh_solve(monkeypatch, data_dir, hmac_key)
     monkeypatch.setitem(sys.modules, "crdt_sync", None)
     for name in SNAPSHOT_MODULES:
@@ -95,9 +97,11 @@ def test_a_harvest_still_credits_when_the_push_raises(
     hmac_key: Path,
     capsys: pytest.CaptureFixture[str],
 ):
+    """A harvest credits the solve even when the snapshot push raises."""
     _a_fresh_solve(monkeypatch, data_dir, hmac_key)
 
     def explode() -> object:
+        """Fail the push the way an unexpected bug would."""
         message = "boom"
         raise RuntimeError(message)
 

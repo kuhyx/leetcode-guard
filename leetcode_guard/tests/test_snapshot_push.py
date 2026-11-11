@@ -41,9 +41,12 @@ class FakeStore:
 
     def __init__(self, error: Exception | None = None) -> None:
         self.writes: list[tuple[str, str]] = []
+        self.messages: list[str] = []
         self.error = error
 
     def put_file_text(self, path: str, text: str, *, message: str) -> None:
+        """Record the write and its commit message, or raise the set error."""
+        self.messages.append(message)
         if self.error is not None:
             raise self.error
         self.writes.append((path, text))
@@ -51,6 +54,7 @@ class FakeStore:
 
 @pytest.fixture
 def quiet_timer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Report an enabled timer without asking systemd."""
     monkeypatch.setattr(
         _status_full,
         "gather_timer",
@@ -60,12 +64,14 @@ def quiet_timer(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def offline_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip the network profile refresh so the profile stays empty."""
     monkeypatch.setattr(
         _snapshot_push, "refresh_profile", lambda *, now, credit_count: None
     )
 
 
 def test_a_push_writes_one_text_leaf():
+    """A push writes the snapshot JSON to the single status leaf."""
     store = FakeStore()
 
     result = push_snapshot(
@@ -89,6 +95,7 @@ def test_a_push_writes_one_text_leaf():
 def test_a_failed_push_is_a_warning_not_a_raise(
     error: Exception, caplog: pytest.LogCaptureFixture
 ):
+    """Each kind of store failure becomes a warning and an unpushed result."""
     result = push_snapshot(BEAT, connect=lambda: FakeStore(error))
 
     assert not result.pushed
@@ -96,6 +103,8 @@ def test_a_failed_push_is_a_warning_not_a_raise(
 
 
 def test_a_failed_connect_is_a_warning_not_a_raise(caplog: pytest.LogCaptureFixture):
+    """A connect that raises becomes a warning and an unpushed result."""
+
     def connect():
         msg = "missing firebase.json"
         raise ConfigError(msg)
@@ -105,13 +114,14 @@ def test_a_failed_connect_is_a_warning_not_a_raise(caplog: pytest.LogCaptureFixt
 
 
 def test_the_default_connect_is_blocked_in_tests():
+    """Without an injected connect, the real Firebase connect is refused."""
     with pytest.raises(AssertionError, match="Firebase"):
         push_snapshot(BEAT)
 
 
-def test_gather_reads_everything_and_writes_no_ledger(
-    data_dir: Path, quiet_timer: None, offline_profile: None
-):
+@pytest.mark.usefixtures("quiet_timer", "offline_profile")
+def test_gather_reads_everything_and_writes_no_ledger(data_dir: Path):
+    """Gathering builds the full snapshot and never creates the ledger file."""
     now = datetime(2026, 8, 10, 12, 0, tzinfo=UTC)
 
     snap = gather_snapshot(now=now)
@@ -125,9 +135,9 @@ def test_gather_reads_everything_and_writes_no_ledger(
     assert not (data_dir / "ledger.json").exists()
 
 
-def test_push_quietly_pushes_the_gathered_snapshot(
-    quiet_timer: None, offline_profile: None
-):
+@pytest.mark.usefixtures("quiet_timer", "offline_profile")
+def test_push_quietly_pushes_the_gathered_snapshot():
+    """``push_quietly`` gathers a snapshot and pushes it."""
     store = FakeStore()
 
     result = push_quietly(connect=lambda: store)
@@ -139,6 +149,8 @@ def test_push_quietly_pushes_the_gathered_snapshot(
 def test_push_quietly_never_raises(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ):
+    """A gather that raises is caught, logged and reported as unpushed."""
+
     def explode(**_kwargs: object) -> dict[str, object]:
         message = "boom"
         raise RuntimeError(message)
@@ -154,6 +166,7 @@ def test_push_quietly_never_raises(
 def test_the_cli_prints_the_outcome(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
+    """``--push-snapshot`` prints the push outcome and exits 0."""
     monkeypatch.setattr(
         _snapshot_push,
         "push_quietly",
@@ -167,6 +180,7 @@ def test_the_cli_prints_the_outcome(
 def test_the_cli_exits_nonzero_on_failure(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
+    """A failed push prints the reason and exits 1."""
     monkeypatch.setattr(
         _snapshot_push,
         "push_quietly",

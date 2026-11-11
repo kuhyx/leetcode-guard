@@ -117,7 +117,7 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
                 re-taken. The caller is expected to put it on screen.
             now: Monotonic clock, injected so elapsed time is testable.
         """
-        self._lock = lock
+        self.lock = lock
         self._config = config
         self._on_fail_closed = on_fail_closed
         self._now = now
@@ -174,9 +174,9 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
 
         # Claim.grab_held goes false FIRST (fail closed): leisure-watch must
         # never read "held" for a grab that is already gone.
-        self._lock.report_grab_held(held=False)
+        self.lock.report_grab_held(held=False)
         try:
-            self._lock.root.grab_release()
+            self.lock.root.grab_release()
         except tk.TclError as exc:
             _logger.exception("could not release the global grab; rolling back")
             return self._rollback_suspend(exc, steps)
@@ -217,7 +217,7 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
             # `disable_vt_switching` returns False when setxkbmap is missing, and
             # claiming VT is locked down when it is not would be a lie the
             # break-glass text on screen repeats to the user.
-            mark_vt(self._lock, disabled=disable_vt_switching())
+            mark_vt(self.lock, disabled=disable_vt_switching())
             self._vt_restored = False
             steps.append("vt-disabled")
 

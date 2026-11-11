@@ -12,75 +12,24 @@ harvested the next morning carries the next day's key.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 import json
 from typing import TYPE_CHECKING
 
 from leetcode_guard._ledger import LedgerEntry, sign
 from leetcode_guard._ledger_entries import charge_entry, credit_entry
-from leetcode_guard._ledger_io import Ledger, append, save_ledger
-from leetcode_guard._submissions import AcSubmission
 from leetcode_guard.solved_today import solved_today
+from leetcode_guard.tests._solved_today_fixtures import (
+    NOW,
+    stamped_submission,
+    write_credit,
+    write_ledger,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import pytest
-
-NOW = datetime.now(tz=UTC).astimezone()
-
-
-def _submission(submission_id: str, *, at: datetime) -> AcSubmission:
-    """An accepted submission stamped at a chosen moment.
-
-    Args:
-        submission_id: LeetCode's submission id.
-        at: When it was submitted.
-
-    Returns:
-        The submission.
-    """
-    return AcSubmission(
-        submission_id=submission_id,
-        title="two-sum",
-        title_slug="two-sum",
-        timestamp=int(at.timestamp()),
-        lang="python3",
-    )
-
-
-def _write(path: Path, entries: list[LedgerEntry]) -> Path:
-    """Save a ledger holding exactly *entries*.
-
-    Args:
-        path: Where to write it.
-        entries: The entries to store.
-
-    Returns:
-        The ledger path.
-    """
-    ledger = Ledger()
-    append(ledger, entries)
-    save_ledger(path, ledger)
-    return path
-
-
-def _credit(path: Path, *, at: datetime, key_file: Path, ident: str = "ac:1") -> Path:
-    """Write a ledger with one signed credit submitted at *at*.
-
-    Args:
-        path: Where to write it.
-        at: The submission time.
-        key_file: The signing key.
-        ident: The submission id.
-
-    Returns:
-        The ledger path.
-    """
-    entry = credit_entry(
-        _submission(ident, at=at), day=at.date(), now=at, key_file=key_file
-    )
-    return _write(path, [entry])
 
 
 class TestCountingTodaysSolves:
@@ -93,7 +42,7 @@ class TestCountingTodaysSolves:
             tmp_path: pytest's temporary directory.
             hmac_key: An isolated signing key.
         """
-        path = _credit(tmp_path / "l.json", at=NOW, key_file=hmac_key)
+        path = write_credit(tmp_path / "l.json", at=NOW, key_file=hmac_key)
         answer = solved_today(ledger_path=path, key_file=hmac_key)
         assert (answer.checked, answer.solved, answer.count) == (True, True, 1)
         assert answer.reason == "1 accepted submission today"
@@ -109,14 +58,14 @@ class TestCountingTodaysSolves:
         """
         entries = [
             credit_entry(
-                _submission(f"ac:{i}", at=NOW),
+                stamped_submission(f"ac:{i}", at=NOW),
                 day=NOW.date(),
                 now=NOW,
                 key_file=hmac_key,
             )
             for i in range(2)
         ]
-        path = _write(tmp_path / "l.json", entries)
+        path = write_ledger(tmp_path / "l.json", entries)
         answer = solved_today(ledger_path=path, key_file=hmac_key)
         assert answer.count == 2
         assert answer.reason == "2 accepted submissions today"
@@ -130,7 +79,7 @@ class TestCountingTodaysSolves:
             tmp_path: pytest's temporary directory.
             hmac_key: An isolated signing key.
         """
-        path = _credit(
+        path = write_credit(
             tmp_path / "l.json", at=NOW - timedelta(days=1), key_file=hmac_key
         )
         answer = solved_today(ledger_path=path, key_file=hmac_key)
@@ -147,7 +96,7 @@ class TestCountingTodaysSolves:
             hmac_key: An isolated signing key.
         """
         charge = charge_entry(NOW.date(), now=NOW, key_file=hmac_key)
-        path = _write(tmp_path / "l.json", [charge])
+        path = write_ledger(tmp_path / "l.json", [charge])
         assert solved_today(ledger_path=path, key_file=hmac_key).solved is False
 
     def test_seen_entries_do_not_count(self, tmp_path: Path, hmac_key: Path) -> None:
@@ -168,7 +117,7 @@ class TestCountingTodaysSolves:
             ),
             key_file=hmac_key,
         )
-        path = _write(tmp_path / "l.json", [entry])
+        path = write_ledger(tmp_path / "l.json", [entry])
         assert solved_today(ledger_path=path, key_file=hmac_key).solved is False
 
     def test_a_forged_credit_is_refused_and_reported(
@@ -181,7 +130,7 @@ class TestCountingTodaysSolves:
             hmac_key: An isolated signing key.
             caplog: pytest's log capture.
         """
-        path = _credit(tmp_path / "l.json", at=NOW, key_file=hmac_key)
+        path = write_credit(tmp_path / "l.json", at=NOW, key_file=hmac_key)
         raw = json.loads(path.read_text(encoding="utf-8"))
         raw["entries"][0]["hmac"] = "00" * 32
         path.write_text(json.dumps(raw), encoding="utf-8")
@@ -198,5 +147,5 @@ class TestCountingTodaysSolves:
             data_dir: The suite's redirected data directory.
             hmac_key: An isolated signing key.
         """
-        _credit(data_dir / "ledger.json", at=NOW, key_file=hmac_key)
+        write_credit(data_dir / "ledger.json", at=NOW, key_file=hmac_key)
         assert solved_today(key_file=hmac_key).solved is True

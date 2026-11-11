@@ -15,11 +15,9 @@ from leetcode_guard._debt import NO_DEBT, Debt
 from leetcode_guard._gate import DayContext, GateState, apply_decision, decide
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import (
-    SeedStamp,
     commit_harvest,
     harvest,
     needs_seeding,
-    seed_ledger,
 )
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -35,6 +33,7 @@ from leetcode_guard.tests._ledger_fixtures import (
     ledger_with_credits,
     submission,
 )
+from leetcode_guard.tests._seed_fixtures import seed_monday
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -54,6 +53,7 @@ def run_day(
 def test_three_solves_on_monday_unlock_monday_tuesday_wednesday_then_lock(
     tmp_path: Path, hmac_key: Path
 ):
+    """Three Monday solves unlock Monday to Wednesday and lock Thursday."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(3, day=MONDAY, key_file=hmac_key)
 
@@ -68,6 +68,7 @@ def test_three_solves_on_monday_unlock_monday_tuesday_wednesday_then_lock(
 
 
 def test_a_weekend_day_costs_two_credits(tmp_path: Path, hmac_key: Path):
+    """Two credits pay for Saturday and leave Sunday locked."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(2, day=FRIDAY, key_file=hmac_key)
 
@@ -76,7 +77,8 @@ def test_a_weekend_day_costs_two_credits(tmp_path: Path, hmac_key: Path):
     assert run_day(ledger, SUNDAY, path, hmac_key) is GateState.LOCKED_INSUFFICIENT
 
 
-def test_one_credit_is_not_enough_for_a_weekend_day(tmp_path: Path, hmac_key: Path):
+def test_one_credit_is_not_enough_for_a_weekend_day(hmac_key: Path):
+    """One credit leaves a weekend day locked, one short of its cost of two."""
     ledger = ledger_with_credits(1, day=FRIDAY, key_file=hmac_key)
 
     decision = decide(ledger, day=SATURDAY, now=NOW, key_file=hmac_key)
@@ -96,7 +98,7 @@ def test_weekday_credits_are_spendable_on_a_weekend(tmp_path: Path, hmac_key: Pa
     assert decide(ledger, day=MONDAY, now=NOW, key_file=hmac_key).balance.available == 0
 
 
-def test_there_is_no_cap_on_banked_credits(tmp_path: Path, hmac_key: Path):
+def test_there_is_no_cap_on_banked_credits(hmac_key: Path):
     """Explicitly chosen: thirty solves bank thirty credits."""
     ledger = ledger_with_credits(30, day=MONDAY, key_file=hmac_key)
 
@@ -157,15 +159,7 @@ def test_first_run_seeds_without_touching_the_gate(tmp_path: Path, hmac_key: Pat
     )
 
     assert needs_seeding(ledger)
-    assert (
-        seed_ledger(
-            ledger,
-            old,
-            stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-            path=path,
-        )
-        == 20
-    )
+    assert seed_monday(ledger, old, path, hmac_key) == 20
     assert not needs_seeding(ledger)
 
     assert harvest(ledger, old, day=MONDAY, now=NOW, key_file=hmac_key).gained == 0
@@ -203,12 +197,7 @@ def test_seeding_never_writes_a_credit(tmp_path: Path, hmac_key: Path):
         reason="5 recent",
     )
 
-    seed_ledger(
-        ledger,
-        probe,
-        stamp=SeedStamp(day=MONDAY, now=NOW, key_file=hmac_key),
-        path=path,
-    )
+    seed_monday(ledger, probe, path, hmac_key)
 
     kinds = {entry.kind for entry in ledger.entries.values()}
     assert "credit" not in kinds

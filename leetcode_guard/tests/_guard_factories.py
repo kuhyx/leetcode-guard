@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict, Unpack
 
 from leetcode_guard._auth import AuthState
 from leetcode_guard._harvest import SeedStamp, seed_ledger
@@ -33,6 +33,7 @@ class InlineExecutor:
     """Runs submitted work immediately on the calling thread."""
 
     def submit(self, fn, *args, **kwargs) -> Future:
+        """Run ``fn`` now and hand back an already-resolved future."""
         future: Future = Future()
         # Deliberately not guarded: the poller has its own crash handling,
         # and swallowing an exception here would hide a broken test helper
@@ -41,7 +42,7 @@ class InlineExecutor:
         return future
 
     def shutdown(self, *, wait: bool = True) -> None:
-        pass
+        """Accept the pool's shutdown call; there is no thread to stop."""
 
 
 def pool_of(*slugs: str) -> PoolResolution:
@@ -66,30 +67,38 @@ UNVERIFIABLE = SolveProbe(
 )
 
 
+class GuardOptions(TypedDict, total=False):
+    """The keyword options :func:`create_guard` takes; all are optional."""
+
+    demo_mode: bool
+    probe: SolveProbe | None
+    poll_probe: SolveProbe | None
+    pool: PoolResolution | None
+    key_file: Path | None
+    write_ledger: bool
+    wait_turn: bool
+    now: datetime
+    seeded: bool
+
+
 def create_guard(
-    tmp_path: Path,
-    *,
-    demo_mode: bool = True,
-    probe: SolveProbe | None = None,
-    poll_probe: SolveProbe | None = None,
-    pool: PoolResolution | None = None,
-    key_file: Path | None = None,
-    write_ledger: bool = True,
-    wait_turn: bool = True,
-    now: datetime = NOW,
-    seeded: bool = False,
+    tmp_path: Path, **options: Unpack[GuardOptions]
 ) -> tuple[LeetcodeGuard, dict[str, Any]]:
     """Build a guard plus a record of what its fake network was asked.
 
     Args:
         tmp_path: Per-test directory for the ledger and escape history.
-        demo_mode: Which lock configuration to arm with.
+        **options: Any of the keys below, each with the default shown.
+        demo_mode: Which lock configuration to arm with. Defaults to True.
         probe: The startup probe, used for seeding.
         poll_probe: What each subsequent poll returns. Defaults to ``probe``.
         pool: The suggestion list.
-        key_file: HMAC key. ``None`` means integrity checking is off.
-        write_ledger: Whether the guard may persist anything.
-        now: Fixed clock.
+        key_file: HMAC key. ``None`` (the default) means integrity checking
+            is off.
+        write_ledger: Whether the guard may persist anything. Defaults to
+            True.
+        wait_turn: Whether the guard waits its turn. Defaults to True.
+        now: Fixed clock. Defaults to ``NOW``.
         seeded: Pre-seed the ledger on an earlier day, so the guard starts on
             an ordinary gating day. Seeding settles the day it runs on, so a
             guard that seeds itself is by definition unlocked -- any test about
@@ -97,13 +106,16 @@ def create_guard(
             *Friday* rather than the day before, because ``NOW`` is a Monday and
             a Sunday seed would settle a weekend day at double cost, making
             every balance in every test two off for no reason anyone reading it
-            would guess.
+            would guess. Defaults to False.
 
     Returns:
         The guard and a dict recording every network call.
     """
+    now = options.get("now", NOW)
+    key_file = options.get("key_file")
+    probe = options.get("probe")
     startup = probe if probe is not None else probe_of()
-    if seeded:
+    if options.get("seeded", False):
         seed_ledger(
             Ledger(),
             startup,
@@ -112,15 +124,16 @@ def create_guard(
             ),
             path=tmp_path / "ledger.json",
         )
+    poll_probe = options.get("poll_probe")
     polled = poll_probe if poll_probe is not None else startup
     calls: dict[str, Any] = {"posts": 0}
+    pool = options.get("pool")
 
     def post(_query: str, _variables: dict[str, Any]) -> Any:
         calls["posts"] += 1
-        return None
 
     guard = LeetcodeGuard(
-        demo_mode=demo_mode,
+        demo_mode=options.get("demo_mode", True),
         deps=GuardDeps(
             ledger_path=tmp_path / "ledger.json",
             escape_path=tmp_path / "escape.json",
@@ -136,13 +149,57 @@ def create_guard(
             pool=pool if pool is not None else pool_of("add-two-numbers"),
             probe=startup,
             key_file=key_file,
-            write_ledger=write_ledger,
+            write_ledger=options.get("write_ledger", True),
             seams=GuardSeams(
-                wait_turn=wait_turn, executor=InlineExecutor(), now=lambda: now
+                wait_turn=options.get("wait_turn", True),
+                executor=InlineExecutor(),
+                now=lambda: now,
             ),
         ),
     )
     # The poller's work function is the only thing that would really call the
     # network; swap it for the scripted probe so tests drive the loop by hand.
-    guard._check = lambda: polled
+    guard.check = lambda: polled
     return guard, calls
+
+
+def guard_with_fresh_solves(
+    tmp_path: Path, key_file: Path, **options: Unpack[GuardOptions]
+) -> LeetcodeGuard:
+    """A seeded guard (``old-1`` already seen) whose polls bring two new solves.
+
+    Args:
+        tmp_path: Per-test directory for the ledger and escape history.
+        key_file: The HMAC key.
+        **options: Further :func:`create_guard` options.
+
+    Returns:
+        The guard; two fresh solves are what a seeded Monday needs to unlock.
+    """
+    guard, _ = create_guard(
+        tmp_path,
+        probe=probe_of("old-1"),
+        poll_probe=probe_of("brand-new", "also-new", "old-1"),
+        key_file=key_file,
+        seeded=True,
+        **options,
+    )
+    return guard
+
+
+def guard_with_one_new_solve(
+    tmp_path: Path, **options: Unpack[GuardOptions]
+) -> LeetcodeGuard:
+    """An unseeded guard that starts having seen ``old`` and then polls ``new``.
+
+    Args:
+        tmp_path: Per-test directory for the ledger and escape history.
+        **options: Further :func:`create_guard` options.
+
+    Returns:
+        The guard.
+    """
+    guard, _ = create_guard(
+        tmp_path, probe=probe_of("old"), poll_probe=probe_of("new", "old"), **options
+    )
+    return guard

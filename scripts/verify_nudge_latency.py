@@ -87,10 +87,11 @@ class TimedGuard(LeetcodeGuard):
 
     noted: float | None = None
 
-    def _refresh_strip(self) -> None:
+    def refresh_strip(self) -> None:
+        """Stamp the moment the verifying note first shows, then refresh."""
         if self.nudge_verifying and self.noted is None:
             self.noted = time.monotonic()
-        super()._refresh_strip()
+        super().refresh_strip()
 
 
 def trial(rtt: float, workdir: Path, *, lag: float, port: int) -> tuple[float, float]:

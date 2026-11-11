@@ -17,6 +17,7 @@ from leetcode_guard.tests._net_fixtures import problem_row
 
 
 def make(slug: str, **kwargs: object) -> Problem:
+    """Parse a fixture row for `slug` and insist it is usable."""
     row = problem_row(slug, **kwargs)
     parsed = parse_problem(row)
     assert parsed is not None
@@ -24,6 +25,7 @@ def make(slug: str, **kwargs: object) -> Problem:
 
 
 def test_parses_a_full_row():
+    """A complete row parses into slug, rate, topics and URL, unsolved."""
     problem = make(
         "two-sum", difficulty="Easy", ac_rate=57.9, topics=["array", "hash-table"]
     )
@@ -36,6 +38,7 @@ def test_parses_a_full_row():
 
 
 def test_status_ac_means_solved():
+    """Only status "ac" marks a problem solved."""
     assert make("two-sum", status="ac").solved
     assert not make("two-sum", status="notac").solved
     assert not make("two-sum", status=None).solved
@@ -55,10 +58,12 @@ def test_status_ac_means_solved():
     ],
 )
 def test_unusable_rows_are_rejected(row: object):
+    """Rows missing or mistyping a required field parse to None."""
     assert parse_problem(row) is None
 
 
 def test_integer_ac_rate_is_accepted():
+    """An integer acceptance rate is taken as a float."""
     parsed = parse_problem({"titleSlug": "s", "acRate": 50, "difficulty": "Easy"})
 
     assert parsed is not None
@@ -66,6 +71,7 @@ def test_integer_ac_rate_is_accepted():
 
 
 def test_non_string_status_becomes_none():
+    """A non-string status is dropped to None."""
     parsed = parse_problem(
         {"titleSlug": "s", "acRate": 1.0, "difficulty": "Easy", "status": 7}
     )
@@ -78,6 +84,7 @@ def test_non_string_status_becomes_none():
     "tags", ["not-a-list", None, [{"name": "x"}, "junk", {"slug": 5}]]
 )
 def test_malformed_topic_tags_degrade_to_empty(tags: object):
+    """Malformed topic tags leave an empty topic tuple."""
     parsed = parse_problem(
         {"titleSlug": "s", "acRate": 1.0, "difficulty": "Easy", "topicTags": tags}
     )
@@ -87,6 +94,7 @@ def test_malformed_topic_tags_degrade_to_empty(tags: object):
 
 
 def test_title_defaults_to_the_slug():
+    """A row without a title uses its slug as the title."""
     parsed = parse_problem(
         {"titleSlug": "some-slug", "acRate": 1.0, "difficulty": "Easy"}
     )
@@ -97,6 +105,7 @@ def test_title_defaults_to_the_slug():
 
 @pytest.mark.parametrize("page", ["not-an-object", {"questions": "not-a-list"}, {}])
 def test_malformed_pages_yield_no_problems(page: object):
+    """A malformed page yields no problems and no rows."""
     assert parse_questions(page) == []
     assert page_row_count(page) == 0
 
@@ -121,10 +130,12 @@ def test_page_row_count_counts_rows_not_parsed_problems():
     ],
 )
 def test_page_total(page: object, expected: int | None):
+    """Only an integer total is read from a page."""
     assert page_total(page) == expected
 
 
 def test_ordering_is_easiest_first_then_highest_acceptance():
+    """Ranking sorts by difficulty, then by acceptance rate descending."""
     problems = [
         make("hard-high", difficulty="Hard", ac_rate=99.0),
         make("easy-low", difficulty="Easy", ac_rate=10.0),
@@ -143,6 +154,7 @@ def test_ordering_is_easiest_first_then_highest_acceptance():
 
 
 def test_unknown_difficulty_sorts_last_rather_than_first():
+    """An unknown difficulty ranks after every known one."""
     unknown = make("mystery", difficulty="Impossible", ac_rate=100.0)
     easy = make("easy", difficulty="Easy", ac_rate=1.0)
 
@@ -153,6 +165,7 @@ def test_unknown_difficulty_sorts_last_rather_than_first():
 
 
 def test_premium_problems_are_always_dropped_from_suggestions():
+    """Premium problems never appear in the ranked pool."""
     premium = make("premium", paid_only=True, ac_rate=99.0)
     free = make("free", ac_rate=1.0)
 
@@ -220,6 +233,7 @@ def test_an_absurdly_long_title_is_truncated():
 
 
 def test_an_ordinary_title_is_untouched():
+    """A short single-line title passes through unchanged."""
     problem = parse_problem(problem_row("two-sum") | {"title": "Longest Substring"})
 
     assert problem is not None

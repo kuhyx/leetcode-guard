@@ -15,6 +15,7 @@ import pytest
 
 from leetcode_coach import session_log
 from leetcode_guard import _coach_grades, _coach_log
+from leetcode_guard._coach_log import _well_formed
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,6 +32,7 @@ def _grade(step: object, grade: str, **extra: object) -> dict[str, Any]:
 
 
 def test_the_reader_knows_every_event_the_writer_may_write() -> None:
+    """The reader's event set equals the coach writer's event set."""
     assert session_log.EVENTS == _coach_log.EVENTS
 
 
@@ -55,12 +57,14 @@ def test_the_reader_knows_every_event_the_writer_may_write() -> None:
     ],
 )
 def test_shape_rules(event: dict[str, Any], ok: bool) -> None:
-    assert _coach_log._well_formed(event) is ok
+    """Each event shape is accepted or rejected per its rule."""
+    assert _well_formed(event) is ok
 
 
 def test_a_cli_only_file_has_unknown_grades(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A file with no session_start yields None grades, not zeros, and no warning."""
     path = _write(tmp_path, {"event": "req"}, _grade(1, "pass"))
     with caplog.at_level(logging.WARNING):
         problem = _coach_log.read_session(path)
@@ -71,6 +75,7 @@ def test_a_cli_only_file_has_unknown_grades(
 
 
 def test_grades_come_from_the_latest_session_only(tmp_path: Path) -> None:
+    """Grades and attempts count only from the latest session_start."""
     path = _write(
         tmp_path,
         {"event": "session_start", "sid": "a"},
@@ -106,6 +111,7 @@ def test_grades_come_from_the_latest_session_only(tmp_path: Path) -> None:
 
 
 def test_step_four_passed_is_accepted() -> None:
+    """A passed step four marks the problem accepted with all four steps keyed."""
     events = [{"event": "session_start"}, _grade(4, "pass", via="accepted")]
     grades, accepted = _coach_grades.grades(events)
     assert accepted is True
@@ -114,6 +120,7 @@ def test_step_four_passed_is_accepted() -> None:
 
 
 def test_grades_ride_in_the_snapshot_rows(tmp_path: Path) -> None:
+    """read_coach puts grades and accepted on each problem row."""
     _write(tmp_path, {"event": "session_start"}, _grade(3, "pass", via="toolbox"))
     coach = _coach_log.read_coach(tmp_path)
     assert coach is not None
@@ -123,6 +130,7 @@ def test_grades_ride_in_the_snapshot_rows(tmp_path: Path) -> None:
 
 
 def test_a_force_alone_is_no_try() -> None:
+    """A forced grade alone counts zero attempts."""
     events = [{"event": "session_start"}, _grade(2, "fail", forced=True)]
     grades, _accepted = _coach_grades.grades(events)
     assert grades is not None

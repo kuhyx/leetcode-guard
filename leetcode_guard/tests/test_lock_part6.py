@@ -10,17 +10,16 @@ from leetcode_guard._submissions import ProbeStatus
 from leetcode_guard.tests._guard_factories import (
     UNVERIFIABLE,
     create_guard,
+    guard_with_one_new_solve,
     probe_of,
 )
 from leetcode_guard.tests._ledger_fixtures import MONDAY
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-
 from leetcode_guard.tests.test_lock import (
     _FakeSurface,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_a_crashed_poll_counts_as_unverifiable(tmp_path: Path, hmac_key: Path):
@@ -32,62 +31,61 @@ def test_a_crashed_poll_counts_as_unverifiable(tmp_path: Path, hmac_key: Path):
     crash we cannot see is the one case that most needs to reach the hatch."""
     guard, _ = create_guard(tmp_path, key_file=hmac_key)
 
-    guard._on_poll_result(None)
+    guard.on_poll_result(None)
 
-    assert guard._poller.state.consecutive_unverifiable == 1
-    assert guard._model.status_line.startswith(g.BLIND)
-    assert not guard._model.status_ok
+    assert guard.poller.state.consecutive_unverifiable == 1
+    assert guard.model.status_line.startswith(g.BLIND)
+    assert not guard.model.status_ok
 
 
 def test_demo_mode_writes_nothing_when_told_not_to(tmp_path: Path, hmac_key: Path):
-    guard, _ = create_guard(
-        tmp_path,
-        probe=probe_of("old"),
-        poll_probe=probe_of("new", "old"),
-        key_file=hmac_key,
-        write_ledger=False,
-    )
+    """With ledger writes disabled, an unlocking poll creates no ledger file."""
+    guard = guard_with_one_new_solve(tmp_path, key_file=hmac_key, write_ledger=False)
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
     assert not (tmp_path / "ledger.json").exists()
 
 
 def test_surfaces_are_registered_and_torn_down(tmp_path: Path):
+    """Every registered surface view is removed when its surface is torn down."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._frames.names
+    assert guard.frames.names
 
-    for name in list(guard._frames.views):
+    for name in list(guard.frames.views):
         guard.teardown_surface(_FakeSurface(name))
 
-    assert guard._frames.views == {}
-    assert guard._frames.names == ()
+    assert guard.frames.views == {}
+    assert guard.frames.names == ()
 
 
 def test_close_is_idempotent(tmp_path: Path):
+    """Closing twice leaves the run closed without raising."""
     guard, _ = create_guard(tmp_path)
 
     guard.close()
     guard.close()
 
-    assert guard._run.closed
+    assert guard.run_state.closed
 
 
 def test_on_close_stops_the_poller(tmp_path: Path):
+    """The window's close hook stops the background poller."""
     guard, _ = create_guard(tmp_path)
 
     guard.on_close()
 
-    assert guard._poller._stopped
+    assert guard.poller.stopped
 
 
 def test_a_callback_error_is_shown_rather_than_swallowed(tmp_path: Path):
+    """A Tk callback error repaints the status line on every surface."""
     guard, _ = create_guard(tmp_path)
 
     guard.on_callback_error()
 
-    for view in guard._frames.views.values():
+    for view in guard.frames.views.values():
         view.status_line.configure.assert_called()
 
 
@@ -104,13 +102,13 @@ def test_the_escape_hatch_settles_the_day_without_spending_credits(
     """An escaped day is forgiven, not free: the balance goes negative."""
     guard, _ = create_guard(tmp_path, probe=probe_of(), key_file=hmac_key, seeded=True)
 
-    guard._on_escape_granted("the network is down and has been all morning")
+    guard.on_escape_granted("the network is down and has been all morning")
 
     ledger = load_ledger(tmp_path / "ledger.json", key_file=hmac_key)
     charge = ledger.entries[f"charge:{MONDAY.isoformat()}"]
     assert charge.detail["source"] == "escape"
     # One escaped day: forgiven, not free.
-    assert guard._decision().balance.available == -1
+    assert guard.decision().balance.available == -1
 
 
 def test_the_hatch_is_offered_from_the_first_second(tmp_path: Path):
@@ -120,25 +118,26 @@ def test_the_hatch_is_offered_from_the_first_second(tmp_path: Path):
     clock only made it absent when it was needed most."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard._should_offer_escape()
+    assert guard.should_offer_escape()
 
 
 def test_the_hatch_appears_quickly_once_the_gate_goes_blind(tmp_path: Path):
     """Making someone wait out a full offer delay while the gate cannot see
     LeetCode at all would be punishing them for an outage."""
     guard, _ = create_guard(tmp_path, poll_probe=UNVERIFIABLE)
-    guard._poller.state.consecutive_unverifiable = 999
+    guard.poller.state.consecutive_unverifiable = 999
 
-    assert guard._should_offer_escape()
+    assert guard.should_offer_escape()
 
 
 def test_the_poll_probe_status_drives_the_status_line(tmp_path: Path, hmac_key: Path):
+    """An unverifiable poll shows the cannot-check status line."""
     guard, _ = create_guard(
         tmp_path, probe=probe_of(), poll_probe=UNVERIFIABLE, key_file=hmac_key
     )
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert guard._model.status_line.startswith(g.BLIND)
-    assert not guard._model.status_ok
-    assert guard._check().status is ProbeStatus.UNVERIFIABLE
+    assert guard.model.status_line.startswith(g.BLIND)
+    assert not guard.model.status_ok
+    assert guard.check().status is ProbeStatus.UNVERIFIABLE

@@ -50,7 +50,8 @@ def test_a_solve_during_lockdown_is_credited_while_the_lock_waits_for_x(
     assert load_ledger(data_dir / "ledger.json").has("ac:42")
 
 
-def test_the_instance_lock_is_taken_only_once_x_answers(monkeypatch, data_dir):
+@pytest.mark.usefixtures("data_dir")
+def test_the_instance_lock_is_taken_only_once_x_answers(monkeypatch):
     """Still single-instance: the lock is acquired, just after the display."""
     order: list[str] = []
     monkeypatch.setattr(_cli, "wait_for_x_server", lambda: order.append("x"))

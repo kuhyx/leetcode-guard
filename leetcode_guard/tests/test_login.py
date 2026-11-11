@@ -14,12 +14,11 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard._auth import CSRF_KEY, SESSION_KEY, Cookies, load_cookies
 from leetcode_guard._leetcode import GraphQLResult
+import leetcode_guard._login as login_module
 from leetcode_guard._login import login, verify_cookies, write_cookies
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-import leetcode_guard._login as login_module
 
 GOOD = Cookies(session="sess", csrf="tok")
 
@@ -51,6 +50,7 @@ def patch_post(monkeypatch, result: GraphQLResult) -> list[str]:
 
 
 def test_a_recognised_session_verifies(monkeypatch):
+    """A non-null status for the probe problem verifies the pair."""
     patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "notac"}}))
 
     ok, reason = verify_cookies(GOOD, timeout=1.0)
@@ -70,6 +70,7 @@ def test_a_null_status_is_refused(monkeypatch):
 
 
 def test_an_unreachable_endpoint_is_refused(monkeypatch):
+    """A transport error refuses the pair."""
     patch_post(monkeypatch, GraphQLResult(transport_error="down"))
 
     ok, reason = verify_cookies(GOOD, timeout=1.0)
@@ -79,6 +80,7 @@ def test_an_unreachable_endpoint_is_refused(monkeypatch):
 
 
 def test_a_rejected_query_is_refused(monkeypatch):
+    """A GraphQL error refuses the pair."""
     patch_post(monkeypatch, GraphQLResult(errors=("bad token",)))
 
     ok, reason = verify_cookies(GOOD, timeout=1.0)
@@ -88,6 +90,7 @@ def test_a_rejected_query_is_refused(monkeypatch):
 
 
 def test_the_probe_asks_about_a_free_problem(monkeypatch):
+    """Verification probes only the free two-sum problem."""
     seen = patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "ac"}}))
 
     verify_cookies(GOOD, timeout=1.0)
@@ -96,6 +99,7 @@ def test_the_probe_asks_about_a_free_problem(monkeypatch):
 
 
 def test_a_verified_pair_is_written_and_loads_back(tmp_path: Path, monkeypatch):
+    """A verified pair is written, creating parents, and loads back equal."""
     patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "ac"}}))
     path = tmp_path / "nested" / "cookies.json"
 
@@ -118,6 +122,7 @@ def test_the_cookie_file_is_readable_only_by_its_owner(tmp_path: Path, monkeypat
 
 
 def test_an_unverified_pair_never_reaches_the_disk(tmp_path: Path, monkeypatch):
+    """A refused pair writes no cookie file."""
     patch_post(monkeypatch, GraphQLResult(data={"question": {"status": None}}))
     path = tmp_path / "cookies.json"
 
@@ -139,6 +144,7 @@ def test_a_refused_login_leaves_an_existing_file_untouched(tmp_path: Path, monke
 
 
 def test_a_blank_value_is_rejected_without_asking_leetcode(tmp_path: Path, monkeypatch):
+    """A blank session is refused before any request."""
     seen = patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "ac"}}))
     path = tmp_path / "cookies.json"
 
@@ -149,6 +155,7 @@ def test_a_blank_value_is_rejected_without_asking_leetcode(tmp_path: Path, monke
 
 
 def test_a_blank_csrf_is_also_rejected(tmp_path: Path, monkeypatch):
+    """A whitespace-only csrf is refused and nothing is written."""
     patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "ac"}}))
     path = tmp_path / "cookies.json"
 
@@ -158,6 +165,7 @@ def test_a_blank_csrf_is_also_rejected(tmp_path: Path, monkeypatch):
 
 
 def test_an_unwritable_path_is_reported_not_raised(tmp_path: Path, monkeypatch):
+    """A path under a file makes login return False instead of raising."""
     patch_post(monkeypatch, GraphQLResult(data={"question": {"status": "ac"}}))
     blocker = tmp_path / "blocker"
     blocker.write_text("not a directory")
@@ -168,6 +176,7 @@ def test_an_unwritable_path_is_reported_not_raised(tmp_path: Path, monkeypatch):
 
 
 def test_write_cookies_reports_failure_rather_than_raising(tmp_path: Path):
+    """write_cookies returns False on an unwritable path."""
     blocker = tmp_path / "blocker"
     blocker.write_text("not a directory")
 

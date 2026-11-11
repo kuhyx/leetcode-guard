@@ -119,8 +119,8 @@ class SolvePoller[R]:
             if settings.executor is not None
             else ThreadPoolExecutor(max_workers=1)
         )
-        self._future: Future[R | None] | None = None
-        self._stopped = False
+        self.future: Future[R | None] | None = None
+        self.stopped = False
         self._tick_job: str | None = None
         self._poked = threading.Event()
         self._in_flight_poked = False
@@ -133,14 +133,14 @@ class SolvePoller[R]:
         self.state = PollState()
 
     @property
-    def _owns_executor(self) -> bool:
+    def owns_executor(self) -> bool:
         """Whether this poller created the executor, and so must shut it down."""
         return self._settings.executor is None
 
     def start(self) -> None:
         """Kick off the first check immediately, and start watching for pokes."""
-        self._stopped = False
-        self._tick()
+        self.stopped = False
+        self.tick()
         self._root.after(self._settings.drain_ms, self._watch)
 
     def poke(self) -> None:
@@ -159,7 +159,7 @@ class SolvePoller[R]:
 
     def _watch(self) -> None:
         """On the Tk thread: turn a pending poke into an immediate check."""
-        if self._stopped:
+        if self.stopped:
             return
         self._fire_poke()
         self._root.after(self._settings.drain_ms, self._watch)
@@ -170,28 +170,28 @@ class SolvePoller[R]:
         A pending tick means idle. While a check is in flight the poke stays
         set and fires on the first watch after it lands.
         """
-        if self._stopped or not self._poked.is_set() or self._tick_job is None:
+        if self.stopped or not self._poked.is_set() or self._tick_job is None:
             return
         self._poked.clear()
         self._root.after_cancel(self._tick_job)
         self._tick_job = None
-        self._tick(poked=True)
+        self.tick(poked=True)
 
     def stop(self) -> None:
         """Stop scheduling. Idempotent."""
-        self._stopped = True
-        if self._owns_executor:
+        self.stopped = True
+        if self.owns_executor:
             self._executor.shutdown(wait=False)
 
-    def _tick(self, *, poked: bool = False) -> None:
+    def tick(self, *, poked: bool = False) -> None:
         """Submit a check, unless one is already in flight."""
         self._tick_job = None
-        if self._stopped:
+        if self.stopped:
             return
-        if self._future is None or self._future.done():
+        if self.future is None or self.future.done():
             self._in_flight_poked = poked
-            self._future = self._executor.submit(self._guarded_work)
-        self._root.after(self._settings.drain_ms, self._drain)
+            self.future = self._executor.submit(self._guarded_work)
+        self._root.after(self._settings.drain_ms, self.drain)
 
     def _guarded_work(self) -> R | None:
         """Run ``work``, converting a crash into a value.
@@ -207,18 +207,18 @@ class SolvePoller[R]:
             _logger.exception("the solve check raised; treating it as unverifiable")
             return None
 
-    def _drain(self) -> None:
+    def drain(self) -> None:
         """On the Tk thread: deliver a finished result, then reschedule."""
-        if self._stopped:
+        if self.stopped:
             return
-        future = self._future
+        future = self.future
         if future is not None and future.done():
-            self._future = None
+            self.future = None
             self.last_was_poke = self._in_flight_poked
             self._deliver(future)
-            self._tick_job = self._root.after(self._settings.interval_ms, self._tick)
+            self._tick_job = self._root.after(self._settings.interval_ms, self.tick)
             return
-        self._root.after(self._settings.drain_ms, self._drain)
+        self._root.after(self._settings.drain_ms, self.drain)
 
     def _deliver(self, future: Future[R | None]) -> None:
         """Hand one result to the callback, never letting it kill the loop."""

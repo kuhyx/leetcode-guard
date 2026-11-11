@@ -16,6 +16,9 @@ What is needed               Why the public API cannot supply it
                              directly, and gatelock's ``close()`` skips
                              its own restore when this flag is stale --
                              so it has to be kept truthful.
+``LockWindow._arming``       The recovery/detector/surface bundle the
+                             tests swap for doubles; gatelock has no
+                             setter for it.
 ===========================  =========================================
 
 Concentrating all of it here means shipped code has exactly one file to audit,
@@ -129,3 +132,28 @@ def surface_windows(lock: SuspendableLock) -> Iterator[tuple[Any, Any]]:
         if surface is None:
             continue
         yield info, surface.window
+
+
+def vt_disabled(lock: SuspendableLock) -> bool:
+    """Read the flag :func:`mark_vt` keeps truthful."""
+    return bool(lock._vt_disabled)
+
+
+def arming(lock: SuspendableLock) -> Any:
+    """The window's arming bundle (recovery loop, detector, surfaces)."""
+    return lock._arming
+
+
+def set_arming(lock: SuspendableLock, bundle: Any) -> None:
+    """Swap the arming bundle, e.g. for one carrying test doubles."""
+    lock._arming = bundle
+
+
+def surface_map(surfaces: Any) -> dict[str, Any]:
+    """The live output-name -> surface map behind ``SurfaceSet``."""
+    return surfaces._surfaces
+
+
+def set_surface_map(surfaces: Any, mapping: dict[str, Any]) -> None:
+    """Replace that map wholesale."""
+    surfaces._surfaces = mapping

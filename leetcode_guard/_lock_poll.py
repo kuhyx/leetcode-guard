@@ -59,73 +59,73 @@ class PollMixin:
     nothing until runtime.
     """
 
-    _deps: GuardDeps
-    _ledger: Ledger
-    _escape: EscapeKit
-    _outage: OutageState
-    _run: RunState
-    _poller: SolvePoller
-    _frames: FrameGroup
-    _model: ViewModel
+    deps: GuardDeps
+    ledger: Ledger
+    escape: EscapeKit
+    outage: OutageState
+    run_state: RunState
+    poller: SolvePoller
+    frames: FrameGroup
+    model: ViewModel
     root: Any
     _blind_seconds: Callable[[], float]
     _blind_for_long_enough: Callable[[], bool]
-    _incident_form_due: Callable[[], bool]
+    incident_form_due: Callable[[], bool]
     _handle_outage: Callable[[], None]
     _end_study: Callable[[], None]
     _end_burst: Callable[[], None]
-    _refresh_strip: Callable[[], None]
+    refresh_strip: Callable[[], None]
     _last_probe: SolveProbe
     clear_outage: Callable[[], None]
     close: Callable[[], None]
 
     def _maybe_seed(self) -> None:
         """Initialise a brand-new ledger so the first run still gates."""
-        if not needs_seeding(self._ledger) and self._deps.write_ledger:
+        if not needs_seeding(self.ledger) and self.deps.write_ledger:
             return
-        if not self._deps.write_ledger:
+        if not self.deps.write_ledger:
             return
         seed_ledger(
-            self._ledger,
-            self._deps.probe,
+            self.ledger,
+            self.deps.probe,
             stamp=SeedStamp(
-                day=local_today(now=self._deps.moment()),
-                now=self._deps.moment(),
-                key_file=self._deps.key_file,
+                day=local_today(now=self.deps.moment()),
+                now=self.deps.moment(),
+                key_file=self.deps.key_file,
             ),
-            path=self._deps.ledger_path,
+            path=self.deps.ledger_path,
         )
 
-    def _decision(self) -> GateDecision:
+    def decision(self) -> GateDecision:
         """Today's verdict against the current ledger."""
-        moment = self._deps.moment()
+        moment = self.deps.moment()
         day = local_today(now=moment)
         return decide_today(
-            self._ledger,
+            self.ledger,
             day=day,
             now=moment,
-            key_file=self._deps.key_file,
-            demo=self._run.demo,
+            key_file=self.deps.key_file,
+            demo=self.run_state.demo,
         )
 
     def _build_model(self, probe: SolveProbe) -> ViewModel:
         """Render the current state."""
         model = build_viewmodel(
-            self._decision(),
+            self.decision(),
             ViewSource(
-                self._deps.pool,
-                self._deps.auth,
+                self.deps.pool,
+                self.deps.auth,
                 # Every unsolved problem: the surface scrolls (``_view_scroll``).
-                limit=len(self._deps.pool.problems),
+                limit=len(self.deps.pool.problems),
                 solved_slugs=self._solved_slugs(probe),
             ),
             probe,
-            checked_at=self._deps.moment(),
-            show_escape=self._should_offer_escape(),
+            checked_at=self.deps.moment(),
+            show_escape=self.should_offer_escape(),
         )
-        if self._outage.note is None:
+        if self.outage.note is None:
             return model
-        return replace(model, notes=(*model.notes, self._outage.note))
+        return replace(model, notes=(*model.notes, self.outage.note))
 
     def _solved_slugs(self, probe: SolveProbe) -> frozenset[str]:
         """Everything known to be solved right now, from both sources.
@@ -137,42 +137,42 @@ class PollMixin:
         alone lags a solve by one harvest, and an unverifiable probe harvests
         nothing at all.
         """
-        return solved_slugs(self._ledger) | frozenset(
+        return solved_slugs(self.ledger) | frozenset(
             item.title_slug for item in probe.submissions
         )
 
-    def _should_offer_escape(self) -> bool:
+    def should_offer_escape(self) -> bool:
         """Whether the hatch is currently visible."""
-        if self._incident_form_due():
+        if self.incident_form_due():
             # Not subject to the ordinary budget: this is the offline path's
             # only exit, and refusing it is what made the lock a trap.
             return True
         return is_offerable(
-            self._escape.tracker,
-            elapsed_seconds=time.monotonic() - self._run.started,
+            self.escape.tracker,
+            elapsed_seconds=time.monotonic() - self.run_state.started,
             # hasattr because the first model is built before the poller
             # exists; treating that as "not blind yet" is correct.
             unverifiable_seconds=self._blind_seconds()
-            if hasattr(self, "_poller")
+            if hasattr(self, "poller")
             else 0.0,
         )
 
-    def _check(self) -> SolveProbe:
+    def check(self) -> SolveProbe:
         """The blocking network call. Runs on the executor, never on Tk."""
-        probe = fetch_recent_ac(self._deps.post, self._deps.username)
-        if self._deps.write_ledger:
+        probe = fetch_recent_ac(self.deps.post, self.deps.username)
+        if self.deps.write_ledger:
             # Executor thread, before the credit is harvested: a Medium solve
             # must already price as 2 when ``_decision`` runs on the Tk thread.
-            moment = self._deps.moment()
+            moment = self.deps.moment()
             resolve_probe(
                 probe,
-                post=self._deps.post,
+                post=self.deps.post,
                 now=moment,
-                key_file=self._deps.key_file,
+                key_file=self.deps.key_file,
             )
         return probe
 
-    def _on_poll_result(self, probe: SolveProbe | None) -> None:
+    def on_poll_result(self, probe: SolveProbe | None) -> None:
         """Fold one probe into the ledger and repaint.
 
         ``None`` means :meth:`_check` *raised*, and it used to return here. That
@@ -195,42 +195,42 @@ class PollMixin:
                 reason="the solve check crashed -- see the log",
             )
         usable = probe.status is ProbeStatus.OK
-        if usable or not self._poller.last_was_poke:
+        if usable or not self.poller.last_was_poke:
             # A failed *extra* probe is not blind time: blind seconds are
             # counted in poll intervals, so letting a burst of nudges count
             # would buy the escape hatch in seconds.
-            self._poller.state.record(usable=usable)
+            self.poller.state.record(usable=usable)
         if probe.status is ProbeStatus.OK:
             self.clear_outage()
         elif self._blind_for_long_enough():
             self._handle_outage()
-            if self._run.closed:
+            if self.run_state.closed:
                 return
 
-        if self._deps.write_ledger:
-            moment = self._deps.moment()
+        if self.deps.write_ledger:
+            moment = self.deps.moment()
             result = harvest(
-                self._ledger,
+                self.ledger,
                 probe,
                 day=local_today(now=moment),
                 now=moment,
-                key_file=self._deps.key_file,
+                key_file=self.deps.key_file,
             )
-            commit_harvest(self._ledger, result, self._deps.ledger_path)
+            commit_harvest(self.ledger, result, self.deps.ledger_path)
             if result.gained:
                 self._end_burst()
 
-        decision = self._decision()
+        decision = self.decision()
         if not decision.locked:
-            if decision.charge is not None and self._deps.write_ledger:
-                apply_decision(self._ledger, decision, self._deps.ledger_path)
+            if decision.charge is not None and self.deps.write_ledger:
+                apply_decision(self.ledger, decision, self.deps.ledger_path)
             self._release(probe)
             return
 
         self._last_probe = probe
-        self._model = self._build_model(probe)
-        apply_viewmodel(self._frames.views.values(), self._model)
-        self._refresh_strip()
+        self.model = self._build_model(probe)
+        apply_viewmodel(self.frames.views.values(), self.model)
+        self.refresh_strip()
 
     def _release(self, probe: SolveProbe) -> None:
         """Show the unlocked screen briefly, then let go.
@@ -241,6 +241,6 @@ class PollMixin:
         the user never sees why the machine came back.
         """
         self._end_study()
-        self._model = self._build_model(probe)
-        apply_viewmodel(self._frames.views.values(), self._model)
+        self.model = self._build_model(probe)
+        apply_viewmodel(self.frames.views.values(), self.model)
         self.root.after(_UNLOCK_LINGER_MS, self.close)

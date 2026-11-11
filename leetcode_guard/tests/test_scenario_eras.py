@@ -50,6 +50,7 @@ def test_a_range_wholly_before_the_reprice_has_no_price():
 
 
 def test_free_days_are_skipped_by_the_landing_walk():
+    """The landing walk skips free days when finding the day a balance reaches."""
     wed_thu_free = {date(2026, 10, 7), date(2026, 10, 8)}
     projection = project(
         date(2026, 10, 14),

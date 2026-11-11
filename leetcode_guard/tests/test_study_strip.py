@@ -1,4 +1,4 @@
-"""Tests for the study-mode strip.
+"""Tests for the study-mode strip widget (its text is in ``test_study_strip_text``).
 
 Tk is a MagicMock, so these assert on what was asked of Tk. The placement test
 uses two outputs on purpose: against a single output a bug that always picked
@@ -22,10 +22,12 @@ CONFIG = LockConfig()
 
 
 def rect(x: int = 0, y: int = 0, width: int = 1920, height: int = 1080):
+    """An output rectangle, full-HD at the origin unless told otherwise."""
     return SimpleNamespace(x=x, y=y, width=width, height=height)
 
 
 def build(*, on_back=None, at=None) -> StudyStrip:
+    """A strip on a mocked parent showing zero elapsed and one owed solve."""
     return build_strip(
         MagicMock(),
         CONFIG,
@@ -36,38 +38,13 @@ def build(*, on_back=None, at=None) -> StudyStrip:
 
 
 def index_of(calls, needle: str) -> int:
+    """Position of the first recorded call whose name matches exactly."""
     for position, call in enumerate(calls):
         if call[0] == needle:
             return position
     seen = [c[0] for c in calls]
     message = f"{needle} not called; got {seen}"
     raise AssertionError(message)
-
-
-# -- text ------------------------------------------------------------------
-
-
-def test_the_elapsed_line_counts_up_and_never_down():
-    """No deadline exists, so no countdown may be implied. Study mode ends on a
-    solve or on the button -- inventing a timer would invent a pressure the
-    gate does not actually apply."""
-    text = StripText(elapsed_seconds=902.0, needed=1)
-
-    assert text.elapsed == "15:02"
-    assert "-" not in text.elapsed
-
-
-def test_the_elapsed_line_survives_a_clock_that_went_backwards():
-    assert StripText(elapsed_seconds=-5.0, needed=1).elapsed == "00:00"
-
-
-def test_the_owed_line_draws_one_circle_per_solve():
-    assert StripText(elapsed_seconds=0, needed=1).owed == g.OWED
-    assert StripText(elapsed_seconds=0, needed=3).owed == g.OWED * 3
-
-
-def test_nothing_owed_shows_the_check():
-    assert StripText(elapsed_seconds=0, needed=0).owed == g.SOLVED
 
 
 # -- construction ----------------------------------------------------------
@@ -85,6 +62,7 @@ def test_overrideredirect_is_set_before_the_geometry(tk_mock):
 
 
 def test_it_asks_to_stay_on_top(tk_mock):
+    """The strip window asks Tk to stay topmost."""
     build()
 
     tk_mock.Toplevel.return_value.attributes.assert_called_with("-topmost", 1)
@@ -119,6 +97,7 @@ def test_the_back_button_is_wired_and_is_not_styled_as_destructive(tk_mock):
 
 
 def test_it_says_what_it_is_and_what_is_owed(tk_mock):
+    """The labels name study mode, the elapsed time and what is still owed."""
     build()
 
     texts = [str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list]
@@ -130,18 +109,18 @@ def test_it_says_what_it_is_and_what_is_owed(tk_mock):
 # -- ticking ---------------------------------------------------------------
 
 
-def test_the_tick_refreshes_the_labels_and_re_lifts():
+def test_the_tick_refreshes_the_labels_and_re_lifts(tk_mock):
     """Nothing else is keeping this on top: the recovery loop is stopped, which
     is the entire reason study mode works at all."""
     strip = build()
 
     strip.tick(StripText(elapsed_seconds=61.0, needed=2))
 
-    # Both labels are the same shared mock, so read the calls rather than
+    # Every label is the same shared ``tk.Label`` mock, so read the calls rather than
     # expecting two distinct widgets.
     written = {
         call.kwargs.get("text")
-        for call in strip._elapsed_label.configure.call_args_list
+        for call in tk_mock.Label.return_value.configure.call_args_list
     }
     assert "01:01" in written
     assert g.OWED * 2 in written
@@ -149,6 +128,7 @@ def test_the_tick_refreshes_the_labels_and_re_lifts():
 
 
 def test_scheduling_drives_the_tick_from_a_supplier():
+    """schedule() keeps ticking with fresh text from the supplier until stopped."""
     strip = build()
     strip.window.after = MagicMock(side_effect=lambda _ms, fn: fn() or "job")
 
@@ -157,7 +137,7 @@ def test_scheduling_drives_the_tick_from_a_supplier():
     def supply() -> StripText:
         calls["n"] += 1
         if calls["n"] > 2:
-            strip._destroyed = True
+            strip.destroy()
         return StripText(elapsed_seconds=float(calls["n"]), needed=1)
 
     strip.schedule(supply)
@@ -165,17 +145,20 @@ def test_scheduling_drives_the_tick_from_a_supplier():
     assert calls["n"] >= 2
 
 
-def test_a_tick_after_destroy_does_nothing():
+def test_a_tick_after_destroy_does_nothing(tk_mock):
+    """A destroyed strip ignores a late tick and writes no label."""
     strip = build()
     strip.destroy()
-    strip._elapsed_label.reset_mock()
+    label = tk_mock.Label.return_value
+    label.reset_mock()
 
     strip.tick(StripText(elapsed_seconds=1.0, needed=1))
 
-    strip._elapsed_label.configure.assert_not_called()
+    label.configure.assert_not_called()
 
 
 def test_scheduling_after_destroy_does_nothing():
+    """A destroyed strip books no further tick."""
     strip = build()
     strip.destroy()
     strip.window.after.reset_mock()
@@ -194,7 +177,10 @@ def test_a_tick_that_raises_stops_the_strip_rather_than_the_lock(caplog):
     with caplog.at_level(logging.WARNING):
         strip.tick(StripText(elapsed_seconds=1.0, needed=1))
 
-    assert strip._destroyed is True
+    # Stopped: a later schedule() no longer books a tick.
+    strip.window.after.reset_mock()
+    strip.schedule(lambda: StripText(elapsed_seconds=0.0, needed=1))
+    strip.window.after.assert_not_called()
     assert caplog.records
 
 
@@ -202,8 +188,10 @@ def test_a_tick_that_raises_stops_the_strip_rather_than_the_lock(caplog):
 
 
 def test_destroy_cancels_the_tick_and_the_window():
+    """destroy() cancels the pending tick and destroys the window."""
     strip = build()
-    strip._job = "job-1"
+    strip.window.after.return_value = "job-1"
+    strip.schedule(lambda: StripText(elapsed_seconds=0.0, needed=1))
 
     strip.destroy()
 
@@ -212,6 +200,7 @@ def test_destroy_cancels_the_tick_and_the_window():
 
 
 def test_destroy_is_idempotent():
+    """A second destroy() does not destroy the window again."""
     strip = build()
 
     strip.destroy()
@@ -221,6 +210,7 @@ def test_destroy_is_idempotent():
 
 
 def test_a_destroy_that_raises_is_logged_not_propagated(caplog):
+    """A Tk error during destroy is logged and swallowed."""
     strip = build()
     strip.window.destroy.side_effect = tk.TclError("already gone")
 

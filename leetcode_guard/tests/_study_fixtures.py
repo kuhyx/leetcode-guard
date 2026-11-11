@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 
 from gatelock import GrabPolicy, LockConfig
 
+from leetcode_guard._gatelock_internals import set_surface_map
 from leetcode_guard._study import StudySession
 
 PRODUCTION = LockConfig(mode="hard")
@@ -29,6 +30,7 @@ class _Rect:
         self._spec = spec
 
     def geometry(self) -> str:
+        """The X geometry string a real output rectangle reports."""
         return self._spec
 
 
@@ -43,20 +45,22 @@ def wired(*outputs: str):
     parent = MagicMock()
     lock = parent.lock
     names = outputs or ("DP-0",)
-    infos = tuple(
-        _info(name, index=i, primary=(i == 0)) for i, name in enumerate(names)
-    )
+    infos = tuple(_info(name, index=i, primary=i == 0) for i, name in enumerate(names))
     lock.surfaces.infos.return_value = infos
-    lock.surfaces._surfaces = {
-        info.output_name: SimpleNamespace(
-            info=info, window=getattr(parent, f"surf_{info.output_name}")
-        )
-        for info in infos
-    }
+    set_surface_map(
+        lock.surfaces,
+        {
+            info.output_name: SimpleNamespace(
+                info=info, window=getattr(parent, f"surf_{info.output_name}")
+            )
+            for info in infos
+        },
+    )
     return parent, lock
 
 
 def session(lock, config=PRODUCTION, *, clock=None, on_fail=None) -> StudySession:
+    """A study session on ``lock`` with a scripted clock and a no-op fail hook."""
     ticks = iter(clock or [0.0, 0.0, 0.0, 0.0, 0.0])
     return StudySession(
         lock,

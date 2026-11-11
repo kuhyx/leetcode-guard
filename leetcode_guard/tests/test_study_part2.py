@@ -10,12 +10,14 @@ import tkinter as tk
 
 import pytest
 
+from leetcode_guard._gatelock_internals import surface_windows
 from leetcode_guard.tests._study_fixtures import (
     DEMO,
     index_of,
     session,
     wired,
 )
+from leetcode_guard.tests._study_regrab import resume_without_grab
 
 
 def test_resume_sets_overrideredirect_before_deiconify():
@@ -93,20 +95,13 @@ def test_a_failed_regrab_still_restarts_recovery_and_reports(caplog):
     """The fail-closed proof. The recovery loop is the real guarantee -- it
     re-takes the grab the moment it frees up -- so it must be restarted even
     when, especially when, our own attempts failed."""
-    _parent, lock = wired()
-    lock.root.grab_set_global.side_effect = tk.TclError("someone else has it")
-    told: list[str] = []
-    study = session(lock, on_fail=told.append)
-    study.suspend()
+    failed = resume_without_grab(caplog, "someone else has it")
 
-    with caplog.at_level(logging.ERROR):
-        outcome = study.resume()
-
-    assert outcome.ok is False
-    lock.recovery.start.assert_called_once()
-    lock.detector.start.assert_called_once()
-    assert told == ["the input grab could not be re-taken"]
-    assert study.active is False
+    assert failed.outcome.ok is False
+    failed.lock.recovery.start.assert_called_once()
+    failed.lock.detector.start.assert_called_once()
+    assert failed.told == ["the input grab could not be re-taken"]
+    assert failed.study.active is False
 
 
 def test_a_failed_regrab_leaves_every_surface_visible():
@@ -115,13 +110,14 @@ def test_a_failed_regrab_leaves_every_surface_visible():
     lock.root.grab_set_global.side_effect = tk.TclError("held")
     study = session(lock)
     study.suspend()
+    windows = _windows_by_output(lock)
     for name in ("DP-0", "HDMI-0"):
-        lock.surfaces._surfaces[name].window.reset_mock()
+        windows[name].reset_mock()
 
     study.resume()
 
     for name in ("DP-0", "HDMI-0"):
-        window = lock.surfaces._surfaces[name].window
+        window = windows[name]
         window.deiconify.assert_called_once()
         window.withdraw.assert_not_called()
 
@@ -139,6 +135,7 @@ def test_a_local_grab_needs_no_re_grab():
 
 
 def test_resume_refocuses_because_on_focus_ready_never_fires_twice():
+    """Resume refocuses a surface itself, since on_focus_ready fires once."""
     _parent, lock = wired()
     study = session(lock)
     study.suspend()
@@ -150,6 +147,7 @@ def test_resume_refocuses_because_on_focus_ready_never_fires_twice():
 
 
 def test_resume_is_idempotent(caplog):
+    """Resuming while not studying is a successful no-op with no re-grab."""
     _parent, lock = wired()
     study = session(lock)
 
@@ -162,18 +160,21 @@ def test_resume_is_idempotent(caplog):
 
 
 def test_a_surface_that_will_not_come_back_does_not_stop_the_rest(caplog):
+    """One surface failing to map still lets the other surfaces come back."""
     _parent, lock = wired("DP-0", "HDMI-0")
     study = session(lock)
     study.suspend()
-    lock.surfaces._surfaces["DP-0"].window.deiconify.side_effect = tk.TclError("gone")
+    windows = _windows_by_output(lock)
+    windows["DP-0"].deiconify.side_effect = tk.TclError("gone")
 
     with caplog.at_level(logging.WARNING):
         study.resume()
 
-    lock.surfaces._surfaces["HDMI-0"].window.deiconify.assert_called_once()
+    windows["HDMI-0"].deiconify.assert_called_once()
 
 
 def test_a_root_that_will_not_map_still_attempts_the_grab(caplog):
+    """A root that fails to map does not skip the global re-grab."""
     _parent, lock = wired()
     study = session(lock)
     study.suspend()
@@ -183,3 +184,8 @@ def test_a_root_that_will_not_map_still_attempts_the_grab(caplog):
         study.resume()
 
     lock.root.grab_set_global.assert_called()
+
+
+def _windows_by_output(lock):
+    """Map each output name to its surface window via the production lookup."""
+    return {info.output_name: window for info, window in surface_windows(lock)}

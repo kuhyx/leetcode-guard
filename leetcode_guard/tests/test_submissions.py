@@ -39,6 +39,7 @@ from leetcode_guard.tests._net_fixtures import (
     ],
 )
 def test_every_failure_mode_is_unverifiable(result: GraphQLResult, fragment: str):
+    """Every LeetCode failure mode yields UNVERIFIABLE with no submissions and a reason."""
     probe = fetch_recent_ac(fake_post(result), "kuchy")
 
     assert probe.status is ProbeStatus.UNVERIFIABLE
@@ -47,6 +48,7 @@ def test_every_failure_mode_is_unverifiable(result: GraphQLResult, fragment: str
 
 
 def test_empty_list_is_a_real_answer_not_an_outage():
+    """An empty submission list is a usable OK answer, not an outage."""
     probe = fetch_recent_ac(fake_post(recent_ac_result([])), "kuchy")
 
     assert probe.status is ProbeStatus.OK
@@ -56,6 +58,7 @@ def test_empty_list_is_a_real_answer_not_an_outage():
 
 
 def test_submissions_are_parsed():
+    """Valid rows parse into submissions with id, timestamp and language."""
     result = recent_ac_result(
         [
             submission_row("111", "two-sum", timestamp=1_700_000_000, lang="python3"),
@@ -75,6 +78,7 @@ def test_submissions_are_parsed():
 
 
 def test_single_submission_reason_is_singular():
+    """One submission uses the singular wording in the reason."""
     probe = fetch_recent_ac(
         fake_post(recent_ac_result([submission_row("1", "two-sum")])), "k"
     )
@@ -84,6 +88,7 @@ def test_single_submission_reason_is_singular():
 
 
 def test_nonexistent_username_is_unverifiable_and_logged_at_error(caplog):
+    """An unknown username is UNVERIFIABLE and logged at ERROR."""
     result = GraphQLResult(errors=("That user does not exist.",))
 
     with caplog.at_level(logging.ERROR):
@@ -107,6 +112,7 @@ def test_nonexistent_username_is_unverifiable_and_logged_at_error(caplog):
     ],
 )
 def test_malformed_rows_are_skipped_without_downgrading_the_probe(row: object):
+    """A malformed row is dropped while the probe stays OK."""
     good = submission_row("999", "good-one")
 
     probe = fetch_recent_ac(fake_post(recent_ac_result([row, good])), "kuchy")
@@ -116,6 +122,7 @@ def test_malformed_rows_are_skipped_without_downgrading_the_probe(row: object):
 
 
 def test_integer_timestamp_is_accepted():
+    """An integer timestamp is accepted as well as a string one."""
     row = {"id": "5", "titleSlug": "two-sum", "timestamp": 1_700_000_000}
 
     probe = fetch_recent_ac(fake_post(recent_ac_result([row])), "kuchy")
@@ -124,6 +131,7 @@ def test_integer_timestamp_is_accepted():
 
 
 def test_title_defaults_to_the_slug_when_absent():
+    """A missing title falls back to the slug and a missing language to empty."""
     row = {"id": "5", "titleSlug": "two-sum", "timestamp": "1"}
 
     probe = fetch_recent_ac(fake_post(recent_ac_result([row])), "kuchy")
@@ -133,6 +141,7 @@ def test_title_defaults_to_the_slug_when_absent():
 
 
 def test_all_rows_malformed_still_reports_ok_with_nothing():
+    """All-malformed rows still report OK with no submissions."""
     probe = fetch_recent_ac(fake_post(recent_ac_result(["junk"])), "kuchy")
 
     assert probe.status is ProbeStatus.OK
@@ -140,6 +149,7 @@ def test_all_rows_malformed_still_reports_ok_with_nothing():
 
 
 def test_the_username_is_sent_in_the_variables():
+    """The query sends the username and a limit of 20."""
     post = fake_post(recent_ac_result([]))
 
     fetch_recent_ac(post, "someone")

@@ -20,8 +20,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-@pytest.fixture
-def bell() -> Iterator[tuple[NudgeServer, list[int]]]:
+@pytest.fixture(name="bell")
+def fixture_bell() -> Iterator[tuple[NudgeServer, list[int]]]:
+    """A started doorbell on a free port plus the list its rings land in."""
     rings: list[int] = []
     server = NudgeServer(lambda: rings.append(1), port=0)
     assert server.start()
@@ -39,6 +40,7 @@ def _request(port: int, method: str, path: str) -> http.client.HTTPResponse:
 
 
 def test_a_post_to_the_bell_rings_it(bell: tuple[NudgeServer, list[int]]) -> None:
+    """A POST to the nudge path rings once and allows any origin."""
     server, rings = bell
     assert server.port is not None
 
@@ -52,6 +54,7 @@ def test_a_post_to_the_bell_rings_it(bell: tuple[NudgeServer, list[int]]) -> Non
 def test_any_other_path_is_a_404_and_rings_nothing(
     bell: tuple[NudgeServer, list[int]],
 ) -> None:
+    """A POST to another path returns 404 and does not ring."""
     server, rings = bell
     assert server.port is not None
 
@@ -64,6 +67,7 @@ def test_any_other_path_is_a_404_and_rings_nothing(
 def test_the_preflight_allows_a_private_network_caller(
     bell: tuple[NudgeServer, list[int]],
 ) -> None:
+    """The OPTIONS preflight allows a private-network caller without ringing."""
     server, rings = bell
     assert server.port is not None
 
@@ -75,6 +79,7 @@ def test_the_preflight_allows_a_private_network_caller(
 
 
 def test_a_taken_port_is_survived_not_raised(caplog: pytest.LogCaptureFixture) -> None:
+    """A taken port makes start return False and logs the fallback."""
     with socket.socket() as squatter:
         squatter.bind(("127.0.0.1", 0))
         squatter.listen()
@@ -88,6 +93,7 @@ def test_a_taken_port_is_survived_not_raised(caplog: pytest.LogCaptureFixture) -
 
 
 def test_stop_is_idempotent_and_closes_the_port() -> None:
+    """Stopping twice is safe and clears the port."""
     server = NudgeServer(lambda: None, port=0)
     server.stop()
     assert server.start()

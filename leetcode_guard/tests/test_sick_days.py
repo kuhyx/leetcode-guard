@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
+import pytest
 import sickdays
 
 from leetcode_guard import _gate_today, _status_projection
@@ -17,9 +18,10 @@ from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, append
 from leetcode_guard._projection import project
 from leetcode_guard._projection_text import projection_lines
+from leetcode_guard._status import gather_status
 from leetcode_guard._status_full import explain_not_triggered
-from leetcode_guard._viewmodel import build_viewmodel
-from leetcode_guard._viewmodel_source import ViewSource
+from leetcode_guard._status_projection import _is_off_day
+from leetcode_guard.tests._gate_fixtures import decide_with, view_of
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -31,12 +33,6 @@ from leetcode_guard.tests._ledger_fixtures import (
 )
 from leetcode_guard.tests.test_projection import SAT, never_free, position, progress
 from leetcode_guard.tests.test_status_gather import full_for
-from leetcode_guard.tests.test_viewmodel import (
-    CHECKED_AT,
-    OK_PROBE,
-    SIGNED_OUT,
-    pool_of,
-)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,6 +42,7 @@ NEXT_MONDAY = MONDAY + timedelta(days=7)
 
 
 def sick_on(*days: date):
+    """A sick-day predicate that is true on exactly these days."""
     return lambda day: day in days
 
 
@@ -55,13 +52,8 @@ def stands_down_on(*days: date):
 
 
 def test_a_sick_day_stands_down_with_no_credit_and_no_charge(hmac_key: Path):
-    decision = decide(
-        Ledger(),
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(sick_day=True),
-    )
+    """A sick day unlocks with nothing needed and no charge written."""
+    decision = decide_with(Ledger(), hmac_key, DayContext(sick_day=True))
 
     assert decision.state is GateState.UNLOCKED_SICK_DAY
     assert decision.state.value == "sick-day"
@@ -71,41 +63,26 @@ def test_a_sick_day_stands_down_with_no_credit_and_no_charge(hmac_key: Path):
 
 
 def test_sick_is_not_free(hmac_key: Path):
-    free = decide(
-        Ledger(),
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(free_day=True),
-    )
-    sick = decide(
-        Ledger(),
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(sick_day=True),
-    )
+    """A sick day reports its own state, distinct from a free day."""
+    free = decide_with(Ledger(), hmac_key, DayContext(free_day=True))
+    sick = decide_with(Ledger(), hmac_key, DayContext(sick_day=True))
 
     assert free.state is GateState.UNLOCKED_FREE_DAY
     assert sick.state is not free.state
 
 
 def test_a_sick_day_does_not_override_an_untrusted_clock(hmac_key: Path):
+    """A clock that moved backwards still locks even on a sick day."""
     ledger = Ledger()
     add_charge(ledger, TUESDAY, key_file=hmac_key)
 
-    decision = decide(
-        ledger,
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(sick_day=True),
-    )
+    decision = decide_with(ledger, hmac_key, DayContext(sick_day=True))
 
     assert decision.state is GateState.LOCKED_CLOCK_UNTRUSTED
 
 
 def test_a_workday_penalty_is_ignored_on_a_sick_day(hmac_key: Path):
+    """The workday penalty doubles the cost only on a non-sick day."""
     kwargs = {"day": TUESDAY, "now": NOW, "key_file": hmac_key}
     penalised = DayContext(workday_penalty=True)
     sick = DayContext(workday_penalty=True, sick_day=True)
@@ -115,6 +92,7 @@ def test_a_workday_penalty_is_ignored_on_a_sick_day(hmac_key: Path):
 
 
 def test_a_sick_day_adds_nothing_to_the_debt():
+    """Missed sick days are not owed and not counted as missed."""
     plain = compute_debt(Ledger(), day=NEXT_MONDAY, is_free=never_free, start=MONDAY)
     sick = compute_debt(
         Ledger(),
@@ -129,6 +107,7 @@ def test_a_sick_day_adds_nothing_to_the_debt():
 
 
 def test_a_charge_on_a_sick_day_repays_by_the_ordinary_rule(hmac_key: Path):
+    """A surcharged charge repays one whether or not its day was sick."""
     ledger = Ledger()
     append(ledger, [charge_entry(MONDAY, now=NOW, key_file=hmac_key, surcharge=1)])
 
@@ -143,7 +122,9 @@ def test_a_charge_on_a_sick_day_repays_by_the_ordinary_rule(hmac_key: Path):
         assert debt.repaid == 1
 
 
-def test_decide_today_reads_the_sick_pool(hmac_key: Path, debt_starts, monkeypatch):
+@pytest.mark.usefixtures("hmac_key")
+def test_decide_today_reads_the_sick_pool(debt_starts, monkeypatch):
+    """decide_today consults sickdays for both the debt and today's state."""
     debt_starts(MONDAY)
     monkeypatch.setattr(sickdays, "stands_down", stands_down_on(MONDAY, TUESDAY))
 
@@ -155,6 +136,7 @@ def test_decide_today_reads_the_sick_pool(hmac_key: Path, debt_starts, monkeypat
 
 
 def test_decide_today_reads_the_real_pool_file():
+    """A sick day written to the real pool file unlocks today."""
     today = date.today()
     sickdays.add_sick_day(today, is_free=lambda _day: False)
 
@@ -164,6 +146,7 @@ def test_decide_today_reads_the_real_pool_file():
 
 
 def test_the_projection_counts_sick_days_apart_from_free():
+    """The projection counts sick days separately and drops them from gated days."""
     sick = sick_on(date(2026, 9, 21), date(2026, 9, 22))
     result = project(
         date(2026, 9, 26),
@@ -185,8 +168,7 @@ def test_the_projection_counts_sick_days_apart_from_free():
 def test_sick_days_reach_the_status_projection(
     data_dir: Path, hmac_key: Path, monkeypatch
 ):
-    from leetcode_guard._status import gather_status
-
+    """The status projection treats sick days as off days, not gated or free."""
     snapshot = gather_status(ledger_path=data_dir / "ledger.json", key_file=hmac_key)
     monkeypatch.setattr(sickdays, "stands_down", lambda *_a, **_k: True)
 
@@ -197,30 +179,21 @@ def test_sick_days_reach_the_status_projection(
     assert report.projection is not None
     assert report.projection.gated_days == 0
     assert report.projection.free_days == 0
-    assert _status_projection._is_off_day(SAT)
+    assert _is_off_day(SAT)
 
 
 def test_the_window_says_sick_not_unlocked(hmac_key: Path):
-    decision = decide(
-        Ledger(),
-        day=MONDAY,
-        now=NOW,
-        key_file=hmac_key,
-        context=DayContext(sick_day=True),
-    )
+    """The view headline names a sick day rather than a free unlock."""
+    decision = decide_with(Ledger(), hmac_key, DayContext(sick_day=True))
 
-    model = build_viewmodel(
-        decision,
-        ViewSource(pool_of(), SIGNED_OUT, limit=10),
-        OK_PROBE,
-        checked_at=CHECKED_AT,
-    )
+    model = view_of(decision)
 
     assert model.headline == g.SICK
     assert model.headline != g.SOLVED
 
 
 def test_status_explains_a_sick_day(data_dir: Path, hmac_key: Path, monkeypatch):
+    """The status explanation mentions the sick day."""
     monkeypatch.setattr(sickdays, "stands_down", lambda *_a, **_k: True)
     ledger = ledger_with_credits(0, day=MONDAY, key_file=hmac_key)
 

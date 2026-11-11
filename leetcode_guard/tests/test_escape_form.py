@@ -48,6 +48,7 @@ def _outline(widget: MagicMock) -> int:
 
 
 def test_a_blank_reason_outlines_the_reason_field():
+    """A refusal for a blank reason outlines the reason field."""
     form = _form()
 
     flag_refusal(form, _draft(reason=""), CONFIG)
@@ -58,6 +59,7 @@ def test_a_blank_reason_outlines_the_reason_field():
 
 
 def test_a_blank_onset_outlines_the_onset_field_and_clears_the_last_outline():
+    """The next refusal moves the outline to the onset field and clears the old one."""
     form = _form()
     flag_refusal(form, _draft(reason=""), CONFIG)
 
@@ -69,6 +71,7 @@ def test_a_blank_onset_outlines_the_onset_field_and_clears_the_last_outline():
 
 
 def test_a_short_explanation_outlines_the_explanation():
+    """A too-short explanation outlines the explanation box."""
     form = _form()
 
     flag_refusal(form, _draft(), CONFIG)
@@ -79,6 +82,7 @@ def test_a_short_explanation_outlines_the_explanation():
 
 
 def test_the_counter_turns_green_at_the_minimum(tk_mock, tmp_path: Path, hmac_key):
+    """The character counter turns green once the minimum length is reached."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     form = build_escape_form(MagicMock(), CONFIG, tracker, lambda: False)
     count = tk_mock.Text.return_value.bind.call_args.args[1]
@@ -96,6 +100,7 @@ def test_the_counter_turns_green_at_the_minimum(tk_mock, tmp_path: Path, hmac_ke
 
 
 def test_past_justifications_are_read_back_as_written(tmp_path: Path, hmac_key):
+    """Recorded justifications are read back verbatim."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     assert recent_lines(tracker) == ""
     tracker.record(_draft(reason="flu", description="fever all night"))
@@ -104,6 +109,7 @@ def test_past_justifications_are_read_back_as_written(tmp_path: Path, hmac_key):
 
 
 def test_the_form_paints_the_read_back(tk_mock, tmp_path: Path, hmac_key):
+    """The form paints the read-back of past justifications."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     tracker.record(_draft(reason="flu", description="fever all night"))
 
@@ -116,6 +122,7 @@ def test_the_form_paints_the_read_back(tk_mock, tmp_path: Path, hmac_key):
 def test_the_budget_is_dots_per_window_or_a_count_past_the_cap(
     tmp_path: Path, hmac_key
 ):
+    """The escape budget is one dot per window, or a count past the cap."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     tracker.record(_draft(description="d"))
 
@@ -127,6 +134,7 @@ def test_the_budget_is_dots_per_window_or_a_count_past_the_cap(
 
 
 def test_many_owed_solves_collapse_into_a_count():
+    """Owed dots past the cap collapse into a glyph and a count."""
     assert g.dots(0) == ""
     assert g.dots(3) == g.OWED * 3
     assert g.dots(g.DOT_CAP + 4) == f"{g.OWED}{g.TIMES}{g.DOT_CAP + 4}"

@@ -20,6 +20,8 @@ from leetcode_guard.tests._net_fixtures import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from leetcode_guard._pool_resolve import PoolResolution
+
 SIGNED_OUT = AuthState(cookies=None, note="signed out note")
 SIGNED_IN = AuthState(cookies=Cookies(session="s", csrf="c"), note="signed in note")
 
@@ -30,10 +32,24 @@ def path_of(tmp_path: Path) -> Path:
 
 
 def cached(*slugs: str, fetched_at: float = 0.0) -> CachedPool:
+    """A complete cached pool holding one parsed problem per slug."""
     problems = tuple(
         p for p in (parse_problem(problem_row(slug)) for slug in slugs) if p is not None
     )
     return CachedPool(problems=problems, fetched_at=fetched_at, complete=True)
+
+
+def resolve_done_and_todo(tmp_path: Path, auth: AuthState) -> PoolResolution:
+    """Resolve a live pool of one accepted and one unsolved problem under *auth*."""
+    post = fake_post(
+        pool_result(
+            [problem_row("done", status="ac"), problem_row("todo", status="notac")],
+            total=2,
+        )
+    )
+    return resolve_pool(
+        post, path_of(tmp_path), now=0.0, solved=SolvedKnowledge(auth=auth)
+    )
 
 
 def test_a_fresh_cache_wins_and_refetches_no_problem_list(tmp_path: Path):
@@ -57,6 +73,7 @@ def test_a_fresh_cache_wins_and_refetches_no_problem_list(tmp_path: Path):
 
 
 def test_a_stale_cache_triggers_a_live_fetch_and_is_replaced(tmp_path: Path):
+    """A cache past its TTL is refetched live and rewritten with the new time."""
     path = tmp_path / "pool.json"
     write_cache(path, cached("old", fetched_at=0.0))
     post = fake_post(pool_result([problem_row("fresh")], total=1))
@@ -73,6 +90,7 @@ def test_a_stale_cache_triggers_a_live_fetch_and_is_replaced(tmp_path: Path):
 
 
 def test_a_failed_fetch_falls_back_to_the_stale_cache_and_says_so(tmp_path: Path):
+    """A failed refresh serves the stale cache and notes its age."""
     path = tmp_path / "pool.json"
     day = 86_400.0
     write_cache(path, cached("old", fetched_at=0.0))
@@ -89,6 +107,7 @@ def test_a_failed_fetch_falls_back_to_the_stale_cache_and_says_so(tmp_path: Path
 
 
 def test_one_day_stale_note_is_singular(tmp_path: Path):
+    """A cache one day old is described as "1 day ago"."""
     path = tmp_path / "pool.json"
     day = 86_400.0
     write_cache(path, cached("old", fetched_at=0.0))
@@ -105,6 +124,7 @@ def test_one_day_stale_note_is_singular(tmp_path: Path):
 
 
 def test_no_cache_and_no_network_still_returns_a_usable_resolution(tmp_path: Path):
+    """No cache and no network still yields an empty, explained resolution."""
     resolution = resolve_pool(
         fake_post(GraphQLResult(transport_error="down")),
         tmp_path / "absent.json",
@@ -127,6 +147,7 @@ def test_post_none_forces_cache_only_resolution(tmp_path: Path):
 
 
 def test_incomplete_fetch_is_announced(tmp_path: Path):
+    """A live fetch short of its total says it may be incomplete."""
     post = fake_post(pool_result([problem_row("partial")], total=999))
 
     resolution = resolve_pool(
@@ -138,6 +159,7 @@ def test_incomplete_fetch_is_announced(tmp_path: Path):
 
 
 def test_the_auth_note_is_always_included(tmp_path: Path):
+    """The auth note always leads the resolution notes."""
     resolution = resolve_pool(
         fake_post(pool_result([problem_row("x")], total=1)),
         tmp_path / "pool.json",
@@ -197,6 +219,7 @@ def test_the_ledger_note_does_not_claim_to_know_every_solve(tmp_path: Path):
 
 
 def test_no_ledger_slugs_adds_no_note(tmp_path: Path):
+    """No ledger slugs means no already-solved note."""
     resolution = resolve_pool(
         fake_post(pool_result([problem_row("x")], total=1)),
         tmp_path / "pool.json",
@@ -212,15 +235,6 @@ def test_a_solved_status_is_dropped_even_with_no_cookies(tmp_path: Path):
     authenticated fetch did manage to return -- the real cache had 10 of them
     among 4007 nulls, and gating on `auth.present` would have discarded all 10.
     """
-    post = fake_post(
-        pool_result(
-            [problem_row("done", status="ac"), problem_row("todo", status="notac")],
-            total=2,
-        )
-    )
-
-    resolution = resolve_pool(
-        post, tmp_path / "pool.json", now=0.0, solved=SolvedKnowledge(auth=SIGNED_OUT)
-    )
+    resolution = resolve_done_and_todo(tmp_path, SIGNED_OUT)
 
     assert [p.title_slug for p in resolution.problems] == ["todo"]

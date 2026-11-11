@@ -23,10 +23,12 @@ Sat 26 2 = 2+2+3+2+2 = 11."""
 
 
 def never_free(_day):
+    """Treat every day as a gated day."""
     return False
 
 
 def progress(easy=55, medium=0, hard=0) -> Progress:
+    """A progress snapshot with the given solved counts per difficulty."""
     return Progress(
         solved={"Easy": easy, "Medium": medium, "Hard": hard},
         total={"Easy": 965, "Medium": 2115, "Hard": 975},
@@ -35,6 +37,7 @@ def progress(easy=55, medium=0, hard=0) -> Progress:
 
 
 def position(*, charged_today=True, available=0, debt=14) -> Position:
+    """The settled-Saturday position, overridable per field."""
     return Position(
         today=SAT,
         charged_today=charged_today,
@@ -57,10 +60,12 @@ def position(*, charged_today=True, available=0, debt=14) -> Position:
     ],
 )
 def test_parse_target_reads_dotted_and_iso_dates(text, expected):
+    """Dotted and ISO dates parse; impossible or other formats give None."""
     assert parse_target(text) == expected
 
 
 def test_the_default_target_is_new_years_eve_in_dotted_form():
+    """The default target is 31 December, rendered in dotted form."""
     assert default_target(SAT) == date(2026, 12, 31)
     assert format_target(default_target(SAT)) == "31.12.2026"
 
@@ -94,6 +99,7 @@ def test_the_price_table_is_an_argument_not_a_global():
 
 
 def test_an_unsettled_today_is_counted_and_costs_the_weekend_price():
+    """An unsettled Saturday counts as one gated day at the weekend price."""
     result = project(
         SAT, position(charged_today=False), is_free=never_free, progress=None
     )
@@ -105,6 +111,7 @@ def test_an_unsettled_today_is_counted_and_costs_the_weekend_price():
 
 
 def test_a_settled_today_asked_about_today_counts_no_days():
+    """A settled today with today as target leaves only the debt."""
     result = project(SAT, position(), is_free=never_free, progress=None)
 
     assert (result.gated_days, result.base_cost, result.required) == (0, 0, 14)
@@ -113,6 +120,7 @@ def test_a_settled_today_asked_about_today_counts_no_days():
 
 
 def test_free_days_cost_nothing_and_repay_nothing():
+    """Free days drop out of both the base cost and the debt repayment."""
     free = {date(2026, 9, 21), date(2026, 9, 22)}
 
     result = project(
@@ -126,6 +134,7 @@ def test_free_days_cost_nothing_and_repay_nothing():
 
 
 def test_banked_credits_reduce_the_demand_and_it_floors_at_zero():
+    """Banked credits beyond the cost floor the demand at zero."""
     result = project(
         date(2026, 9, 20),
         position(available=50, debt=0),
@@ -138,6 +147,7 @@ def test_banked_credits_reduce_the_demand_and_it_floors_at_zero():
 
 
 def test_a_long_horizon_repays_the_whole_debt_under_the_rules():
+    """By year end the rules alone have repaid the whole debt."""
     result = project(date(2026, 12, 31), position(), is_free=never_free, progress=None)
 
     assert result.gated_days == 103
@@ -146,6 +156,7 @@ def test_a_long_horizon_repays_the_whole_debt_under_the_rules():
 
 
 def test_new_solves_fill_easy_then_medium_then_hard():
+    """Projected solves fill Easy, then Medium, then Hard, dropping leftovers."""
     nearly_done = Progress(
         solved={"Easy": 963, "Medium": 2114, "Hard": 970},
         total={"Easy": 965, "Medium": 2115, "Hard": 975},
@@ -164,5 +175,6 @@ def test_new_solves_fill_easy_then_medium_then_hard():
 
 
 def test_percent_is_zero_over_an_empty_total():
+    """percent() is zero over an empty total and a plain ratio otherwise."""
     assert percent(3, 0) == 0.0
     assert percent(1, 4) == 25.0

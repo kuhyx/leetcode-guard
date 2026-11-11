@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import json
 from typing import TYPE_CHECKING
 
+from gatelock import log_integrity
 from gatelock.log_integrity import compute_entry_hmac
 import pytest
 
@@ -23,9 +24,7 @@ NOW = datetime(2026, 9, 19, 9, 0).astimezone()
 def _signing_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     key = tmp_path / "hmac.key"
     key.write_bytes(b"1" * 32)
-    import gatelock.log_integrity
-
-    monkeypatch.setattr(gatelock.log_integrity, "DEFAULT_HMAC_KEY_FILE", key)
+    monkeypatch.setattr(log_integrity, "DEFAULT_HMAC_KEY_FILE", key)
 
 
 def _entry(
@@ -57,12 +56,14 @@ class TestBinding:
     """The verdict rules are gatelock's; this checks leetcode-guard's wiring."""
 
     def test_completed_defers_until_the_signed_instant(self) -> None:
+        """A signed completed session defers the gate until its exempt time."""
         _write(_entry())
         assert defer_for_morning_session(NOW) == (
             "morning session completed, no gate until 11:00"
         )
 
     def test_expired_or_unsigned_defers_nothing(self) -> None:
+        """An expired or unsigned session defers nothing."""
         _write(_entry())
         assert defer_for_morning_session(NOW + timedelta(hours=3)) is None
         _write(_entry(), sign=False)
@@ -71,6 +72,7 @@ class TestBinding:
     def test_the_retry_budget_is_leetcode_guards_own(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """The wait-and-retry budget comes from leetcode-guard's own constant."""
         naps: list[float] = []
         assert defer_for_morning_session(NOW, wait=True, sleep=naps.append) is None
         assert naps == []
@@ -88,6 +90,7 @@ class TestArmingRun:
         capsys: pytest.CaptureFixture[str],
         data_dir: Path,
     ) -> None:
+        """A production run defers with no network call and no ledger write."""
         _write(_entry(date=_today(), exempt_until="23:59"))
         monkeypatch.setattr(
             _cli, "build_client", lambda: pytest.fail("must not touch the network")
@@ -96,9 +99,9 @@ class TestArmingRun:
         assert "deferred: morning session completed" in capsys.readouterr().out
         assert not (data_dir / "ledger.json").exists()
 
-    def test_demo_ignores_the_morning(
-        self, monkeypatch: pytest.MonkeyPatch, data_dir: Path
-    ) -> None:
+    @pytest.mark.usefixtures("data_dir")
+    def test_demo_ignores_the_morning(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A demo run ignores the morning session and reaches the client."""
         _write(_entry(date=_today(), exempt_until="23:59"))
         reached: dict[str, bool] = {}
 

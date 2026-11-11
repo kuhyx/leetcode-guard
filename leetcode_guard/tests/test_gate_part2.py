@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard._clock_guard import check_clock
 from leetcode_guard._constants import GATE_START_DATE
 from leetcode_guard._gate import (
@@ -16,6 +18,7 @@ from leetcode_guard._gate import (
 from leetcode_guard._ledger import SOURCE_ESCAPE
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import Ledger, save_ledger
+from leetcode_guard.tests._gate_fixtures import settle_escape
 from leetcode_guard.tests._ledger_fixtures import (
     MONDAY,
     NOW,
@@ -28,19 +31,12 @@ if TYPE_CHECKING:
 
 
 def test_settle_day_is_idempotent(tmp_path: Path, hmac_key: Path):
+    """Settling the same day twice saves the charge only once."""
     path = tmp_path / "ledger.json"
     ledger = Ledger()
 
-    assert settle_day(
-        ledger,
-        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
-        path,
-    )
-    assert not settle_day(
-        ledger,
-        charge_entry(MONDAY, now=NOW, source=SOURCE_ESCAPE, key_file=hmac_key),
-        path,
-    )
+    assert settle_escape(ledger, path, hmac_key)
+    assert not settle_escape(ledger, path, hmac_key)
 
 
 def test_a_far_future_date_is_trusted(hmac_key: Path):
@@ -53,6 +49,7 @@ def test_a_far_future_date_is_trusted(hmac_key: Path):
 
 
 def test_save_failure_makes_apply_decision_report_false(tmp_path: Path, hmac_key: Path):
+    """apply_decision reports False when the ledger cannot be saved."""
     blocker = tmp_path / "blocker"
     blocker.write_text("file", encoding="utf-8")
     ledger = ledger_with_credits(1, day=MONDAY, key_file=hmac_key)
@@ -62,6 +59,7 @@ def test_save_failure_makes_apply_decision_report_false(tmp_path: Path, hmac_key
 
 
 def test_settle_day_reports_a_failed_save(tmp_path: Path, hmac_key: Path):
+    """settle_day reports False when the ledger cannot be saved."""
     blocker = tmp_path / "blocker"
     blocker.write_text("file", encoding="utf-8")
 
@@ -73,10 +71,12 @@ def test_settle_day_reports_a_failed_save(tmp_path: Path, hmac_key: Path):
 
 
 def test_saving_an_empty_ledger_still_works(tmp_path: Path):
+    """An empty ledger saves successfully."""
     assert save_ledger(tmp_path / "ledger.json", Ledger())
 
 
-def test_the_gate_is_inert_before_its_start_date(hmac_key: Path, gate_starts):
+@pytest.mark.usefixtures("gate_starts")
+def test_the_gate_is_inert_before_its_start_date(hmac_key: Path):
     """Installed but not yet in force. systemd cannot express "not before date
     X", so the start date lives here where --status and MCP can see it."""
     before = GATE_START_DATE - timedelta(days=1)
@@ -89,14 +89,17 @@ def test_the_gate_is_inert_before_its_start_date(hmac_key: Path, gate_starts):
     assert str(GATE_START_DATE) in decision.reason
 
 
-def test_the_gate_locks_on_its_start_date(hmac_key: Path, gate_starts):
+@pytest.mark.usefixtures("gate_starts")
+def test_the_gate_locks_on_its_start_date(hmac_key: Path):
+    """On the start date itself an empty ledger locks."""
     decision = decide(Ledger(), day=GATE_START_DATE, now=NOW, key_file=hmac_key)
 
     assert decision.state is GateState.LOCKED_INSUFFICIENT
     assert decision.locked
 
 
-def test_the_start_date_never_masks_a_rolled_back_clock(hmac_key: Path, gate_starts):
+@pytest.mark.usefixtures("gate_starts")
+def test_the_start_date_never_masks_a_rolled_back_clock(hmac_key: Path):
     """Ordering matters: if the start-date check ran first, setting the date
     back to July would re-enter the inert state and disable the gate forever."""
     ledger = Ledger()
@@ -110,7 +113,8 @@ def test_the_start_date_never_masks_a_rolled_back_clock(hmac_key: Path, gate_sta
     assert decision.locked
 
 
-def test_an_inert_day_is_never_charged(tmp_path: Path, hmac_key: Path, gate_starts):
+@pytest.mark.usefixtures("gate_starts")
+def test_an_inert_day_is_never_charged(tmp_path: Path, hmac_key: Path):
     """Nothing is spent while the gate is not in force."""
     path = tmp_path / "ledger.json"
     ledger = ledger_with_credits(2, day=MONDAY, key_file=hmac_key)

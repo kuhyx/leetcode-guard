@@ -93,6 +93,7 @@ def words_in(text: str) -> list[str]:
 
 
 def assert_text_free(fake: MagicMock) -> None:
+    """Fail if any painted text holds a word outside the allowed set."""
     texts = painted(fake)
     assert texts, "nothing was painted: the guard would pass vacuously"
     offenders = {text: words_in(text) for text in texts if words_in(text)}
@@ -100,6 +101,7 @@ def assert_text_free(fake: MagicMock) -> None:
 
 
 def _model(ledger: Ledger, key: Path, **kwargs: Any):
+    """A view model for one lock state, with defaults for the rest."""
     day = kwargs.pop("day", MONDAY)
     context = kwargs.pop("context", DayContext())
     decision = decide(ledger, day=day, now=NOW, key_file=key, context=context)
@@ -137,6 +139,7 @@ def _surfaces(key: Path, tmp: Path) -> list[Any]:
 def test_no_surface_state_paints_a_word(
     tk_mock, tmp_path: Path, hmac_key: Path, disable_vt: bool
 ):
+    """No lock-surface state paints a word, with or without VT switching."""
     config = LockConfig(
         mode="hard", grab=GrabPolicy(kind="local", disable_vt=disable_vt)
     )
@@ -153,6 +156,7 @@ def test_no_surface_state_paints_a_word(
 
 
 def test_the_escape_form_paints_no_word(tk_mock, tmp_path: Path, hmac_key: Path):
+    """The escape form, even after a refused submit, paints no word."""
     tracker = build_tracker(tmp_path / "escape.json", key_file=hmac_key)
     hatch = EscapeHatch(tracker, LockConfig(), on_granted=lambda _r: None)
     form = hatch.show(MagicMock())
@@ -166,6 +170,7 @@ def test_the_escape_form_paints_no_word(tk_mock, tmp_path: Path, hmac_key: Path)
 
 
 def test_the_study_strip_paints_no_word(tk_mock):
+    """The study strip paints no word."""
     rect = MagicMock(x=0, y=0, width=1920, height=1080)
     strip = build_strip(
         MagicMock(),

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from crdt_sync import FirebaseSyncError
 import pytest
 
 from leetcode_guard import _snapshot_dedup
@@ -35,20 +36,22 @@ FULL_WRITE = [SNAPSHOT_PATH, STATUS_HASH_PATH, HEARTBEAT_PATH]
 
 
 class FakeStore:
+    """An in-memory Firebase store that records writes and can fail one path."""
+
     def __init__(self, fail_on: str | None = None) -> None:
         self.writes: list[tuple[str, str]] = []
         self.fail_on = fail_on
 
     def put_file_text(self, path: str, text: str, *, message: str) -> None:
+        """Record ``text`` at ``path``, or raise if ``path`` is the failing one."""
         if path == self.fail_on:
-            from crdt_sync import FirebaseSyncError
-
             message = f"HTTP 500 on {path}"
             raise FirebaseSyncError(message)
         self.writes.append((path, text))
 
 
 def snap(minute: int, credits_: int = 1) -> dict[str, object]:
+    """Build a snapshot generated at 15:``minute`` with ``credits_`` credits."""
     return {
         "schema": 1,
         "generated_at": f"2026-10-23T15:{minute:02d}:00+02:00",
@@ -57,11 +60,14 @@ def snap(minute: int, credits_: int = 1) -> dict[str, object]:
 
 
 def test_the_hash_ignores_only_generated_at():
+    """The hash changes with content but not with generated_at."""
     assert content_hash(snap(1)) == content_hash(snap(2))
     assert content_hash(snap(1)) != content_hash(snap(1, credits_=2))
 
 
-def test_first_push_writes_the_snapshot_then_the_heartbeat(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_first_push_writes_the_snapshot_then_the_heartbeat():
+    """A first push writes status, hash and the heartbeat in order."""
     store = FakeStore()
 
     result = push_snapshot(snap(1), connect=lambda: store)
@@ -74,7 +80,9 @@ def test_first_push_writes_the_snapshot_then_the_heartbeat(data_dir: Path):
     assert "heartbeat" in result.reason
 
 
-def test_unchanged_content_writes_only_the_heartbeat(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_unchanged_content_writes_only_the_heartbeat():
+    """Unchanged content costs only the ~30-byte heartbeat write."""
     push_snapshot(snap(1), connect=FakeStore)
     store = FakeStore()
 
@@ -85,7 +93,9 @@ def test_unchanged_content_writes_only_the_heartbeat(data_dir: Path):
     assert result.reason.startswith("unchanged")
 
 
-def test_changed_content_writes_the_snapshot_again(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_changed_content_writes_the_snapshot_again():
+    """A content change rewrites the full snapshot."""
     push_snapshot(snap(1), connect=FakeStore)
     store = FakeStore()
 
@@ -94,7 +104,8 @@ def test_changed_content_writes_the_snapshot_again(data_dir: Path):
     assert [path for path, _ in store.writes] == FULL_WRITE
 
 
-def test_a_failed_snapshot_write_records_nothing_and_beats_nothing(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_a_failed_snapshot_write_records_nothing_and_beats_nothing():
     """A fresh heartbeat over stale content would hide the failure from the app."""
     failing = FakeStore(fail_on=SNAPSHOT_PATH)
 
@@ -108,9 +119,9 @@ def test_a_failed_snapshot_write_records_nothing_and_beats_nothing(data_dir: Pat
     assert [path for path, _ in retry.writes] == FULL_WRITE
 
 
-def test_a_failed_heartbeat_is_reported(
-    data_dir: Path, caplog: pytest.LogCaptureFixture
-):
+@pytest.mark.usefixtures("data_dir")
+def test_a_failed_heartbeat_is_reported(caplog: pytest.LogCaptureFixture):
+    """A failed heartbeat fails the push but keeps the recorded hash."""
     result = push_snapshot(snap(1), connect=lambda: FakeStore(fail_on=HEARTBEAT_PATH))
 
     assert not result.pushed
@@ -120,6 +131,7 @@ def test_a_failed_heartbeat_is_reported(
 
 
 def test_the_state_file_is_redirected(tmp_path: Path):
+    """The push state file lives under the test's tmp dir."""
     assert _snapshot_dedup.PUSH_STATE_FILE.is_relative_to(tmp_path)
 
 
@@ -127,6 +139,7 @@ def test_the_state_file_is_redirected(tmp_path: Path):
 def test_an_unusable_state_file_means_resend(
     tmp_path: Path, text: str, caplog: pytest.LogCaptureFixture
 ):
+    """A corrupt or mistyped state file reads as no hash, with a warning."""
     path = tmp_path / "state.json"
     path.write_text(text, encoding="utf-8")
 
@@ -135,6 +148,7 @@ def test_an_unusable_state_file_means_resend(
 
 
 def test_the_state_round_trips(tmp_path: Path):
+    """A written hash reads back unchanged."""
     path = tmp_path / "state.json"
 
     assert write_pushed_hash("abc", path)
@@ -144,6 +158,7 @@ def test_the_state_round_trips(tmp_path: Path):
 def test_an_unwritable_state_file_is_a_warning(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ):
+    """An unwritable state path returns False and logs a warning."""
     blocker = tmp_path / "file"
     blocker.write_text("x", encoding="utf-8")
 

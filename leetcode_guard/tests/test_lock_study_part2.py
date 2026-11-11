@@ -8,112 +8,114 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+import pytest
+
 from leetcode_guard import _glyphs as g
-from leetcode_guard.tests._guard_factories import UNVERIFIABLE, create_guard, probe_of
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
+from leetcode_guard._gatelock_internals import arming, set_arming, vt_disabled
+from leetcode_guard.tests._guard_factories import (
+    UNVERIFIABLE,
+    guard_with_fresh_solves,
+)
 from leetcode_guard.tests.test_lock_study import (
     URL,
     locked_guard,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
+
+@pytest.mark.usefixtures("no_spawn")
 def test_a_real_solve_while_studying_puts_the_lock_back_first(
-    tmp_path: Path, hmac_key: Path, no_spawn
+    tmp_path: Path, hmac_key: Path
 ):
     """The primary exit. The unlocked screen has to land on a surface that is
     actually mapped, or the good news flashes onto a hidden window."""
-    guard, _ = create_guard(
-        tmp_path,
-        probe=probe_of("old-1"),
-        poll_probe=probe_of("brand-new", "also-new", "old-1"),
-        key_file=hmac_key,
-        seeded=True,
-        demo_mode=False,
-    )
+    guard = guard_with_fresh_solves(tmp_path, hmac_key, demo_mode=False)
     # Both are read-only handles onto the frozen arming bundle, so the bundle
     # is swapped for one carrying mocks.
-    guard._lock._arming = replace(
-        guard._lock._arming, recovery=MagicMock(), detector=MagicMock()
+    set_arming(
+        guard.lock,
+        replace(arming(guard.lock), recovery=MagicMock(), detector=MagicMock()),
     )
-    guard._open_problem(URL)
-    strip = guard._strip
-    assert guard._session().active
+    guard.open_problem(URL)
+    strip = guard.strip
+    assert guard.session().active
 
-    guard._on_poll_result(guard._check())
+    guard.on_poll_result(guard.check())
 
-    assert not guard._session().active
+    assert not guard.session().active
     strip.window.destroy.assert_called_once()
-    guard._lock.root.grab_set_global.assert_called()
-    assert not guard._decision().locked
+    guard.lock.root.grab_set_global.assert_called()
+    assert not guard.decision().locked
 
 
-def test_closing_during_study_restores_vt_bookkeeping(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_closing_during_study_restores_vt_bookkeeping(tmp_path: Path, hmac_key: Path):
     """Suspend cleared gatelock's ``_vt_disabled`` to match reality. If close
     ran without resuming, gatelock would skip its own restore and the machine
     would exit with VT switching still disabled."""
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
-    guard._open_problem(URL)
-    assert guard._lock._vt_disabled is False
+    guard.open_problem(URL)
+    assert vt_disabled(guard.lock) is False
 
     guard.on_close()
 
-    assert not guard._session().active
+    assert not guard.session().active
 
 
+@pytest.mark.usefixtures("no_spawn")
 def test_an_unverifiable_poll_during_study_leaves_it_running(
-    tmp_path: Path, hmac_key: Path, no_spawn
+    tmp_path: Path, hmac_key: Path
 ):
     """A blind check is not a reason to yank the browser away mid-problem."""
     guard = locked_guard(tmp_path, hmac_key, poll_probe=UNVERIFIABLE)
-    guard._open_problem(URL)
+    guard.open_problem(URL)
 
-    guard._on_poll_result(UNVERIFIABLE)
+    guard.on_poll_result(UNVERIFIABLE)
 
-    assert guard._session().active
+    assert guard.session().active
 
 
-def test_the_strip_text_reports_what_is_still_owed(
-    tmp_path: Path, hmac_key: Path, no_spawn
-):
+@pytest.mark.usefixtures("no_spawn")
+def test_the_strip_text_reports_what_is_still_owed(tmp_path: Path, hmac_key: Path):
+    """The study strip names the problems still owed and the time studied."""
     guard = locked_guard(tmp_path, hmac_key)
 
-    text = guard._strip_text()
+    text = guard.strip_text()
 
     assert text.needed >= 1
     assert text.owed.startswith(g.OWED)
     assert text.elapsed.count(":") == 1
 
 
+@pytest.mark.usefixtures("no_spawn")
 def test_the_strip_falls_back_to_the_first_output_when_none_is_primary(
-    tmp_path: Path, hmac_key: Path, no_spawn
+    tmp_path: Path, hmac_key: Path
 ):
     """A desk with no output flagged primary still gets a strip somewhere
     visible rather than none at all."""
     guard = locked_guard(tmp_path, hmac_key)
-    only = guard._lock.surfaces.infos()[0]
+    only = guard.lock.surfaces.infos()[0]
     plain = SimpleNamespace(
         output_name=only.output_name, rect=only.rect, index=0, is_primary=False
     )
     only_plain = MagicMock()
     only_plain.infos.return_value = (plain,)
-    guard._lock._arming = replace(guard._lock._arming, surfaces=only_plain)
+    set_arming(guard.lock, replace(arming(guard.lock), surfaces=only_plain))
 
-    assert guard._primary_rect() is plain.rect
+    assert guard.primary_rect() is plain.rect
 
 
 def test_dropping_a_strip_that_was_never_built_is_harmless(
     tmp_path: Path, hmac_key: Path
 ):
+    """Dropping a strip before any was built leaves no strip and raises nothing."""
     guard = locked_guard(tmp_path, hmac_key)
 
-    guard._drop_strip()
+    guard.drop_strip()
 
-    assert guard._strip is None
+    assert guard.strip is None
 
 
 def test_a_launcher_that_raises_never_strands_the_machine_unlocked(
@@ -135,8 +137,8 @@ def test_a_launcher_that_raises_never_strands_the_machine_unlocked(
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
 
     with caplog.at_level(logging.ERROR):
-        guard._open_problem(URL)
+        guard.open_problem(URL)
 
-    assert not guard._session().active, "study mode must not stay active"
-    guard._lock.root.grab_set_global.assert_called()
+    assert not guard.session().active, "study mode must not stay active"
+    guard.lock.root.grab_set_global.assert_called()
     assert caplog.records

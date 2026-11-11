@@ -59,6 +59,7 @@ def test_no_tool_can_grant_a_credit_or_unlock():
 
 @pytest.mark.parametrize("word", _FORBIDDEN)
 def test_the_module_defines_no_write_shaped_tool(word: str):
+    """No exposed tool name starts with a write-shaped verb."""
     assert not any(name.startswith(word) for name in tool_names())
 
 
@@ -92,6 +93,7 @@ def test_the_server_never_imports_the_cli():
 
 
 def test_get_status_returns_plain_data(data_dir: Path, hmac_key: Path):
+    """get_status returns a plain dict with the day and lock state."""
     save_ledger(
         data_dir / "ledger.json", ledger_with_credits(2, day=MONDAY, key_file=hmac_key)
     )
@@ -103,7 +105,9 @@ def test_get_status_returns_plain_data(data_dir: Path, hmac_key: Path):
     assert "locked" in status
 
 
-def test_get_credits_reports_the_position(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_get_credits_reports_the_position():
+    """get_credits on an empty ledger reports zero available and locked."""
     credits_now = _mcp.get_credits()
 
     assert credits_now["available"] == 0
@@ -142,6 +146,7 @@ def test_suggestions_come_from_the_cache_and_never_fetch(data_dir: Path):
 
 
 def test_the_suggestion_limit_is_honoured(data_dir: Path):
+    """get_suggested_problems returns no more than the limit."""
     problems = tuple(
         p
         for p in (parse_problem(problem_row(slug)) for slug in ("a", "b", "c"))
@@ -155,11 +160,15 @@ def test_the_suggestion_limit_is_honoured(data_dir: Path):
     assert len(_mcp.get_suggested_problems(limit=2)) == 2
 
 
-def test_suggestions_are_empty_with_no_cache(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_suggestions_are_empty_with_no_cache():
+    """Without a pool cache there are no suggestions."""
     assert _mcp.get_suggested_problems() == []
 
 
-def test_explain_lock_carries_the_decision_chain(data_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_explain_lock_carries_the_decision_chain():
+    """explain_lock reports the state, reason, clock trust and pool notes."""
     explanation = _mcp.explain_lock()
 
     assert explanation["locked"]
@@ -169,7 +178,8 @@ def test_explain_lock_carries_the_decision_chain(data_dir: Path):
     assert isinstance(explanation["pool_notes"], list)
 
 
-def test_no_tool_returns_a_secret(data_dir: Path, config_dir: Path):
+@pytest.mark.usefixtures("data_dir")
+def test_no_tool_returns_a_secret(config_dir: Path):
     """Nothing may hand back the sync token, the cookies or an HMAC key."""
     (config_dir / "sync_token").write_text("ghp_supersecret", encoding="utf-8")
     (config_dir / "cookies.json").write_text(

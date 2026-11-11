@@ -30,8 +30,8 @@ def _run(home: Path, coach: Path | None = None) -> subprocess.CompletedProcess[s
     )
 
 
-@pytest.fixture
-def coach(tmp_path: Path) -> Path:
+@pytest.fixture(name="coach")
+def fixture_coach(tmp_path: Path) -> Path:
     """A stand-in for the installed package dir: the skill body and the launcher."""
     root = tmp_path.parent / f"{tmp_path.name}-coach"
     root.mkdir()
@@ -51,6 +51,7 @@ def _old_skill(home: Path) -> Path:
 
 
 def test_fresh_home_gets_both_links(tmp_path: Path, coach: Path) -> None:
+    """A fresh HOME gets the skill and command symlinks, and a rerun is a no-op."""
     proc = _run(tmp_path, coach)
     assert proc.returncode == 0, proc.stderr
     skill = tmp_path / ".claude" / "skills" / "leetcode"
@@ -61,6 +62,7 @@ def test_fresh_home_gets_both_links(tmp_path: Path, coach: Path) -> None:
 
 
 def test_old_skill_dir_is_backed_up_outside_skills(tmp_path: Path, coach: Path) -> None:
+    """An old copied skill dir is backed up outside skills/ and replaced by the link."""
     _old_skill(tmp_path)
     bin_link = tmp_path / ".local" / "bin" / "leetcode"
     bin_link.parent.mkdir(parents=True)
@@ -78,6 +80,7 @@ def test_old_skill_dir_is_backed_up_outside_skills(tmp_path: Path, coach: Path) 
 
 
 def test_existing_symlink_is_repointed(tmp_path: Path, coach: Path) -> None:
+    """A stale skill symlink is repointed without touching its old target."""
     skills = tmp_path / ".claude" / "skills"
     skills.mkdir(parents=True)
     elsewhere = tmp_path / "elsewhere"
@@ -89,6 +92,7 @@ def test_existing_symlink_is_repointed(tmp_path: Path, coach: Path) -> None:
 
 
 def test_unknown_directory_is_refused(tmp_path: Path, coach: Path) -> None:
+    """A skill dir the script did not create is refused and left intact."""
     other = tmp_path / ".claude" / "skills" / "leetcode"
     other.mkdir(parents=True)
     (other / "notes.txt").write_text("mine", encoding="utf-8")
@@ -100,6 +104,7 @@ def test_unknown_directory_is_refused(tmp_path: Path, coach: Path) -> None:
 
 
 def test_regular_file_at_the_command_is_refused(tmp_path: Path, coach: Path) -> None:
+    """A regular file at the command path is refused, not overwritten."""
     bin_file = tmp_path / ".local" / "bin" / "leetcode"
     bin_file.parent.mkdir(parents=True)
     bin_file.write_text("#!/bin/sh\n", encoding="utf-8")
@@ -111,6 +116,7 @@ def test_regular_file_at_the_command_is_refused(tmp_path: Path, coach: Path) -> 
 def test_without_an_override_it_links_what_the_system_python_imports(
     tmp_path: Path,
 ) -> None:
+    """Without an override the skill links to the package the system python imports."""
     user_base = {"PYTHONUSERBASE": str(Path.home() / ".local")}
     probe = subprocess.run(
         [SYSTEM_PYTHON, "-P", "-c", PROBE],

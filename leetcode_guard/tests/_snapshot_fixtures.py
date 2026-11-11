@@ -17,6 +17,18 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from leetcode_guard import (
+    _coach_log,
+    _phone_errors,
+    _phone_errors_sync,
+    _profile_cache,
+    _push_trigger,
+    _snapshot_auth,
+    _snapshot_dedup,
+    _snapshot_local,
+    _snapshot_push,
+)
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -39,18 +51,6 @@ def _isolate_snapshot(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> list[list[str]]:
     """Redirect the snapshot's own files and block both of its side effects."""
-    from leetcode_guard import (
-        _coach_log,
-        _phone_errors,
-        _phone_errors_sync,
-        _profile_cache,
-        _push_trigger,
-        _snapshot_auth,
-        _snapshot_dedup,
-        _snapshot_local,
-        _snapshot_push,
-    )
-
     spawned: list[list[str]] = []
     monkeypatch.setattr(_push_trigger, "_spawn", spawned.append)
     monkeypatch.setattr(_snapshot_auth, "firebase_client_for", _refuse_firebase)
