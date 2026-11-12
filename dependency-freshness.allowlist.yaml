@@ -1,0 +1,17 @@
+# Dependencies held below latest stable in this repo, and why. `transitive:`
+# entries are predicates: they clear themselves when the blocker moves, so
+# they carry no `expires`.
+
+exceptions:
+  - ecosystem: toolchain
+    package: flutter
+    pinned: "3.47.9"
+    reason: >-
+      Flutter 3.50.0 deprecates package:flutter/material.dart for
+      package:material_ui: 62 deprecated_member_use infos fail `flutter
+      analyze` in app/ (measured 2026-11-12). Swapping the imports alone
+      breaks the theme hand-off, because design_system 0.3.1 and sync_settings_ui (kuhyx/utils)
+      still use flutter's ThemeData; both must move to material_ui first.
+      Same hold as kartka d57e87e.
+    blocked_by: "migration:kuhyx/utils design_system + sync_settings_ui to material_ui"
+    expires: "2026-12-12"
