@@ -82,7 +82,11 @@ report` rows correct; `leetcode due` lists a +3-day re-test; `--cluster`
 skips an Accepted problem. Full suite, coverage 100%, ruff/mypy/pylint clean.
 `~/.claude/scripts/tests` still green after the move.
 
-## kuhy's done (human, ≥2 days; open in TODO-coach.md)
+## kuhy's done (human, ≥2 days)
 
 Solves ≥3 of 268/260/169/137 with 0 hints above H1, req list before first code
 line in every log; `leetcode_no_solution_stop.py` never fires.
+
+Coach sign-off: done (kuhy confirmed 2026-11-12: toolbox.json and
+answer_key.json reviewed, ≥3 of the four solved over ≥2 days within H1, live
+Coach tab run on desktop and phone).
