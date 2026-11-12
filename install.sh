@@ -74,7 +74,7 @@ verify_imports() {
     # interpreter systemd will launch, not for whatever is on $PATH now.
     log "verifying imports with $SYSTEM_PYTHON"
     "$SYSTEM_PYTHON" -c \
-        "import leetcode_guard, leetcode_coach, gatelock, crdt_sync, sickdays, focus_project, requests, genanki; print('imports OK')" \
+        "import leetcode_guard, leetcode_coach, gatelock, crdt_sync, nacl, argon2, sickdays, focus_project, requests, genanki; print('imports OK')" \
         || fail "a runtime dependency is missing from the system python"
 }
 

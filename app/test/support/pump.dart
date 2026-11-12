@@ -22,6 +22,7 @@ Future<StatusController> pumpApp(
   int minutes = 1,
   List<Uri>? opened,
   WidgetBuilder? settingsBuilder,
+  Widget? lockAction,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = devicePixelRatio;
@@ -44,6 +45,7 @@ Future<StatusController> pumpApp(
         return true;
       },
       settingsBuilder: settingsBuilder,
+      lockAction: lockAction,
     ),
   );
   await tester.pumpAndSettle();

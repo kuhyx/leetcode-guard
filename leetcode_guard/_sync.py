@@ -13,6 +13,10 @@ Two safety properties carried over from the ledger itself:
   HMAC does not verify against this machine's key is stored and refused. The
   sync repo is a user-writable channel, so without that it would be a way to
   mint credits by committing JSON.
+* **The backends hold ciphertext only.** The log lives under
+  ``leetcode-guard-sync/devices-e2e`` sealed with the shared crdt-sync
+  passphrase (:mod:`leetcode_guard._e2e`); a device that cannot unlock skips
+  the sync and never falls back to plaintext.
 * **Sync never gates unlocking.** Every failure is reported in a
   :class:`SyncResult` and logged; nothing here can keep the lock shut.
 
@@ -30,6 +34,7 @@ from typing import TYPE_CHECKING, Final
 from crdt_sync import (
     CONFIG_FILE,
     ConfigError,
+    E2eLockedError,
     FileSyncStateStore,
     FirebaseAuthError,
     GitHubSyncClient,
@@ -40,9 +45,11 @@ from crdt_sync import (
     RevisionTracking,
     SyncTarget,
     mirror_client_for,
+    open_encrypted_client,
     sync_log,
 )
 
+from leetcode_guard import _e2e
 from leetcode_guard._constants import DEVICE_ID, SYNC_STATE_FILE, SYNC_TOKEN_FILE
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._sync_records import (
@@ -116,7 +123,7 @@ def sync_ledger(
     *,
     token_path: Path | None = None,
     key_file: Path | None = None,
-    client: GitHubSyncClient | None = None,
+    client: RemoteStore | None = None,
 ) -> SyncResult:
     """Push our ledger and merge in whatever other devices published.
 
@@ -147,12 +154,17 @@ def sync_ledger(
     local = records_from_ledger(ledger)
 
     try:
+        # The OUTERMOST store is wrapped, so GitHub and Firebase alike only
+        # ever receive ciphertext.
+        store, layout = open_encrypted_client(
+            _remote_client(client),
+            SYNC_PATH_PREFIX,
+            passphrase=_e2e.read_passphrase(),
+            params=_e2e.PARAMS,
+            state_dir=_e2e.STATE_DIR,
+        )
         merged = sync_log(
-            SyncTarget(
-                client=_remote_client(client),
-                device_id=DEVICE_ID,
-                path_prefix=SYNC_PATH_PREFIX,
-            ),
+            SyncTarget(client=store, device_id=DEVICE_ID, path_prefix=layout.prefix),
             local,
             LogCodec(
                 commit_message="leetcode-guard: update ledger",
@@ -164,8 +176,21 @@ def sync_ledger(
             # ledger whether or not anything changed -- the traffic the
             # Firebase free tier's monthly budget depends on not happening.
             RevisionTracking(
-                state_store=FileSyncStateStore(SYNC_STATE_FILE),
+                # Its own file: the pre-E2E state says "already pushed" for a
+                # log the new prefix has never seen.
+                state_store=FileSyncStateStore(
+                    SYNC_STATE_FILE.with_name(f"{SYNC_STATE_FILE.stem}-e2e.json")
+                ),
+                revs_path=layout.revs_path,
             ),
+        )
+    except E2eLockedError as exc:
+        _logger.warning("ledger sync skipped, e2e locked: %s", exc)
+        return SyncResult(
+            pushed=False,
+            record_count=len(local),
+            merged_in=0,
+            reason=f"e2e locked, not syncing: {exc}",
         )
     except (GitHubSyncError, RemoteSyncError) as exc:
         _logger.warning("ledger sync failed: %s", exc)
@@ -194,7 +219,7 @@ def sync_quietly(
     *,
     token_path: Path | None = None,
     key_file: Path | None = None,
-    client: GitHubSyncClient | None = None,
+    client: RemoteStore | None = None,
 ) -> SyncResult:
     """Sync without ever letting a failure escape.
 

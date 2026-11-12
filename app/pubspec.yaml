@@ -14,8 +14,15 @@ dependencies:
   crdt_sync:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_dart-v0.12.1
+      ref: crdt_sync_dart-v0.14.1
       path: crdt_sync_dart
+  # End-to-end encryption: the keystore-held passphrase, the cached key and
+  # the icon-only lock button. Phone only, like crdt_sync.
+  crdt_sync_flutter:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: crdt_sync_flutter-v0.8.1
+      path: crdt_sync_flutter
   design_system:
     git:
       url: https://github.com/kuhyx/utils
@@ -42,7 +49,7 @@ dependencies:
   sync_settings_ui:
     git:
       url: https://github.com/kuhyx/utils
-      ref: sync_settings_ui-v0.7.0
+      ref: sync_settings_ui-v0.7.3
       path: sync_settings_ui
   # Opens a suggestion's problem page in the browser: the app's one action.
   url_launcher: 6.3.3

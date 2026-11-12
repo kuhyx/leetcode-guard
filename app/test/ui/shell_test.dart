@@ -1,3 +1,5 @@
+import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
+    show E2ePassphraseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
@@ -136,5 +138,26 @@ void main() {
   testWidgets('no settings button on desktop', (tester) async {
     await pumpApp(tester);
     expect(find.bySemanticsLabel('Sync account'), findsNothing);
+  });
+
+  testWidgets('the E2E lock sits in the app bar, icon only', (tester) async {
+    await pumpApp(
+      tester,
+      lockAction: const E2ePassphraseButton(locked: true),
+    );
+    final lock = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byIcon(Icons.lock),
+    );
+    expect(lock, findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.byType(Text)),
+      findsOneWidget, // the as-of age only
+    );
+  });
+
+  testWidgets('no lock where the wrapper holds every secret', (tester) async {
+    await pumpApp(tester);
+    expect(find.byIcon(Icons.lock), findsNothing);
   });
 }

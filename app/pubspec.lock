@@ -93,11 +93,20 @@ packages:
     dependency: "direct main"
     description:
       path: crdt_sync_dart
-      ref: "crdt_sync_dart-v0.12.1"
-      resolved-ref: "6641d85f0550ca60433fc8e0d13a3dafdbb664d6"
+      ref: "crdt_sync_dart-v0.14.1"
+      resolved-ref: edd0f7a7882cb1d3904932ba94faa282d08165df
       url: "https://github.com/kuhyx/utils"
     source: git
-    version: "0.12.1"
+    version: "0.14.1"
+  crdt_sync_flutter:
+    dependency: "direct main"
+    description:
+      path: crdt_sync_flutter
+      ref: "crdt_sync_flutter-v0.8.1"
+      resolved-ref: "3225af8365481677d61a8cabec0c0ad4d0407567"
+      url: "https://github.com/kuhyx/utils"
+    source: git
+    version: "0.8.1"
   cross_file:
     dependency: transitive
     description:
@@ -114,6 +123,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.8"
+  cryptography:
+    dependency: transitive
+    description:
+      name: cryptography
+      sha256: "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.9.0"
   data_transfer_flutter:
     dependency: transitive
     description:
@@ -452,14 +469,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
-  listen:
-    dependency: transitive
-    description:
-      name: listen
-      sha256: "47501a08016a43fcad79252439d723f50f14f88fa7bfd8a177e0a417e5c9e1f2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
   logging:
     dependency: transitive
     description:
@@ -733,11 +742,11 @@ packages:
     dependency: "direct main"
     description:
       path: sync_settings_ui
-      ref: "sync_settings_ui-v0.7.0"
-      resolved-ref: "3084080d744c348a217727e26a6be838e7d5a4ff"
+      ref: "sync_settings_ui-v0.7.3"
+      resolved-ref: "02d9d689e921d80ec155af9903164c3d2d259dce"
       url: "https://github.com/kuhyx/utils"
     source: git
-    version: "0.7.0"
+    version: "0.7.3"
   term_glyph:
     dependency: transitive
     description:
@@ -750,10 +759,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "0a10344e901e5b2e63819567951cb6a06673ed6b84f40462188ff5a0c41f371f"
+      sha256: "2a122cbe059f8b610d3a5415f42e255b6c17b1f21eee1d960f31080237fb4f11"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.14"
+    version: "0.7.12"
   typed_data:
     dependency: transitive
     description:

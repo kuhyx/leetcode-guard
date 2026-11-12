@@ -183,8 +183,8 @@ A tray icon in the i3 bar, mirroring screen-locker's workout-status:
 
 The status app (Flutter; phone and a desktop Chrome `--app` window) replaced
 the tkinter window. It reads the display-only snapshot the exporter publishes
-every minute: from Firebase RTDB on the phone (`leetcode-guard/status`,
-`status_hash`, `heartbeat`) and from `~/.local/share/leetcode_guard/snapshot.json`
+every minute: from Firebase RTDB on the phone (`leetcode-guard/snapshot-e2e/`
+`status`, `status_hash`, `heartbeat`, end-to-end encrypted) and from `~/.local/share/leetcode_guard/snapshot.json`
 on the desktop. `DOCS-status-snapshot.md` has the schema. The gate never reads
 either.
 

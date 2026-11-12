@@ -1,27 +1,28 @@
-/// Sends the phone's kept errors to `leetcode-guard/app_errors/<device id>`
-/// on the next successful Firebase contact; the desktop's harvester reads
-/// that node and raises a notification once per new error.
+/// Sends the phone's kept errors, sealed, to
+/// `leetcode-guard/app_errors-e2e/<device id>` on the next successful
+/// Firebase contact; the desktop's harvester bulk-reads that node through
+/// its own sealing store and raises a notification once per new error.
 ///
-/// Same path to RTDB as the coach transport: the signed-in client's token,
-/// a REST PUT of one JSON string leaf (RTDB drops nulls and empties from a
-/// tree), `print=silent` so nothing is echoed back. Best effort throughout:
+/// One sealed JSON string leaf per install (RTDB drops nulls and empties
+/// from a tree), written through the shared [SealedStores], so a locked
+/// phone sends nothing rather than plaintext. Best effort throughout:
 /// a failed upload only leaves the errors pending, and is never itself
 /// recorded, so it cannot feed back into the banner or the log.
 library;
 
-import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
 import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/data/app_errors.dart';
+import 'package:leetcode_guard/src/data/e2e_stores.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
-import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
-import 'package:leetcode_guard/src/data/rtdb_namespace.dart';
+import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart'
+    show kE2eLockedText;
 
 /// Where each install's errors land.
-const kAppErrorsRoot = 'leetcode-guard/app_errors';
+final String kAppErrorsRoot = kAppErrorsLayout.prefix;
 
 /// What the controllers tell about their Firebase contacts.
 abstract interface class ErrorReporter {
@@ -35,19 +36,8 @@ abstract interface class ErrorReporter {
 
 /// [ErrorReporter] over [AppErrorLog] and RTDB REST.
 class RtdbErrorReporter implements ErrorReporter {
-  /// Creates the reporter; [open] gives the signed-in client.
-  new({
-    required this.log,
-    required this.devices,
-    required this.open,
-    required String databaseUrl,
-    http.Client? httpClient,
-    String? namespace,
-  }) : databaseUrl = databaseUrl.endsWith('/')
-           ? databaseUrl.substring(0, databaseUrl.length - 1)
-           : databaseUrl,
-       _namespace = resolveNamespace(namespace),
-       _http = httpClient ?? http.Client();
+  /// Creates the reporter; [stores] gives the sealing store.
+  new({required this.log, required this.devices, required this.stores});
 
   /// The kept errors.
   final AppErrorLog log;
@@ -55,13 +45,8 @@ class RtdbErrorReporter implements ErrorReporter {
   /// This install's id, the node's key.
   final DeviceIdStore devices;
 
-  /// Opens the signed-in client; only its token provider is used.
-  final FirebaseOpener open;
-
-  /// The regional database origin, no trailing slash.
-  final String databaseUrl;
-  final String _namespace;
-  final http.Client _http;
+  /// The shared, once-unlocked sealing stores.
+  final SealedStores stores;
   bool _sending = false;
 
   @override
@@ -82,25 +67,20 @@ class RtdbErrorReporter implements ErrorReporter {
     final device = await devices.deviceId();
     final batch = await log.pending(device);
     if (batch == null) return false;
-    final client = await open();
-    if (client == null) return false;
-    final http.Response res;
     try {
-      final token = await client.auth.idToken();
-      res = await _http.put(
-        Uri.parse(
-          '$databaseUrl/${namespacedPath(_namespace, '$kAppErrorsRoot/$device')}.json',
-        ).replace(queryParameters: {'print': 'silent', 'auth': token}),
-        headers: {'content-type': 'application/json'},
-        body: jsonEncode(batch.body),
+      final store = await stores.appErrors();
+      if (store == null) return false;
+      await store.putFileText(
+        '$kAppErrorsRoot/$device',
+        batch.body,
+        message: 'leetcode-guard: app errors',
       );
+    } on E2eLockedFailure {
+      return _gaveUp(kE2eLockedText);
     } on http.ClientException catch (error) {
       return _gaveUp(describeFailure(error));
     } on RemoteSyncError catch (error) {
-      return _gaveUp(describeSignInFailure(error));
-    }
-    if (res.statusCode != 200 && res.statusCode != 204) {
-      return _gaveUp(httpFailure(res.statusCode));
+      return _gaveUp(describeRemoteFailure(error));
     }
     await log.markSent(batch);
     return true;

@@ -3,7 +3,7 @@
 The desktop app reads ``~/.local/share/leetcode_guard/snapshot.json`` with no
 Firebase at all, so it is written on every push attempt -- before the network
 is touched, so an offline minute still refreshes it. The phone polls the tiny
-heartbeat plus ``leetcode-guard/status_hash`` and downloads the ~49 KB status
+heartbeat plus ``status_hash`` and downloads the ~49 KB status
 only when the hash moved, so the hash is written with every full write.
 """
 
@@ -107,7 +107,7 @@ def test_a_full_write_publishes_its_hash_between_status_and_heartbeat():
 
     push_snapshot(snap(1), connect=lambda: store)
 
-    assert STATUS_HASH_PATH == "leetcode-guard/status_hash"
+    assert STATUS_HASH_PATH == "leetcode-guard/snapshot-e2e/status_hash"
     assert [path for path, _ in store.writes] == [
         SNAPSHOT_PATH,
         STATUS_HASH_PATH,
@@ -135,7 +135,7 @@ def test_a_failed_hash_write_resends_both_next_time():
     result = push_snapshot(snap(1), connect=lambda: failing)
 
     assert not result.pushed
-    assert read_pushed_hash() is None
+    assert read_pushed_hash(target=SNAPSHOT_PATH) is None
     retry = FakeStore()
     push_snapshot(snap(2), connect=lambda: retry)
     assert [path for path, _ in retry.writes] == [

@@ -17,7 +17,8 @@ acceptance rate).
 ## Decisions
 
 1. **Data path.** PC pushes ONE display-only JSON snapshot to Firebase RTDB at
-   `leetcode-guard/status`, using the shared credential in
+   `leetcode-guard/snapshot-e2e/status` (sealed, see **End-to-end
+   encryption** below), using the shared credential in
    `~/.config/crdt-sync/` (see how other kuhy apps authenticate). The app only
    reads it. Nothing that decides, charges or credits may ever read the snapshot
    (same rule as `progress_cache.json`). No GitHub transport.
@@ -52,16 +53,29 @@ acceptance rate).
 Built by `leetcode_guard/_snapshot*.py` (exporter landed 2026-10-23); the
 example below is trimmed from a real read-back of the RTDB node.
 
-**Transport.** RTDB path `leetcode-guard/status` holds ONE JSON **string**
+**End-to-end encryption (2026-11-12).** `status`, `status_hash` and
+`heartbeat` live under `leetcode-guard/snapshot-e2e/`, each sealed with
+XChaCha20-Poly1305 under a key Argon2id-derived from the shared crdt-sync
+passphrase (header `leetcode-guard/e2e`, shared with the phone's
+`leetcode-guard/app_errors-e2e/<device>` reports). RTDB holds ciphertext only;
+the paths below name the leaves relative to that prefix. A device without the
+passphrase is *locked*: the PC skips the push, the phone shows a lock button
+and reads nothing. The pre-E2E `leetcode-guard/{status,status_hash,heartbeat}`
+nodes are no longer written and never deleted by code. The push state records
+the node it was written to, so the first push after the move is a full one.
+`leetcode-guard/coach` is NOT sealed: utils' leetcode_coach relay reads it too.
+Code: `leetcode_guard/_e2e.py`, `app/lib/src/data/e2e_stores.dart`.
+
+**Transport.** RTDB path `status` holds ONE JSON **string**
 leaf (crdt_sync's text-leaf convention, PUT with `print=silent`, ~32 KB),
 not an object tree: a tree would
 silently drop every `null` and `[]`, i.e. exactly the "unknown" sections.
-The app reads the node and `jsonDecode`s the string once. Auth: the shared
+The app reads the node, opens the seal and `jsonDecode`s the text once. Auth: the shared
 `~/.config/crdt-sync/` account; the existing root rule already grants this
 uid read/write, so no rule change. A push runs after every `_harvest_run`
 minute and on every write of the production ledger.
 
-**Heartbeat (staleness, decision 3).** `leetcode-guard/heartbeat` is a JSON
+**Heartbeat (staleness, decision 3).** `heartbeat` is a JSON
 string leaf holding the ISO time of the last successful push (~27 bytes,
 written every minute with `print=silent`). The full `status` node is written
 only when the snapshot's content -- everything except `generated_at` --
@@ -75,7 +89,7 @@ decimal (what the window shows) so they do not change every minute; a
 profile refetch (`fetched_at`, at most every 15 min) still counts as a
 change. Upload drops from ~46 MB/day to roughly 3-4 MB/day.
 
-**Status hash (phone polling).** `leetcode-guard/status_hash` is a JSON
+**Status hash (phone polling).** `status_hash` is a JSON
 string leaf holding the SHA-256 hex digest of the snapshot's content (the
 same hash `_snapshot_dedup.content_hash` dedups on: everything except
 `generated_at`, canonical JSON). It is written in the same push as every full

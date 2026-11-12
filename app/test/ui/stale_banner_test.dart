@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:leetcode_guard/src/data/e2e_stores.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
@@ -12,6 +13,7 @@ import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
 
+import '../support/fake_rtdb.dart';
 import '../support/fakes.dart';
 import '../support/fixtures.dart';
 
@@ -75,18 +77,25 @@ void main() {
     // The real source over a client failing the way the phone did, so the
     // URL with `?auth=<token>` is in the exception, as it was that day.
     final source = FirebaseSnapshotSource(
-      open: () async => FirebaseRestClient(
-        databaseUrl: 'https://db.example',
-        auth: FirebaseTokenProvider(apiKey: 'k', store: _signedIn()),
-      ),
-      databaseUrl:
-          'https://kuhy-syncs-default-rtdb.europe-west1'
-          '.firebasedatabase.app',
-      httpClient: MockClient(
-        (r) async => throw http.ClientException(
-          "SocketException: Failed host lookup: '${r.url.host}' (OS Error: "
-          'No address associated with hostname, errno = 7)',
-          r.url,
+      stores: SealedStores(
+        open: () async => FirebaseRestClient(
+          databaseUrl:
+              'https://kuhy-syncs-default-rtdb.europe-west1'
+              '.firebasedatabase.app',
+          auth: FirebaseTokenProvider(apiKey: 'k', store: _signedIn()),
+          httpClient: MockClient(
+            (r) async => throw http.ClientException(
+              "SocketException: Failed host lookup: '${r.url.host}' (OS "
+              'Error: No address associated with hostname, errno = 7)',
+              r.url,
+            ),
+          ),
+        ),
+        unlock: (store) => openEncryptedStore(
+          store: store,
+          oldPrefix: kSnapshotOldPrefix,
+          readPassphrase: () async => kTestPassphrase,
+          params: kTestArgon2,
         ),
       ),
     );

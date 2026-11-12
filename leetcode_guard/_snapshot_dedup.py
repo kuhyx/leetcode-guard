@@ -8,7 +8,9 @@ when that hash differs from the last *successful* write; the per-minute
 freshness signal is the tiny heartbeat node instead.
 
 The state file is display plumbing like ``progress_cache.json``: deleting it
-costs one redundant write, nothing more.
+costs one redundant write, nothing more. It also records *where* the write
+went: a hash recorded for another path (the pre-E2E ``leetcode-guard/status``)
+forces a write, so a moved node is never left empty behind a fresh heartbeat.
 """
 
 from __future__ import annotations
@@ -39,8 +41,8 @@ def content_hash(snapshot: dict[str, Any]) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def read_pushed_hash(path: Path | None = None) -> str | None:
-    """The hash of the last full write, or ``None`` to force one."""
+def read_pushed_hash(*, target: str, path: Path | None = None) -> str | None:
+    """The hash of the last full write to ``target``, or ``None`` to force one."""
     source = PUSH_STATE_FILE if path is None else path
     if not source.exists():
         return None
@@ -53,15 +55,18 @@ def read_pushed_hash(path: Path | None = None) -> str | None:
     if not isinstance(pushed, str):
         _logger.warning("snapshot push state at %s holds no hash", source)
         return None
+    if raw.get("target") != target:
+        _logger.info("snapshot push state is for another node; pushing in full")
+        return None
     return pushed
 
 
-def write_pushed_hash(pushed: str, path: Path | None = None) -> bool:
-    """Record a successful full write. Never raises."""
-    target = PUSH_STATE_FILE if path is None else path
+def write_pushed_hash(pushed: str, *, target: str, path: Path | None = None) -> bool:
+    """Record a successful full write to ``target``. Never raises."""
+    state = PUSH_STATE_FILE if path is None else path
     try:
-        write_json(target, {"hash": pushed})
+        write_json(state, {"hash": pushed, "target": target})
     except OSError as exc:
-        _logger.warning("could not record the pushed snapshot at %s: %s", target, exc)
+        _logger.warning("could not record the pushed snapshot at %s: %s", state, exc)
         return False
     return True

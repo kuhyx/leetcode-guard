@@ -1,5 +1,5 @@
-/// Reads `leetcode-guard/status`, `.../status_hash` and `.../heartbeat`
-/// from the shared Realtime Database.
+/// Reads the sealed `status`, `status_hash` and `heartbeat` leaves under
+/// `leetcode-guard/snapshot-e2e` from the shared Realtime Database.
 ///
 /// The phone's source (client from the keystore), wrapped in a
 /// `HashGatedSource` so a poll only re-downloads the status when its hash
@@ -7,49 +7,40 @@
 /// exporter's local file.
 library;
 
+import 'dart:convert';
+
 import 'package:crdt_sync/crdt_sync.dart';
 import 'package:http/http.dart' as http;
+import 'package:leetcode_guard/src/data/e2e_stores.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/hash_gated_source.dart';
-import 'package:leetcode_guard/src/data/rtdb_namespace.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 
-/// Where the PC's exporter publishes the snapshot (one JSON string leaf).
-const kStatusPath = 'leetcode-guard/status';
+/// Where the PC's exporter publishes the snapshot (one sealed string leaf).
+final String kStatusPath = '${kSnapshotLayout.prefix}/status';
 
 /// The tiny freshness node, an ISO instant written every minute.
-const kHeartbeatNode = 'leetcode-guard/heartbeat';
+final String kHeartbeatNode = '${kSnapshotLayout.prefix}/heartbeat';
 
-/// The status's content hash (a JSON string), written beside it.
-const kStatusHashNode = 'leetcode-guard/status_hash';
+/// The status's content hash, written beside it.
+final String kStatusHashNode = '${kSnapshotLayout.prefix}/status_hash';
+
+/// Shown when this phone has no usable key; the lock button says the rest.
+const kE2eLockedText = 'E2E locked';
 
 /// Opens a signed-in client, or null when this device has no account.
 typedef FirebaseOpener = Future<FirebaseRestClient?> Function();
 
-/// Raw GETs of [kStatusPath], [kStatusHashNode] and [kHeartbeatNode].
+/// Decrypted reads of [kStatusPath], [kStatusHashNode] and [kHeartbeatNode].
 ///
-/// Raw rather than `FirebaseRestClient.getFileText`, which would decode the
-/// leaf for us: the controller parses, the same way for every source.
+/// Each value comes back JSON-encoded, the shape a raw RTDB GET of the leaf
+/// had, so the controller parses every source the same way.
 class FirebaseSnapshotSource implements HashedSnapshotSource {
-  /// Creates a source over [open].
-  new({
-    required this.open,
-    required String databaseUrl,
-    http.Client? httpClient,
-    String? namespace,
-  }) : databaseUrl = databaseUrl.endsWith('/')
-           ? databaseUrl.substring(0, databaseUrl.length - 1)
-           : databaseUrl,
-       _namespace = resolveNamespace(namespace),
-       _http = httpClient ?? http.Client();
+  /// Creates a source over [stores].
+  new({required this.stores});
 
-  /// Opens the signed-in client; only its token provider is used.
-  final FirebaseOpener open;
-
-  /// The regional database origin, no trailing slash.
-  final String databaseUrl;
-  final String _namespace;
-  final http.Client _http;
+  /// The shared, once-unlocked sealing stores.
+  final SealedStores stores;
 
   @override
   Future<String?> fetch() => _get(kStatusPath);
@@ -61,27 +52,22 @@ class FirebaseSnapshotSource implements HashedSnapshotSource {
   Future<String?> statusHash() => _get(kStatusHashNode);
 
   Future<String?> _get(String path) async {
-    final client = await open();
-    if (client == null) {
-      throw const SnapshotUnavailable(
-        'Not signed in: connect the Sync account first',
-      );
-    }
-    final http.Response res;
+    final String? text;
     try {
-      final token = await client.auth.idToken();
-      res = await _http.get(
-        Uri.parse('$databaseUrl/${namespacedPath(_namespace, path)}.json')
-            .replace(queryParameters: {'auth': token}),
-      );
+      final store = await stores.snapshot();
+      if (store == null) {
+        throw const SnapshotUnavailable(
+          'Not signed in: connect the Sync account first',
+        );
+      }
+      text = await store.getFileText(path);
+    } on E2eLockedFailure {
+      throw const SnapshotUnavailable(kE2eLockedText);
     } on http.ClientException catch (error) {
       throw SnapshotUnavailable(describeFailure(error));
     } on RemoteSyncError catch (error) {
-      throw SnapshotUnavailable(describeSignInFailure(error));
+      throw SnapshotUnavailable(describeRemoteFailure(error));
     }
-    if (res.statusCode != 200) {
-      throw SnapshotUnavailable(httpFailure(res.statusCode));
-    }
-    return res.body.trim() == 'null' ? null : res.body;
+    return text == null ? null : jsonEncode(text);
   }
 }

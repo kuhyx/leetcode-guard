@@ -73,7 +73,7 @@ def test_first_push_writes_the_snapshot_then_the_heartbeat():
     result = push_snapshot(snap(1), connect=lambda: store)
 
     assert [path for path, _ in store.writes] == FULL_WRITE
-    assert HEARTBEAT_PATH == "leetcode-guard/heartbeat"
+    assert HEARTBEAT_PATH == "leetcode-guard/snapshot-e2e/heartbeat"
     assert json.loads(store.writes[0][1])["generated_at"].endswith("15:01:00+02:00")
     assert store.writes[2][1] == "2026-10-23T15:01:00+02:00"
     assert result.pushed
@@ -113,7 +113,7 @@ def test_a_failed_snapshot_write_records_nothing_and_beats_nothing():
 
     assert not result.pushed
     assert failing.writes == []
-    assert read_pushed_hash() is None
+    assert read_pushed_hash(target=SNAPSHOT_PATH) is None
     retry = FakeStore()
     push_snapshot(snap(2), connect=lambda: retry)
     assert [path for path, _ in retry.writes] == FULL_WRITE
@@ -127,7 +127,7 @@ def test_a_failed_heartbeat_is_reported(caplog: pytest.LogCaptureFixture):
     assert not result.pushed
     assert "snapshot push failed" in caplog.text
     # The snapshot itself landed, so the next minute need not resend it.
-    assert read_pushed_hash() == content_hash(snap(1))
+    assert read_pushed_hash(target=SNAPSHOT_PATH) == content_hash(snap(1))
 
 
 def test_the_state_file_is_redirected(tmp_path: Path):
@@ -143,7 +143,7 @@ def test_an_unusable_state_file_means_resend(
     path = tmp_path / "state.json"
     path.write_text(text, encoding="utf-8")
 
-    assert read_pushed_hash(path) is None
+    assert read_pushed_hash(target=SNAPSHOT_PATH, path=path) is None
     assert "snapshot push state" in caplog.text
 
 
@@ -151,8 +151,9 @@ def test_the_state_round_trips(tmp_path: Path):
     """A written hash reads back unchanged."""
     path = tmp_path / "state.json"
 
-    assert write_pushed_hash("abc", path)
-    assert read_pushed_hash(path) == "abc"
+    assert write_pushed_hash("abc", target=SNAPSHOT_PATH, path=path)
+    assert read_pushed_hash(target=SNAPSHOT_PATH, path=path) == "abc"
+    assert read_pushed_hash(target="leetcode-guard/status", path=path) is None
 
 
 def test_an_unwritable_state_file_is_a_warning(
@@ -162,5 +163,7 @@ def test_an_unwritable_state_file_is_a_warning(
     blocker = tmp_path / "file"
     blocker.write_text("x", encoding="utf-8")
 
-    assert not write_pushed_hash("abc", blocker / "state.json")
+    assert not write_pushed_hash(
+        "abc", target=SNAPSHOT_PATH, path=blocker / "state.json"
+    )
     assert "could not record" in caplog.text

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from crdt_sync import ConfigError, Hlc, Record
+from crdt_sync import ConfigError, E2eLayout, GitHubSyncClient, Hlc, Record
 import pytest
 
 from leetcode_guard import _sync
@@ -24,6 +24,7 @@ from leetcode_guard.tests._ledger_fixtures import (
     forged_credit,
     ledger_with_credits,
 )
+from leetcode_guard.tests._memory_remote import MemoryRemote
 from leetcode_guard.tests.test_sync import (
     FakeSyncClient,
     fake_sync_log,
@@ -106,16 +107,25 @@ def test_a_present_token_builds_a_real_client(
     tmp_path: Path, hmac_key: Path, monkeypatch
 ):
     """Covers the branch that constructs GitHubSyncClient; the client itself is
-    never called because sync_log is stubbed."""
+    never called because the E2E open and sync_log are stubbed."""
     token = tmp_path / "sync_token"
     token.write_text("ghp_test", encoding="utf-8")
     path = tmp_path / "ledger.json"
     save_ledger(path, ledger_with_credits(1, day=MONDAY, key_file=hmac_key))
     fake_sync_log(monkeypatch)
+    opened: list[object] = []
+
+    def open_e2e(store: object, old: str, **_k: object) -> tuple[object, E2eLayout]:
+        """Record the store the E2E layer wraps; never touch it."""
+        opened.append(store)
+        return MemoryRemote(), E2eLayout.of(old)
+
+    monkeypatch.setattr(_sync, "open_encrypted_client", open_e2e)
 
     result = sync_ledger(path, token_path=token, key_file=hmac_key)
 
     assert result.pushed
+    assert isinstance(opened[0], GitHubSyncClient)
 
 
 def test_remote_client_stays_on_github_without_firebase_config(

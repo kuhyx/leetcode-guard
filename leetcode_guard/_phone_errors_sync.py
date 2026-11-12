@@ -18,17 +18,19 @@ import shutil
 import subprocess
 from typing import TYPE_CHECKING, Final
 
-from crdt_sync import ConfigError, FirebaseAuthError, RemoteSyncError
-
 from leetcode_guard import _glyphs as g
+from leetcode_guard._e2e import APP_ERRORS_LAYOUT, sealed, unlock_shared
 from leetcode_guard._phone_errors import (
     parse_phone_errors,
     read_mirror,
     write_mirror,
 )
 from leetcode_guard._snapshot_auth import connect as sign_in
-from leetcode_guard._snapshot_push import FIREBASE_APP, PUSH_TIMEOUT_SECONDS
-from leetcode_guard._snapshot_rtdb import silent_store_for
+from leetcode_guard._snapshot_push import (
+    FIREBASE_APP,
+    PUSH_FAILURES,
+    PUSH_TIMEOUT_SECONDS,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -36,8 +38,8 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
-APP_ERRORS_PATH: Final = "leetcode-guard/app_errors"
-"""One JSON string leaf per install, written by the status app."""
+APP_ERRORS_PATH: Final = APP_ERRORS_LAYOUT.prefix
+"""One sealed JSON string leaf per install, written by the status app."""
 
 NOTIFY_TIMEOUT_SECONDS: Final = 5.0
 
@@ -47,10 +49,17 @@ error report, shown as it arrived."""
 
 
 def fetch_phone_errors() -> object:
-    """``app_errors`` as decoded JSON; raises crdt_sync's errors on failure."""
+    """``device -> report text``, opened; raises crdt_sync's errors on failure.
+
+    A bulk read through the sealing store, so every leaf comes back
+    decrypted and one that will not open is dropped (and logged) there.
+
+    Raises:
+        E2eLockedError: No usable key; nothing is read.
+    """
     client = sign_in(FIREBASE_APP, timeout_seconds=PUSH_TIMEOUT_SECONDS)
-    store = silent_store_for(client, timeout_seconds=PUSH_TIMEOUT_SECONDS)
-    return store.get_json(APP_ERRORS_PATH)
+    store = sealed(client, unlock_shared(client), APP_ERRORS_LAYOUT)
+    return store.get_string_map(APP_ERRORS_PATH)
 
 
 def send_notification(title: str, body: str) -> bool:
@@ -112,13 +121,7 @@ def sync_quietly() -> str:
     """
     try:
         return sync_phone_errors(fetch_phone_errors, notify=send_notification)
-    except (
-        ConfigError,
-        FirebaseAuthError,
-        RemoteSyncError,
-        OSError,
-        ValueError,
-    ) as exc:
+    except (*PUSH_FAILURES, ValueError) as exc:
         # The type only: a requests message carries the URL and its ?auth=.
         _logger.warning("phone errors unavailable: %s", type(exc).__name__)
         return f"unavailable ({type(exc).__name__})"

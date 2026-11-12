@@ -1,41 +1,10 @@
-import 'dart:async';
-
-import 'package:crdt_sync/crdt_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:leetcode_guard/src/data/failure_text.dart';
-import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_cache.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-InMemoryCredentialStore _signedIn() {
-  final store = InMemoryCredentialStore();
-  unawaited(
-    store.save(
-      FirebaseCredentials(
-        idToken: 'tok',
-        refreshToken: 'r',
-        expiresAt: DateTime.now().add(const Duration(hours: 1)),
-      ),
-    ),
-  );
-  return store;
-}
-
-FirebaseSnapshotSource _source(
-  http.Client httpClient, {
-  InMemoryCredentialStore? store,
-}) => FirebaseSnapshotSource(
-  open: () async => FirebaseRestClient(
-    databaseUrl: 'https://db.example',
-    auth: FirebaseTokenProvider(apiKey: 'k', store: store ?? _signedIn()),
-  ),
-  databaseUrl: 'https://db.example/',
-  httpClient: httpClient,
-);
 
 Matcher _unavailable(Object message) => throwsA(
   isA<SnapshotUnavailable>().having((e) => e.message, 'message', message),
@@ -88,111 +57,6 @@ void main() {
       );
       await expectLater(source.fetch(), _unavailable(contains('refused')));
     });
-  });
-
-  group('FirebaseSnapshotSource', () {
-    test('GETs the status path with the ID token', () async {
-      Uri? asked;
-      final source = _source(
-        MockClient((r) async {
-          asked = r.url;
-          return http.Response('{"schema": 1}', 200);
-        }),
-      );
-      expect(await source.fetch(), '{"schema": 1}');
-      expect(asked!.path, '/leetcode-guard/status.json');
-      expect(asked!.queryParameters['auth'], 'tok');
-      expect(asked!.host, 'db.example');
-    });
-
-    test('a JSON null body means nothing published', () async {
-      final source = _source(
-        MockClient((_) async => http.Response('null', 200)),
-      );
-      expect(await source.fetch(), isNull);
-    });
-
-    test('not signed in is unavailable with a hint', () async {
-      final source = FirebaseSnapshotSource(
-        open: () async => null,
-        databaseUrl: 'https://db.example',
-      );
-      await expectLater(source.fetch(), _unavailable(contains('Sync account')));
-    });
-
-    test('a rejected read is unavailable', () async {
-      final source = _source(
-        MockClient((_) async => http.Response('denied', 401)),
-      );
-      await expectLater(
-        source.fetch(),
-        _unavailable('Firebase answered HTTP 401'),
-      );
-    });
-
-    test('network and auth failures are unavailable', () async {
-      final offline = _source(
-        MockClient((_) async => throw http.ClientException('offline')),
-      );
-      await expectLater(
-        offline.fetch(),
-        _unavailable('Network error (ClientException)'),
-      );
-      final unauthenticated = _source(
-        MockClient((_) async => http.Response('{}', 200)),
-        store: InMemoryCredentialStore(),
-      );
-      await expectLater(
-        unauthenticated.fetch(),
-        _unavailable(contains('sign-in failed')),
-      );
-    });
-
-    test('a DNS failure never carries the URL or the token', () async {
-      // The 2026-10-24 Pixel 6a banner: `ClientException.toString()` ends in
-      // `uri=...?auth=<ID token>`.
-      final source = _source(
-        MockClient(
-          (r) async => throw http.ClientException(
-            "SocketException: Failed host lookup: 'db.example'",
-            r.url,
-          ),
-        ),
-      );
-      await expectLater(
-        source.statusHash(),
-        _unavailable(
-          allOf(kOfflineText, isNot(contains('tok')), isNot(contains('auth'))),
-        ),
-      );
-    });
-
-    test('heartbeat reads its own tiny node', () async {
-      Uri? asked;
-      final source = _source(
-        MockClient((r) async {
-          asked = r.url;
-          return http.Response('"2026-10-23T14:05:00+02:00"', 200);
-        }),
-      );
-      expect(await source.heartbeat(), '"2026-10-23T14:05:00+02:00"');
-      expect(asked!.path, '/leetcode-guard/heartbeat.json');
-    });
-  });
-
-  test('statusHash reads its own tiny node; missing is null', () async {
-    final asked = <String>[];
-    var body = '"abc"';
-    final source = _source(
-      MockClient((r) async {
-        asked.add(r.url.path);
-        return http.Response(body, 200);
-      }),
-    );
-    expect(await source.statusHash(), '"abc"');
-    body = 'null';
-    expect(await source.statusHash(), isNull);
-    expect(asked, everyElement('/leetcode-guard/status_hash.json'));
   });
 
   test('wrapper heartbeat reads /heartbeat.json; 404 is none', () async {

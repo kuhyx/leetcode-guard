@@ -2,8 +2,12 @@
 // Bootstrap only: picks the platform's source and binds the plugins
 // (url_launcher, the keystore) that `flutter test` has no binding for.
 // Everything it wires is tested through LeetGuardApp's injected seams.
+import 'dart:async';
+
 import 'package:crdt_sync/crdt_sync.dart'
     show checkSyncNamespace, syncNamespace;
+import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
+    show E2ePassphraseButton;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
@@ -12,6 +16,7 @@ import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
 import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/data/app_error_report.dart';
 import 'package:leetcode_guard/src/data/app_errors.dart';
+import 'package:leetcode_guard/src/data/e2e_stores.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
@@ -35,24 +40,22 @@ void main() {
   // go out through the wrapper to the system (filtered) browser.
   //
   // The phone polls Firebase, re-downloading the status only when its hash
-  // moves. Its errors are kept and sent to leetcode-guard/app_errors/<dev>
-  // on the next contact, for the desktop to notify about.
+  // moves. Its errors are kept and sent to leetcode-guard/app_errors-e2e/
+  // <dev> on the next contact, for the desktop to notify about. Both are
+  // sealed under one key, unlocked once per run (e2e_stores.dart).
   final devices = PrefsDeviceId();
+  final stores = SealedStores(open: openFirebase);
   final reporter = kIsWeb
       ? null
       : RtdbErrorReporter(
           log: AppErrorLog(),
           devices: devices,
-          open: openFirebase,
-          databaseUrl: kProject.databaseUrl,
+          stores: stores,
         );
   final source = kIsWeb
       ? WrapperSnapshotSource(base: Uri.base)
       : HashGatedSource(
-          FirebaseSnapshotSource(
-            open: openFirebase,
-            databaseUrl: kProject.databaseUrl,
-          ),
+          FirebaseSnapshotSource(stores: stores),
         );
   // The coach relay: the wrapper's /coach/* on the desktop, RTDB on the
   // phone (DOCS-coach-relay.md).
@@ -66,13 +69,26 @@ void main() {
     devices: devices,
     reporter: reporter,
   );
+  final status = StatusController(
+    source: source,
+    cache: PrefsSnapshotCache(),
+    reporter: reporter,
+  );
   runApp(
     LeetGuardApp(
-      controller: StatusController(
-        source: source,
-        cache: PrefsSnapshotCache(),
-        reporter: reporter,
-      ),
+      controller: status,
+      lockAction: kIsWeb
+          ? null
+          : ValueListenableBuilder<bool>(
+              valueListenable: stores.locked,
+              builder: (_, locked, _) => E2ePassphraseButton(
+                locked: locked,
+                onSaved: () {
+                  stores.reset();
+                  unawaited(status.refresh());
+                },
+              ),
+            ),
       coach: coach,
       openUrl: kIsWeb
           ? WrapperUrlOpener(base: Uri.base).call

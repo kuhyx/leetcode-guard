@@ -7,14 +7,15 @@ line in the harvest's journal, never an exception out of ``main``.
 from __future__ import annotations
 
 import subprocess
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from crdt_sync import FirebaseSyncError
 import pytest
 
-from leetcode_guard import _harvest_run, _phone_errors_sync
+from leetcode_guard import _e2e, _harvest_run, _phone_errors_sync
 from leetcode_guard._phone_errors import read_mirror
+from leetcode_guard._snapshot_push import FIREBASE_APP
+from leetcode_guard.tests._memory_remote import MemoryRemote
 from leetcode_guard.tests.test_phone_errors import DEVICE, entry, node
 
 if TYPE_CHECKING:
@@ -143,22 +144,36 @@ def test_quietly_syncs_through_the_real_parts(monkeypatch: pytest.MonkeyPatch):
 def test_the_fetch_reads_app_errors_with_the_pushers_session(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """The fetch reads app_errors through the pusher's signed-in store."""
-    asked: list[str] = []
+    """The fetch signs in as the pusher and reads the sealed node."""
+    signed_in: list[object] = []
+    remote = MemoryRemote()
 
-    def get_json(path: str) -> object:
-        """Record the asked path and return a fixed node."""
-        asked.append(path)
-        return {"a": 1}
+    def sign_in(app: str, **_k: object) -> MemoryRemote:
+        """Record the credential cache asked for."""
+        signed_in.append(app)
+        return remote
 
-    store = SimpleNamespace(get_json=get_json)
-    monkeypatch.setattr(_phone_errors_sync, "sign_in", lambda *_a, **_k: "client")
+    monkeypatch.setattr(_phone_errors_sync, "sign_in", sign_in)
+
+    assert _phone_errors_sync.fetch_phone_errors() == {}
+    assert signed_in == [FIREBASE_APP]
+    assert _phone_errors_sync.APP_ERRORS_PATH == "leetcode-guard/app_errors-e2e"
+
+
+def test_a_locked_device_reads_nothing_and_says_so(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """No passphrase: an "unavailable" line, no request past the sign-in."""
+    _e2e.PASSWORD_PATH.unlink()
+    remote = MemoryRemote()
+    monkeypatch.setattr(_phone_errors_sync, "sign_in", lambda *_a, **_k: remote)
     monkeypatch.setattr(
-        _phone_errors_sync, "silent_store_for", lambda client, **_k: store
+        _phone_errors_sync, "send_notification", lambda *_a: pytest.fail("notified")
     )
 
-    assert _phone_errors_sync.fetch_phone_errors() == {"a": 1}
-    assert asked == ["leetcode-guard/app_errors"]
+    assert real_sync_quietly() == "unavailable (E2eLockedError)"
+    assert remote.writes == []
+    assert "E2eLockedError" in caplog.text
 
 
 def test_notify_send_success_and_failures(

@@ -79,7 +79,7 @@ def test_a_push_writes_one_text_leaf():
     )
 
     assert result.pushed
-    assert store.writes[0][0] == SNAPSHOT_PATH == "leetcode-guard/status"
+    assert store.writes[0][0] == SNAPSHOT_PATH == "leetcode-guard/snapshot-e2e/status"
     assert json.loads(store.writes[0][1]) == {
         "schema": 1,
         "profile": None,

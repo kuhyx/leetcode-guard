@@ -25,17 +25,18 @@ from leetcode_guard.tests._ledger_fixtures import (
     NOW,
     ledger_with_credits,
 )
+from leetcode_guard.tests._memory_remote import MemoryRemote
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class FakeSyncClient:
-    """Stands in for GitHubSyncClient without touching the network."""
+class FakeSyncClient(MemoryRemote):
+    """Stands in for GitHubSyncClient without touching the network.
 
-    def __init__(self, *, remote: dict | None = None, error: Exception | None = None):
-        self.remote = remote if remote is not None else {}
-        self.error = error
+    An in-memory remote, so the real E2E unlock runs in front of the stubbed
+    ``sync_log``.
+    """
 
 
 def fake_sync_log(monkeypatch, merged: dict | None = None, error=None) -> dict:
@@ -186,6 +187,8 @@ def test_a_successful_sync_reports_what_it_did(
     assert result.record_count == 2
     assert seen["target"].device_id == "pc"
     assert seen["codec"].filename == "ledger.json"
+    assert seen["target"].path_prefix == "leetcode-guard-sync/devices-e2e"
+    assert seen["revisions"].revs_path == "leetcode-guard-sync/revs-e2e"
 
 
 def test_a_github_failure_is_reported_not_raised(

@@ -1,10 +1,7 @@
 import 'dart:convert';
 
-import 'package:crdt_sync/crdt_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
+import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/data/hash_gated_source.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
@@ -16,7 +13,9 @@ import '../support/fixtures.dart';
 final String _v1 = jsonEncode('{"schema": 1}');
 final String _v2 = jsonEncode('{"schema": 2}');
 
-/// A fake RTDB: answers each node from a mutable map and records every GET.
+/// The decrypted leaves, as `FirebaseSnapshotSource` answers them (each
+/// JSON-encoded, the shape of a raw RTDB GET); records every read. An int
+/// is an HTTP failure. The real source's E2E reads are in e2e_stores_test.
 class _Rtdb {
   final nodes = <String, Object?>{
     'status': _v1,
@@ -25,33 +24,29 @@ class _Rtdb {
   };
   final asked = <String>[];
 
-  late final source = FirebaseSnapshotSource(
-    open: () async {
-      final store = InMemoryCredentialStore();
-      await store.save(
-        FirebaseCredentials(
-          idToken: 'tok',
-          refreshToken: 'r',
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-        ),
-      );
-      return FirebaseRestClient(
-        databaseUrl: 'https://db.example',
-        auth: FirebaseTokenProvider(apiKey: 'k', store: store),
-      );
-    },
-    databaseUrl: 'https://db.example',
-    httpClient: MockClient((r) async {
-      final node = r.url.path
-          .replaceFirst('/leetcode-guard/', '')
-          .replaceFirst('.json', '');
-      asked.add(node);
-      final answer = nodes[node];
-      if (answer is Exception) throw answer;
-      if (answer is int) return http.Response('err', answer);
-      return http.Response((answer as String?) ?? 'null', 200);
-    }),
-  );
+  late final source = _Leaves(this);
+}
+
+class _Leaves implements HashedSnapshotSource {
+  new(this.db);
+
+  final _Rtdb db;
+
+  Future<String?> _get(String node) async {
+    db.asked.add(node);
+    final answer = db.nodes[node];
+    if (answer is int) throw SnapshotUnavailable(httpFailure(answer));
+    return answer as String?;
+  }
+
+  @override
+  Future<String?> fetch() => _get('status');
+
+  @override
+  Future<String?> heartbeat() => _get('heartbeat');
+
+  @override
+  Future<String?> statusHash() => _get('status_hash');
 }
 
 void main() {

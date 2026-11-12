@@ -11,7 +11,6 @@ same leaf, same auth (the signed-in client's own token provider), a 204.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 from typing import TYPE_CHECKING, Final, Protocol
 
 from crdt_sync import CONFIG_FILE, FirebaseConfig, FirebaseSyncError
@@ -20,7 +19,7 @@ import requests
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from crdt_sync import FirebaseSyncClient
+    from crdt_sync import FirebaseSyncClient, RemoteStore
 
 _SILENT: Final = "silent"
 
@@ -40,11 +39,14 @@ class SilentStore:
         database_url: The database's HTTPS origin.
         id_token: Returns a currently valid ID token.
         timeout_seconds: Per-request network timeout.
+        reader: The signed-in client every read goes to, so this is a whole
+            ``RemoteStore`` that ``EncryptingStore`` can wrap.
     """
 
     database_url: str
     id_token: Callable[[], str]
     timeout_seconds: float
+    reader: RemoteStore
 
     def put_file_text(self, path: str, text: str, *, message: str) -> None:
         """Store ``text`` at ``path`` as a JSON string leaf.
@@ -75,24 +77,17 @@ class SilentStore:
             )
             raise FirebaseSyncError(failure)
 
-    def get_json(self, path: str) -> object:
-        """The decoded JSON at ``path`` (``None`` when the node is empty).
+    def list_directory(self, path: str) -> list[str]:
+        """Delegate to the signed-in client: reads keep their echo."""
+        return self.reader.list_directory(path)
 
-        Raises:
-            FirebaseSyncError: On any non-2xx response or network error.
-        """
-        url = f"{self.database_url.rstrip('/')}/{path}.json"
-        try:
-            response = requests.get(
-                url, params={"auth": self.id_token()}, timeout=self.timeout_seconds
-            )
-        except requests.RequestException as exc:
-            failure = f"network error reading {path}: {type(exc).__name__}"
-            raise FirebaseSyncError(failure) from exc
-        if not response.ok:
-            failure = f"reading {path} failed: HTTP {response.status_code}"
-            raise FirebaseSyncError(failure)
-        return json.loads(response.text)
+    def get_file_text(self, path: str) -> str | None:
+        """Delegate to the signed-in client."""
+        return self.reader.get_file_text(path)
+
+    def delete_file(self, path: str, *, message: str = "") -> None:
+        """Delegate to the signed-in client."""
+        self.reader.delete_file(path, message=message)
 
 
 def silent_store_for(
@@ -100,4 +95,6 @@ def silent_store_for(
 ) -> SilentStore:
     """Wrap a signed-in crdt_sync client's token provider."""
     config = FirebaseConfig.load(CONFIG_FILE)
-    return SilentStore(config.database_url, client.auth.id_token, timeout_seconds)
+    return SilentStore(
+        config.database_url, client.auth.id_token, timeout_seconds, reader=client
+    )

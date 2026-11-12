@@ -1,12 +1,13 @@
 """Publish the status snapshot to Firebase RTDB for the status app.
 
-DOCS-status-snapshot.md decisions 1 and 2: ``leetcode-guard/status`` holds the
-snapshot, ``leetcode-guard/status_hash`` its content hash and
-``leetcode-guard/heartbeat`` the time of the last push. Every harvest run and
-every ledger change pushes; the snapshot and its hash are written only when
-the content changed (``_snapshot_dedup``), the heartbeat always. Every
-attempt, offline ones included, also refreshes the desktop app's local copy
-(``_snapshot_local``).
+DOCS-status-snapshot.md decisions 1 and 2: ``status`` holds the snapshot,
+``status_hash`` its content hash and ``heartbeat`` the time of the last push,
+all under ``leetcode-guard/snapshot-e2e`` and sealed (``_e2e``): RTDB only
+ever holds ciphertext, and a locked device (no passphrase) skips the push.
+Every harvest run and every ledger change pushes; the snapshot and its hash
+are written only when the content changed (``_snapshot_dedup``), the
+heartbeat always. Every attempt, offline ones included, also refreshes the
+desktop app's local copy (``_snapshot_local``).
 Read by nothing but the app. Firebase only, through the shared ``~/.config/crdt-sync/``
 credential via crdt_sync -- no GitHub transport.
 
@@ -28,11 +29,12 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
-from crdt_sync import ConfigError, FirebaseAuthError, RemoteSyncError
+from crdt_sync import ConfigError, E2eLockedError, FirebaseAuthError, RemoteSyncError
 
 from leetcode_guard._coach_log import read_coach
 from leetcode_guard._constants import EXIT_OK, PROGRESS_CACHE_FILE
 from leetcode_guard._daycost import local_now
+from leetcode_guard._e2e import SNAPSHOT_LAYOUT, sealed, unlock_shared
 from leetcode_guard._profile_cache import refresh_profile
 from leetcode_guard._progress import read_progress_cache
 from leetcode_guard._snapshot import build_snapshot
@@ -55,13 +57,13 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
-SNAPSHOT_PATH: Final = "leetcode-guard/status"
+SNAPSHOT_PATH: Final = f"{SNAPSHOT_LAYOUT.prefix}/status"
 
-STATUS_HASH_PATH: Final = "leetcode-guard/status_hash"
+STATUS_HASH_PATH: Final = f"{SNAPSHOT_LAYOUT.prefix}/status_hash"
 """A JSON string leaf: the content hash of what ``status`` holds. The phone
 polls it with the heartbeat and downloads the full node only when it moves."""
 
-HEARTBEAT_PATH: Final = "leetcode-guard/heartbeat"
+HEARTBEAT_PATH: Final = f"{SNAPSHOT_LAYOUT.prefix}/heartbeat"
 """A JSON string leaf: the ISO time of the last push, written every minute."""
 
 FIREBASE_APP: Final = "leetcode_guard_status"
@@ -74,6 +76,16 @@ PUSH_TIMEOUT_SECONDS: Final = 10.0
 
 EXIT_PUSH_FAILED: Final = 1
 
+PUSH_FAILURES: Final = (
+    ConfigError,
+    E2eLockedError,
+    FirebaseAuthError,
+    RemoteSyncError,
+    OSError,
+)
+"""Every expected failure of a signed-in, sealed RTDB step: a warning and a
+result, never a raise. A locked device (``E2eLockedError``) is one of them."""
+
 
 @dataclass(frozen=True)
 class PushResult:
@@ -85,9 +97,15 @@ class PushResult:
 
 
 def _firebase_client() -> TextStore:
-    """A signed-in RTDB client; raises crdt_sync's errors on any failure."""
+    """A signed-in, sealing RTDB writer; raises crdt_sync's errors on failure.
+
+    Raises:
+        E2eLockedError: No usable key; the caller writes nothing.
+    """
     client = sign_in(FIREBASE_APP, timeout_seconds=PUSH_TIMEOUT_SECONDS)
-    return silent_store_for(client, timeout_seconds=PUSH_TIMEOUT_SECONDS)
+    key = unlock_shared(client)
+    writer = silent_store_for(client, timeout_seconds=PUSH_TIMEOUT_SECONDS)
+    return sealed(writer, key, SNAPSHOT_LAYOUT)
 
 
 def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
@@ -126,7 +144,7 @@ def push_snapshot(
     """
     write_local_snapshot(snapshot)
     digest = content_hash(snapshot)
-    changed = digest != read_pushed_hash()
+    changed = digest != read_pushed_hash(target=SNAPSHOT_PATH)
     text = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
     beat = str(snapshot[VOLATILE_KEY])
     try:
@@ -136,9 +154,9 @@ def push_snapshot(
             client.put_file_text(
                 STATUS_HASH_PATH, digest, message="leetcode-guard: hash"
             )
-            write_pushed_hash(digest)
+            write_pushed_hash(digest, target=SNAPSHOT_PATH)
         client.put_file_text(HEARTBEAT_PATH, beat, message="leetcode-guard: beat")
-    except (ConfigError, FirebaseAuthError, RemoteSyncError, OSError) as exc:
+    except PUSH_FAILURES as exc:
         _logger.warning("snapshot push failed: %s", exc)
         return PushResult(pushed=False, reason=f"snapshot push failed: {exc}", size=0)
     if not changed:

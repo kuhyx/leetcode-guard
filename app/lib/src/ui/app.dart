@@ -32,6 +32,7 @@ class LeetGuardApp extends StatelessWidget {
     required this.openUrl,
     this.settingsBuilder,
     this.coach,
+    this.lockAction,
     super.key,
   });
 
@@ -46,6 +47,10 @@ class LeetGuardApp extends StatelessWidget {
 
   /// The guided coaching session; null leaves the Coach tab view-only.
   final CoachController? coach;
+
+  /// The icon-only E2E passphrase button, beside the sync account; null
+  /// where the wrapper holds every secret (desktop).
+  final Widget? lockAction;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -155,6 +160,7 @@ class _ShellState extends State<_Shell> {
               ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
+          ?widget.app.lockAction,
           if (settings != null)
             IconButton(
               icon: const Icon(
