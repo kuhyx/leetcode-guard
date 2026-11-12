@@ -109,6 +109,9 @@ unfixable = []
 # reported nothing while still exiting 0 -- the exact fail-open shape it exists
 # to catch. Fifth file to hit this trap.
 "scripts/verify_solved_semantics.py" = ["T201"]
+# The coach sign-off check (DOCS-coach-spec.md item 2): its per-problem
+# lines and PASS/FAIL verdict ARE its output, so T201 is wrong here.
+"scripts/verify_coach_signoff.py" = ["T201"]
 # PyGObject requires `gi.require_version` to run BEFORE `from gi.repository
 # import ...`, so E402 (import not at top of file) is unavoidable and correct
 # here. INP001 likewise: scripts/ is not a package and must not become one.
