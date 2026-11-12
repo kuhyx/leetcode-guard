@@ -45,7 +45,7 @@ class RevealMixin:
     frames: FrameGroup
     model: ViewModel
     run_state: RunState
-    _build_model: Callable[[SolveProbe], ViewModel]
+    build_model: Callable[[SolveProbe], ViewModel]
 
     def start_reveal(self) -> None:
         """Record what the pool resolution already verified."""
@@ -121,6 +121,6 @@ class RevealMixin:
                     p for p in pool.problems if p.title_slug not in evidence.solved
                 ),
             )
-            self.model = self._build_model(self._last_probe)
+            self.model = self.build_model(self._last_probe)
             apply_viewmodel(self.frames.views.values(), self.model)
         self._request_reveal_check()

@@ -29,12 +29,6 @@ States: ``locked``, ``solved-one``, ``unlocked``, ``escape``, ``outage``,
 ``production``.
 """
 
-# This harness drives the lock's internals on purpose, for the same reason the
-# test suite does: the states it photographs are only reachable from inside.
-# Same access as its ruff ``SLF001`` exemption in ``pyproject.toml``, declared
-# here because pylint has no per-file-ignores.
-# pylint: disable=protected-access
-
 from __future__ import annotations
 
 from concurrent.futures import Future
@@ -218,7 +212,7 @@ def build(state: str, workdir: Path) -> LeetcodeGuard:
             addresses=(),
         )
         guard.outage.note = decide_policy(offline, guard.escape.incidents).message
-        guard.model = guard._build_model(
+        guard.model = guard.build_model(
             SolveProbe(
                 status=ProbeStatus.UNVERIFIABLE, submissions=(), reason="offline"
             )

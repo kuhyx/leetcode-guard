@@ -172,12 +172,13 @@ read inside `leetcode_guard/` goes through `_gatelock_internals.py`.
 parses `_study.py`, `_study_resume.py` and `_lock_study.py` as ASTs and fails if
 one reaches past it.
 
-The `scripts/` harnesses are exempt on purpose and are **not** covered by that
-test: `verify_study_grab.py` checks that the adapter's own assumptions hold on a
-real X server, so routing it through the adapter would be marking its own
-homework. `screenshot_states.py` drives internals for the same reason the test
-suite does. Both carry their own `SLF001` entry — so grep `pyproject.toml` for
-the real list rather than trusting a count here.
+The `scripts/` harnesses are **not** covered by that test, and since
+2026-11-12 neither touches a private name (no `SLF001`, no pylint
+`protected-access`; kuhy chose refactor over suppression). `verify_study_grab.py`
+judges the grab by gatelock's public `holds_grab()`, never by an adapter verdict,
+and reads surfaces only through the adapter's logic-free `surface_map`.
+`screenshot_states.py` renders through the public `LeetcodeGuard.build_model`.
+Keep it that way: a new private reach is a new public seam, not a suppression.
 
 **`install.sh` will clobber the editable gatelock if you let it.** `pip install
 -e .` resolves the pinned `gatelock @ git+...` and installs it *non*-editably

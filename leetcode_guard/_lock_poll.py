@@ -108,7 +108,7 @@ class PollMixin:
             demo=self.run_state.demo,
         )
 
-    def _build_model(self, probe: SolveProbe) -> ViewModel:
+    def build_model(self, probe: SolveProbe) -> ViewModel:
         """Render the current state."""
         model = build_viewmodel(
             self.decision(),
@@ -228,7 +228,7 @@ class PollMixin:
             return
 
         self._last_probe = probe
-        self.model = self._build_model(probe)
+        self.model = self.build_model(probe)
         apply_viewmodel(self.frames.views.values(), self.model)
         self.refresh_strip()
 
@@ -241,6 +241,6 @@ class PollMixin:
         the user never sees why the machine came back.
         """
         self._end_study()
-        self.model = self._build_model(probe)
+        self.model = self.build_model(probe)
         apply_viewmodel(self.frames.views.values(), self.model)
         self.root.after(_UNLOCK_LINGER_MS, self.close)

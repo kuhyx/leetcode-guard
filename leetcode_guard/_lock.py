@@ -138,7 +138,7 @@ class LeetcodeGuard(
         self.root = GateRoot()
         self.root.title("LeetCode Guard" + (" [DEMO]" if demo_mode else ""))
 
-        self.model = self._build_model(deps.probe)
+        self.model = self.build_model(deps.probe)
         self.start_reveal()
         # ``_study`` and ``_strip`` are built lazily by StudyMixin: the session
         # needs the LockWindow, which does not exist until further down.

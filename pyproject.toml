@@ -94,17 +94,14 @@ unfixable = []
 # a rename rather than letting it surface inside a live lock. The proper fix is
 # upstream LockWindow.suspend()/resume(); this module is the seam until then.
 "leetcode_guard/_gatelock_internals.py" = ["ANN401", "SLF001"]
-# A state-rendering harness, not shipped code. It exists to force the lock into
-# each state and photograph it -- which necessarily means driving internals,
-# exactly as the test suite does and is exempted for. It caught both UI bugs no
-# assertion could: the close button drawn behind the surfaces, and the escape
-# form's unlabelled first field.
-"scripts/screenshot_states.py" = ["SLF001", "T201"]
-# The grab harness, and deliberately NOT routed through _gatelock_internals: it
-# exists to check that the adapter's own assumptions hold on a real X server, so
-# asking the adapter would be marking its own homework. Its printed PASS/FAIL
-# lines are its output, hence T201.
-"scripts/verify_study_grab.py" = ["SLF001", "T201"]
+# A state-rendering harness, not shipped code: its printed paths are its output.
+# It drives the lock only through public seams (``LeetcodeGuard.build_model``),
+# so it needs no SLF001 exemption (pylint 10.00, 2026-11-12).
+"scripts/screenshot_states.py" = ["T201"]
+# The grab harness. It judges the grab by gatelock's public ``holds_grab()``,
+# never by the adapter's verdicts; its one gatelock read is the adapter's plain ``surface_map`` accessor,
+# which carries no logic to mark. Its printed PASS/FAIL lines are its output.
+"scripts/verify_study_grab.py" = ["T201"]
 # The solved-semantics harness. Same reasoning as the grab check: its printed
 # PASS/FAIL lines and its SKIP instructions ARE its output, so T201 is wrong
 # here. The fixer proved the point by deleting all thirteen prints on the first

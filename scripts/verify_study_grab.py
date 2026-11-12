@@ -27,11 +27,6 @@ being released is the original bug wearing the fix as a disguise, and it is the
 single most likely thing to regress when gatelock is bumped.
 """
 
-# Reaches gatelock and lock privates on purpose: routing a check of the
-# adapter's own assumptions through ``_gatelock_internals`` would be marking its
-# own homework (CLAUDE.md). Mirrors its ruff ``SLF001`` per-file exemption.
-# pylint: disable=protected-access
-
 from __future__ import annotations
 
 from concurrent.futures import Future
@@ -50,6 +45,7 @@ from leetcode_guard import _focus, _gate
 from leetcode_guard import _lock_study as lock_study
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import POOL_CACHE_FILE
+from leetcode_guard._gatelock_internals import surface_map
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps, GuardSeams
@@ -240,7 +236,7 @@ def _surfaces_mapped(guard: LeetcodeGuard) -> bool:
     """
     surfaces = guard.lock.surfaces
     for info in surfaces.infos():
-        surface = surfaces._surfaces.get(info.output_name)
+        surface = surface_map(surfaces).get(info.output_name)
         if surface is None or not surface.window.winfo_ismapped():
             return False
     return True
