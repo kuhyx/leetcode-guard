@@ -54,6 +54,8 @@ def _hermetic_gatelock(
     arbiter.
     """
     monkeypatch.setenv("GATELOCK_RUNTIME_DIR", str(tmp_path / "gatelock-runtime"))
+    # gatelock sleeps 1.5 s at every startup; hundreds of tests pay it.
+    monkeypatch.setattr("gatelock._queue.STARTUP_GRACE_SECONDS", 0.0)
     with (
         patch("gatelock._surfaces.tk.Toplevel", side_effect=_make_toplevel),
         patch("gatelock._outputs.RandrBackend.create", return_value=None),
