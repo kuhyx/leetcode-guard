@@ -215,13 +215,8 @@ python3 -m leetcode_guard --backfill-difficulty [--max-fetch 25]  # price solved
 up to persisting anything, so you can answer "would this lock me out?" without
 finding out the hard way.
 
-## Error reports
-
-Every uncaught, thread or Tk callback error, and any freeze of the lock window
-over 1 s, goes to the shared app-errors spool through `gatelock.error_report`
-(`leetcode_guard/_errors.py`, installed by the CLI). The PC's `app-errors`
-timer turns each one into a ticket on the todoImplementer board (kuhyx/utils
-`DOCS-app-errors.md`). Nothing shows on screen.
+Errors and lock-window freezes over 1 s go silently to the board's app-errors
+spool (`leetcode_guard/_errors.py`; kuhyx/utils `DOCS-app-errors.md`).
 
 ## Integrity
 
