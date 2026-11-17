@@ -73,14 +73,14 @@ pytest_plugins = [
 def _no_error_hooks(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Keep the CLI from hooking the test process's errors into the real spool.
 
-    gatelock installs its hooks once per process: a reporter already in place
-    makes ``install`` return it untouched, so no hook is set and every report
-    lands in this test's folder.
+    gatelock installs its hooks once per process: a reporter already in
+    ``error_report.INSTALLED`` makes ``install`` return it untouched, so no
+    hook is set and every report lands in this test's folder.
     """
     reporter = _errors.error_report.Reporter(
         app=_errors.APP, repo=_errors.REPO, spool=tmp_path / "app-errors-spool"
     )
-    monkeypatch.setattr(_errors.error_report, "_installed", reporter)
+    monkeypatch.setattr(_errors.error_report.INSTALLED, "reporter", reporter)
     monkeypatch.setattr(_errors.SLOT, "reporter", None)
 
 
