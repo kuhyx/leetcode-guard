@@ -25,7 +25,7 @@ from freedays import _api as freedays_api
 import pytest
 import requests
 
-from leetcode_guard import _constants, _focus, _gate, _morning_session
+from leetcode_guard import _constants, _errors, _focus, _gate, _morning_session
 import leetcode_guard._cli_commands as cli_commands
 import leetcode_guard._leetcode as leetcode_module
 import leetcode_guard._lock as lock_module
@@ -67,6 +67,21 @@ pytest_plugins = [
     "leetcode_guard.tests._paths_fixture",
     "leetcode_guard.tests._snapshot_fixtures",
 ]
+
+
+@pytest.fixture(autouse=True)
+def _no_error_hooks(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Keep the CLI from hooking the test process's errors into the real spool.
+
+    gatelock installs its hooks once per process: a reporter already in place
+    makes ``install`` return it untouched, so no hook is set and every report
+    lands in this test's folder.
+    """
+    reporter = _errors.error_report.Reporter(
+        app=_errors.APP, repo=_errors.REPO, spool=tmp_path / "app-errors-spool"
+    )
+    monkeypatch.setattr(_errors.error_report, "_installed", reporter)
+    monkeypatch.setattr(_errors.SLOT, "reporter", None)
 
 
 @pytest.fixture(autouse=True)

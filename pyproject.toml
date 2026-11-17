@@ -20,10 +20,10 @@ requires-python = ">=3.14"
 # read its progress/how_to modules and its session-log contract. It brings
 # genanki (the card builder) along.
 dependencies = [
-    "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.14.0#subdirectory=gatelock",
+    "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.15.0#subdirectory=gatelock",
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.3#subdirectory=freedays",
-    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.4#subdirectory=sickdays",
+    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.5#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project",
     "leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.4#subdirectory=leetcode_coach",
     "requests==2.34.2",

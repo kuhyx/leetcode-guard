@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from gatelock import wait_for_x_server
 
+from leetcode_guard import _errors
 from leetcode_guard._cli_args import build_parser
 from leetcode_guard._cli_commands import (
     cmd_cache_statements,
@@ -210,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     configure_logging(verbose=args.verbose)
+    _errors.install()
     command = _chosen_command(args)
     if command is not None:
         return command()

@@ -135,11 +135,11 @@ repos:
         additional_dependencies:
           - pytest
           - requests
-          - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.14.0#subdirectory=gatelock
+          - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.15.0#subdirectory=gatelock
           - crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync
           - leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.4#subdirectory=leetcode_coach
           - freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.3#subdirectory=freedays
-          - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.4#subdirectory=sickdays
+          - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.5#subdirectory=sickdays
           - mcp>=2,<3
           - pydantic
           - genanki==0.13.1

@@ -36,7 +36,9 @@ from gatelock import (
     assert_not_under_pytest,
     wait_for_turn,
 )
+from gatelock.error_report import watch_stalls
 
+from leetcode_guard import _errors
 from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import (
     POLL_INTERVAL_MS_DEMO,
@@ -136,6 +138,8 @@ class LeetcodeGuard(
         self.outage = OutageState()
 
         self.root = GateRoot()
+        if _errors.SLOT.reporter is not None:
+            watch_stalls(self.root, _errors.SLOT.reporter)
         self.root.title("LeetCode Guard" + (" [DEMO]" if demo_mode else ""))
 
         self.model = self.build_model(deps.probe)
