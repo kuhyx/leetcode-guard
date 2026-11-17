@@ -9,6 +9,8 @@ requires-python = ">=3.14"
 # credit ledger across devices. The whole fleet is on one pin now, so the
 # note that used to live here about this repo carrying a newer one than its
 # siblings no longer describes anything.
+# earned-time: the registry that says which ledger row pays today's rung; the
+# evening chain (--evening) asks it, never its own reading of the ledger.
 # freedays: the shared free-day pool every gate app consults.
 # sickdays: the separate sick-day pool (never merged into freedays).
 # focus-project: a declared focus project stands this gate down like a sick
@@ -22,6 +24,7 @@ requires-python = ">=3.14"
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.15.0#subdirectory=gatelock",
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
+    "earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.22.0#subdirectory=earned_time",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.3#subdirectory=freedays",
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.5#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project",
@@ -102,6 +105,11 @@ unfixable = []
 # never by the adapter's verdicts; its one gatelock read is the adapter's plain ``surface_map`` accessor,
 # which carries no logic to mark. Its printed PASS/FAIL lines are its output.
 "scripts/verify_study_grab.py" = ["T201"]
+# The evening-chain e2e: its PASS/FAIL lines ARE its output (T201); it starts
+# Xvfb/xwininfo/import/xdotool by name (S607); and its roles stub the gate's
+# private push spawner so a scratch ledger can never request a live push (SLF001).
+"scripts/e2e_evening.py" = ["S607", "T201"]
+"scripts/e2e_evening_roles.py" = ["SLF001"]
 # The solved-semantics harness. Same reasoning as the grab check: its printed
 # PASS/FAIL lines and its SKIP instructions ARE its output, so T201 is wrong
 # here. The fixer proved the point by deleting all thirteen prints on the first

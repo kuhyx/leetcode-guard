@@ -43,6 +43,7 @@ from leetcode_guard._constants import (
     PROGRESS_CACHE_FILE,
 )
 from leetcode_guard._daycost import local_today
+from leetcode_guard._evening import busy_exit, evening_paid, evening_preflight
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import SeedStamp, needs_seeding, seed_ledger
@@ -50,6 +51,7 @@ from leetcode_guard._instance import acquire as acquire_instance
 from leetcode_guard._ledger_io import load_ledger, solved_slugs
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps, GuardSeams
+from leetcode_guard._lock_evening import EveningGuard
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._morning_session import defer_for_morning_session
 from leetcode_guard._night_lockdown import defer_for_evening_lockdown
@@ -65,51 +67,44 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def cmd_lock(*, demo_mode: bool) -> int:
+def cmd_lock(*, demo_mode: bool, evening: bool = False) -> int:
     """Arm the gate, opening a window only if today is not already settled.
 
     Every network call happens here, before any window exists. A fetch on the
     paint path would mean no window when the network is down, and no window is
     the bypass this whole tool exists to close.
     """
-    if not demo_mode:
-        # The unit is started by the login target *and* by a Persistent=true
-        # timer catch-up that fires one second after the user manager, before
-        # X exists. Wait for the server -- for as long as it takes, no clock --
-        # before the first fetch, so the pool is not resolved against a network
-        # that is also still coming up, and so a missing display is a wait
-        # rather than an exit-1 that burns the day's timer stamp (2026-09-13).
-        #
-        # And wait *before* taking the instance lock. Night lockdown stops
-        # lightdm, the restarted unit waits here for a display that returns
-        # only once a credit lands, and a holder makes the one-minute harvest
-        # stand aside: no solve could ever be credited (2026-10-17). A waiter
-        # has loaded no ledger, so holding nothing here costs no invariant.
+    if evening and (early := evening_preflight(LEDGER_FILE)) is not None:
+        return early
+    if not demo_mode and not evening:
+        # Timer catch-up fires before X exists: wait for the server, no
+        # clock, before the first fetch, and *before* the instance lock (a
+        # holder stalls the harvest all night lockdown; 2026-10-17).
         wait_for_x_server()
     instance = acquire_instance(INSTANCE_LOCK_FILE)
     if instance is None:
         # The afternoon retry firing while the morning run is still queued
         # behind the workout lock. Two waiters would clear the gate twice.
         print("another leetcode-guard run is already active", file=sys.stderr)
-        return EXIT_OK
+        return busy_exit(LEDGER_FILE) if evening else EXIT_OK
     try:
-        return _run_lock(demo_mode=demo_mode)
+        return _run_lock(demo_mode=demo_mode, evening=evening)
     finally:
         instance.release()
 
 
-def _run_lock(*, demo_mode: bool) -> int:
+def _run_lock(*, demo_mode: bool, evening: bool) -> int:
     """The body of :func:`cmd_lock`, once the single-instance lock is held."""
     if not demo_mode and local_today() < GATE_START_DATE:
-        # Checked before build_client so a not-yet-active gate costs no network
-        # at all -- the timer fires daily from install day and must be free
-        # until it is genuinely in force. Demo mode ignores the date so the
-        # lock can always be shown.
+        # Before build_client: a not-yet-active gate costs no network. Demo
+        # mode ignores the date so the lock can always be shown.
         print(f"gate not active until {GATE_START_DATE}; nothing to do")
         return EXIT_OK
 
     now = datetime.now().astimezone()
-    if not demo_mode and (why := defer_for_morning_session(now, wait=True)) is not None:
+    # Evening runs skip the deferrals below (see _evening): no 0 on unpaid.
+    gated = not (demo_mode or evening)
+    if gated and (why := defer_for_morning_session(now, wait=True)) is not None:
         # The phone's morning session earned the carrot: no gate until the
         # signed instant. A run deferral, never ledger state -- nothing is
         # written, so the next run (login, 09:30 or 11:00 slot) re-decides.
@@ -134,9 +129,10 @@ def _run_lock(*, demo_mode: bool) -> int:
         # disk. Returning without it leaves the bank undebited and the day
         # looking, in hindsight, like one the gate never ran on.
         apply_decision(ledger, decision, ledger_path)
-        print(f"already unlocked: {decision.reason}")
-        return EXIT_OK
-    if not demo_mode and (why := defer_for_evening_lockdown(now)) is not None:
+        if not evening or evening_paid(ledger_path, key_file=None, now=now):
+            print(f"already unlocked: {decision.reason}")
+            return EXIT_OK
+    if gated and (why := defer_for_evening_lockdown(now)) is not None:
         # Tonight's lockdown already fired (a late credit may have lifted it):
         # do not lock a finished solve out. After the decision, so a day paid
         # from the bank is still settled; nothing is written here.
@@ -163,7 +159,7 @@ def _run_lock(*, demo_mode: bool) -> int:
     # exactly the state `decide` unlocks on. Skipping the run leaves no such
     # state behind -- delete the ledger and you skip one run, you do not earn a
     # day.
-    if not demo_mode and needs_seeding(ledger) and probe.status is ProbeStatus.OK:
+    if gated and needs_seeding(ledger) and probe.status is ProbeStatus.OK:
         seed_ledger(ledger, probe, stamp=SeedStamp(day=day, now=now), path=ledger_path)
         print("seeded a new ledger; not arming this run -- the next one gates")
         return EXIT_OK
@@ -186,7 +182,8 @@ def _run_lock(*, demo_mode: bool) -> int:
         ),
     )
 
-    guard = LeetcodeGuard(
+    guard_type = EveningGuard if evening else LeetcodeGuard
+    guard = guard_type(
         demo_mode=demo_mode,
         deps=GuardDeps(
             ledger_path=ledger_path,
@@ -200,7 +197,7 @@ def _run_lock(*, demo_mode: bool) -> int:
         ),
     )
     guard.run()
-    return EXIT_OK
+    return guard.exit_code if evening else EXIT_OK
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -209,13 +206,16 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         A process exit code.
     """
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.evening and not args.production:
+        parser.error("--evening needs --production")
     configure_logging(verbose=args.verbose)
     _errors.install()
     command = _chosen_command(args)
     if command is not None:
         return command()
-    return cmd_lock(demo_mode=not args.production)
+    return cmd_lock(demo_mode=not args.production, evening=args.evening)
 
 
 def _chosen_command(args: Namespace) -> Callable[[], int] | None:

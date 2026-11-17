@@ -201,6 +201,7 @@ leetcode-guard-status --state      # ok | warn | lock (tray icon colour)
 ```bash
 python3 -m leetcode_guard              # demo lock (safe: local grab, close button)
 python3 -m leetcode_guard --production # the real thing
+python3 -m leetcode_guard --production --evening  # evening-chain rung (_evening.py): 0 paid, 10 ended, 3 no X
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
 python3 -m leetcode_guard --status --by 31.12.2026  # + solved counts and a projection
@@ -225,24 +226,8 @@ timer turns each one into a ticket on the todoImplementer board (kuhyx/utils
 
 ## Integrity
 
-Ledger entries are HMAC-signed against `/etc/workout-locker/hmac.key`, shared
-with the sibling lockers.
-
-* A credit whose signature does not verify is **kept on disk and refused** —
-  hand-editing the JSON cannot buy a day.
-* A *charge* whose signature does not verify still counts — discarding one
-  would refund a day.
-* If the key becomes unreadable, this device's own credits keep counting
-  (loudly), but credits arriving over sync do not. Otherwise a single `chmod`
-  would brick the machine.
-
-**Honest scope:** the key is world-readable, so this is tamper-*evident*, not
-tamper-*proof*. It stops casual editing and leaves a record; it does not stop
-someone who reads the key.
-
-The gate also refuses to honour an existing charge when the system clock has
-moved backwards past a settled day — otherwise setting the date back would be
-the cheapest bypass of all.
+HMAC-signed ledger; credits must verify, charges need not. Details:
+`DOCS-integrity.md`.
 
 ## Development
 

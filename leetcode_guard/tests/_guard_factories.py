@@ -16,6 +16,7 @@ from leetcode_guard._harvest import SeedStamp, seed_ledger
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps, GuardSeams
+from leetcode_guard._lock_evening import EveningGuard
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._submissions import ProbeStatus, SolveProbe
@@ -79,6 +80,7 @@ class GuardOptions(TypedDict, total=False):
     wait_turn: bool
     now: datetime
     seeded: bool
+    evening: bool
 
 
 def create_guard(
@@ -132,7 +134,8 @@ def create_guard(
     def post(_query: str, _variables: dict[str, Any]) -> Any:
         calls["posts"] += 1
 
-    guard = LeetcodeGuard(
+    guard_type = EveningGuard if options.get("evening", False) else LeetcodeGuard
+    guard = guard_type(
         demo_mode=options.get("demo_mode", True),
         deps=GuardDeps(
             ledger_path=tmp_path / "ledger.json",

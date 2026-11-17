@@ -26,6 +26,7 @@ from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._study_strip import build_strip
 from leetcode_guard._study_strip_text import StripText
 from leetcode_guard._view import build_guard_view, install_demo_close_button
+from leetcode_guard._view_evening import install_end_evening_button
 from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel
@@ -52,6 +53,7 @@ WORD = re.compile(r"[A-Za-z]{2,}")
 URL = re.compile(r"https?://\S+")
 TYPED = (
     "systemctl --user stop leetcode-guard.service",
+    "systemctl --user stop evening-gates.service",
     'setxkbmap -option ""',
     "Ctrl+Alt+F2",
     "Ctrl+Alt+F1",
@@ -151,6 +153,7 @@ def test_no_surface_state_paints_a_word(
     for model in models:
         apply_viewmodel([view], model)
     install_demo_close_button(MagicMock(), config, lambda: None)
+    install_end_evening_button(MagicMock(), config, lambda: None)
 
     assert_text_free(tk_mock)
 

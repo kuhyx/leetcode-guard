@@ -21,6 +21,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Arm for real: global input grab, VT switching disabled, real ledger.",
     )
     parser.add_argument(
+        "--evening",
+        action="store_true",
+        help=(
+            "With --production: one rung of the evening chain. Exits 0 at once "
+            "when today's leetcode charge is paid; else locks until it lands. "
+            "Exit 10 = evening ended from the window, 3 = no X server."
+        ),
+    )
+    parser.add_argument(
         "--probe",
         action="store_true",
         help="Print live LeetCode data and exit. Opens no window, writes nothing.",
