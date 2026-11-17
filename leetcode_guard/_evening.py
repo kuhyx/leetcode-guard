@@ -44,7 +44,14 @@ X_WAIT_SECONDS: Final = 10.0
 """The bounded display wait; the contract allows at most 10 s."""
 
 EXIT_NO_X: Final = 3
-"""No X server answered in time: nothing was shown, nothing was decided."""
+"""No window could be shown (no X server in time, or another leetcode-guard run
+holds the instance lock): nothing was decided, and the rung may be unpaid, so
+the orchestrator must stop and fail closed rather than relaunch."""
+
+STOP_COMMAND: Final = "systemctl --user stop evening-gates.service"
+"""The break-glass line for the evening lock. The gate runs as a child of the
+orchestrator's unit (``CONTRACT.md``), so stopping ``leetcode-guard.service``,
+the daytime command, would leave it up; stopping this one kills its cgroup."""
 
 _CONTRACT_END_EVENING: Final = 10
 """Exit code of the end-evening control; mirrors ``evening-chain/CONTRACT.md``."""
@@ -93,3 +100,11 @@ def evening_preflight(ledger_path: Path) -> int | None:
         sys.stderr.write(f"evening: no X server within {X_WAIT_SECONDS:.0f} s\n")
         return EXIT_NO_X
     return None
+
+
+def busy_exit(ledger_path: Path) -> int:
+    """Exit code when another run holds the instance lock (0 only if paid)."""
+    if evening_paid(ledger_path, key_file=None):
+        return EXIT_OK
+    sys.stderr.write("evening: another leetcode-guard run holds the instance lock\n")
+    return EXIT_NO_X

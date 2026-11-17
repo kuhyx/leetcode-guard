@@ -26,8 +26,9 @@ from typing import TYPE_CHECKING, Final
 
 from gatelock import watch_credit
 
+from leetcode_guard._breakglass import breakglass_lines
 from leetcode_guard._constants import EXIT_OK
-from leetcode_guard._evening import EXIT_END_EVENING, evening_paid
+from leetcode_guard._evening import EXIT_END_EVENING, STOP_COMMAND, evening_paid
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._view_evening import install_end_evening_button
 
@@ -56,12 +57,13 @@ class EveningGuard(LeetcodeGuard):
         watch_credit(
             self.root,
             [deps.ledger_path],
-            self._rung_paid,
+            self.rung_paid,
             self.on_evening_credit,
             poll_ms=CREDIT_POLL_MS,
         )
 
-    def _rung_paid(self) -> bool:
+    def rung_paid(self) -> bool:
+        """Whether today's leetcode rung is verifiably paid (unreadable: no)."""
         return evening_paid(
             self.deps.ledger_path,
             key_file=self.deps.key_file,
@@ -74,7 +76,7 @@ class EveningGuard(LeetcodeGuard):
 
     def _release(self, probe: SolveProbe) -> None:
         """Let go only for a paid rung."""
-        if not self._rung_paid():
+        if not self.rung_paid():
             _logger.warning("evening: stand-down held; the leetcode rung is unpaid")
             return
         super()._release(probe)
@@ -89,7 +91,13 @@ class EveningGuard(LeetcodeGuard):
     def build_surface(self, parent: tk.Misc, surface: SurfaceInfo) -> None:
         """The ordinary surface plus the end-evening control, from t=0."""
         super().build_surface(parent, surface)
-        install_end_evening_button(parent, self.run_state.config, self.end_evening)
+        config = self.run_state.config
+        install_end_evening_button(parent, config, self.end_evening)
+        # The ordinary line stops leetcode-guard.service, which does not own
+        # this process; a dead break-glass command is worse than none.
+        view = self.frames.views[surface.output_name]
+        lines = breakglass_lines(config, STOP_COMMAND)
+        view.decor.breakglass.configure(text="\n".join(lines))
 
     def end_evening(self) -> None:
         """Kuhy ends the evening: close, exit 10, the chain stops."""

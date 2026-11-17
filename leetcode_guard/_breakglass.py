@@ -41,7 +41,9 @@ CONSOLE_KEYS: Final = "Ctrl+Alt+F2"
 DESKTOP_KEYS: Final = "Ctrl+Alt+F1"
 
 
-def breakglass_lines(config: LockConfig) -> tuple[str, ...]:
+def breakglass_lines(
+    config: LockConfig, stop_command: str = STOP_COMMAND
+) -> tuple[str, ...]:
     """The recovery route for the lock as it is currently configured.
 
     No prose (textgate): the command and the key chords are what the user
@@ -52,11 +54,13 @@ def breakglass_lines(config: LockConfig) -> tuple[str, ...]:
     Args:
         config: The live lock configuration. Read for ``resolved_disable_vt``,
             which decides whether a TTY switch is honestly on offer.
+        stop_command: What stops the process that owns this lock. The evening
+            chain's gate is a child of another unit, so it passes that unit's.
 
     Returns:
         Lines to render verbatim, in order.
     """
-    command = f"{g.PROMPT} {STOP_COMMAND}"
+    command = f"{g.PROMPT} {stop_command}"
     if config.resolved_disable_vt():
         return (
             f"{g.CONSOLE} {CONSOLE_KEYS} {g.NO_ENTRY}",

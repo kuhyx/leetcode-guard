@@ -209,3 +209,27 @@ def test_the_end_code_follows_the_orchestrator_when_it_exists(
     monkeypatch.setattr(_evening.importlib, "import_module", lambda _name: module)
 
     assert _evening.end_evening_code() == expected
+
+
+def test_a_held_instance_lock_never_exits_zero_on_an_unpaid_rung(
+    monkeypatch, data_dir: Path, capsys
+) -> None:
+    """The daytime lock still up: exit 0 would relaunch the gate in a tight loop."""
+    _seeded_ledger(data_dir)
+    patch_cli(monkeypatch, "acquire_instance", lambda _path: None)
+
+    assert _cli.main(EVENING) == _evening.EXIT_NO_X
+    assert not _Guard.built
+    assert "instance lock" in capsys.readouterr().err
+
+
+def test_a_held_instance_lock_is_zero_when_the_rung_got_paid(
+    monkeypatch, data_dir: Path
+) -> None:
+    """Paid between the preflight and the lock: nothing left to do."""
+    _seeded_ledger(data_dir)
+    patch_cli(monkeypatch, "acquire_instance", lambda _path: None)
+    paid = iter([False, True])
+    monkeypatch.setattr(_evening, "evening_paid", lambda *_a, **_k: next(paid))
+
+    assert _cli.main(EVENING) == 0

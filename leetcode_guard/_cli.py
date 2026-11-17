@@ -42,7 +42,7 @@ from leetcode_guard._constants import (
     PROGRESS_CACHE_FILE,
 )
 from leetcode_guard._daycost import local_today
-from leetcode_guard._evening import evening_paid, evening_preflight
+from leetcode_guard._evening import busy_exit, evening_paid, evening_preflight
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import SeedStamp, needs_seeding, seed_ledger
@@ -94,7 +94,7 @@ def cmd_lock(*, demo_mode: bool, evening: bool = False) -> int:
         # The afternoon retry firing while the morning run is still queued
         # behind the workout lock. Two waiters would clear the gate twice.
         print("another leetcode-guard run is already active", file=sys.stderr)
-        return EXIT_OK
+        return busy_exit(LEDGER_FILE) if evening else EXIT_OK
     try:
         return _run_lock(demo_mode=demo_mode, evening=evening)
     finally:

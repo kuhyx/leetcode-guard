@@ -53,6 +53,7 @@ WORD = re.compile(r"[A-Za-z]{2,}")
 URL = re.compile(r"https?://\S+")
 TYPED = (
     "systemctl --user stop leetcode-guard.service",
+    "systemctl --user stop evening-gates.service",
     'setxkbmap -option ""',
     "Ctrl+Alt+F2",
     "Ctrl+Alt+F1",

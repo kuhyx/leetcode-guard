@@ -17,7 +17,11 @@ from leetcode_guard._ledger import SOURCE_ESCAPE
 from leetcode_guard._ledger_entries import charge_entry
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._lock_poll import _UNLOCK_LINGER_MS
-from leetcode_guard.tests._guard_factories import create_guard, probe_of
+from leetcode_guard.tests._guard_factories import (
+    create_guard,
+    guard_with_fresh_solves,
+    probe_of,
+)
 from leetcode_guard.tests._ledger_fixtures import add_charge
 
 if TYPE_CHECKING:
@@ -185,3 +189,32 @@ def test_the_evening_lock_ranks_150(tmp_path: Path, hmac_key: Path) -> None:
     guard = _guard(tmp_path, hmac_key)
 
     assert guard.run_state.config.rank == RANK_LEETCODE_GUARD == 150
+
+
+def test_the_break_glass_line_stops_the_unit_that_owns_the_process(
+    tmp_path: Path, hmac_key: Path, tk_mock
+) -> None:
+    """The evening gate is a child of evening-gates.service; the daytime stop
+    command would do nothing, and a dead break-glass line is worse than none."""
+    guard = _guard(tmp_path, hmac_key)
+    label = tk_mock.Label.return_value
+    label.configure.reset_mock()
+
+    guard.build_surface(tk_mock.Frame(), MagicMock(output_name="DP-0"))
+
+    shown = [c.kwargs.get("text", "") for c in label.configure.call_args_list]
+    assert any("systemctl --user stop evening-gates.service" in t for t in shown)
+    assert not any("leetcode-guard.service" in t for t in shown)
+
+
+def test_a_real_solve_inside_the_evening_lock_pays_the_rung_and_releases(
+    tmp_path: Path, hmac_key: Path
+) -> None:
+    """The poll's own charge is the row earned_time accepts: nothing injected."""
+    guard = guard_with_fresh_solves(tmp_path, hmac_key, demo_mode=False, evening=True)
+    assert not guard.rung_paid()
+
+    guard.on_poll_result(guard.check())
+
+    assert guard.rung_paid()
+    assert (_UNLOCK_LINGER_MS, guard.close) in _afters(guard)
