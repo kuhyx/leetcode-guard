@@ -201,6 +201,7 @@ leetcode-guard-status --state      # ok | warn | lock (tray icon colour)
 ```bash
 python3 -m leetcode_guard              # demo lock (safe: local grab, close button)
 python3 -m leetcode_guard --production # the real thing
+python3 -m leetcode_guard --production --evening  # evening-chain rung (_evening.py): 0 paid, 10 ended, 3 no X
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
 python3 -m leetcode_guard --status --by 31.12.2026  # + solved counts and a projection
