@@ -37,6 +37,8 @@ class CoachSessionLink {
     MaterialPageRoute<void>(
       builder: (_) =>
           CoachSessionScreen(controller: controller, openUrl: openUrl),
+      // Named for the app-errors route observer (a pattern, never an id).
+      settings: const RouteSettings(name: '/coach/session'),
     ),
   );
 
