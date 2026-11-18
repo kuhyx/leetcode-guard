@@ -138,8 +138,6 @@ class LeetcodeGuard(
         self.outage = OutageState()
 
         self.root = GateRoot()
-        if _errors.SLOT.reporter is not None:
-            watch_stalls(self.root, _errors.SLOT.reporter)
         self.root.title("LeetCode Guard" + (" [DEMO]" if demo_mode else ""))
 
         self.model = self.build_model(deps.probe)
@@ -246,5 +244,12 @@ class LeetcodeGuard(
         self.lock.close()
 
     def run(self) -> None:
-        """Hand control to Tk until the lock releases."""
+        """Hand control to Tk until the lock releases.
+
+        The stall watch starts here, not at ``GateRoot()``: construction blocks
+        the Tk thread on purpose (``wait_for_turn``'s grace, the surface build)
+        and was filed as a frozen loop (c890f31a).
+        """
+        if _errors.SLOT.reporter is not None:
+            watch_stalls(self.root, _errors.SLOT.reporter)
         self.lock.run()

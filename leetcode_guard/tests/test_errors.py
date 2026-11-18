@@ -36,4 +36,37 @@ def test_lock_window_watches_stalls_once_installed(
     monkeypatch.setattr(_lock, "watch_stalls", watch)
     monkeypatch.setattr(_errors.SLOT, "reporter", MagicMock())
     guard, _ = create_guard(tmp_path)
+    guard.run()
     watch.assert_called_once_with(guard.root, _errors.SLOT.reporter)
+
+
+def test_stall_clock_starts_with_the_event_loop_not_the_constructor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Construction blocks the Tk thread before mainloop, by design.
+
+    gatelock's ``wait_for_turn`` sleeps a 1.5 s startup grace and the surfaces
+    are built synchronously, all before the event loop runs. A watch armed at
+    ``GateRoot()`` counted that as a frozen loop: every lock filed a ~1.6 s
+    ``slow wait: tk.mainloop`` (c890f31a, 2026-11-18). The watch starts when
+    ``run`` hands control to Tk.
+    """
+    watch = MagicMock()
+    monkeypatch.setattr(_lock, "watch_stalls", watch)
+    monkeypatch.setattr(_errors.SLOT, "reporter", MagicMock())
+    guard, _ = create_guard(tmp_path)
+    watch.assert_not_called()
+    guard.run()
+    watch.assert_called_once()
+
+
+def test_no_reporter_means_no_stall_watch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Tests and tools that never installed the reporter watch nothing."""
+    watch = MagicMock()
+    monkeypatch.setattr(_lock, "watch_stalls", watch)
+    monkeypatch.setattr(_errors.SLOT, "reporter", None)
+    guard, _ = create_guard(tmp_path)
+    guard.run()
+    watch.assert_not_called()
