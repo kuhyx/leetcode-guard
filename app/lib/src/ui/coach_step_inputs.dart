@@ -5,10 +5,10 @@ library;
 import 'dart:convert';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// An outlined field whose 8 KiB limit shows as a live `bytes/limit`
 /// counter once the text is within a tenth of it; over the limit the

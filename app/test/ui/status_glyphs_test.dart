@@ -1,13 +1,13 @@
 // The Status tab's icon vocabulary: every value Python publishes has its
 // own glyph, and anything unexpected falls back to a glyph, never a word.
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/status_days.dart';
 import 'package:leetcode_guard/src/ui/status_glyphs.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/status_sections.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// `GateState` values in `leetcode_guard/_gate_state.py` (2026-11-10).
 const _gateStates = [

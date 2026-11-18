@@ -2,34 +2,4 @@
 # entries are predicates: they clear themselves when the blocker moves, so
 # they carry no `expires`.
 
-exceptions:
-  - ecosystem: gittag
-    package: crdt_sync_flutter
-    pinned: "0.8.1"
-    reason: >-
-      The next release imports package:material_ui; app/ still builds its
-      theme on flutter's material.dart (62 deprecated_member_use infos
-      measured 2026-11-12), so taking it means migrating app/ to
-      material_ui first, as daily-limits did.
-    blocked_by: "migration:leetcode-guard app/ to material_ui"
-    expires: "2026-12-12"
-  - ecosystem: gittag
-    package: design_system
-    pinned: "0.3.1"
-    reason: >-
-      The next release imports package:material_ui; app/ still builds its
-      theme on flutter's material.dart (62 deprecated_member_use infos
-      measured 2026-11-12), so taking it means migrating app/ to
-      material_ui first, as daily-limits did.
-    blocked_by: "migration:leetcode-guard app/ to material_ui"
-    expires: "2026-12-12"
-  - ecosystem: gittag
-    package: sync_settings_ui
-    pinned: "0.7.3"
-    reason: >-
-      The next release imports package:material_ui; app/ still builds its
-      theme on flutter's material.dart (62 deprecated_member_use infos
-      measured 2026-11-12), so taking it means migrating app/ to
-      material_ui first, as daily-limits did.
-    blocked_by: "migration:leetcode-guard app/ to material_ui"
-    expires: "2026-12-12"
+exceptions: []

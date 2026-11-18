@@ -17,7 +17,6 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
@@ -28,6 +27,7 @@ import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/coach_visible.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Why the whole tab can be unknown, and what to check.
 const kCoachWhy =

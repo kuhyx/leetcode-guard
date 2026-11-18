@@ -2,8 +2,8 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Outer gutter of every tab.
 const kGutter = EdgeInsets.all(AppSpacing.md);

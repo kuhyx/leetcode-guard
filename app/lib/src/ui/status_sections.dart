@@ -10,12 +10,12 @@
 /// numbers are drawn, next to an icon.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/status_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The icon of each gate state Python publishes (`GateState` in
 /// `leetcode_guard/_gate_state.py`); anything else is a question mark.

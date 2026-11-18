@@ -6,12 +6,12 @@ library;
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/ui/coach_chat_message.dart';
 import 'package:leetcode_guard/src/ui/coach_step_inputs.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Ctrl+Enter as keycap symbols (no letters): the desktop send chord.
 const kSendChord = '⌃⏎';

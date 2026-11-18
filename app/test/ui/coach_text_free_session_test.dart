@@ -3,9 +3,9 @@
 // Allowed letters: what the coach model wrote (the fake script's replies
 // and grader feedback), the problem's title, the toolbox entries (the
 // curriculum kuhy reviewed) and what this test typed.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/ui/coach_session_screen.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/coach_rig.dart';
 import '../support/fake_relay.dart';

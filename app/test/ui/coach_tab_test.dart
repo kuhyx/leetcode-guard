@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/coach_how_to.dart';
 import 'package:leetcode_guard/src/ui/coach_tab.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/coach_labels.dart';
 import '../support/coach_pump.dart';

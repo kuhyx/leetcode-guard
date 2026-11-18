@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/ids.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'fake_coach_transport.dart';
 import 'fakes.dart';

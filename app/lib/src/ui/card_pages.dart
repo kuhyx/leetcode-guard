@@ -9,8 +9,8 @@ library;
 import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Key of the area holding the selected section.
 const kTabContentKey = Key('tab-content');

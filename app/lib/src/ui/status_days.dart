@@ -3,12 +3,12 @@
 /// replaced are spoken.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/status_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The spoken name of the full list of recent solves.
 const _recentSolves = 'Recent solves';

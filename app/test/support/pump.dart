@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'fakes.dart';
 import 'fixtures.dart';

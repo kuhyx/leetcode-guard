@@ -7,13 +7,13 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/model/coach_relay.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_how_to.dart';
 import 'package:leetcode_guard/src/ui/coach_run_result.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Who wrote [m], spoken: "You", "Coach", "PC", plus a kind other than chat.
 String roleLabel(ChatMessage m) {

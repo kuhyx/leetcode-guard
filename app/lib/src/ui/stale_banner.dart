@@ -7,11 +7,12 @@
 /// and scrubbed again here because the accessibility tree is exposed too.
 library;
 
+import 'package:crdt_sync_flutter/crdt_sync_flutter.dart' show WaitWatch;
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/data/failure_text.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The icon of each [FailureKind].
 IconData failureIcon(FailureKind kind) => switch (kind) {
@@ -60,8 +61,13 @@ class StaleBanner extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (c.snapshot == null)
-                const Icon(Icons.cloud_download_outlined, color: ink)
+              // The first load, before any snapshot or error: the app's one
+              // loader. WaitWatch times it (perf.slow over 1 s) and paints
+              // nothing new; an error swaps in the bare icon, ending the wait.
+              if (c.snapshot == null && error == null)
+                const WaitWatch(operation: 'snapshot.load', child: _noSnapshot)
+              else if (c.snapshot == null)
+                _noSnapshot
               else ...[
                 const Icon(Icons.history, color: ink),
                 const SizedBox(width: AppSpacing.xs),
@@ -90,3 +96,8 @@ class StaleBanner extends StatelessWidget {
     );
   }
 }
+
+const _noSnapshot = Icon(
+  Icons.cloud_download_outlined,
+  color: AppPalette.onFill,
+);

@@ -1,10 +1,10 @@
 import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
     show E2ePassphraseButton;
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fixtures.dart';
 import '../support/pump.dart';

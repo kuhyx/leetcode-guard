@@ -21,12 +21,12 @@ dependencies:
   crdt_sync_flutter:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_flutter-v0.8.1
+      ref: crdt_sync_flutter-v0.9.1
       path: crdt_sync_flutter
   design_system:
     git:
       url: https://github.com/kuhyx/utils
-      ref: design_system-v0.3.1
+      ref: design_system-v0.4.1
       path: design_system
   flutter:
     sdk: flutter
@@ -40,6 +40,9 @@ dependencies:
       ref: google_account_token-v0.1.0
       path: google_account_token
   http: 1.6.0
+  # Material widgets, off package:flutter/material.dart (deprecated in
+  # Flutter 3.50); the shared packages build on it too.
+  material_ui: 1.11.1
   path: 1.9.1
   # The last good snapshot, so an offline launch shows it (stale) rather
   # than a screen of "unknown". Display data only; no credential.
@@ -49,7 +52,7 @@ dependencies:
   sync_settings_ui:
     git:
       url: https://github.com/kuhyx/utils
-      ref: sync_settings_ui-v0.7.3
+      ref: sync_settings_ui-v0.8.4
       path: sync_settings_ui
   # Opens a suggestion's problem page in the browser: the app's one action.
   url_launcher: 6.3.3

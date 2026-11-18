@@ -2,8 +2,8 @@
 /// the foreground (`DOCS-coach-relay.md` §1: "never in the background").
 library;
 
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Attaches [controller] while mounted and shown; rebuilds [builder] on
 /// every change.

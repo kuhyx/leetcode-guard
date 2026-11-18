@@ -8,13 +8,13 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_how_to.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The command that starts the relay (desktop, relay down).
 const kStartRelayCommand = 'systemctl --user start leetcode-coach-relay';

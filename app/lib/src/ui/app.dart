@@ -7,8 +7,9 @@ library;
 
 import 'dart:async';
 
+import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
+    show AppErrors, AppErrorsRouteObserver;
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
@@ -19,6 +20,7 @@ import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/tabs.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Width at which the bottom bar becomes a side rail (M3's medium/expanded
 /// breakpoint).
@@ -33,6 +35,7 @@ class LeetGuardApp extends StatelessWidget {
     this.settingsBuilder,
     this.coach,
     this.lockAction,
+    this.errors,
     super.key,
   });
 
@@ -52,12 +55,18 @@ class LeetGuardApp extends StatelessWidget {
   /// where the wrapper holds every secret (desktop).
   final Widget? lockAction;
 
+  /// App-wide error reporting (routes stamped into reports); null in tests.
+  final AppErrors? errors;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
     // The app's proper noun, for the OS task switcher only (settled).
     title: 'LeetGuard',
     debugShowCheckedModeBanner: false,
     theme: buildDarkTheme(),
+    navigatorObservers: [
+      if (errors case final errors?) AppErrorsRouteObserver(errors),
+    ],
     home: _Shell(this),
   );
 }
@@ -106,7 +115,12 @@ class _ShellState extends State<_Shell> {
   void _select(int index) => setState(() => _tab = index);
 
   Future<void> _openSettings(WidgetBuilder builder) async {
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: builder));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: builder,
+        settings: const RouteSettings(name: '/settings'),
+      ),
+    );
     unawaited(_c.refresh());
   }
 

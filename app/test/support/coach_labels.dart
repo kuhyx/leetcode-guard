@@ -3,8 +3,8 @@
 /// says). They read the widgets directly, so no `ensureSemantics` needed.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The label [e] speaks. An `Icon` or a `Text` builds its own `Semantics`
 /// from its label: that inner node is theirs, not a second match.

@@ -5,7 +5,6 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
@@ -13,6 +12,7 @@ import 'package:leetcode_guard/src/ui/coach_session_screen.dart';
 import 'package:leetcode_guard/src/ui/coach_step_body.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Spoken while the PC starts the session.
 const kStartingSession = 'Waiting for the PC to start the session...';

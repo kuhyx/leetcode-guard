@@ -4,11 +4,11 @@
 /// draw a step with the same shape, and a grade with the same pill.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/pending.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A step's glyph, its spoken name and what it asks (spoken only).
 typedef StepGlyph = ({IconData icon, String name, String asks});

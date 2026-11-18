@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:crdt_sync/crdt_sync.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -12,6 +11,7 @@ import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fake_rtdb.dart';
 import '../support/fakes.dart';

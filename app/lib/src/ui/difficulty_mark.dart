@@ -7,9 +7,9 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Credit weight per difficulty key; an unknown key weighs 1.
 const kLevelWeight = {'Easy': 1, 'Medium': 2, 'Hard': 4};

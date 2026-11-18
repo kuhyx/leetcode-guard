@@ -4,11 +4,11 @@
 // Scope: the app bar, the navigation bar/rail, `ProfileTab`, the
 // `ProjectionSection` card and its sheet. The other Status cards and the
 // Coach tab are reworked (and guarded) separately.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/projection_section.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fixtures.dart';
 import '../support/pump.dart';

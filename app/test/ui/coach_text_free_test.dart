@@ -2,10 +2,10 @@
 // tab, its sheets and its snack bar, at desktop and phone sizes. Only named
 // content may hold letters: LeetCode slugs and titles and the commands kuhy
 // types, taken from the fixture itself.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
 import 'package:leetcode_guard/src/ui/coach_tab.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/coach_pump.dart';
 import '../support/coach_rig.dart';

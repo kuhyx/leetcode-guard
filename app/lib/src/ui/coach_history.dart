@@ -8,13 +8,13 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/coach_grade.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The graded steps: the snapshot's key and the session step number.
 const kGradedSteps = <(String, int)>[

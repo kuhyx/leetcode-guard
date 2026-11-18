@@ -7,9 +7,8 @@ import 'dart:async';
 import 'package:crdt_sync/crdt_sync.dart'
     show checkSyncNamespace, syncNamespace;
 import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
-    show E2ePassphraseButton;
+    show AppErrorsConfig, E2ePassphraseButton, installAppErrors;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
@@ -26,12 +25,28 @@ import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:sync_settings_ui/sync_settings_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Entry point.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Every error and every wait over 1 s goes to the PC's app-errors ingest,
+  // which files a board ticket (kuhyx/utils DOCS-app-errors.md). The release
+  // build passes the versionCode and name as dart-defines (release-apk.yml).
+  // Queued in prefs on both platforms; only the phone uploads (below).
+  final errors = await installAppErrors(
+    const AppErrorsConfig(
+      app: 'leetcode-guard-app',
+      repo: 'kuhyx/leetcode-guard',
+      package: 'leetcode_guard',
+      // 0 unless the release build passes --dart-define=APP_BUILD.
+      // ignore: avoid_redundant_argument_values
+      build: int.fromEnvironment('APP_BUILD'),
+      version: String.fromEnvironment('APP_VERSION'),
+    ),
+  );
   // Fail closed on a bad SYNC_NAMESPACE before any screen or request.
   checkSyncNamespace(syncNamespace);
   // Desktop is this web build in a Chrome window: the wrapper that served
@@ -45,6 +60,14 @@ void main() {
   // sealed under one key, unlocked once per run (e2e_stores.dart).
   final devices = PrefsDeviceId();
   final stores = SealedStores(open: openFirebase);
+  // The desktop never touches Firebase or a credential; its reports stay
+  // queued (the Tk gate reports for the PC as leetcode-guard).
+  if (!kIsWeb) {
+    errors.connect(
+      sink: () async => (await openFirebase())?.patchValues,
+      deviceId: devices.deviceId,
+    );
+  }
   final reporter = kIsWeb
       ? null
       : RtdbErrorReporter(
@@ -77,6 +100,7 @@ void main() {
   runApp(
     LeetGuardApp(
       controller: status,
+      errors: errors,
       lockAction: kIsWeb
           ? null
           : ValueListenableBuilder<bool>(

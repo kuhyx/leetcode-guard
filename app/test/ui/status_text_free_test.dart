@@ -2,11 +2,11 @@
 // is an icon, a number, a date or content LeetCode / the PC published.
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/ui/projection_section.dart';
 import 'package:leetcode_guard/src/ui/tabs.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fixtures.dart';
 import '../support/pump.dart';

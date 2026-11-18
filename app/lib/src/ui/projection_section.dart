@@ -5,12 +5,12 @@
 /// Python, and a Dart port would drift from them.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/snapshot.dart';
 import 'package:leetcode_guard/src/ui/difficulty_mark.dart';
 import 'package:leetcode_guard/src/ui/more_sheet.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Spoken only (textgate): SectionCard speaks its title and paints _leading.
 const _title = 'Progress & projection';

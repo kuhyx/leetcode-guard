@@ -6,7 +6,6 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
@@ -17,6 +16,7 @@ import 'package:leetcode_guard/src/ui/coach_session_banners.dart';
 import 'package:leetcode_guard/src/ui/coach_steps.dart';
 import 'package:leetcode_guard/src/ui/coach_visible.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Below this width the chat is a pane of its own (the shell's 840 px).
 const kSessionSplit = 840.0;

@@ -3,8 +3,8 @@
 /// so the coach screens use these instead.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Asks before [action] (its icon, large and in the danger hue): a cross
 /// keeps things as they are, a check in the danger hue goes ahead. Escape

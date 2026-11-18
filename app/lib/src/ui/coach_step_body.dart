@@ -2,7 +2,6 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/requests.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
@@ -12,6 +11,7 @@ import 'package:leetcode_guard/src/ui/coach_implement.dart';
 import 'package:leetcode_guard/src/ui/coach_session_screen.dart';
 import 'package:leetcode_guard/src/ui/coach_step_inputs.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Step [n]'s body.
 class StepBody extends StatefulWidget {

@@ -10,13 +10,13 @@ library;
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/ui/coach_dialogs.dart';
 import 'package:leetcode_guard/src/ui/coach_glyphs.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The card's spoken title (a [SectionCard] title is never painted).
 const kHowToTitle = 'How to start';
@@ -91,18 +91,16 @@ class _CommandsButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     key: const Key('show-commands'),
     icon: const Icon(Icons.list, semanticLabel: 'All commands'),
-    onPressed: () => unawaited(
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => SafeArea(
-          child: ListView(
-            key: const Key('sheet'),
-            padding: kGutter,
-            shrinkWrap: true,
-            children: [for (final c in commands) _CommandRow(c)],
-          ),
+    onPressed: () => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: ListView(
+          key: const Key('sheet'),
+          padding: kGutter,
+          shrinkWrap: true,
+          children: [for (final c in commands) _CommandRow(c)],
         ),
       ),
     ),

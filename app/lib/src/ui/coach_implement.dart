@@ -3,12 +3,12 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/problem_url.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Step 4: open the problem, then wait for LeetCode's Accepted.
 class ImplementStatus extends StatelessWidget {
