@@ -101,6 +101,8 @@ Future<void> main() async {
     LeetGuardApp(
       controller: status,
       errors: errors,
+      // A tap-to-throw button for checking the board report on a phone.
+      debugThrow: kDebugMode || const bool.fromEnvironment('DEBUG_THROW'),
       lockAction: kIsWeb
           ? null
           : ValueListenableBuilder<bool>(

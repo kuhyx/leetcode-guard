@@ -36,6 +36,7 @@ class LeetGuardApp extends StatelessWidget {
     this.coach,
     this.lockAction,
     this.errors,
+    this.debugThrow = false,
     super.key,
   });
 
@@ -57,6 +58,11 @@ class LeetGuardApp extends StatelessWidget {
 
   /// App-wide error reporting (routes stamped into reports); null in tests.
   final AppErrors? errors;
+
+  /// Shows an icon-only app-bar button that throws an uncaught error, to
+  /// check the app-errors path on a phone. main.dart sets it only in debug
+  /// builds or with `--dart-define=DEBUG_THROW=true`; releases never.
+  final bool debugThrow;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -174,6 +180,15 @@ class _ShellState extends State<_Shell> {
               ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
+          if (widget.app.debugThrow)
+            IconButton(
+              key: const Key('debug-throw'),
+              icon: const Icon(
+                Icons.bug_report_outlined,
+                semanticLabel: 'Throw a test error',
+              ),
+              onPressed: () => throw StateError('debug throw'),
+            ),
           ?widget.app.lockAction,
           if (settings != null)
             IconButton(
