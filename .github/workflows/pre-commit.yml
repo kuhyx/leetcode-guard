@@ -28,12 +28,12 @@ jobs:
             skip: ""
             install: pre-commit
           # `rest` holds the language: system hooks. screens-fit imports
-          # gatelock and leetcode_guard, whose pins live in requirements.txt;
-          # dependency-freshness needs pyyaml and packaging, which that file
-          # already pulls in (via pre-commit and pytest).
+          # gatelock and leetcode_guard, whose pins live in requirements.txt.
+          # dependency-freshness is skipped: the version check runs only
+          # locally, so an upstream release can never turn CI red.
           - group: rest
             hooks: ""
-            skip: mypy,pylint
+            skip: mypy,pylint,dependency-freshness
             install: -r requirements.txt
     name: pre-commit (${{ matrix.group }})
     steps:
