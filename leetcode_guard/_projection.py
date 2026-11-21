@@ -43,6 +43,9 @@ _logger: Final = logging.getLogger(__name__)
 
 _DOTTED_PARTS: Final = 3
 
+GOAL_DATE: Final = date(2027, 7, 31)
+"""kuhy set this goal date on 2026-11-21; ``--by`` still overrides it."""
+
 
 def parse_target(text: str) -> date | None:
     """Read ``dd.mm.yyyy`` (as typed into the window) or ISO, else ``None``."""
@@ -60,7 +63,13 @@ def parse_target(text: str) -> date | None:
 
 
 def default_target(today: date) -> date:
-    """The last day of the current year -- the entry's starting value."""
+    """:data:`GOAL_DATE`, or the end of this year once it has passed.
+
+    The projection must never start on a past date, so after the goal date the
+    entry falls back to the last day of ``today``'s year.
+    """
+    if today <= GOAL_DATE:
+        return GOAL_DATE
     return date(today.year, 12, 31)
 
 

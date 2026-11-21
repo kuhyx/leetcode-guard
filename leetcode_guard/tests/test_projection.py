@@ -8,6 +8,7 @@ import pytest
 
 from leetcode_guard._progress import Progress
 from leetcode_guard._projection import (
+    GOAL_DATE,
     Position,
     default_target,
     format_target,
@@ -64,10 +65,19 @@ def test_parse_target_reads_dotted_and_iso_dates(text, expected):
     assert parse_target(text) == expected
 
 
-def test_the_default_target_is_new_years_eve_in_dotted_form():
-    """The default target is 31 December, rendered in dotted form."""
-    assert default_target(SAT) == date(2026, 12, 31)
-    assert format_target(default_target(SAT)) == "31.12.2026"
+def test_the_default_target_is_the_goal_date_in_dotted_form():
+    """Before the goal date the default is GOAL_DATE, rendered dotted."""
+    assert date(2027, 7, 31) == GOAL_DATE
+    assert default_target(SAT) == GOAL_DATE
+    assert default_target(GOAL_DATE) == GOAL_DATE
+    assert format_target(default_target(SAT)) == "31.07.2027"
+
+
+def test_the_default_target_never_lands_in_the_past():
+    """Once the goal date has passed, fall back to the end of that year."""
+    after = date(2027, 8, 1)
+    assert default_target(after) == date(2027, 12, 31)
+    assert default_target(date(2028, 3, 4)) == date(2028, 12, 31)
 
 
 def test_a_week_ahead_from_a_settled_saturday():

@@ -190,7 +190,7 @@ on the desktop. `DOCS-status-snapshot.md` has the schema. The gate never reads
 either.
 
 The projection table is also available from the shell:
-`leetcode-guard --status --by 31.12.2027 --price 1 --goal Easy=837`.
+`leetcode-guard --status --by 31.07.2027 --price 1 --goal Easy=837`.
 
 ```bash
 leetcode-guard-status --summary    # one line (tray tooltip); also the default
@@ -206,7 +206,7 @@ python3 -m leetcode_guard --production --evening  # evening-chain rung (_evening
 python3 -m leetcode_guard --check      # today's full decision trace; writes nothing
 python3 -m leetcode_guard --status     # ledger position from disk; no network
 python3 -m leetcode_guard --status --by 31.12.2026  # + solved counts and a projection
-python3 -m leetcode_guard --status --by 31.12.2027 --price 1 --goal Easy=837  # what price lands the goal
+python3 -m leetcode_guard --status --by 31.07.2027 --price 1 --goal Easy=837  # what price lands the goal
 python3 -m leetcode_guard --probe      # live API data
 python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync
