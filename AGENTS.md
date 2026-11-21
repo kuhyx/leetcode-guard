@@ -11,53 +11,52 @@ diet_guard was silently dead for three days. `~/.venvs/leetcode-guard-mcp`
 exists only for the MCP server, so the MCP SDK never has to be on the systemd path.
 
 ## Never break these
-
-**"Cannot check" is not "not solved".** LeetCode answers an expired session and
-several other failures with **HTTP 200 and a null payload**, not an error.
-`_submissions.fetch_recent_ac` returns a three-valued `ProbeStatus` for exactly
-this reason. Collapsing it into a boolean gives a lock whose unlock condition
-can never be satisfied and which does not know it.
+ **"Cannot check" is not "not solved".** LeetCode answers an expired session and several other
+failures with **HTTP 200 and a null payload**, not an error. `_submissions.fetch_recent_ac` returns
+a three-valued `ProbeStatus` for exactly this reason. Collapsing it into a boolean gives a lock
+whose unlock condition can never be satisfied and which does not know it.
 
 **Credits must verify; charges must not have to.** The table in `_balance.py`
 is deliberately asymmetric and inverts gatelock's own rule for credits. An
 unverified credit is a bypass (append JSON, get a day). An unverified charge
 being discarded would be a refund. Read the module docstring before touching it.
 
-**The MCP server is read-only.** No `grant_credit`, no `mark_solved`, no
-`unlock`, ever. A credit exists only because LeetCode confirmed an accepted
-submission. `test_mcp.py` asserts the absence.
+**The MCP server is read-only.** No `grant_credit`, no `mark_solved`, no `unlock`, ever. A credit
+exists only because LeetCode confirmed an accepted submission. `test_mcp.py` asserts the absence.
 
-**Debt is derived, never stored.** A past day with no charge that was neither
-free nor sick is owed at its price, and every day costs one more until it is repaid
-(`_debt.py`). No ledger form on purpose: `rm ledger.json` *grows* the debt, and
-back-filling `charge:<past-date>` would unlock those dates. `DOCS-debt.md` has
-the rest: why repayment follows the credit rule, and the test plumbing.
+**Debt is derived, never stored.** A past day with no charge that was neither free nor sick is owed
+at its price, and every day costs one more until it is repaid (`_debt.py`). No ledger form on
+purpose: `rm ledger.json` *grows* the debt, and back-filling `charge:<past-date>` would unlock those
+dates. `DOCS-debt.md` has the rest: why repayment follows the credit rule, and the test plumbing.
 
-**Credit weight is derived and signed (2026-11-02).** Easy 1 / Medium 2 / Hard 4
-per accepted submission, priced at read time from `difficulty.json`'s signed rows
-(`_difficulty.py`); ledger rows stay `amount: 1`, never rewritten. A missing,
-edited or foreign row weighs 1 (never raises), logged once per balance. The
-unsigned pool/statement caches only *write* rows; both harvesters price a
+**Credit weight is derived and signed (2026-11-02).** Easy 1 / Medium 2 / Hard 4 per accepted
+submission, priced at read time from `difficulty.json`'s signed rows (`_difficulty.py`); ledger rows
+stay `amount: 1`, never rewritten. A missing, edited or foreign row weighs 1 (never raises), logged
+once per balance. The unsigned pool/statement caches only *write* rows; both harvesters price a
 credit BEFORE `decide_today`. `--backfill-difficulty` is resumable.
 
-**The progress mirror is display-only.** `progress_cache.json` holds the
-profile's solved/total counts for the status window's projection and nothing
-else. Nothing that decides, charges or credits may read it: the moment the gate
-consulted it, editing the JSON would be a bypass. A failed fetch renders
-"unknown", never `0 / 4055` — an unknown username answers HTTP 200 with a
-healthy `allQuestionsCount` and `matchedUser: null`, so a good denominator says
-nothing about the numerator (`_progress.parse_progress`).
+**The progress mirror is display-only.** `progress_cache.json` holds the profile's solved/total
+counts for the status window's projection and nothing else. Nothing that decides, charges or credits
+may read it: the moment the gate consulted it, editing the JSON would be a bypass. A failed fetch
+renders "unknown", never `0 / 4055` — an unknown username answers HTTP 200 with a healthy
+`allQuestionsCount` and `matchedUser: null`, so a good denominator says nothing about the numerator
+(`_progress.parse_progress`).
+
+**The curriculum and the tutor reader are display-only.** `_curriculum.py` (order) and `_theory.py`
+(tutor files, pencil mark) only sort and mark rows, and read files anyone can edit, so nothing that
+decides, charges or credits may import either: `test_display_only_imports.py` bans it, transitively.
+A missing or bad file keeps the acceptance order; an unreadable tutor reads "unknown", shown as
+pending, never taught. `DOCS-curriculum.md` has the rules.
 
 **Seeding is not optional.** Without it the first run harvests ~20 recent
 submissions as credits (three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by a
 solve that has not happened yet — the state that armed on 2026-08-05 — so the
 run that *creates* the ledger returns without arming (`cmd_lock`).
 
-**A gate deferral must never be ledger state.** Settling the day was tried and
-reverted: it wrote `charge:<today>`, the exact key `decide` unlocks on, so
-`rm ledger.json` bought an unlocked day, repeatably. Deferring the *run* leaves
-nothing behind — delete the ledger and you skip one run, you do not earn a day.
-`test_the_run_that_creates_the_ledger_does_not_arm` pins it.
+**A gate deferral must never be ledger state.** Settling the day was tried and reverted: it wrote
+`charge:<today>`, the exact key `decide` unlocks on, so `rm ledger.json` bought an unlocked day,
+repeatably. Deferring the *run* leaves nothing behind — delete the ledger and you skip one run, you
+do not earn a day. `test_the_run_that_creates_the_ledger_does_not_arm` pins it.
 
 **The lock must always offer a way to do the thing it demands** (the 2026-08-05
 rule; it outranks lock strength). Never remove: an `Open` button per problem, the
