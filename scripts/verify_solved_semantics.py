@@ -54,10 +54,13 @@ _EXIT_OK: Final = 0
 _EXIT_FAILED: Final = 1
 
 _NEVER_ATTEMPTED: Final = (
-    "build-array-from-permutation",
-    "convert-the-temperature",
+    "median-of-two-sorted-arrays",
+    "regular-expression-matching",
 )
-"""Free, long-standing problems kuhy has not solved.
+"""Free, long-standing Hard problems kuhy has not opened (null on 2026-11-21).
+
+Hard on purpose: the guard serves Easy problems, so an Easy slug here gets
+solved sooner or later (both earlier ones were, by 2026-11-21).
 
 If one of these is ever actually solved the harness reports a mismatch rather
 than a false pass -- the failure text says to swap the slug, which is cheaper
