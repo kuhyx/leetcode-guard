@@ -21,6 +21,11 @@ CARDS = {
     "s1": {"module": "sql-lessons", "suspended": False},
     "s2": {"module": "sql-lessons", "suspended": False},
     "g1": {"module": "select-group-basics", "suspended": False},
+    "c1": {
+        "module": "clause-order-where-vs-having-and-left-join",
+        "suspended": False,
+    },
+    "d1": {"module": "date-format-codes-decimal-division-and", "suspended": False},
 }
 
 
@@ -49,17 +54,26 @@ def test_only_the_sql_unit_maps_a_tutor_subject():
 
     assert list(mapped) == ["sql"]
     assert mapped["sql"].subject == SUBJECT
-    assert mapped["sql"].modules == ("sql-lessons", "select-group-basics")
+    assert mapped["sql"].modules == (
+        "sql-lessons",
+        "select-group-basics",
+        "clause-order-where-vs-having-and-left-join",
+        "date-format-codes-decimal-division-and",
+    )
 
 
-def test_the_sql_unit_is_pending_until_both_modules_are_taught(tmp_path: Path):
-    """The state kuhy sees today: lessons done, group basics not."""
+def test_the_sql_unit_is_pending_until_every_module_is_taught(tmp_path: Path):
+    """Lessons done, or all but the last module taught: still pending."""
     curriculum = shipped()
     index = [unit.unit_id for unit in curriculum.units].index("sql")
 
     half = unit_theory(curriculum, tutor(tmp_path / "half", "s1", "s2"))
-    full = unit_theory(curriculum, tutor(tmp_path / "full", "s1", "s2", "g1"))
+    almost = unit_theory(curriculum, tutor(tmp_path / "almost", "s1", "s2", "g1", "c1"))
+    full = unit_theory(
+        curriculum, tutor(tmp_path / "full", "s1", "s2", "g1", "c1", "d1")
+    )
 
     assert half[index] is Theory.PENDING
+    assert almost[index] is Theory.PENDING
     assert full[index] is Theory.DONE
     assert {state for i, state in enumerate(full) if i != index} == {Theory.NONE}

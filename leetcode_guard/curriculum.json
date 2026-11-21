@@ -72,7 +72,11 @@
       "tags": ["database"],
       "tutor": {
         "subject": "mysql-8-for-timed-sql-coding-tests-joins-and",
-        "modules": ["sql-lessons", "select-group-basics"]
+        "modules": [
+          "sql-lessons", "select-group-basics",
+          "clause-order-where-vs-having-and-left-join",
+          "date-format-codes-decimal-division-and"
+        ]
       }
     },
     {

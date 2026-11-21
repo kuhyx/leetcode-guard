@@ -35,9 +35,10 @@ Add this to the unit's row in `curriculum.json`:
 ```
 
 The shipped file maps only `sql` (subject `mysql-8-for-timed-sql-coding-tests-joins-and`,
-modules `sql-lessons`, `select-group-basics`), so every other unit reads `none` and
-nothing else is marked. A mapping needs a subject and a non-empty module list, else the whole
-file is refused (see Failure).
+all four of its modules: `sql-lessons`, `select-group-basics`,
+`clause-order-where-vs-having-and-left-join`, `date-format-codes-decimal-division-and`),
+so every other unit reads `none` and nothing else is marked. A mapping needs a subject
+and a non-empty module list, else the whole file is refused (see Failure).
 
 ## What "done" means
 
