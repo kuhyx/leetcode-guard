@@ -54,9 +54,7 @@ from leetcode_guard._lock_release import ReleaseMixin
 from leetcode_guard._lock_reveal import RevealMixin
 from leetcode_guard._lock_state import EscapeKit, OutageState, RunState
 from leetcode_guard._lock_study import StudyMixin
-from leetcode_guard._network_incident import (
-    build_tracker as build_incident_tracker,
-)
+from leetcode_guard._network_incident import build_tracker as build_incident_tracker
 from leetcode_guard._poller import PollerSettings, SolvePoller
 from leetcode_guard._sync import sync_quietly
 from leetcode_guard._view import build_guard_view, install_demo_close_button
@@ -204,11 +202,7 @@ class LeetcodeGuard(
         self.frames.discard(surface.output_name)
 
     def on_focus_ready(self, surface: SurfaceInfo | None) -> None:
-        """Nothing to focus: the lock has no input field until the hatch opens.
-
-        ``surface`` may be ``None`` -- that is the zero-live-outputs case,
-        where the lock correctly holds the grab and shows nothing.
-        """
+        """No input field until the hatch opens; ``None``: zero live outputs."""
 
     def on_callback_error(self) -> None:
         """A Tk callback raised. Say so on screen and keep polling."""
