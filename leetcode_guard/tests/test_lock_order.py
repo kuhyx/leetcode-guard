@@ -22,12 +22,12 @@ def _documented_ranks() -> dict[str, int]:
     return {m[2]: int(m[3]) for m in rows if m}
 
 
-def test_the_rank_is_the_one_in_the_lock_order_table():
+def test_the_rank_is_the_one_in_the_lock_order_table() -> None:
     """A rank changed here without the table (or back) fails."""
     assert _documented_ranks()["leetcode_guard"] == RANK_LEETCODE_GUARD
 
 
-def test_the_table_orders_the_locks_by_falling_rank():
+def test_the_table_orders_the_locks_by_falling_rank() -> None:
     """Rows run strongest first, and no two locks share a rank."""
     ranks = list(_documented_ranks().values())
     assert ranks == sorted(ranks, reverse=True)
