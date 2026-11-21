@@ -12,7 +12,7 @@ Read-only. Skips loudly at exit 0 when the tutor has no data on this machine --
 a missing precondition, not a shape change. Checked:
 
 * ``log.jsonl`` holds ``taught`` events carrying string ``s`` (subject) and
-  ``c`` (card);
+  ``c`` (card); ``untaught`` events, if any, carry the same two strings;
 * every ``subjects/<id>/cards.json`` is an object of rows with a string
   ``module`` and a boolean ``suspended``;
 * the two join: a taught card of a subject that still exists is a key of that
@@ -97,6 +97,16 @@ def main() -> int:
         isinstance(e.get("s"), str) and isinstance(e.get("c"), str) for e in taught
     )
     _check(results, "every taught event names a subject and a card", passed=keyed)
+
+    untaught = [event for event in _events(log) if event.get("k") == "untaught"]
+    _check(
+        results,
+        f"every untaught event names a subject and a card ({len(untaught)})",
+        passed=all(
+            isinstance(e.get("s"), str) and isinstance(e.get("c"), str)
+            for e in untaught
+        ),
+    )
 
     cards = _cards_by_subject(root, results)
     _check(

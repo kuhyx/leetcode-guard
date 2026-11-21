@@ -16,7 +16,9 @@ re-checked live by ``scripts/verify_theory_shape.py``:
   "suspended": bool, ...}}``. Cards exist only for modules the tutor has
   unlocked, so a locked module has none and reads as pending.
 * ``log.jsonl`` -- one JSON object per line, appended while this reads; a
-  taught card is ``{"k": "taught", "s": <subject>, "c": <card_id>, ...}``.
+  taught card is ``{"k": "taught", "s": <subject>, "c": <card_id>, ...}``, and
+  un-ticking it appends the same shape with ``"k": "untaught"`` (measured in the
+  tutor's source 2026-11-21); rows apply in file order, the last one wins.
 
 **Display-only**, like ``_curriculum``: nothing that decides, charges or
 credits may import this. Every failure reads as :attr:`Theory.UNKNOWN` (shown
@@ -46,6 +48,7 @@ TUTOR_DATA_DIR = Path.home() / ".local" / "share" / "tutor"
 """Read at call time so the test suite can point it away from the real tutor."""
 
 _TAUGHT: Final = "taught"
+_UNTAUGHT: Final = "untaught"
 
 
 def _events(data: bytes, path: Path) -> list[object]:
@@ -71,19 +74,27 @@ def _events(data: bytes, path: Path) -> list[object]:
 
 
 def _taught(root: Path) -> frozenset[tuple[str, str]] | None:
-    """Every ``(subject, card)`` the log says was taught; ``None`` if unreadable."""
+    """Every ``(subject, card)`` taught after the log is folded in file order.
+
+    A ``taught`` row adds the pair, a later ``untaught`` row takes it out again
+    (the tutor's own fold does the same). ``None`` if the log is unreadable.
+    """
     path = root / "log.jsonl"
     data = read_tutor_bytes(path, _logger)
     if data is None:
         return None
-    return frozenset(
-        (event["s"], event["c"])
-        for event in _events(data, path)
-        if isinstance(event, dict)
-        and event.get("k") == _TAUGHT
-        and isinstance(event.get("s"), str)
-        and isinstance(event.get("c"), str)
-    )
+    taught: set[tuple[str, str]] = set()
+    for event in _events(data, path):
+        if not isinstance(event, dict):
+            continue
+        subject, card = event.get("s"), event.get("c")
+        if not (isinstance(subject, str) and isinstance(card, str)):
+            continue
+        if event.get("k") == _TAUGHT:
+            taught.add((subject, card))
+        elif event.get("k") == _UNTAUGHT:
+            taught.discard((subject, card))
+    return frozenset(taught)
 
 
 def _module_cards(root: Path, subject: str) -> dict[str, set[str]] | None:

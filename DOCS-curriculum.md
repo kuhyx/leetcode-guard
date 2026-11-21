@@ -46,6 +46,7 @@ A unit is done when every live (not suspended) card of each mapped module has a
 `taught` event in the log. That is kuhy's choice (2026-11-21) over the tutor's
 "mastered", which needs a Good review days later; it is why the reader uses the
 event log, not the stored status. A module with no cards yet is pending.
+An `untaught` row (the tutor appends one when kuhy un-ticks a card; measured 2026-11-21 in `tutor/fold.py` and `tutor/source.py`) takes that card back out until a later `taught` row, so rows apply in file order.
 
 States: `NONE` (no mapping), `DONE`, `PENDING`, `UNKNOWN`. A pending or unknown
 block gets the pencil glyph (`_glyphs.problem_mark`) ahead of the difficulty
