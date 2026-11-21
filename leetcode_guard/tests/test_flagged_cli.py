@@ -11,6 +11,7 @@ from leetcode_guard import (
     _attempt_paths,
     _attempt_report,
     _cli,
+    _coach_reviews,
     _constants,
     _flagged_cli,
 )
@@ -56,7 +57,9 @@ def seeded(hmac_key: Path) -> None:
 def _frozen_now(monkeypatch: pytest.MonkeyPatch) -> None:
     """The command reads the real clock; pin it to an hour after the accept."""
     monkeypatch.setattr(
-        _flagged_cli, "load_report", lambda: _attempt_report.load_report(now=NOW)
+        _flagged_cli,
+        "load_report",
+        lambda **kwargs: _attempt_report.load_report(now=NOW, **kwargs),
     )
 
 
@@ -134,3 +137,47 @@ def test_the_command_writes_nothing():
     _cli.main(["--flagged", "--json"])
 
     assert {path.name: path.read_bytes() for path in data.iterdir()} == before
+
+
+def _coach_log_of(slug: str, *events: object) -> None:
+    folder = _coach_reviews.COACH_SESSIONS_DIR
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"2026-11-21-{slug}.jsonl").write_text(
+        "".join(json.dumps(event) + "\n" for event in events), encoding="utf-8"
+    )
+
+
+@pytest.mark.usefixtures("seeded")
+def test_a_finished_review_clears_the_flag(capsys: pytest.CaptureFixture[str]):
+    """A ``review`` with a named cause in the coach log: no row, same summary."""
+    _coach_log_of("long-one", {"event": "review", "cause": "idea-to-code"})
+
+    assert _cli.main(["--flagged"]) == 0
+
+    assert capsys.readouterr().out == "measured 2, unknown 1, under 10 min 50%\n"
+
+
+@pytest.mark.usefixtures("seeded")
+def test_a_review_without_a_cause_leaves_the_flag(capsys: pytest.CaptureFixture[str]):
+    """An unfinished review is not a review: the row still prints."""
+    _coach_log_of("long-one", {"event": "review"}, {"event": "postmortem"})
+
+    assert _cli.main(["--flagged", "--json"]) == 0
+
+    flagged = json.loads(capsys.readouterr().out)["flagged"]
+    assert [row["slug"] for row in flagged] == ["long-one"]
+
+
+@pytest.mark.usefixtures("seeded")
+def test_an_unreadable_coach_log_keeps_the_flag(
+    capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture
+):
+    """Could not check: a warning, the row stays, and the command still exits 0."""
+    folder = _coach_reviews.COACH_SESSIONS_DIR
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    folder.write_text("a file where the folder should be", encoding="utf-8")
+
+    assert _cli.main(["--flagged"]) == 0
+
+    assert capsys.readouterr().out.startswith("long-one  active 25m")
+    assert "could not check" in caplog.text

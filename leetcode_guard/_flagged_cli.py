@@ -1,7 +1,7 @@
 """``--flagged``: solves that took long although their theory was taught.
 
-Read-only over the ledger and ``attempts.json``; prints and writes nothing
-else. Lives outside the ``_cli*`` names on purpose: those modules are the
+Read-only over the ledger, ``attempts.json`` and the coach log; prints and
+writes nothing else. Lives outside the ``_cli*`` names on purpose: those modules are the
 windows' neighbours and may not import display-only readers directly
 (``test_display_only_imports``); this one is a terminal diagnostic that reads
 them by design.
@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from leetcode_guard._attempt_report import load_report
+from leetcode_guard._coach_reviews import reviewed_slugs
 from leetcode_guard._constants import EXIT_OK
 
 _SECONDS_PER_MINUTE = 60
@@ -46,8 +47,11 @@ def summary_line(report: dict[str, Any]) -> str:
 
 
 def cmd_flagged(*, as_json: bool) -> int:
-    """Print the flagged solves and a summary, or the whole report as JSON."""
-    report = load_report()
+    """Print the flagged solves and a summary, or the whole report as JSON.
+
+    A solve the coach has reviewed (``_coach_reviews``) is not flagged.
+    """
+    report = load_report(cleared=reviewed_slugs())
     if as_json:
         print(json.dumps(report, sort_keys=True, indent=2))
         return EXIT_OK

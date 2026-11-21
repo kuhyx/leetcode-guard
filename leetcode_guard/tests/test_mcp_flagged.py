@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from leetcode_guard import _attempt_paths, _constants, _mcp
+from leetcode_guard import _attempt_paths, _coach_reviews, _constants, _mcp
 from leetcode_guard._attempt_model import to_document
 from leetcode_guard.tests._flagged_fixtures import (
     T0,
@@ -43,3 +43,24 @@ def test_get_flagged_returns_the_report_and_writes_nothing(hmac_key: Path):
     assert report["threshold_seconds"] == 1200
     assert json.loads(json.dumps(report)) == report
     assert {path.name: path.read_bytes() for path in data.iterdir()} == before
+
+
+def test_get_flagged_drops_a_reviewed_solve(hmac_key: Path):
+    """The coach's finished review clears the flag here too, read-only."""
+    write_credits(_constants.LEDGER_FILE, [("1", "a", T0)], hmac_key)
+    _attempt_paths.ATTEMPTS_FILE.write_text(
+        json.dumps(
+            to_document(records_of(record_of("a", beat_run(T0, 26), theory="done")))
+        ),
+        encoding="utf-8",
+    )
+    folder = _coach_reviews.COACH_SESSIONS_DIR
+    folder.mkdir(parents=True)
+    review = {"event": "review", "cause": "missing-idea", "module": "bit-tricks"}
+    (folder / "2026-11-21-a.jsonl").write_text(json.dumps(review) + "\n", "utf-8")
+    before = (folder / "2026-11-21-a.jsonl").read_bytes()
+
+    report = _mcp.get_flagged()
+
+    assert report["flagged"] == []
+    assert (folder / "2026-11-21-a.jsonl").read_bytes() == before

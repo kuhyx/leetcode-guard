@@ -4,7 +4,8 @@ The log is DOCS-coach-spec.md decision 8: one JSONL file per problem at
 ``~/.local/share/leetcode-coach/sessions/<date>-<slug>.jsonl``, events ``req``,
 ``req_check``, ``code``, ``rung``, ``reveal``, ``postmortem``, ``retest``, and
 the app's ``session_start``, ``grade``, ``chat``, ``session_end``
-(DOCS-coach-relay.md section 5; per-step grades in ``_coach_grades``). It
+(DOCS-coach-relay.md section 5; per-step grades in ``_coach_grades``), and the
+review stage's ``review`` and ``skeleton`` (DOCS-attempts.md). It
 was being written in parallel with this reader, so **every field-name
 assumption lives in the constants below** and nothing else guesses:
 
@@ -66,6 +67,7 @@ EVENTS: Final = frozenset(
     {
         *(REQ, REQ_CHECK, CODE, RUNG, REVEAL, "postmortem", "retest"),
         *("session_start", GRADE, CHAT, SESSION_END),
+        *("review", "skeleton"),  # coach 0.1.6; read by _coach_reviews / sign-off
     }
 )
 VERDICTS: Final = frozenset({"pass", "incomplete", "unverified"})

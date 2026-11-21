@@ -29,7 +29,7 @@ from typing import Any, Final
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
-from leetcode_guard import _attempt_report
+from leetcode_guard import _attempt_report, _coach_reviews
 from leetcode_guard._constants import SUGGESTION_COUNT
 from leetcode_guard._status import gather_status, snapshot_dict
 
@@ -132,10 +132,11 @@ def get_flagged() -> dict[str, Any]:
     """Solves that took over 20 min of active time though the theory was taught.
 
     Also the last 28 days' measured and unknown solves and the share under
-    10 min (``null`` with no data). Display-only: it reads ``attempts.json``
-    and the ledger and writes nothing.
+    10 min (``null`` with no data). A solve the coach has reviewed is not
+    flagged. Display-only: it reads ``attempts.json``, the ledger and the
+    coach log, and writes nothing.
     """
-    return _attempt_report.load_report()
+    return _attempt_report.load_report(cleared=_coach_reviews.reviewed_slugs())
 
 
 def main() -> None:

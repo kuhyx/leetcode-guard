@@ -15,7 +15,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard import _attempt_paths, _constants, _curriculum, _theory
+from leetcode_guard import (
+    _attempt_paths,
+    _coach_reviews,
+    _constants,
+    _curriculum,
+    _theory,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,3 +98,8 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Its constants live in their own module (``_constants`` is at the line
     # cap), so they are redirected here rather than through ``overrides``.
     monkeypatch.setattr(_attempt_paths, "ATTEMPTS_FILE", data / "attempts.json")
+    # The coach's session logs are kuhy's live review record: a test that read
+    # them would clear or keep a flag by what he did today.
+    monkeypatch.setattr(
+        _coach_reviews, "COACH_SESSIONS_DIR", tmp_path / "coach-reviews" / "sessions"
+    )
