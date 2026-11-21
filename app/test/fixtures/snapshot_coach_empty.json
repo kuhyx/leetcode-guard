@@ -242,7 +242,7 @@
         },
         {
           "name": "Post-mortem",
-          "text": "Claude says which hint gave which requirement and makes the cards."
+          "text": "Say which hint gave which requirement, then make the cards."
         }
       ],
       "next_note": "The command skips problems LeetCode already shows as Accepted, so it may serve a later one than listed here.",
