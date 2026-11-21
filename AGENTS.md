@@ -182,7 +182,7 @@ Keep it that way: a new private reach is a new public seam, not a suppression.
 **`install.sh` will clobber the editable gatelock if you let it.** `pip install
 -e .` resolves the pinned `gatelock @ git+...` and installs it *non*-editably
 over the top of `~/src/utils/gatelock`, breaking live editing across all four
-lockers — invisibly. `preserve_editable_gatelock` puts it back; keep it.
+lockers — invisibly. `preserve_editable` puts it back; keep it.
 
 **Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py`
 (the worst: a credential command that stored or refused a cookie silently).**

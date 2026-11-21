@@ -24,7 +24,8 @@ source "${RUN_DIR}/install.sh"
 
 install_dependencies() {
     install_package
-    preserve_editable_gatelock
+    preserve_editable gatelock "$GATELOCK_SRC"
+    preserve_editable leetcode_coach "$COACH_SRC"
     verify_imports
 }
 
