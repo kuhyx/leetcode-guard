@@ -3,9 +3,9 @@
 
 Since ``--since``: >=3 distinct problems of 268/260/169/137, each Accepted
 after a coach session that logged ``req`` before the first ``code``, no hint
-above H1, no ``reveal``, no ``retest``; on >=2 local dates; and the Claude Stop
-hook (``leetcode_no_solution_stop.py``) never fired. Items 1 and 3 are kuhy's
-word, not checked here::
+above H1 (an opened ``skeleton``, any payload, ranks above it), no ``reveal``,
+no ``retest``; on >=2 local dates; the Stop hook (``leetcode_no_solution_stop.py``)
+never fired. Items 1 and 3 are kuhy's word, not checked here::
 
     /usr/bin/python3 -m scripts.verify_coach_signoff --since 2026-11-07
 
@@ -115,6 +115,7 @@ def judge(path: Path, day: date, slug: str) -> Session:
     reasons = [
         ("retest" in kinds, "a cold re-test"),
         ("reveal" in kinds, "reveal typed"),
+        ("skeleton" in kinds, f"skeleton opened > {MAX_RUNG}"),
         (bool(seen) and max(seen) > RUNGS.index(MAX_RUNG), f"hint {rung} > {MAX_RUNG}"),
         (order == "n", "code before req:"),
         (order == "-", "no code logged"),
