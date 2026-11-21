@@ -8,7 +8,7 @@ bandit==1.9.4
 codespell==2.4.3
 coverage==7.17.4
 crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync
-earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.22.0#subdirectory=earned_time
+earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.23.0#subdirectory=earned_time
 focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project
 freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.3#subdirectory=freedays
 gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.16.0#subdirectory=gatelock
