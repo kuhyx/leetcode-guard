@@ -77,7 +77,7 @@ def fixture_sandbox(tmp_path: Path) -> Env:
     _git(seed, "init", "-q", "-b", "main")
     _git(seed, "config", "user.email", "t@t")
     _git(seed, "config", "user.name", "t")
-    _exe(seed / "install.sh", '#!/bin/bash\necho "install.sh" >> "$FAKE_LOG"\n')
+    _exe(seed / "install.sh", '#!/bin/bash\necho "install.sh $*" >> "$FAKE_LOG"\n')
     (seed / "app").mkdir()
     (seed / "app" / "pubspec.yaml").write_text("name: app\n", encoding="utf-8")
     _git(seed, "add", ".")
@@ -143,6 +143,15 @@ def test_pulls_installs_restarts_and_passes(sandbox: Env, tmp_path: Path) -> Non
         " leetcode-coach-relay.service" in calls
     )
     assert "health OK" in proc.stderr
+
+
+def test_force_reaches_install(sandbox: Env) -> None:
+    """`deploy.sh --force` is the full-reinstall path; a plain run passes nothing."""
+    assert _run(sandbox).returncode == 0
+    assert "install.sh --force" not in sandbox.log.read_text(encoding="utf-8")
+    proc = subprocess.run([str(SCRIPT), "--force"], env=sandbox.env, check=False)
+    assert proc.returncode == 0
+    assert "install.sh --force" in sandbox.log.read_text(encoding="utf-8")
 
 
 def test_never_starts_the_lock_service(sandbox: Env) -> None:

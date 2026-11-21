@@ -8,7 +8,10 @@
 # days, so this script verifies the imports with the exact interpreter the
 # service will use.
 #
-# Idempotent. Safe to re-run after any change.
+# Idempotent. Safe to re-run after any change. The system-python pip is skipped
+# while its stamp matches, and the MCP venv setup (scripts/setup_mcp.sh, same
+# idea) runs beside it (scripts/install_mcp_phase.sh). `--force` reinstalls
+# both whatever the stamps say.
 # ============================================================================
 
 set -euo pipefail
@@ -29,6 +32,9 @@ readonly INSTALL_STAMP="${XDG_STATE_HOME:-${HOME}/.local/state}/leetcode-guard/i
 log() { printf 'install: %s\n' "$1" >&2; }
 fail() { printf 'install: FAILED -- %s\n' "$1" >&2; exit 1; }
 
+# shellcheck source=scripts/install_mcp_phase.sh
+source "${REPO_DIR}/scripts/install_mcp_phase.sh"
+
 # The user site is shared with every other locker's install: if one of them
 # swapped a dependency since our last install, the listing differs and our
 # pins go back in, as they did when every deploy reinstalled.
@@ -42,7 +48,8 @@ install_key() {
 
 install_package() {
     # Imports must still resolve: the stamp never vouches for a broken site.
-    if [[ -f "$INSTALL_STAMP" && "$(cat "$INSTALL_STAMP")" == "$(install_key)" ]] \
+    if [[ "${INSTALL_FORCE:-0}" != 1 && -f "$INSTALL_STAMP" \
+        && "$(cat "$INSTALL_STAMP")" == "$(install_key)" ]] \
         && "$SYSTEM_PYTHON" -c "$RUNTIME_IMPORTS" >/dev/null 2>&1; then
         log "pyproject.toml unchanged since the last verified install -- pip skipped"
         return
@@ -190,12 +197,18 @@ use_disk_tmpdir() {
     local base="${XDG_CACHE_HOME:-${HOME}/.cache}"
     mkdir -p "$base"
     INSTALL_TMPDIR="$(mktemp -d "$base/leetcode-guard-install.XXXXXX")"
-    trap 'rm -rf -- "$INSTALL_TMPDIR"' EXIT
+    trap cleanup EXIT
     export TMPDIR="$INSTALL_TMPDIR"
 }
 
 main() {
+    if [[ "${1:-}" == "--force" ]]; then
+        export INSTALL_FORCE=1
+    elif (($#)); then
+        fail "unknown argument '$1' (the only one is --force)"
+    fi
     use_disk_tmpdir
+    start_mcp_setup
     install_package
     preserve_editable gatelock "$GATELOCK_SRC"
     preserve_editable leetcode_coach "$COACH_SRC"
@@ -210,10 +223,7 @@ main() {
     install_coach_relay
     install_tray
     "${REPO_DIR}/scripts/install_nudge_extension.sh"
-    # The MCP venv pins its own copies of gatelock/freedays/sickdays; without a refresh
-    # here a dependency bump leaves the server failing to import, which the
-    # client reports only as "Connection closed" (2026-10-03: freedays 0.1.0).
-    "${REPO_DIR}/scripts/setup_mcp.sh"
+    finish_mcp_setup
     log "done. Try: python3 -m leetcode_guard --check"
 }
 

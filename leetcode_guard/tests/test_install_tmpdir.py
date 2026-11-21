@@ -27,6 +27,7 @@ def _run_main(tmp_path: Path) -> tuple[subprocess.CompletedProcess[str], list[st
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
     shutil.copy(REPO / "install.sh", repo / "install.sh")
+    shutil.copy(REPO / "scripts/install_mcp_phase.sh", repo / "scripts")
     for name in _STEPS:
         step = repo / "scripts" / name
         step.write_text('#!/bin/bash\nprintf "%s\\n" "$TMPDIR" >> "$TMP_LOG"\n')

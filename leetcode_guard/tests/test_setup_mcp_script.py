@@ -14,11 +14,16 @@ from pathlib import Path
 import shutil
 import subprocess
 
+import pytest
+
+from leetcode_guard.tests._stamp_fixtures import assert_damaged_stamp_reinstalls
+
 REPO = Path(__file__).resolve().parents[2]
 BASH = shutil.which("bash") or "/usr/bin/bash"
 _FAKE_PYTHON = """#!/bin/bash
 echo "$*" >> "$FAKE_LOG"
 [[ "$1" == -c && -n "${FAKE_IMPORT_FAIL:-}" ]] && exit 1
+[[ "$*" == "-m pip install --quiet -e"* && -n "${FAKE_PIP_FAIL:-}" ]] && exit 1
 exit 0
 """
 
@@ -31,10 +36,15 @@ class Sandbox:
     env: dict[str, str]
     log: Path
 
-    def run(self, **extra: str) -> subprocess.CompletedProcess[str]:
+    @property
+    def stamp(self) -> Path:
+        """Where the last good install is recorded, inside the venv."""
+        return Path(self.env["HOME"]) / ".venvs/leetcode-guard-mcp/.setup_mcp.sha256"
+
+    def run(self, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
         """Run setup_mcp.sh and return the finished process."""
         return subprocess.run(
-            [BASH, str(self.repo / "scripts" / "setup_mcp.sh")],
+            [BASH, str(self.repo / "scripts" / "setup_mcp.sh"), *args],
             env={**self.env, **extra},
             capture_output=True,
             text=True,
@@ -88,3 +98,40 @@ def test_a_broken_venv_is_reinstalled_not_vouched_for(tmp_path: Path) -> None:
     box.run()
     broken = box.run(FAKE_IMPORT_FAIL="1")
     assert (broken.returncode, box.installs()) == (1, 2)
+
+
+def test_force_reinstalls_despite_a_matching_stamp(tmp_path: Path) -> None:
+    """`--force` and INSTALL_FORCE=1 (what install.sh exports) both skip the skip."""
+    box = _sandbox(tmp_path)
+    assert box.run().returncode == 0
+    assert box.run("--force").returncode == 0
+    assert box.run(INSTALL_FORCE="1").returncode == 0
+    assert box.installs() == 3
+
+
+def test_a_failed_pip_install_leaves_no_stamp(tmp_path: Path) -> None:
+    """The stamp goes before pip starts: a failed install is never vouched for."""
+    box = _sandbox(tmp_path)
+    assert box.run().returncode == 0
+    pyproject = box.repo / "pyproject.toml"
+    pyproject.write_text("[project]\nname = 'y'\n", encoding="utf-8")
+    assert box.run(FAKE_PIP_FAIL="1").returncode != 0
+    assert not box.stamp.exists()
+    assert box.run().returncode == 0
+    assert box.installs() == 3
+
+
+def test_the_import_check_runs_when_pip_is_skipped(tmp_path: Path) -> None:
+    """A skipped pip phase still ends in the server-module import."""
+    box = _sandbox(tmp_path)
+    box.run()
+    box.log.unlink()
+    assert box.run().returncode == 0
+    assert box.installs() == 0
+    assert "leetcode_guard._mcp" in box.log.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("damage", ["delete", "garbage", "empty", "unreadable"])
+def test_a_missing_or_unreadable_stamp_reinstalls(tmp_path: Path, damage: str) -> None:
+    """Fail closed: anything but a readable, matching stamp means pip runs."""
+    assert_damaged_stamp_reinstalls(_sandbox(tmp_path), damage)

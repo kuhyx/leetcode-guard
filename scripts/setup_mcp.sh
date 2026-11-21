@@ -11,7 +11,8 @@
 # or the server fails to start in a way that looks like a hang rather than an
 # error -- hence the explicit verification step at the end.
 #
-# Idempotent: safe to re-run after any dependency change.
+# Idempotent: safe to re-run after any dependency change. `--force` or
+# INSTALL_FORCE=1 (install.sh exports it for its own --force) skips the stamp.
 # ============================================================================
 
 set -euo pipefail
@@ -36,6 +37,7 @@ verify_import() {
 }
 
 main() {
+    [[ "${1:-}" != "--force" ]] || INSTALL_FORCE=1
     if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
         log "creating ${VENV_DIR}"
         python3 -m venv "${VENV_DIR}"
@@ -45,7 +47,8 @@ main() {
     key="$(install_key)"
     # The stamp only skips the install when the import still works: a venv
     # broken some other way is reinstalled, never vouched for.
-    if [[ -f "${STAMP}" && "$(cat "${STAMP}")" == "${key}" ]] && verify_import; then
+    if [[ "${INSTALL_FORCE:-0}" != 1 && -f "${STAMP}" && "$(cat "${STAMP}")" == "${key}" ]] \
+        && verify_import; then
         log "pyproject.toml unchanged since the last install -- skipped"
         log "done -- .mcp.json already points at ${VENV_DIR}/bin/python"
         return 0

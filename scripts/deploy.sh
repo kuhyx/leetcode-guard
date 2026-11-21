@@ -9,7 +9,10 @@
 #      The Flutter app under app/ is not deployed by this script, so another
 #      session's uncommitted edits there are pulled past and kept; git itself
 #      refuses a pull that would overwrite one;
-#   2. run install.sh from it (package, units, coach relay, tray, MCP venv);
+#   2. run install.sh from it (package, units, coach relay, tray, MCP venv).
+#      Its two pip phases run side by side and are skipped while their stamps
+#      match, which keeps a deploy under the 60 s action cap (2026-11-21: 68 s).
+#      `deploy.sh --force` reinstalls both;
 #   3. restart the two long-running units so they load the new code;
 #   4. health-check, exiting non-zero and naming the first check that fails.
 #
@@ -99,7 +102,7 @@ main() {
     local started
     started="$(date +%s)"
     update_clone
-    "$LIVE_DIR/install.sh"
+    "$LIVE_DIR/install.sh" "$@"
     restart_units
     check_units "$started"
     probe_url web "$WEB_URL" '"ok": true'
