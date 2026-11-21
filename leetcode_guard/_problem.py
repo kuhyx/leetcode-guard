@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._constants import PROBLEM_URL_TEMPLATE
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -182,6 +182,7 @@ def rank_pool(
     problems: Iterable[Problem],
     *,
     solved_slugs: frozenset[str] = frozenset(),
+    block: Callable[[Problem], tuple[int, ...]] | None = None,
 ) -> list[Problem]:
     """Filter and order the suggestion list.
 
@@ -204,9 +205,11 @@ def rank_pool(
             keeps the filter working when the session has expired -- the pool
             query is public, so dead cookies yield a full list whose ``status``
             is uniformly ``None``. A lower bound, never the full solved set.
+        block: The curriculum's block key (``_curriculum``), sorted between
+            difficulty and acceptance; ``None`` keeps the plain order.
 
     Returns:
-        A new list, easiest first then highest acceptance first.
+        A new list, easiest first, then by block, then highest acceptance.
     """
     kept = [
         problem
@@ -215,4 +218,11 @@ def rank_pool(
         and not problem.solved
         and problem.title_slug not in solved_slugs
     ]
-    return sorted(kept, key=sort_key)
+    if block is None:
+        return sorted(kept, key=sort_key)
+
+    def blocked(problem: Problem) -> tuple[float, ...]:
+        difficulty, acceptance = sort_key(problem)
+        return (difficulty, *block(problem), acceptance)
+
+    return sorted(kept, key=blocked)

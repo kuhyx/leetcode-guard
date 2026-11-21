@@ -17,6 +17,7 @@ import logging
 from typing import TYPE_CHECKING, Final, Literal
 
 from leetcode_guard._constants import POOL_TTL_SECONDS, SUGGESTION_COUNT
+from leetcode_guard._curriculum import block_order
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_fetch import fetch_pool
 from leetcode_guard._pool_verify import (
@@ -192,7 +193,7 @@ def _resolved(
 ) -> PoolResolution:
     """Rank and package a non-empty pool, verifying the top of it live."""
     post, limit = live
-    ranked = rank_pool(problems, solved_slugs=solved_slugs)
+    ranked = rank_pool(problems, solved_slugs=solved_slugs, block=block_order())
     ranked, evidence = verify_live(ranked, post=post, limit=limit)
     note = live_note(evidence)
     if note is not None:

@@ -1,0 +1,161 @@
+"""The curriculum order: which theory block a problem is served in.
+
+Acceptance-rate order shuffles topics, so a pattern met once does not come back
+for weeks and a problem needing a trick arrives before the trick was ever
+taught (2026-11-21: 7 of 19 coached problems stalled on a missing idea). The
+curriculum is an ordered list of units -- a set of LeetCode topic tags plus the
+tutor module that teaches them -- and the suggestion list is served unit by unit.
+
+**A problem belongs to the LATEST unit among its tags**, so every idea it needs
+was taught before it is offered: an ``array`` problem that also carries
+``bit-manipulation`` waits for the bit block. A tag no unit claims is ignored
+when another tag maps, and sorts after every unit when none does; advanced
+tags such as ``rolling-hash`` are left unclaimed on purpose, because an Easy
+tagged that way is solvable without it.
+
+**Display-only**, exactly like ``progress_cache.json``. It orders rows and
+nothing else: no module that decides, charges or credits may import this one
+(``test_curriculum_imports.py`` pins it). A missing or malformed file falls back
+to the acceptance order rather than emptying the list -- the lock must always
+offer something to solve.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+import logging
+from pathlib import Path
+from typing import TYPE_CHECKING, Final
+
+from leetcode_guard._read_json import MISSING, read_json
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    from leetcode_guard._problem import Problem
+
+_logger: Final = logging.getLogger(__name__)
+
+SHIPPED_CURRICULUM_FILE: Final = Path(__file__).parent / "curriculum.json"
+CURRICULUM_FILE = SHIPPED_CURRICULUM_FILE
+"""Read at call time, never bound as a default argument, so the test suite can
+point it away from the shipped list (``_paths_fixture``)."""
+
+
+class _MalformedError(ValueError):
+    """The curriculum document has a shape this module refuses."""
+
+
+@dataclass(frozen=True)
+class Unit:
+    """One theory block: the tags it claims and the tutor module teaching them."""
+
+    unit_id: str
+    tags: frozenset[str]
+    subject: str = ""
+    """Tutor subject id; empty until the subject exists."""
+    module: str = ""
+    untagged: bool = False
+    """Claims problems with no topic tags (LeetCode's JavaScript and pandas sets)."""
+
+
+@dataclass(frozen=True)
+class Curriculum:
+    """The ordered units."""
+
+    units: tuple[Unit, ...]
+
+    def unit_index(self, topics: Iterable[str]) -> int:
+        """Position of the block a problem with these tags is served in.
+
+        Returns:
+            The latest claiming unit's index, or ``len(units)`` -- after every
+            block -- when no unit claims any of the tags.
+        """
+        tags = frozenset(topics)
+        last = len(self.units)
+        if not tags:
+            return next((i for i, u in enumerate(self.units) if u.untagged), last)
+        return max((i for i, u in enumerate(self.units) if u.tags & tags), default=last)
+
+    def unit_index_of(self, problem: Problem) -> tuple[int, ...]:
+        """The block key ``rank_pool`` sorts by, between difficulty and rate."""
+        return (self.unit_index(problem.topics),)
+
+
+def _unit(row: object) -> Unit:
+    """Parse one unit row, refusing anything not exactly the expected shape."""
+    if not isinstance(row, dict):
+        message = f"unit is not an object: {row!r}"
+        raise _MalformedError(message)
+    unit_id, tags, tutor = row.get("id"), row.get("tags"), row.get("tutor", {})
+    if not isinstance(unit_id, str) or not unit_id:
+        message = f"unit id must be a non-empty string: {unit_id!r}"
+        raise _MalformedError(message)
+    if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+        message = f"unit {unit_id}: tags must be a list of strings"
+        raise _MalformedError(message)
+    if not isinstance(tutor, dict):
+        message = f"unit {unit_id}: tutor must be an object"
+        raise _MalformedError(message)
+    subject, module = tutor.get("subject", ""), tutor.get("module", "")
+    named = isinstance(subject, str) and isinstance(module, str) and subject and module
+    if tutor and not named:
+        message = f"unit {unit_id}: tutor needs a subject and a module"
+        raise _MalformedError(message)
+    return Unit(
+        unit_id=unit_id,
+        tags=frozenset(tags),
+        subject=subject,
+        module=module,
+        untagged=row.get("untagged") is True,
+    )
+
+
+def _units(document: object) -> tuple[Unit, ...]:
+    """Parse every unit; an id or a tag claimed twice is refused."""
+    rows = document.get("units") if isinstance(document, dict) else None
+    if not isinstance(rows, list) or not rows:
+        message = "no units"
+        raise _MalformedError(message)
+    units = tuple(_unit(row) for row in rows)
+    ids = [unit.unit_id for unit in units]
+    claimed = [tag for row in rows for tag in row["tags"]]
+    if len(set(ids)) != len(ids) or len(set(claimed)) != len(claimed):
+        message = "a unit id or a tag appears twice"
+        raise _MalformedError(message)
+    return units
+
+
+def parse_curriculum(document: object) -> Curriculum | None:
+    """The curriculum in ``document``, or ``None`` (logged) when malformed."""
+    try:
+        return Curriculum(units=_units(document))
+    except _MalformedError as exc:
+        _logger.warning("curriculum refused, keeping the acceptance order: %s", exc)
+        return None
+
+
+def load_curriculum(path: Path | None = None) -> Curriculum | None:
+    """Read the curriculum file.
+
+    Args:
+        path: The file; ``None`` means :data:`CURRICULUM_FILE` as it is *now*.
+
+    Returns:
+        The curriculum, or ``None`` when the file is absent (no curriculum
+        configured) or unreadable or malformed (both logged at WARNING).
+    """
+    target = CURRICULUM_FILE if path is None else path
+    document = read_json(
+        target, _logger, "curriculum %s unreadable, keeping the old order: %s", target
+    )
+    if document is MISSING:
+        return None
+    return parse_curriculum(document)
+
+
+def block_order() -> Callable[[Problem], tuple[int, ...]] | None:
+    """The block key for ``rank_pool``, or ``None`` for the acceptance order."""
+    curriculum = load_curriculum()
+    return None if curriculum is None else curriculum.unit_index_of

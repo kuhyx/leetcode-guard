@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard import _constants
+from leetcode_guard import _constants, _curriculum
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -81,3 +81,7 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         for name, value in overrides.items():
             if hasattr(module, name):
                 monkeypatch.setattr(module, name, value, raising=True)
+
+    # Shipped config rather than state, but with the real unit list in force
+    # every ordering test would quietly depend on it. Absent = the old order.
+    monkeypatch.setattr(_curriculum, "CURRICULUM_FILE", tmp_path / "curriculum.json")

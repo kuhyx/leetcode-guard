@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "units": [
+    {
+      "id": "scans",
+      "tags": ["array", "string", "simulation", "enumeration", "matrix", "string-matching"]
+    },
+    {
+      "id": "hashing",
+      "tags": ["hash-table", "counting", "hash-function"]
+    },
+    {
+      "id": "math",
+      "tags": [
+        "math", "number-theory", "geometry", "polygons", "combinatorics",
+        "euclidean-algorithm", "greatest-common-divisor", "primality-test",
+        "prime-number-sieve", "sieve-theory", "prime-factorization",
+        "pigeonhole-principle", "brainteaser", "game-theory", "impartial-game",
+        "nim-game", "minimax-algorithm", "newtons-method"
+      ]
+    },
+    {
+      "id": "bits",
+      "tags": ["bit-manipulation"]
+    },
+    {
+      "id": "sorting-greedy",
+      "tags": [
+        "sorting", "greedy", "counting-sort", "quicksort", "bubble-sort",
+        "boyer-moore-majority-vote-algorithm"
+      ]
+    },
+    {
+      "id": "pointers-window",
+      "tags": ["two-pointers", "sliding-window"]
+    },
+    {
+      "id": "prefix-sums",
+      "tags": ["prefix-sum"]
+    },
+    {
+      "id": "stack-queue",
+      "tags": ["stack", "queue", "monotonic-stack", "bracket-sequences", "data-stream", "design"]
+    },
+    {
+      "id": "binary-search",
+      "tags": ["binary-search", "interactive"]
+    },
+    {
+      "id": "lists-recursion",
+      "tags": [
+        "linked-list", "doubly-linked-list", "floyds-cycle-finding-algorithm",
+        "recursion", "divide-and-conquer", "backtracking"
+      ]
+    },
+    {
+      "id": "trees",
+      "tags": [
+        "tree", "binary-tree", "binary-search-tree", "depth-first-search",
+        "breadth-first-search", "graph", "union-find", "trie"
+      ]
+    },
+    {
+      "id": "heap-dp",
+      "tags": [
+        "heap-priority-queue", "ordered-set", "dynamic-programming", "memoization",
+        "longest-increasing-subsequence", "dp-on-trees"
+      ]
+    },
+    {
+      "id": "sql",
+      "tags": ["database"]
+    },
+    {
+      "id": "js-pandas",
+      "tags": [],
+      "untagged": true
+    }
+  ]
+}
