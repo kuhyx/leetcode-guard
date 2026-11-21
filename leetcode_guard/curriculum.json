@@ -69,7 +69,11 @@
     },
     {
       "id": "sql",
-      "tags": ["database"]
+      "tags": ["database"],
+      "tutor": {
+        "subject": "mysql-8-for-timed-sql-coding-tests-joins-and",
+        "modules": ["sql-lessons", "select-group-basics"]
+      }
     },
     {
       "id": "js-pandas",

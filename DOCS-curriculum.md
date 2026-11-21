@@ -34,8 +34,9 @@ Add this to the unit's row in `curriculum.json`:
 "tutor": {"subject": "algo", "modules": ["bits"]}
 ```
 
-The shipped file maps none yet, so every unit reads `none` and nothing is
-marked. A mapping needs a subject and a non-empty module list, else the whole
+The shipped file maps only `sql` (subject `mysql-8-for-timed-sql-coding-tests-joins-and`,
+modules `sql-lessons`, `select-group-basics`), so every other unit reads `none` and
+nothing else is marked. A mapping needs a subject and a non-empty module list, else the whole
 file is refused (see Failure).
 
 ## What "done" means
