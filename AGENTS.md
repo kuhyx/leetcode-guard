@@ -11,7 +11,8 @@ diet_guard was silently dead for three days. `~/.venvs/leetcode-guard-mcp`
 exists only for the MCP server, so the MCP SDK never has to be on the systemd path.
 
 ## Never break these
- **"Cannot check" is not "not solved".** LeetCode answers an expired session and several other
+
+**"Cannot check" is not "not solved".** LeetCode answers an expired session and several other
 failures with **HTTP 200 and a null payload**, not an error. `_submissions.fetch_recent_ac` returns
 a three-valued `ProbeStatus` for exactly this reason. Collapsing it into a boolean gives a lock
 whose unlock condition can never be satisfied and which does not know it.

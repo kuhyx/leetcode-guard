@@ -20,7 +20,10 @@ re-checked live by ``scripts/verify_theory_shape.py``:
 
 **Display-only**, like ``_curriculum``: nothing that decides, charges or
 credits may import this. Every failure reads as :attr:`Theory.UNKNOWN` (shown
-as pending, logged at WARNING) -- cannot check is never "taught".
+as pending, logged at WARNING) -- cannot check is never "taught". Files are
+opened only through :mod:`leetcode_guard._tutor_read` (regular, size-capped);
+the one exception to "UNKNOWN" is a torn or undecodable log *line*, which is
+skipped and the other lines still count.
 """
 
 from __future__ import annotations
@@ -31,7 +34,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._curriculum import Blocks, Theory, load_curriculum
-from leetcode_guard._read_json import MISSING, read_json
+from leetcode_guard._read_json import MISSING
+from leetcode_guard._tutor_read import read_tutor_bytes, read_tutor_json
 
 if TYPE_CHECKING:
     from leetcode_guard._curriculum import Curriculum, Unit
@@ -44,27 +48,37 @@ TUTOR_DATA_DIR = Path.home() / ".local" / "share" / "tutor"
 _TAUGHT: Final = "taught"
 
 
-def _event(line: str, path: Path) -> object:
-    """One log line parsed, or ``None`` (warned) for a half-written one."""
-    try:
-        return json.loads(line)
-    except ValueError as exc:
-        _logger.warning("skipping a torn line in tutor log %s: %s", path, exc)
-        return None
+def _events(data: bytes, path: Path) -> list[object]:
+    """Every parseable log line; the rest are skipped with ONE warning.
+
+    A line cut mid-append (a multibyte character split in two included) is the
+    normal state of a log a live server writes, so it costs only itself.
+    """
+    events: list[object] = []
+    warned = False
+    for raw in data.split(b"\n"):
+        if not raw.strip():
+            continue
+        try:
+            events.append(json.loads(raw.decode("utf-8")))
+        except (ValueError, RecursionError) as exc:
+            if not warned:
+                _logger.warning(
+                    "skipping torn line(s) in tutor log %s, first: %s", path, exc
+                )
+                warned = True
+    return events
 
 
 def _taught(root: Path) -> frozenset[tuple[str, str]] | None:
     """Every ``(subject, card)`` the log says was taught; ``None`` if unreadable."""
     path = root / "log.jsonl"
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
-        _logger.warning("tutor log %s unreadable, theory unknown: %s", path, exc)
+    data = read_tutor_bytes(path, _logger)
+    if data is None:
         return None
-    events = (_event(line, path) for line in lines if line.strip())
     return frozenset(
         (event["s"], event["c"])
-        for event in events
+        for event in _events(data, path)
         if isinstance(event, dict)
         and event.get("k") == _TAUGHT
         and isinstance(event.get("s"), str)
@@ -75,12 +89,11 @@ def _taught(root: Path) -> frozenset[tuple[str, str]] | None:
 def _module_cards(root: Path, subject: str) -> dict[str, set[str]] | None:
     """Live card ids per module of ``subject``; ``None`` (warned) if unusable."""
     path = root / "subjects" / subject / "cards.json"
-    document = read_json(path, _logger, "tutor cards %s unreadable: %s", path)
-    if document is MISSING and not path.exists():
-        _logger.warning("no tutor cards at %s yet, theory unknown", path)
+    document = read_tutor_json(path, _logger)
+    if document is MISSING:
+        return None
     if not isinstance(document, dict):
-        if document is not MISSING:
-            _logger.warning("tutor cards %s are not an object, theory unknown", path)
+        _logger.warning("tutor cards %s are not an object, theory unknown", path)
         return None
     cards: dict[str, set[str]] = {}
     for card_id, row in document.items():

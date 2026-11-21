@@ -186,6 +186,25 @@ def _ledger_note(count: int) -> str:
     )
 
 
+def _blocks_or_none() -> Blocks | None:
+    """The curriculum blocks, or ``None`` (the old acceptance order) on any bug.
+
+    The last-resort fence of a display-only read: ``resolve_pool`` runs with
+    the instance lock held and before any window opens, so whatever the tutor
+    reader does wrong must cost the ordering, never the lock. ``Exception``
+    only: ``KeyboardInterrupt`` and ``SystemExit`` still stop the process.
+    """
+    try:
+        return load_blocks()
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        _logger.warning(
+            "theory order unavailable, using acceptance order: %s",
+            type(exc).__name__,
+            exc_info=True,
+        )
+        return None
+
+
 def _resolved(
     problems: tuple[Problem, ...],
     source: PoolSource,
@@ -196,7 +215,7 @@ def _resolved(
 ) -> PoolResolution:
     """Rank and package a non-empty pool, verifying the top of it live."""
     post, limit = live
-    blocks = load_blocks()
+    blocks = _blocks_or_none()
     key = None if blocks is None else blocks.key
     ranked = rank_pool(problems, solved_slugs=solved_slugs, block=key)
     ranked, evidence = verify_live(ranked, post=post, limit=limit)

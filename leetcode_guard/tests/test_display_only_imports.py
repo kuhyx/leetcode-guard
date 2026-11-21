@@ -11,7 +11,7 @@ import pytest
 
 from leetcode_guard.tests.test_push_trigger import PACKAGE, _closure, _imports
 
-DISPLAY_ONLY = {"_curriculum", "_theory"}
+DISPLAY_ONLY = {"_curriculum", "_theory", "_tutor_read"}
 DECIDER_PREFIXES = (
     "_balance",
     "_daycost",
@@ -20,6 +20,10 @@ DECIDER_PREFIXES = (
     "_gate",
     "_harvest",
     "_ledger",
+)
+WINDOW_PREFIXES = ("_lock", "_cli", "_study")
+WINDOWS = sorted(
+    path.stem for path in PACKAGE.glob("_*.py") if path.stem.startswith(WINDOW_PREFIXES)
 )
 ORCHESTRATOR = "_harvest_run"
 """Mints through ``_harvest`` and then pushes the display snapshot, so its
@@ -45,3 +49,16 @@ def test_nothing_that_decides_can_reach_the_display_only_modules(name: str):
 def test_the_harvester_never_reads_them_itself():
     """Its own code may hand the snapshot off, never consult the curriculum."""
     assert not _imports(ORCHESTRATOR) & DISPLAY_ONLY
+
+
+def test_the_window_list_is_not_empty():
+    """A renamed prefix would otherwise make the ban below vacuous."""
+    assert {"_lock", "_cli", "_study"} <= set(WINDOWS)
+
+
+@pytest.mark.parametrize("name", WINDOWS)
+def test_the_lock_and_study_windows_never_import_them_directly(name: str):
+    """They reach the order through the display path on purpose (``resolve_pool``
+    hands them ``blocks``); a direct import is a second reader of editable files
+    inside the window that holds the grab."""
+    assert not _imports(name) & DISPLAY_ONLY

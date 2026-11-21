@@ -60,21 +60,43 @@ would steer a lock or a credit (the `progress_cache.json` rule again).
 `tests/test_display_only_imports.py` bans the gate, balance, debt, difficulty,
 ledger and harvest modules from reaching `_curriculum` or `_theory`, through any
 import chain. `_harvest_run` pushes the status snapshot, so it gets the direct
-ban only.
+ban only. The `_lock*`, `_cli*` and `_study*` modules get the direct ban too:
+they receive the order from `resolve_pool`, never read the files themselves.
 
 ## Failure
 
+Every path fails open to the old acceptance order or to `UNKNOWN`, with a
+WARNING, and none raises. `resolve_pool` runs with the instance lock held and
+before any window opens, so a raise here is a lock that never arms.
+
 - `curriculum.json` missing: the old acceptance order, silently.
-- Unreadable or malformed (bad shape, a tag or id claimed twice): the old order
-  and a WARNING.
-- Tutor log or cards unreadable, not an object, or a card without a module:
-  `UNKNOWN`, logged at WARNING, shown as pending, never as taught. A torn log
-  line is skipped with a warning.
-  The mark fails closed; the list fails open.
+- `curriculum.json` unreadable or malformed (bad shape, a tag or id claimed
+  twice): the old order and a WARNING.
+- A tutor file (log or cards) that is missing, unreadable (`PermissionError`),
+  not a regular file (FIFO, socket, device, directory), over `MAX_TUTOR_FILE_BYTES`
+  (32 MiB; the real log was 181 KB), not UTF-8, nested past the JSON recursion
+  limit, not an object, or holding a card without a module: that subject reads
+  `UNKNOWN`, shown as pending, never as taught. A file that is not regular or is
+  too big is never opened (`_tutor_read.py`: `stat` first, then an `O_NONBLOCK`
+  bounded read), so a FIFO cannot hang the arming run.
+- A torn log line (a write cut mid-append, a split multibyte character, a stray
+  byte, a line nested too deep) is skipped like malformed JSON and costs only
+  itself: the other lines still count, with ONE warning per read.
+- Anything else the theory reader does wrong: `_pool_resolve._blocks_or_none`
+  catches `Exception` (not `BaseException`), logs one WARNING naming its type,
+  and ranks in the old acceptance order.
+
+The mark fails closed; the list fails open.
+
+## Known limits
+
+Theory state is read once per resolve. The pencil mark and the order refresh
+at the next arm or `--status` call, not while a lock is up: teaching a module
+in the tutor mid-lock changes nothing on the open window.
 
 ## Verify
 
-1. Tests: `pytest leetcode_guard/tests/test_{curriculum,theory,theory_surface,display_only_imports}.py`.
+1. Tests: `pytest leetcode_guard/tests/test_{curriculum,theory,theory_surface,theory_hostile,theory_files,display_only_imports}.py`.
 2. Live shape of the tutor files: `python3 -m scripts.verify_theory_shape`. The
    tests build their tutor dir by hand, so a renamed event or moved file would
    leave them green while every block reads `UNKNOWN`. It skips loudly at exit 0
