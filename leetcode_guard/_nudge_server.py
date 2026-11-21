@@ -19,10 +19,11 @@ lock is up, so the extension's request fails silently on an unlocked machine.
 from __future__ import annotations
 
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 import logging
-import threading
 from typing import TYPE_CHECKING, ClassVar, Final
+
+from leetcode_guard._loopback_listener import LoopbackListener
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -85,15 +86,17 @@ class NudgeServer:
             port: Bind port; ``0`` picks a free one (tests).
         """
         self._on_nudge = on_nudge
-        self._address = (host, port)
-        self._server: ThreadingHTTPServer | None = None
+        self._listener = LoopbackListener(
+            (host, port),
+            thread_name="nudge-server",
+            failure="cannot listen for browser nudges on %s:%d; solves will be "
+            "noticed by the regular poll only",
+        )
 
     @property
     def port(self) -> int | None:
         """The bound port, or ``None`` when not listening."""
-        if self._server is None:
-            return None
-        return int(self._server.server_address[1])
+        return self._listener.port
 
     def start(self) -> bool:
         """Bind and serve in the background.
@@ -103,27 +106,8 @@ class NudgeServer:
             30-second poll still notices every solve, just later.
         """
         handler = type("NudgeHandler", (_Handler,), {"on_nudge": self._on_nudge})
-        try:
-            self._server = ThreadingHTTPServer(self._address, handler)
-        except OSError:
-            _logger.warning(
-                "cannot listen for browser nudges on %s:%d; solves will be "
-                "noticed by the regular poll only",
-                *self._address,
-                exc_info=True,
-            )
-            return False
-        self._server.daemon_threads = True
-        thread = threading.Thread(
-            target=self._server.serve_forever, name="nudge-server", daemon=True
-        )
-        thread.start()
-        return True
+        return self._listener.start(handler)
 
     def stop(self) -> None:
         """Close the port. Idempotent."""
-        server, self._server = self._server, None
-        if server is None:
-            return
-        server.shutdown()
-        server.server_close()
+        self._listener.stop()

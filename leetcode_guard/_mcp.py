@@ -29,6 +29,7 @@ from typing import Any, Final
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from leetcode_guard import _attempt_report
 from leetcode_guard._constants import SUGGESTION_COUNT
 from leetcode_guard._status import gather_status, snapshot_dict
 
@@ -124,6 +125,17 @@ def explain_lock() -> dict[str, Any]:
         "pool_source": snapshot.pool.source,
         "pool_notes": list(snapshot.pool.notes),
     }
+
+
+@mcp.tool(title="Slow solves to review", annotations=_READS_ONLY)
+def get_flagged() -> dict[str, Any]:
+    """Solves that took over 20 min of active time though the theory was taught.
+
+    Also the last 28 days' measured and unknown solves and the share under
+    10 min (``null`` with no data). Display-only: it reads ``attempts.json``
+    and the ledger and writes nothing.
+    """
+    return _attempt_report.load_report()
 
 
 def main() -> None:

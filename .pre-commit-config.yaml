@@ -295,6 +295,20 @@ repos:
         require_serial: true
         stages: [manual]
 
+      # The fixtures for recentSubmissionList (every status, public, 20 rows)
+      # repeat what was measured on 2026-11-21. This asks the live endpoint
+      # whether the keys, the string timestamp and the 20-row cap still hold.
+      # No cookie needed; skips loudly (exit 0) when LeetCode cannot be
+      # reached or answers "could not check", fails only if the shape moved.
+      - id: recent-submissions
+        name: recentSubmissionList still has the fixtures' shape (network)
+        entry: python3 -m scripts.verify_recent_submissions
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+
       # Four markdown namespaces (README / CLAUDE* / DOCS* / TODO*), plus the
       # rule that a TODO carries "REMOVE ME AFTER FINISH" and nothing else may.
       # Shared gate in ~/src/utils owns the namespaces and the exemption list, so

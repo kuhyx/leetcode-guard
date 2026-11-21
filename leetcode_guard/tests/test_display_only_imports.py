@@ -11,7 +11,25 @@ import pytest
 
 from leetcode_guard.tests.test_push_trigger import PACKAGE, _closure, _imports
 
-DISPLAY_ONLY = {"_curriculum", "_theory", "_tutor_read"}
+DISPLAY_ONLY = {
+    "_curriculum",
+    "_theory",
+    "_tutor_read",
+    # attempts.json: heartbeats and submissions measured for display. A decider
+    # that read it would turn "open the editorial" into a bypass.
+    "_attempt_paths",
+    "_attempt_model",
+    "_attempt_store",
+    "_attempt_io",
+    "_attempt_server",
+    # The readers built on it: the solve measurement and the flagged report.
+    "_attempts",
+    "_attempt_report",
+    # recentSubmissionList, every status: read by the harvester's attempts line
+    # (``_attempt_line``, which is NOT listed: the orchestrator imports it on
+    # purpose and must not import any module below directly).
+    "_attempt_queries",
+}
 DECIDER_PREFIXES = (
     "_balance",
     "_daycost",

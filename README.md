@@ -211,6 +211,7 @@ python3 -m leetcode_guard --probe      # live API data
 python3 -m leetcode_guard --login      # store cookies, only if they verify
 python3 -m leetcode_guard --sync       # push/merge the ledger via crdt_sync
 python3 -m leetcode_guard --backfill-difficulty [--max-fetch 25]  # price solved problems
+python3 -m leetcode_guard --flagged [--json]  # long solves of taught theory, for review (get_flagged over MCP)
 ```
 
 `--check` is the one to reach for. It does everything an armed gate would, right

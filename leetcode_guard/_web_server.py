@@ -13,6 +13,10 @@ that could mint a credit would be a hole straight through the gate.
 This publishes a *fact*, never a number of hours. steam-backlog-enforcer owns
 every hour value, the same split screen-locker uses for the workout flag, so
 the two repos cannot disagree about what an earned day is.
+
+The 8771 API stays GET-only. The same process also hosts the browser
+extension's heartbeat listener (``_attempt_server``, its own port, display-only
+data that nothing deciding may read); losing that port never affects this API.
 """
 
 from __future__ import annotations
@@ -21,9 +25,10 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import urlsplit
 
+from leetcode_guard._attempt_server import AttemptServer
 from leetcode_guard._daycost import local_today
 from leetcode_guard._gate_today import gate_off
 from leetcode_guard._logging_setup import configure_logging
@@ -63,19 +68,28 @@ def build_status_payload() -> dict[str, Any]:
     }
 
 
-def build_health_payload() -> dict[str, Any]:
+def build_health_payload(*, attempts_up: bool = False) -> dict[str, Any]:
     """A liveness probe that does not touch the ledger.
+
+    Args:
+        attempts_up: Whether the heartbeat listener on its own port is bound.
+            Additive: the deploy probe only looks for ``"ok": true``.
 
     Returns:
         A minimal ok payload.
     """
-    return {"ok": True, "service": "leetcode-guard-web"}
+    return {
+        "ok": True,
+        "service": "leetcode-guard-web",
+        "attempts_listener": attempts_up,
+    }
 
 
 class _Handler(BaseHTTPRequestHandler):
     """Serves the two read-only JSON routes."""
 
     server_version = "leetcode-guard-web"
+    attempts: ClassVar[AttemptServer | None] = None
 
     def log_message(self, fmt: str, /, *args: object) -> None:
         """Send request logging to the journal at debug, not to stderr.
@@ -92,7 +106,9 @@ class _Handler(BaseHTTPRequestHandler):
         if split.path == _API_STATUS:
             self._serve_json("status", build_status_payload)
         elif split.path == _API_HEALTH:
-            self._serve_json("health", build_health_payload)
+            attempts = type(self).attempts
+            up = attempts is not None and attempts.up
+            self._serve_json("health", lambda: build_health_payload(attempts_up=up))
         else:
             self._send(
                 HTTPStatus.NOT_FOUND,
@@ -141,6 +157,7 @@ class _Handler(BaseHTTPRequestHandler):
 def create_server(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
+    attempts: AttemptServer | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) the threading HTTP server.
 
@@ -148,6 +165,8 @@ def create_server(
         host: Address to bind. Must stay on loopback: the API is
             unauthenticated.
         port: Port to bind.
+        attempts: The heartbeat listener, only so ``/api/health`` can say
+            whether it is up.
 
     Returns:
         The unstarted server.
@@ -158,7 +177,8 @@ def create_server(
     if not host.startswith("127.") and host != "localhost":
         msg = f"Refusing to bind {host}: the status API is loopback-only"
         raise ValueError(msg)
-    return ThreadingHTTPServer((host, port), _Handler)
+    handler = type("WebHandler", (_Handler,), {"attempts": attempts})
+    return ThreadingHTTPServer((host, port), handler)
 
 
 def serve(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
@@ -168,12 +188,16 @@ def serve(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
         host: Address to bind.
         port: Port to bind.
     """
-    server = create_server(host, port)
+    # Display-only and fail-open: a taken attempt port is a warning inside start().
+    attempts = AttemptServer()
+    attempts.start()
+    server = create_server(host, port, attempts)
     logger.info("leetcode-guard status API listening on http://%s:%d", host, port)
     try:
         server.serve_forever()
     finally:
         server.server_close()
+        attempts.stop()
 
 
 def main() -> int:

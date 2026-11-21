@@ -71,3 +71,11 @@ repaints ~4 ms after LeetCode answers (`scripts/verify_nudge_latency.py`), so
 end to end is one LeetCode round trip, ~0.3 s, plus any feed lag.
 `verify_nudge_latency.py --port 8799 --lag 0.5`: note ~5 ms, credit ~630 ms
 (1.3 s under the old ladder).
+
+The extension also reports the open problem. While a LeetCode problem tab is
+visible, `extension/relay.js` POSTs `{"slug": ..., "tab": ...}` to
+`127.0.0.1:8782/beat` on load, on every route change, when the tab becomes
+visible again, and once a minute; it sends nothing while the tab is hidden.
+`python3 -m scripts.verify_heartbeat_extension` checks this headlessly against a
+stub listener (a copy of the extension with a free port and a 4 s interval).
+Like the nudge check, it is not a pre-push hook.

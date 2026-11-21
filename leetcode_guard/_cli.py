@@ -44,6 +44,7 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._daycost import local_today
 from leetcode_guard._evening import busy_exit, evening_paid, evening_preflight
+from leetcode_guard._flagged_cli import cmd_flagged
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import SeedStamp, needs_seeding, seed_ledger
@@ -210,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.evening and not args.production:
         parser.error("--evening needs --production")
+    if args.json and not args.flagged:
+        parser.error("--json needs --flagged")
     configure_logging(verbose=args.verbose)
     _errors.install()
     command = _chosen_command(args)
@@ -239,5 +242,6 @@ def _chosen_command(args: Namespace) -> Callable[[], int] | None:
             lambda: cmd_backfill_difficulty(max_fetch=args.max_fetch),
         ),
         (args.push_snapshot, cmd_push_snapshot),
+        (args.flagged, lambda: cmd_flagged(as_json=args.json)),
     )
     return next((run for chosen, run in commands if chosen), None)

@@ -140,6 +140,8 @@ def main(*, key_file: Path | None = None) -> int:
     # purpose -- a detached child would die with this oneshot's cgroup.
     print(f"snapshot: {_push_line()}")
     print(f"phone errors: {_phone_errors_line()}")
+    # Last, so its network call cannot delay the lines above.
+    print(f"attempts: {_attempts_line(key_file)}")
     return EXIT_OK
 
 
@@ -178,6 +180,24 @@ def _phone_errors_line() -> str:
         # The type only, and no traceback: an RTDB failure's message can
         # carry the request URL, ``?auth=<token>`` and all.
         _logger.warning("phone errors unavailable: %s", type(exc).__name__)
+        return f"unavailable ({type(exc).__name__})"
+
+
+def _attempts_line(key_file: Path | None) -> str:
+    """Record theory snapshots and failed submissions; isolated like the push.
+
+    Display only: it writes ``attempts.json`` and nothing else, and the harvest
+    above has already run, so whatever it does wrong costs only this line.
+    """
+    try:
+        from leetcode_guard._attempt_line import (  # pylint: disable=import-outside-toplevel
+            attempts_line,
+        )
+
+        return attempts_line(key_file=key_file)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        # The type only, like the phone errors: a request URL can ride in a message.
+        _logger.warning("attempts line unavailable: %s", type(exc).__name__)
         return f"unavailable ({type(exc).__name__})"
 
 

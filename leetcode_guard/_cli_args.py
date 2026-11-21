@@ -124,6 +124,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--flagged",
+        action="store_true",
+        help=(
+            "List solves that took over 20 min of active time although their "
+            "theory was taught, then a summary. Read-only, no network."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="With --flagged: print the whole report as one JSON document.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Log at DEBUG.",

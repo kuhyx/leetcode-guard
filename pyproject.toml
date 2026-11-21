@@ -124,6 +124,17 @@ unfixable = []
 "scripts/verify_coach_signoff.py" = ["T201"]
 # The tutor-shape check: its PASS/FAIL and SKIP lines ARE its output (T201).
 "scripts/verify_theory_shape.py" = ["T201"]
+# The flagged-solve replay: its PASS/FAIL and SKIP lines ARE its output (T201).
+"scripts/verify_flagged_replay.py" = ["T201"]
+# The recentSubmissionList shape check: its PASS/FAIL and SKIP lines ARE its
+# output. T201 is auto-fixable and the ruff hook runs --unsafe-fixes, so the
+# fixer would delete them and still exit 0 (the sixth file to hit this trap).
+"scripts/verify_recent_submissions.py" = ["T201"]
+# BLE001: ``_attempt_line._blocks_or_none`` fences the display-only theory
+# reader (logged at warning, with the type): a bug there costs the snapshot's
+# value (stored ``unknown``), never the failed-submission record
+# (test_attempt_snapshot.py).
+"leetcode_guard/_attempt_line.py" = ["BLE001"]
 # PyGObject requires `gi.require_version` to run BEFORE `from gi.repository
 # import ...`, so E402 (import not at top of file) is unavoidable and correct
 # here. INP001 likewise: scripts/ is not a package and must not become one.
@@ -154,6 +165,9 @@ unfixable = []
 # --backfill-difficulty prints its whole outcome (rows written, what is still
 # unknown); same auto-fix trap, same commit as the print.
 "leetcode_guard/_cli_difficulty.py" = ["T201"]
+# --flagged prints the flagged solves and the summary; same auto-fix trap,
+# same commit as the print.
+"leetcode_guard/_flagged_cli.py" = ["T201"]
 # The out-of-lock harvest's one print is its whole journal line; same reason.
 # PLC0415 + BLE001: the snapshot push is imported lazily and fenced with a
 # broad except (logged at warning, with the traceback) on purpose -- display

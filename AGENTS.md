@@ -17,10 +17,10 @@ failures with **HTTP 200 and a null payload**, not an error. `_submissions.fetch
 a three-valued `ProbeStatus` for exactly this reason. Collapsing it into a boolean gives a lock
 whose unlock condition can never be satisfied and which does not know it.
 
-**Credits must verify; charges must not have to.** The table in `_balance.py`
-is deliberately asymmetric and inverts gatelock's own rule for credits. An
-unverified credit is a bypass (append JSON, get a day). An unverified charge
-being discarded would be a refund. Read the module docstring before touching it.
+**Credits must verify; charges must not have to.** The table in `_balance.py` is deliberately
+asymmetric and inverts gatelock's own rule for credits. An unverified credit is a bypass (append
+JSON, get a day). An unverified charge being discarded would be a refund. Read the module docstring
+before touching it.
 
 **The MCP server is read-only.** No `grant_credit`, no `mark_solved`, no `unlock`, ever. A credit
 exists only because LeetCode confirmed an accepted submission. `test_mcp.py` asserts the absence.
@@ -49,127 +49,123 @@ decides, charges or credits may import either: `test_display_only_imports.py` ba
 A missing or bad file keeps the acceptance order; an unreadable tutor reads "unknown", shown as
 pending, never taught. `DOCS-curriculum.md` has the rules.
 
-**Seeding is not optional.** Without it the first run harvests ~20 recent
-submissions as credits (three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by a
-solve that has not happened yet — the state that armed on 2026-08-05 — so the
-run that *creates* the ledger returns without arming (`cmd_lock`).
+**The attempt log and the flag are display-only.** Nothing that decides, charges or credits may
+import `attempts.json` readers (`_attempt_*`, `_attempts`, `--flagged`, `get_flagged`):
+`test_display_only_imports.py` bans it, transitively. `_attempt_line` is the only one `_harvest_run`
+imports; flags are derived at read time, only `theory_at_solve` is stored. `DOCS-attempts.md`.
+
+**Seeding is not optional.** Without it the first run harvests ~20 recent submissions as credits
+(three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by
+a solve that has not happened yet — the state that armed on 2026-08-05 — so the run that *creates*
+the ledger returns without arming (`cmd_lock`).
 
 **A gate deferral must never be ledger state.** Settling the day was tried and reverted: it wrote
 `charge:<today>`, the exact key `decide` unlocks on, so `rm ledger.json` bought an unlocked day,
 repeatably. Deferring the *run* leaves nothing behind — delete the ledger and you skip one run, you
 do not earn a day. `test_the_run_that_creates_the_ledger_does_not_arm` pins it.
 
-**The lock must always offer a way to do the thing it demands** (the 2026-08-05
-rule; it outranks lock strength). Never remove: an `Open` button per problem, the
-escape hatch from t=0, the break-glass command on the surface.
+**The lock must always offer a way to do the thing it demands** (the 2026-08-05 rule; it outranks
+lock strength). Never remove: an `Open` button per problem, the escape hatch from t=0, the
+break-glass command on the surface.
 `test_scenarios.py::test_a_freshly_seeded_lock_offers_a_way_out_at_t0` pins it.
 
-**Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases
-the X global grab so a browser gets keystrokes; no timeout, until a solve lands
-or "Back to lock" (`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves
-the grab drops; a mocked root reports success either way.
+**Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases the X global grab so
+a browser gets keystrokes; no timeout, until a solve lands or "Back to lock"
+(`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; a mocked root reports
+success either way.
 
-**The suggestion list repaints live, and scrolls.** A solve mid-lock frees its
-slot and the next *pre-verified* candidate moves up; rows are reconfigured,
-never rebuilt, and Open buttons re-bound (`_view_update.py`). Scrolling and the
-browser nudge: read `DOCS-scroll-and-nudge.md` before touching either.
+**The suggestion list repaints live, and scrolls.** A solve mid-lock frees its slot and the next
+*pre-verified* candidate moves up; rows are reconfigured, never rebuilt, and Open buttons re-bound
+(`_view_update.py`). Scrolling and the browser nudge: read `DOCS-scroll-and-nudge.md` before
+touching either.
 
-**Arming runs at login and on the timer; the X wait is unbounded.** The
-timer's `Persistent=true` catch-up fires one second into a boot, before X
-exists, and systemd stamps the slot as done whether or not a window followed
-(`DOCS-incident-2026-09-13.md`). So the unit is `WantedBy=graphical-session.target`
-too, and `cmd_lock` waits on `gatelock.wait_for_x_server` (no deadline) BEFORE
-the instance lock: a held lock stalls the harvest all night lockdown (2026-10-17,
-`test_night_lockdown.py`). Every clear writes `charge:<today>`, so an extra run
-on a settled day exits windowless. Never wait on the *network*: cable bypass.
+**Arming runs at login and on the timer; the X wait is unbounded.** The timer's `Persistent=true`
+catch-up fires one second into a boot, before X exists, and systemd stamps the slot as done whether
+or not a window followed (`DOCS-incident-2026-09-13.md`). So the unit is
+`WantedBy=graphical-session.target` too, and `cmd_lock` waits on `gatelock.wait_for_x_server` (no
+deadline) BEFORE the instance lock: a held lock stalls the harvest all night lockdown (2026-10-17,
+`test_night_lockdown.py`). Every clear writes `charge:<today>`, so an extra run on a settled day
+exits windowless. Never wait on the *network*: cable bypass.
 
-**The morning session defers an arming run, never settles a day.** After the
-X wait, `_run_lock` reads wake-alarm's signed `morning_session.json`
-(`_morning_session.py`); while its `exempt_until` is ahead it prints `deferred:`
-and returns `EXIT_OK` with nothing written, so `decide()` stays pure and a deleted
-file cannot mint an unlocked day. The 09:30/11:00 slots re-decide. Never re-derive
-the cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
+**The morning session defers an arming run, never settles a day.** After the X wait, `_run_lock`
+reads wake-alarm's signed `morning_session.json` (`_morning_session.py`); while its `exempt_until`
+is ahead it prints `deferred:` and returns `EXIT_OK` with nothing written, so `decide()` stays pure
+and a deleted file cannot mint an unlocked day. The 09:30/11:00 slots re-decide. Never re-derive the
+cutoffs or fetch Firebase here: `wake-alarm/DOCS-morning-session-pc.md`.
 
-**Never exit because another lock is running.** `_queue.wait_for_turn` waits
-windowless; standing down would let "start the workout lock" skip the grind.
+**Never exit because another lock is running.** `_queue.wait_for_turn` waits windowless; standing
+down would let "start the workout lock" skip the grind.
 
-**The one-minute harvester (`_harvest_run`) is not a lock.** It only peeks at the
-instance lock (holding it stands `cmd_lock` down), never writes while a lock is
-up, never seeds, settles only in a run that minted a credit, and records credits
-on focus/sick days too (only charges and locks stand down).
+**The one-minute harvester (`_harvest_run`) is not a lock.** It only peeks at the instance lock
+(holding it stands `cmd_lock` down), never writes while a lock is up, never seeds, settles only in a
+run that minted a credit, and records credits on focus/sick days too (only charges and locks stand
+down).
 
 ## Traps that have already cost time
 
-**`questionList` caps a page at 100 rows** regardless of `limit` — no error, no
-indication. `fetch_pool` advances `skip` by rows *actually returned*; an earlier
-version advanced by the requested size and collected 657 of 4003 problems.
+**`questionList` caps a page at 100 rows** regardless of `limit` — no error, no indication.
+`fetch_pool` advances `skip` by rows *actually returned*; an earlier version advanced by the
+requested size and collected 657 of 4003 problems.
 
-**`status` has three values and `null` means two different things.** Measured
-2026-08-14: `"ac"` = solved, `"notac"` = attempted and failed, **`null` = never
-attempted**; a dead session also returns `null` for everything, so null is *not*
-a signal of being signed out. Inferring "expired" from it announced "could not
-check" with a fresh cookie and tripped the early exit that abandons the sweep.
-`_live_solved` splits `checked` (a readable `question` envelope came back) from
-`recognised` (status non-null): null inside a valid envelope is an *answer*, a
-missing envelope is silence, only silence means "could not check". Detecting a
-dead cookie is `--login`'s job (it probes a slug chosen to be non-null).
+**`status` has three values and `null` means two different things.** Measured 2026-08-14: `"ac"` =
+solved, `"notac"` = attempted and failed, **`null` = never attempted**; a dead session also returns
+`null` for everything, so null is *not* a signal of being signed out. Inferring "expired" from it
+announced "could not check" with a fresh cookie and tripped the early exit that abandons the sweep.
+`_live_solved` splits `checked` (a readable `question` envelope came back) from `recognised` (status
+non-null): null inside a valid envelope is an *answer*, a missing envelope is silence, only silence
+means "could not check". Detecting a dead cookie is `--login`'s job (it probes a slug chosen to be
+non-null).
 
 The pool query is public: expired cookies return HTTP 200 with a healthy list
 of nulls. Filtering on `status == "ac"` needs no auth flag; an `exclude_solved`
 flag wired to "cookies loaded" once *discarded* genuine `"ac"` rows when signed out.
 
-**Solved-state is checked live, but only for what is displayed.** Re-paging the
-whole authenticated pool is 41 requests before the window exists, and LeetCode
-answers a rate limit with the same null payload as an expired session — so an
-exhaustive check manufactures the failure it is looking for. Rank first, verify
-the top N, backfill from the next candidates. `recentAcSubmissionList` is hard
-capped at **20 rows** regardless of `limit` (verified against an account with
-thousands of solves), so it can never enumerate a full solved set; do not raise
-`RECENT_AC_LIMIT` to try — it feeds the harvest path, where every unseen
-submission id mints a credit.
+**Solved-state is checked live, but only for what is displayed.** Re-paging the whole authenticated
+pool is 41 requests before the window exists, and LeetCode answers a rate limit with the same null
+payload as an expired session — so an exhaustive check manufactures the failure it is looking for.
+Rank first, verify the top N, backfill from the next candidates. `recentAcSubmissionList` is hard
+capped at **20 rows** regardless of `limit` (verified against an account with thousands of solves),
+so it can never enumerate a full solved set; do not raise `RECENT_AC_LIMIT` to try — it feeds the
+harvest path, where every unseen submission id mints a credit.
 
-**The demo deletes its ledger every run**, so anything derived from ledger state
-is empty there. That put two already-solved problems back at the top of the demo
-surface after the filter was fixed everywhere else, and **only the screenshot
-caught it** — the unit tests all passed. Screenshot the demo after any change to
-the suggestion list.
+**The demo deletes its ledger every run**, so anything derived from ledger state is empty there.
+That put two already-solved problems back at the top of the demo surface after the filter was fixed
+everywhere else, and **only the screenshot caught it** — the unit tests all passed. Screenshot the
+demo after any change to the suggestion list.
 
-**Ruff runs with `--unsafe-fixes` and `T201` is auto-fixable.** Without the
-per-file ignore, the fixer deleted every `print` in `cmd_probe` and replaced the
-loops with `pass`. It still exited 0. Assert on stdout, not on exit codes.
+**Ruff runs with `--unsafe-fixes` and `T201` is auto-fixable.** Without the per-file ignore, the
+fixer deleted every `print` in `cmd_probe` and replaced the loops with `pass`. It still exited 0.
+Assert on stdout, not on exit codes.
 
-**With `overrideredirect=True` the root is a backdrop behind the surfaces.** A
-widget placed on the root is invisible and unclickable. The demo close button
-goes on the surface. Only a screenshot caught this — screenshot the demo.
+**With `overrideredirect=True` the root is a backdrop behind the surfaces.** A widget placed on the
+root is invisible and unclickable. The demo close button goes on the surface. Only a screenshot
+caught this — screenshot the demo.
 
 **`EscapeTracker.validate` rejects a blank `onset`.** A form without that field
 can never be submitted; the hatch was clickable but always refused.
 
-**A `from scripts.x import y` breaks mypy, and only in CI.** `scripts/` is not
-a package and must not become one, so importing one script from another makes
-mypy see that file under two module names ("Source file found twice") and exit
-2. Locally a warm `.mypy_cache` hides it, so this passes every pre-commit run
-on the machine that wrote it and fails the first clean checkout. Scripts share
-code by duplicating the few lines they need, or by importing from
-`leetcode_guard/`. Reproduce a CI mypy failure with `rm -rf .mypy_cache` first.
+**A `from scripts.x import y` breaks mypy, and only in CI.** `scripts/` is not a package and must
+not become one, so importing one script from another makes mypy see that file under two module names
+("Source file found twice") and exit 2. Locally a warm `.mypy_cache` hides it, so this passes every
+pre-commit run on the machine that wrote it and fails the first clean checkout. Scripts share code
+by duplicating the few lines they need, or by importing from `leetcode_guard/`. Reproduce a CI mypy
+failure with `rm -rf .mypy_cache` first.
 
 **`# noqa` / `# type: ignore` are banned by a pygrep hook**, even in docstrings.
 
 **Any module that does `import tkinter as tk` must be added to `TK_MODULES` in
-`leetcode_guard/tests/_tk_stub.py` in the same commit.** Miss one and the suite
-does not fail — it opens a real fullscreen window, or hangs holding a grab. The
-list runs both ways: a module that *stops* importing tkinter must come
-**out**, or patching an attribute it no longer has raises at fixture time and
-fails the entire suite at once. `_lock.py` left the list when its last widget
-call moved to `_view.install_demo_close_button`. Verify with
-`grep -l '^import tkinter as tk' leetcode_guard/*.py`.
+`leetcode_guard/tests/_tk_stub.py` in the same commit.** Miss one and the suite does not fail — it
+opens a real fullscreen window, or hangs holding a grab. The list runs both ways: a module that
+*stops* importing tkinter must come **out**, or patching an attribute it no longer has raises at
+fixture time and fails the entire suite at once. `_lock.py` left the list when its last widget call
+moved to `_view.install_demo_close_button`. Verify with `grep -l '^import tkinter as tk'
+leetcode_guard/*.py`.
 
-**Shipped code reaches gatelock's privates from exactly one file.** `_recovery`,
-`_detector`, `_surfaces` and `_vt_disabled` have no public equivalent, so every
-read inside `leetcode_guard/` goes through `_gatelock_internals.py`.
-`test_study.py::test_every_private_gatelock_read_goes_through_the_adapter`
-parses `_study.py`, `_study_resume.py` and `_lock_study.py` as ASTs and fails if
-one reaches past it.
+**Shipped code reaches gatelock's privates from exactly one file.** `_recovery`, `_detector`,
+`_surfaces` and `_vt_disabled` have no public equivalent, so every read inside `leetcode_guard/`
+goes through `_gatelock_internals.py`.
+`test_study.py::test_every_private_gatelock_read_goes_through_the_adapter` parses `_study.py`,
+`_study_resume.py` and `_lock_study.py` as ASTs and fails if one reaches past it.
 
 The `scripts/` harnesses are **not** covered by that test, and since
 2026-11-12 neither touches a private name (no `SLF001`, no pylint
@@ -179,15 +175,15 @@ and reads surfaces only through the adapter's logic-free `surface_map`.
 `screenshot_states.py` renders through the public `LeetcodeGuard.build_model`.
 Keep it that way: a new private reach is a new public seam, not a suppression.
 
-**`install.sh` will clobber the editable gatelock if you let it.** `pip install
--e .` resolves the pinned `gatelock @ git+...` and installs it *non*-editably
-over the top of `~/src/utils/gatelock`, breaking live editing across all four
-lockers — invisibly. `preserve_editable` puts it back; keep it.
+**`install.sh` will clobber the editable gatelock if you let it.** `pip install -e .` resolves the
+pinned `gatelock @ git+...` and installs it *non*-editably over the top of `~/src/utils/gatelock`,
+breaking live editing across all four lockers — invisibly. `preserve_editable` puts it back; keep
+it.
 
-**Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py`
-(the worst: a credential command that stored or refused a cookie silently).**
-Add a `T201` per-file ignore in the same commit as any new print-driven module
-(`_cli_difficulty.py` has one) and assert on stdout, not exit codes.
+**Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py` (the worst: a
+credential command that stored or refused a cookie silently).** Add a `T201` per-file ignore in the
+same commit as any new print-driven module (`_cli_difficulty.py` has one) and assert on stdout, not
+exit codes.
 
 ## Verifying
 
@@ -196,28 +192,24 @@ Tests and lint are necessary but not sufficient. The demo lock must be run on
 `scripts/screenshot_lock.sh [out.png]`. Never `pkill -f leetcode_guard` (it
 matches the shell running it); the script kills by PID.
 
-**One `import -window root` is not a screenshot.** Fired before the surfaces
-paint it returns the `overrideredirect` backdrop, a uniformly charcoal image
-that looks like an empty lock screen (2 of 3 captures on 2026-08-09 were blank).
-`-window <id>` does not help: the surface reports its geometry before it has
-drawn. The script keeps the largest of several samples; under 10 KB fails.
+**One `import -window root` is not a screenshot.** Fired before the surfaces paint it returns the
+`overrideredirect` backdrop, a uniformly charcoal image that looks like an empty lock screen (2 of 3
+captures on 2026-08-09 were blank). `-window <id>` does not help: the surface reports its geometry
+before it has drawn. The script keeps the largest of several samples; under 10 KB fails.
 
-**Fixtures asserting LeetCode's behaviour need a live check.** A mock can only
-repeat what its author believed, so a wrong belief produces a green suite and a
-broken product — `status_result`'s docstring claimed a null status meant
-"signed out", every solved-state test asserted against it, and the code shipped
-the same error. `scripts/verify_solved_semantics.py` asks the real endpoint
-whether `ac`/`notac`/`null` still mean what the fixtures say, and it fails
-against the pre-fix code. It runs as a `pre-push` hook and **skips loudly at
-exit 0 when the cookie is dead** — that is a precondition failure, not a
-semantic one, and the cookie expires every two weeks, so failing there would
-block unrelated pushes. Any fixture encoding external-system semantics should
-cite the date it was measured, the way `_queries.py` does.
+**Fixtures asserting LeetCode's behaviour need a live check.** A mock can only repeat what its
+author believed, so a wrong belief produces a green suite and a broken product — `status_result`'s
+docstring claimed a null status meant "signed out", every solved-state test asserted against it, and
+the code shipped the same error. `scripts/verify_solved_semantics.py` asks the real endpoint whether
+`ac`/`notac`/`null` still mean what the fixtures say, and it fails against the pre-fix code. It runs
+as a `pre-push` hook and **skips loudly at exit 0 when the cookie is dead** — that is a precondition
+failure, not a semantic one, and the cookie expires every two weeks, so failing there would block
+unrelated pushes. Any fixture encoding external-system semantics should cite the date it was
+measured, the way `_queries.py` does.
 
-**The grab needs its own check.** A screenshot proves pixels, not input. Over a
-mocked Tk root a released grab and a held one are indistinguishable — which is
-what let the 2026-08-05 trap look healthy — so the suspend/resume cycle is
-verified against a real X server instead:
+**The grab needs its own check.** A screenshot proves pixels, not input. Over a mocked Tk root a
+released grab and a held one are indistinguishable — which is what let the 2026-08-05 trap look
+healthy — so the suspend/resume cycle is verified against a real X server instead:
 
 ```bash
 xvfb-run -a -s "-screen 0 1600x1200x24" python3 -m scripts.verify_study_grab

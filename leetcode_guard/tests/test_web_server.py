@@ -38,8 +38,15 @@ _PKG = "leetcode_guard._web_server"
 
 @pytest.fixture(autouse=True)
 def _gate_on() -> Iterator[None]:
-    """Never read the real free-day or sick-day pools (``test_gate_off``)."""
-    with patch(f"{_PKG}.gate_off", return_value=False):
+    """Never read the real free-day or sick-day pools (``test_gate_off``).
+
+    Also keeps ``serve()`` from binding the real attempt port (8782), which the
+    live service owns.
+    """
+    with (
+        patch(f"{_PKG}.gate_off", return_value=False),
+        patch(f"{_PKG}.AttemptServer"),
+    ):
         yield
 
 
