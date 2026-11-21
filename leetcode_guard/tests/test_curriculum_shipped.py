@@ -1,4 +1,4 @@
-"""The shipped curriculum's one tutor mapping: the ``sql`` unit.
+"""The shipped curriculum's tutor mappings: ``sql`` and the 13 new-subject units.
 
 Hermetic: the tutor directory is a scratch one, never the live tutor's.
 """
@@ -48,11 +48,39 @@ def shipped() -> _curriculum.Curriculum:
     return curriculum
 
 
-def test_only_the_sql_unit_maps_a_tutor_subject():
-    """Every other unit stays unmapped until its tutor module exists."""
+ALGO_SUBJECT = "leetcode-easy-algorithms-in-typescript"
+PANDAS_SUBJECT = "javascript-and-pandas-for-leetcode-easy"
+ALGO_UNITS = [
+    "scans",
+    "hashing",
+    "math",
+    "bits",
+    "sorting-greedy",
+    "pointers-window",
+    "prefix-sums",
+    "stack-queue",
+    "binary-search",
+    "lists-recursion",
+    "trees",
+    "heap-dp",
+]
+
+
+def test_every_unit_maps_a_tutor_subject():
+    """Each algorithm unit maps its own same-named module; js-pandas maps four."""
     mapped = {unit.unit_id: unit for unit in shipped().units if unit.subject}
 
-    assert list(mapped) == ["sql"]
+    assert list(mapped) == [*ALGO_UNITS, "sql", "js-pandas"]
+    for unit_id in ALGO_UNITS:
+        assert mapped[unit_id].subject == ALGO_SUBJECT
+        assert mapped[unit_id].modules == (unit_id,)
+    assert mapped["js-pandas"].subject == PANDAS_SUBJECT
+    assert mapped["js-pandas"].modules == (
+        "js-closures-timers",
+        "js-promises-arrays",
+        "pandas-select-filter-group",
+        "pandas-clean-reshape",
+    )
     assert mapped["sql"].subject == SUBJECT
     assert mapped["sql"].modules == (
         "sql-lessons",
@@ -76,4 +104,5 @@ def test_the_sql_unit_is_pending_until_every_module_is_taught(tmp_path: Path):
     assert half[index] is Theory.PENDING
     assert almost[index] is Theory.PENDING
     assert full[index] is Theory.DONE
-    assert {state for i, state in enumerate(full) if i != index} == {Theory.NONE}
+    # The scratch tutor has no cards for the other subjects: unknown, never done.
+    assert {state for i, state in enumerate(full) if i != index} == {Theory.UNKNOWN}

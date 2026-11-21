@@ -34,10 +34,19 @@ Add this to the unit's row in `curriculum.json`:
 "tutor": {"subject": "algo", "modules": ["bits"]}
 ```
 
-The shipped file maps only `sql` (subject `mysql-8-for-timed-sql-coding-tests-joins-and`,
-all four of its modules: `sql-lessons`, `select-group-basics`,
-`clause-order-where-vs-having-and-left-join`, `date-format-codes-decimal-division-and`),
-so every other unit reads `none` and nothing else is marked. A mapping needs a subject
+The shipped file maps all 14 units (2026-11-21):
+
+- the 12 algorithm units each map the same-named module of subject
+  `leetcode-easy-algorithms-in-typescript`;
+- `js-pandas` maps all four modules (`js-closures-timers`, `js-promises-arrays`,
+  `pandas-select-filter-group`, `pandas-clean-reshape`) of
+  `javascript-and-pandas-for-leetcode-easy`;
+- `sql` maps all four modules (`sql-lessons`, `select-group-basics`,
+  `clause-order-where-vs-having-and-left-join`, `date-format-codes-decimal-division-and`)
+  of `mysql-8-for-timed-sql-coding-tests-joins-and`.
+
+The two new subjects were still draft plans with no cards when mapped, so
+every unit that uses them reads pending. A mapping needs a subject
 and a non-empty module list, else the whole file is refused (see Failure).
 
 ## What "done" means

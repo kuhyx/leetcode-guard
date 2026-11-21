@@ -3,11 +3,13 @@
   "units": [
     {
       "id": "scans",
-      "tags": ["array", "string", "simulation", "enumeration", "matrix", "string-matching"]
+      "tags": ["array", "string", "simulation", "enumeration", "matrix", "string-matching"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["scans"]}
     },
     {
       "id": "hashing",
-      "tags": ["hash-table", "counting", "hash-function"]
+      "tags": ["hash-table", "counting", "hash-function"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["hashing"]}
     },
     {
       "id": "math",
@@ -17,55 +19,65 @@
         "prime-number-sieve", "sieve-theory", "prime-factorization",
         "pigeonhole-principle", "brainteaser", "game-theory", "impartial-game",
         "nim-game", "minimax-algorithm", "newtons-method"
-      ]
+      ],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["math"]}
     },
     {
       "id": "bits",
-      "tags": ["bit-manipulation"]
+      "tags": ["bit-manipulation"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["bits"]}
     },
     {
       "id": "sorting-greedy",
       "tags": [
         "sorting", "greedy", "counting-sort", "quicksort", "bubble-sort",
         "boyer-moore-majority-vote-algorithm"
-      ]
+      ],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["sorting-greedy"]}
     },
     {
       "id": "pointers-window",
-      "tags": ["two-pointers", "sliding-window"]
+      "tags": ["two-pointers", "sliding-window"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["pointers-window"]}
     },
     {
       "id": "prefix-sums",
-      "tags": ["prefix-sum"]
+      "tags": ["prefix-sum"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["prefix-sums"]}
     },
     {
       "id": "stack-queue",
-      "tags": ["stack", "queue", "monotonic-stack", "bracket-sequences", "data-stream", "design"]
+      "tags": ["stack", "queue", "monotonic-stack", "bracket-sequences", "data-stream", "design"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["stack-queue"]}
     },
     {
       "id": "binary-search",
-      "tags": ["binary-search", "interactive"]
+      "tags": ["binary-search", "interactive"],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["binary-search"]}
     },
     {
       "id": "lists-recursion",
       "tags": [
         "linked-list", "doubly-linked-list", "floyds-cycle-finding-algorithm",
         "recursion", "divide-and-conquer", "backtracking"
-      ]
+      ],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["lists-recursion"]}
     },
     {
       "id": "trees",
       "tags": [
         "tree", "binary-tree", "binary-search-tree", "depth-first-search",
         "breadth-first-search", "graph", "union-find", "trie"
-      ]
+      ],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["trees"]}
     },
     {
       "id": "heap-dp",
       "tags": [
         "heap-priority-queue", "ordered-set", "dynamic-programming", "memoization",
         "longest-increasing-subsequence", "dp-on-trees"
-      ]
+      ],
+      "tutor": {"subject": "leetcode-easy-algorithms-in-typescript", "modules": ["heap-dp"]}
     },
     {
       "id": "sql",
@@ -82,7 +94,8 @@
     {
       "id": "js-pandas",
       "tags": [],
-      "untagged": true
+      "untagged": true,
+      "tutor": {"subject": "javascript-and-pandas-for-leetcode-easy", "modules": ["js-closures-timers", "js-promises-arrays", "pandas-select-filter-group", "pandas-clean-reshape"]}
     }
   ]
 }
