@@ -15,7 +15,7 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly REPO_DIR
-readonly SYSTEM_PYTHON="/usr/bin/python3"
+readonly SYSTEM_PYTHON="${INSTALL_PYTHON:-/usr/bin/python3}"  # seam for tests only
 readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly HMAC_KEY="/etc/workout-locker/hmac.key"
 readonly GATELOCK_SRC="${HOME}/src/utils/gatelock"
@@ -158,7 +158,20 @@ install_tray() {
     fi
 }
 
+# pip clones the whole kuhyx/utils monorepo (~125 MB) once per pinned git+
+# dependency into TMPDIR, here and in the MCP venv setup. /tmp is a tmpfs other
+# jobs fill: on 2026-11-21 the seventh clone hit "unable to write file" and the
+# deploy failed. So the install runs with a disk-backed TMPDIR, removed on exit.
+use_disk_tmpdir() {
+    local base="${XDG_CACHE_HOME:-${HOME}/.cache}"
+    mkdir -p "$base"
+    INSTALL_TMPDIR="$(mktemp -d "$base/leetcode-guard-install.XXXXXX")"
+    trap 'rm -rf -- "$INSTALL_TMPDIR"' EXIT
+    export TMPDIR="$INSTALL_TMPDIR"
+}
+
 main() {
+    use_disk_tmpdir
     install_package
     preserve_editable gatelock "$GATELOCK_SRC"
     preserve_editable leetcode_coach "$COACH_SRC"
