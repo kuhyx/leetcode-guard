@@ -30,7 +30,7 @@ dependencies = [
     "kuhy-credit @ git+https://github.com/kuhyx/utils@kuhy-credit-v0.3.0#subdirectory=kuhy_credit",
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.6#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project",
-    "leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.5#subdirectory=leetcode_coach",
+    "leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.6#subdirectory=leetcode_coach",
     "requests==2.34.2",
 ]
 
