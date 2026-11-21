@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from leetcode_guard import _cli, _cli_commands
 from leetcode_guard._cli_commands import projection_inputs
+from leetcode_guard._projection import default_target, format_target
 from leetcode_guard._status_projection import (
     BAD_PRICE,
     GOAL_NEEDS_COUNTS,
@@ -30,14 +33,14 @@ def test_price_and_goal_print_the_what_if(monkeypatch, capsys):
 
 
 @pytest.mark.usefixtures("data_dir")
-def test_price_or_goal_alone_implies_the_end_of_year(monkeypatch, capsys):
-    """--price without --by projects to 31 December."""
+def test_price_or_goal_alone_implies_the_default_target(monkeypatch, capsys):
+    """--price without --by projects to the default target (the goal date)."""
     monkeypatch.setattr(_cli_commands, "fetch_live_progress", progress)
 
     _cli.main(["--status", "--price", "3"])
     out = capsys.readouterr().out
 
-    assert "by 31.12." in out
+    assert f"by {format_target(default_target(date.today()))}" in out
     assert "Prices: Tue/Wed/Thu cost 3, Mon/Fri cost 4, Sat/Sun cost 6." in out
 
 
