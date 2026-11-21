@@ -52,8 +52,35 @@ service (beats) and the harvester (submissions, theory snapshot).
 Flags are derived at read time. Only `theory_at_solve` is stored, once per
 record, never overwritten ("a flag is fixed at solve time"). The report lists
 flagged solves, measured solves of the last 28 days, unknown solves and the
-share under 10 minutes (`null` with no data). A later review stage clears a
-flag through `build_report(..., cleared=...)`.
+share under 10 minutes (`null` with no data).
+
+## How a flag clears (stage 3)
+
+Only a finished review clears a flag. The coach (0.1.6, `/leetcode review`)
+appends a `review` event to the problem's session log,
+`~/.local/share/leetcode-coach/sessions/<date>-<slug>.jsonl`, once kuhy names
+one cause: `statement`, `missing-idea`, `idea-to-code`, `debugging` or
+`interruption`. A `missing-idea` review may also name the curriculum unit in
+`module`; the guard ignores it.
+
+`_coach_reviews.reviewed_slugs()` reads those logs and returns every slug with
+such an event. `--flagged` and `get_flagged` pass that set as
+`load_report(cleared=...)`, so a reviewed solve drops out of `flagged` and
+stays in `measured`.
+
+- A `review` with no cause, or a cause outside the five, clears nothing.
+- A folder that cannot be listed means "could not check": a warning, nothing
+  cleared, every flag stays. The command still prints and exits 0.
+- A missing folder means no reviews yet: nothing cleared, no warning.
+- An unreadable file or a torn line is skipped with a warning.
+
+The log is plain unsigned JSONL, so editing it can only hide a row of a review
+list; `_coach_reviews` is in the display-only import ban below.
+
+A `skeleton` event (payload `unit`) means the coach showed kuhy a code
+skeleton during that session. For the coach sign-off
+(`scripts/verify_coach_signoff.py`) any `skeleton` event ranks above H1, so
+the session does not count. The hint ladder itself stays H0-H3.
 
 ## Failure paths
 
@@ -66,13 +93,14 @@ flag through `build_report(..., cleared=...)`.
 | `attempts.json` corrupt | moved to `attempts.json.corrupt`, fresh file | yes |
 | Fetch cannot check (HTTP 200, null payload) | `attempts: could not check`, nothing merged | yes |
 | Theory reader or whole `attempts_line` raises | `unknown` snapshot / `unavailable (<type>)`, warning; harvest unaffected | yes |
+| Coach log folder cannot be listed | warning, no flag cleared | no: flags stay |
 
 Editing `attempts.json` can only add or remove a row in a review list.
 
 ## The import ban
 
 The attempt modules (`_attempt_paths`, `_model`, `_store`, `_io`, `_server`,
-`_queries`, plus `_attempts` and `_attempt_report`) must never be imported by
+`_queries`, plus `_attempts`, `_attempt_report` and `_coach_reviews`) must never be imported by
 anything that decides, charges or credits; `tests/test_display_only_imports.py`
 checks it transitively. `_attempt_line` is the one exception: `_harvest_run`
 imports it lazily and fenced, and it never writes the ledger.
