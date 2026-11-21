@@ -4,8 +4,11 @@
 #
 # The live deployment runs from the clone at ~/src/leetcode-guard (editable
 # install into the system python's user site-packages). So a deploy is:
-#   1. fast-forward that clone (refuse a dirty or diverged tree: concurrent
-#      sessions edit it, so never stash, reset or merge);
+#   1. fast-forward that clone (refuse a diverged tree or a dirty deployed
+#      path: concurrent sessions edit it, so never stash, reset or merge).
+#      The Flutter app under app/ is not deployed by this script, so another
+#      session's uncommitted edits there are pulled past and kept; git itself
+#      refuses a pull that would overwrite one;
 #   2. run install.sh from it (package, units, coach relay, tray, MCP venv);
 #   3. restart the two long-running units so they load the new code;
 #   4. health-check, exiting non-zero and naming the first check that fails.
@@ -32,12 +35,14 @@ fail() { printf 'deploy: FAILED -- %s\n' "$1" >&2; exit 1; }
 
 update_clone() {
     [[ -d "$LIVE_DIR/.git" ]] || fail "no git clone at $LIVE_DIR"
-    if [[ -n "$(git -C "$LIVE_DIR" status --porcelain)" ]]; then
-        git -C "$LIVE_DIR" status --short >&2
+    local dirty
+    dirty="$(git -C "$LIVE_DIR" status --porcelain -- . ':(exclude)app')"
+    if [[ -n "$dirty" ]]; then
+        printf '%s\n' "$dirty" >&2
         fail "live clone $LIVE_DIR is dirty; commit or remove the edits, nothing was touched"
     fi
     git -C "$LIVE_DIR" pull --ff-only --quiet \
-        || fail "pull in $LIVE_DIR is not a fast-forward; nothing was reset"
+        || fail "pull in $LIVE_DIR is not a fast-forward (or would overwrite an app/ edit); nothing was reset"
     log "live clone at $(git -C "$LIVE_DIR" log -1 --format='%h %s')"
 }
 

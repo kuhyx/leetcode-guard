@@ -78,6 +78,8 @@ def fixture_sandbox(tmp_path: Path) -> Env:
     _git(seed, "config", "user.email", "t@t")
     _git(seed, "config", "user.name", "t")
     _exe(seed / "install.sh", '#!/bin/bash\necho "install.sh" >> "$FAKE_LOG"\n')
+    (seed / "app").mkdir()
+    (seed / "app" / "pubspec.yaml").write_text("name: app\n", encoding="utf-8")
     _git(seed, "add", ".")
     _git(seed, "commit", "-qm", "one")
     origin = tmp_path / "origin.git"
@@ -106,12 +108,12 @@ def fixture_sandbox(tmp_path: Path) -> Env:
     return Env(origin=origin, live=live, log=log, env=env)
 
 
-def _push_new_commit(sandbox: Env, tmp_path: Path) -> str:
+def _push_new_commit(sandbox: Env, tmp_path: Path, name: str = "new.txt") -> str:
     work = tmp_path / "work"
     _git(tmp_path, "clone", "-q", str(sandbox.origin), str(work))
     _git(work, "config", "user.email", "t@t")
     _git(work, "config", "user.name", "t")
-    (work / "new.txt").write_text("x", encoding="utf-8")
+    (work / name).write_text("x", encoding="utf-8")
     _git(work, "add", ".")
     _git(work, "commit", "-qm", "two")
     _git(work, "push", "-q", "origin", "main")
@@ -162,6 +164,31 @@ def test_dirty_clone_refuses_and_keeps_the_edit(sandbox: Env) -> None:
     assert proc.returncode != 0
     assert "dirty" in proc.stderr
     assert "# mine" in edit.read_text(encoding="utf-8")
+    assert "install.sh" not in sandbox.log.read_text(encoding="utf-8")
+
+
+def test_an_app_edit_does_not_block_the_deploy(sandbox: Env, tmp_path: Path) -> None:
+    """The Flutter app under app/ is not deployed here; another session's
+    uncommitted edit there is pulled past and kept (2026-11-21 red deploy)."""
+    head = _push_new_commit(sandbox, tmp_path)
+    edit = sandbox.live / "app" / "pubspec.yaml"
+    edit.write_text("name: mine\n", encoding="utf-8")
+    proc = _run(sandbox)
+    assert proc.returncode == 0, proc.stderr
+    assert _git(sandbox.live, "rev-parse", "HEAD").strip() == head
+    assert edit.read_text(encoding="utf-8") == "name: mine\n"
+
+
+def test_an_app_edit_the_pull_would_overwrite_refuses(
+    sandbox: Env, tmp_path: Path
+) -> None:
+    """git refuses to overwrite it; the deploy stops before any install."""
+    _push_new_commit(sandbox, tmp_path, "app/pubspec.yaml")
+    edit = sandbox.live / "app" / "pubspec.yaml"
+    edit.write_text("name: mine\n", encoding="utf-8")
+    proc = _run(sandbox)
+    assert proc.returncode != 0
+    assert edit.read_text(encoding="utf-8") == "name: mine\n"
     assert "install.sh" not in sandbox.log.read_text(encoding="utf-8")
 
 
