@@ -79,7 +79,10 @@ def get_credits() -> dict[str, Any]:
 
 @mcp.tool(title="Suggested problems", annotations=_READS_ONLY)
 def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]]:
-    """Non-premium problems, easiest first then highest acceptance.
+    """Non-premium problems, easiest first, in curriculum (theory block) order.
+
+    ``unit`` names the block; ``theory`` says whether the tutor has taught it
+    (``pending``/``unknown`` rows are served after the taught blocks).
 
     Served from the cached pool. This never fetches, so it is always instant
     and never contributes to rate limiting.
@@ -91,6 +94,8 @@ def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]
             "difficulty": item.difficulty,
             "ac_rate": item.ac_rate,
             "url": item.url,
+            "unit": item.unit,
+            "theory": item.theory,
         }
         for item in snapshot.pool.suggestions
     ]

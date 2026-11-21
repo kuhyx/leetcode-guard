@@ -10,15 +10,14 @@ import pytest
 
 from leetcode_guard import _curriculum
 from leetcode_guard._curriculum import (
+    Blocks,
     Curriculum,
-    block_order,
+    Theory,
     load_curriculum,
     parse_curriculum,
 )
-from leetcode_guard._pool_cache import CachedPool, write_cache
-from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._problem import rank_pool
-from leetcode_guard.tests.test_pool_resolve import SIGNED_OUT, path_of
+from leetcode_guard.tests._pool_fixtures import resolve_offline
 from leetcode_guard.tests.test_problem import make
 
 if TYPE_CHECKING:
@@ -31,7 +30,7 @@ DOCUMENT = {
         {
             "id": "bits",
             "tags": ["bit-manipulation"],
-            "tutor": {"subject": "algo", "module": "bit-manipulation"},
+            "tutor": {"subject": "algo", "modules": ["bit-manipulation"]},
         },
         {"id": "js", "tags": [], "untagged": True},
     ],
@@ -45,6 +44,11 @@ def curriculum() -> Curriculum:
     return parsed
 
 
+def blocks(*theory: Theory) -> Blocks:
+    """The curriculum with each unit's theory state; none mapped by default."""
+    return Blocks(curriculum=curriculum(), theory=theory or (Theory.NONE,) * 3)
+
+
 def test_ordering_follows_the_curriculum():
     """An earlier block is served first, whatever its acceptance rate."""
     problems = [
@@ -53,7 +57,7 @@ def test_ordering_follows_the_curriculum():
         make("scan-easy", ac_rate=80.0, topics=["string"]),
     ]
 
-    ranked = rank_pool(problems, block=curriculum().unit_index_of)
+    ranked = rank_pool(problems, block=blocks().key)
 
     assert [p.title_slug for p in ranked] == ["scan-easy", "scan-hard", "bits-easy"]
 
@@ -89,7 +93,7 @@ def test_difficulty_still_outranks_the_curriculum():
         make("easy-bits", difficulty="Easy", topics=["bit-manipulation"]),
     ]
 
-    ranked = rank_pool(problems, block=curriculum().unit_index_of)
+    ranked = rank_pool(problems, block=blocks().key)
 
     assert [p.title_slug for p in ranked] == ["easy-bits", "medium-scan"]
 
@@ -98,14 +102,14 @@ def test_a_unit_keeps_its_tutor_module():
     """The theory lookup needs the subject and module a unit points at."""
     units = curriculum().units
 
-    assert (units[1].subject, units[1].module) == ("algo", "bit-manipulation")
-    assert (units[0].subject, units[0].module) == ("", "")
+    assert (units[1].subject, units[1].modules) == ("algo", ("bit-manipulation",))
+    assert (units[0].subject, units[0].modules) == ("", ())
 
 
 def test_a_missing_file_keeps_the_acceptance_order(tmp_path: Path):
     """No curriculum is not an error: the list falls back to the old order."""
     assert load_curriculum(tmp_path / "absent.json") is None
-    assert block_order() is None
+    assert load_curriculum() is None
 
 
 def test_a_broken_file_warns_and_keeps_the_acceptance_order(
@@ -136,8 +140,15 @@ def test_a_broken_file_warns_and_keeps_the_acceptance_order(
         {"units": [{"id": "a", "tags": ["x"]}, {"id": "a", "tags": ["y"]}]},
         {"units": [{"id": "a", "tags": ["x"]}, {"id": "b", "tags": ["x"]}]},
         {"units": [{"id": "a", "tags": [], "tutor": "algo"}]},
-        {"units": [{"id": "a", "tags": [], "tutor": {"subject": 1, "module": "m"}}]},
+        {"units": [{"id": "a", "tags": [], "tutor": {"subject": 1, "modules": ["m"]}}]},
         {"units": [{"id": "a", "tags": [], "tutor": {"subject": "s"}}]},
+        {"units": [{"id": "a", "tags": [], "tutor": {"subject": "s", "modules": "m"}}]},
+        {
+            "units": [
+                {"id": "a", "tags": [], "tutor": {"subject": "s", "modules": [""]}}
+            ]
+        },
+        {"units": [{"id": "a", "tags": [], "tutor": {"subject": "s", "modules": []}}]},
     ],
 )
 def test_a_malformed_document_is_refused(
@@ -168,20 +179,36 @@ def test_the_suggestion_list_is_served_in_curriculum_order(
     curriculum_file = tmp_path / "curriculum.json"
     curriculum_file.write_text(json.dumps(DOCUMENT), encoding="utf-8")
     monkeypatch.setattr(_curriculum, "CURRICULUM_FILE", curriculum_file)
-    problems = (
+    resolution = resolve_offline(
+        tmp_path,
         make("bits-easy", ac_rate=99.0, topics=["bit-manipulation"]),
         make("scan-hard", ac_rate=40.0, topics=["array"]),
     )
-    write_cache(
-        path_of(tmp_path), CachedPool(problems=problems, fetched_at=0.0, complete=True)
-    )
-
-    resolution = resolve_pool(
-        None,
-        path_of(tmp_path),
-        now=0.0,
-        solved=SolvedKnowledge(auth=SIGNED_OUT),
-        ttl=1_000.0,
-    )
 
     assert [p.title_slug for p in resolution.problems] == ["scan-hard", "bits-easy"]
+
+
+def test_a_waiting_block_is_pushed_below_the_taught_ones():
+    """Theory not taught yet: the block stays on the list, under the rest."""
+    problems = [
+        make("scan", ac_rate=10.0, topics=["array"]),
+        make("bits", ac_rate=99.0, topics=["bit-manipulation"]),
+        make("js", ac_rate=50.0),
+    ]
+    state = blocks(Theory.PENDING, Theory.DONE, Theory.UNKNOWN)
+
+    ranked = rank_pool(problems, block=state.key)
+
+    assert [p.title_slug for p in ranked] == ["bits", "scan", "js"]
+    assert [state.waits(p) for p in ranked] == [False, True, True]
+    assert [state.unit_id(p) for p in ranked] == ["bits", "scans", "js"]
+
+
+def test_a_problem_no_unit_claims_never_waits():
+    """Nothing teaches it, so there is nothing to wait for and no block id."""
+    stray = make("stray", topics=["union-find"])
+    state = blocks(Theory.PENDING, Theory.PENDING, Theory.PENDING)
+
+    assert state.theory_of(stray) is Theory.NONE
+    assert not state.waits(stray)
+    assert state.unit_id(stray) == ""

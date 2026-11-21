@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from leetcode_guard import _constants, _curriculum
+from leetcode_guard import _constants, _curriculum, _theory
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -85,3 +85,5 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Shipped config rather than state, but with the real unit list in force
     # every ordering test would quietly depend on it. Absent = the old order.
     monkeypatch.setattr(_curriculum, "CURRICULUM_FILE", tmp_path / "curriculum.json")
+    # The real tutor data dir is live state: a test must never read it.
+    monkeypatch.setattr(_theory, "TUTOR_DATA_DIR", tmp_path / "tutor")

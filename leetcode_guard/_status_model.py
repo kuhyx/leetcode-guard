@@ -24,6 +24,10 @@ class Suggestion:
     difficulty: str
     ac_rate: float
     url: str
+    unit: str = ""
+    """The curriculum block it is served in; ``""`` without a curriculum."""
+    theory: str = ""
+    """``none``/``done``/``pending``/``unknown`` for that block's tutor module."""
 
 
 @dataclass(frozen=True)

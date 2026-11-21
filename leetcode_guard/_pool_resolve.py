@@ -17,7 +17,6 @@ import logging
 from typing import TYPE_CHECKING, Final, Literal
 
 from leetcode_guard._constants import POOL_TTL_SECONDS, SUGGESTION_COUNT
-from leetcode_guard._curriculum import block_order
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_fetch import fetch_pool
 from leetcode_guard._pool_verify import (
@@ -25,11 +24,13 @@ from leetcode_guard._pool_verify import (
     verify_live,
 )
 from leetcode_guard._problem import Problem, rank_pool
+from leetcode_guard._theory import load_blocks
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from leetcode_guard._auth import AuthState
+    from leetcode_guard._curriculum import Blocks
     from leetcode_guard._leetcode import PostFn
 
 _logger: Final = logging.getLogger(__name__)
@@ -78,6 +79,8 @@ class PoolResolution:
     problems: tuple[Problem, ...]
     source: PoolSource
     notes: tuple[str, ...]
+    blocks: Blocks | None = None
+    """The curriculum order the list was ranked by; ``None`` = acceptance order."""
 
     @property
     def empty(self) -> bool:
@@ -193,11 +196,15 @@ def _resolved(
 ) -> PoolResolution:
     """Rank and package a non-empty pool, verifying the top of it live."""
     post, limit = live
-    ranked = rank_pool(problems, solved_slugs=solved_slugs, block=block_order())
+    blocks = load_blocks()
+    key = None if blocks is None else blocks.key
+    ranked = rank_pool(problems, solved_slugs=solved_slugs, block=key)
     ranked, evidence = verify_live(ranked, post=post, limit=limit)
     note = live_note(evidence)
     if note is not None:
         notes.append(note)
     if not ranked:
         notes.append(NO_SUGGESTIONS_NOTE)
-    return PoolResolution(problems=tuple(ranked), source=source, notes=tuple(notes))
+    return PoolResolution(
+        problems=tuple(ranked), source=source, notes=tuple(notes), blocks=blocks
+    )

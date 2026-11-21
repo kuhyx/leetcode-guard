@@ -136,6 +136,7 @@ def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> P
         now=now,
         solved=SolvedKnowledge(auth=auth, slugs=solved_slugs(ledger)),
     )
+    blocks = pool.blocks
     return PoolView(
         auth_present=auth.present,
         auth_note=auth.note,
@@ -147,6 +148,8 @@ def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> P
                 difficulty=problem.difficulty,
                 ac_rate=problem.ac_rate,
                 url=problem.url,
+                unit="" if blocks is None else blocks.unit_id(problem),
+                theory="" if blocks is None else blocks.theory_of(problem).value,
             )
             for problem in pool.problems[:limit]
         ),

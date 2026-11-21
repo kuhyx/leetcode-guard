@@ -46,6 +46,8 @@ SITE_DOWN: Final = "☁✗"
 """LeetCode is down while this machine is online."""
 SITE_UP: Final = "☁✓"
 OPEN: Final = "↗"
+THEORY_PENDING: Final = "✎"
+"""The tutor has not taught this problem's block yet (``_theory``)."""
 ESCAPE: Final = "⎋"
 CLOSE: Final = "✕"
 END_EVENING: Final = "☾"
@@ -93,3 +95,9 @@ def elapsed(seconds: float) -> str:
     """``MM:SS`` -- elapsed only, never a target (see ``_study_strip``)."""
     total = max(0, int(seconds))
     return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def problem_mark(difficulty: str, ac_rate: float, *, waits: bool = False) -> str:
+    """A row's mark: ``◆◆  48%``, led by the pencil while its theory waits."""
+    mark = f"{weight_mark(difficulty)}  {ac_rate:.0f}%"
+    return f"{THEORY_PENDING}  {mark}" if waits else mark

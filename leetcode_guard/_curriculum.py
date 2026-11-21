@@ -15,7 +15,7 @@ tagged that way is solvable without it.
 
 **Display-only**, exactly like ``progress_cache.json``. It orders rows and
 nothing else: no module that decides, charges or credits may import this one
-(``test_curriculum_imports.py`` pins it). A missing or malformed file falls back
+(``test_display_only_imports.py`` pins it). A missing or malformed file falls back
 to the acceptance order rather than emptying the list -- the lock must always
 offer something to solve.
 """
@@ -23,6 +23,7 @@ offer something to solve.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import enum
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -30,7 +31,7 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard._read_json import MISSING, read_json
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from leetcode_guard._problem import Problem
 
@@ -53,8 +54,9 @@ class Unit:
     unit_id: str
     tags: frozenset[str]
     subject: str = ""
-    """Tutor subject id; empty until the subject exists."""
-    module: str = ""
+    """Tutor subject id; empty when no theory is mapped to the unit."""
+    modules: tuple[str, ...] = ()
+    """Tutor module ids; the unit's theory is done when all of them are."""
     untagged: bool = False
     """Claims problems with no topic tags (LeetCode's JavaScript and pandas sets)."""
 
@@ -78,9 +80,49 @@ class Curriculum:
             return next((i for i, u in enumerate(self.units) if u.untagged), last)
         return max((i for i, u in enumerate(self.units) if u.tags & tags), default=last)
 
-    def unit_index_of(self, problem: Problem) -> tuple[int, ...]:
-        """The block key ``rank_pool`` sorts by, between difficulty and rate."""
-        return (self.unit_index(problem.topics),)
+
+class Theory(enum.Enum):
+    """Whether the tutor has taught a unit's theory (``_theory`` decides)."""
+
+    NONE = "none"
+    """No tutor module is mapped to the unit: nothing to wait for."""
+    DONE = "done"
+    PENDING = "pending"
+    UNKNOWN = "unknown"
+    """The tutor's files could not be read. Shown as pending, never as done:
+    "cannot check" must not read as "taught"."""
+
+
+@dataclass(frozen=True)
+class Blocks:
+    """The curriculum plus each unit's theory state, as of one resolve."""
+
+    curriculum: Curriculum
+    theory: tuple[Theory, ...]
+    """One state per unit, in unit order."""
+
+    def theory_of(self, problem: Problem) -> Theory:
+        """The theory state of the block ``problem`` is served in."""
+        index = self.curriculum.unit_index(problem.topics)
+        return self.theory[index] if index < len(self.theory) else Theory.NONE
+
+    def waits(self, problem: Problem) -> bool:
+        """Whether the row is marked and pushed down: theory not yet taught."""
+        return self.theory_of(problem) in {Theory.PENDING, Theory.UNKNOWN}
+
+    def unit_id(self, problem: Problem) -> str:
+        """The block's id, or ``""`` for a problem no unit claims."""
+        index = self.curriculum.unit_index(problem.topics)
+        units = self.curriculum.units
+        return units[index].unit_id if index < len(units) else ""
+
+    def key(self, problem: Problem) -> tuple[int, ...]:
+        """What ``rank_pool`` sorts by between difficulty and acceptance.
+
+        Taught blocks first, in curriculum order; then the waiting ones, also
+        in curriculum order. Nothing is ever dropped.
+        """
+        return (int(self.waits(problem)), self.curriculum.unit_index(problem.topics))
 
 
 def _unit(row: object) -> Unit:
@@ -98,16 +140,21 @@ def _unit(row: object) -> Unit:
     if not isinstance(tutor, dict):
         message = f"unit {unit_id}: tutor must be an object"
         raise _MalformedError(message)
-    subject, module = tutor.get("subject", ""), tutor.get("module", "")
-    named = isinstance(subject, str) and isinstance(module, str) and subject and module
+    subject, modules = tutor.get("subject", ""), tutor.get("modules", [])
+    named = (
+        isinstance(subject, str)
+        and isinstance(modules, list)
+        and all(isinstance(module, str) and module for module in modules)
+        and bool(subject and modules)
+    )
     if tutor and not named:
-        message = f"unit {unit_id}: tutor needs a subject and a module"
+        message = f"unit {unit_id}: tutor needs a subject and a list of modules"
         raise _MalformedError(message)
     return Unit(
         unit_id=unit_id,
         tags=frozenset(tags),
         subject=subject,
-        module=module,
+        modules=tuple(modules),
         untagged=row.get("untagged") is True,
     )
 
@@ -153,9 +200,3 @@ def load_curriculum(path: Path | None = None) -> Curriculum | None:
     if document is MISSING:
         return None
     return parse_curriculum(document)
-
-
-def block_order() -> Callable[[Problem], tuple[int, ...]] | None:
-    """The block key for ``rank_pool``, or ``None`` for the acceptance order."""
-    curriculum = load_curriculum()
-    return None if curriculum is None else curriculum.unit_index_of

@@ -95,6 +95,7 @@ def build_problem_lines(
     """
     lines: list[ProblemLine] = []
     dropped: list[str] = []
+    blocks = pool.blocks
     for problem in pool.problems:
         if len(lines) == limit:
             break
@@ -106,7 +107,11 @@ def build_problem_lines(
                 label=f"{len(lines) + 1}  {problem.title}",
                 url=problem.url,
                 slug=problem.title_slug,
-                mark=f"{g.weight_mark(problem.difficulty)}  {problem.ac_rate:.0f}%",
+                mark=g.problem_mark(
+                    problem.difficulty,
+                    problem.ac_rate,
+                    waits=blocks is not None and blocks.waits(problem),
+                ),
                 difficulty=problem.difficulty,
             )
         )
