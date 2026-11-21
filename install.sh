@@ -20,11 +20,34 @@ readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly HMAC_KEY="/etc/workout-locker/hmac.key"
 readonly GATELOCK_SRC="${HOME}/src/utils/gatelock"
 readonly COACH_SRC="${HOME}/src/utils/leetcode_coach"
+readonly RUNTIME_IMPORTS="import leetcode_guard, leetcode_coach, gatelock, crdt_sync, nacl, argon2, sickdays, focus_project, kuhy_credit, requests, genanki"
+# What the last verified install was made from. The install is editable, so
+# code edits never need it; only pyproject.toml or a moved repo does, and
+# redoing it re-cloned the utils monorepo once per git pin on every deploy.
+readonly INSTALL_STAMP="${XDG_STATE_HOME:-${HOME}/.local/state}/leetcode-guard/install.sha256"
 
 log() { printf 'install: %s\n' "$1" >&2; }
 fail() { printf 'install: FAILED -- %s\n' "$1" >&2; exit 1; }
 
+# The user site is shared with every other locker's install: if one of them
+# swapped a dependency since our last install, the listing differs and our
+# pins go back in, as they did when every deploy reinstalled.
+install_key() {
+    {
+        printf '%s\n' "$REPO_DIR"
+        cat "$REPO_DIR/pyproject.toml" 2>/dev/null || true
+        "$SYSTEM_PYTHON" -m pip list --user --format=freeze 2>/dev/null || true
+    } | sha256sum | cut -d' ' -f1
+}
+
 install_package() {
+    # Imports must still resolve: the stamp never vouches for a broken site.
+    if [[ -f "$INSTALL_STAMP" && "$(cat "$INSTALL_STAMP")" == "$(install_key)" ]] \
+        && "$SYSTEM_PYTHON" -c "$RUNTIME_IMPORTS" >/dev/null 2>&1; then
+        log "pyproject.toml unchanged since the last verified install -- pip skipped"
+        return
+    fi
+    rm -f -- "$INSTALL_STAMP"
     log "installing into the system python's user site-packages"
     "$SYSTEM_PYTHON" -m pip install --user --break-system-packages -e "$REPO_DIR" \
         || fail "pip install"
@@ -73,9 +96,10 @@ verify_imports() {
     # The check that matters: every runtime dependency must resolve for the
     # interpreter systemd will launch, not for whatever is on $PATH now.
     log "verifying imports with $SYSTEM_PYTHON"
-    "$SYSTEM_PYTHON" -c \
-        "import leetcode_guard, leetcode_coach, gatelock, crdt_sync, nacl, argon2, sickdays, focus_project, kuhy_credit, requests, genanki; print('imports OK')" \
+    "$SYSTEM_PYTHON" -c "$RUNTIME_IMPORTS; print('imports OK')" \
         || fail "a runtime dependency is missing from the system python"
+    mkdir -p "$(dirname "$INSTALL_STAMP")"
+    install_key >"$INSTALL_STAMP"
 }
 
 ensure_hmac_key() {
