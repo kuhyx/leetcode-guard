@@ -50,7 +50,7 @@ BEATS: list[dict[str, str]] = []  # filled by _collect from the stub's stdout
 # constant on its own line in the extension, so the match is exact.
 REWRITES = (
     ("manifest.json", "http://127.0.0.1:8782/*", "http://127.0.0.1:{port}/*"),
-    ("background.js", "http://127.0.0.1:8782/beat", "http://127.0.0.1:{port}/beat"),
+    ("sw.js", "http://127.0.0.1:8782/beat", "http://127.0.0.1:{port}/beat"),
     ("relay.js", "const BEAT_INTERVAL_MS = 60000;", "const BEAT_INTERVAL_MS = 4000;"),
 )
 

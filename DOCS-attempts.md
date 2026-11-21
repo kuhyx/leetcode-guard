@@ -6,7 +6,7 @@ The extension reports which problem tab is on screen. The log turns that into
 
 ## Data flow
 
-1. The extension (manifest 1.1.0) POSTs `{"slug", "tab"}` to
+1. The extension (manifest 1.1.1) POSTs `{"slug", "tab"}` to
    `127.0.0.1:8782/beat` on load, on a route change, when the tab becomes
    visible, and once a minute while visible. A hidden tab sends nothing.
 2. `leetcode-guard-web.service` (`_web_server`, status API on 8771) starts a

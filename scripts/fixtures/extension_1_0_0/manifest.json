@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "LeetCode Guard nudge",
+  "version": "1.0.0",
+  "description": "Tells a running leetcode-guard lock to check LeetCode the moment a submission is Accepted. Sends no data.",
+  "host_permissions": ["http://127.0.0.1:8772/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["page_hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["relay.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

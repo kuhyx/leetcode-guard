@@ -151,6 +151,11 @@ pre-commit run on the machine that wrote it and fails the first clean checkout. 
 by duplicating the few lines they need, or by importing from `leetcode_guard/`. Reproduce a CI mypy
 failure with `rm -rf .mypy_cache` first.
 
+**A changed extension service worker needs a new file name.** Chromium keeps an unpacked extension's
+cached worker across a manifest bump and a browser restart while the file name stays, so 1.1.0's
+heartbeat never ran in the live Helium (still 1.0.0's `background.js`). A fresh-profile check cannot
+see it; `scripts/verify_heartbeat_upgrade.py` seeds a profile with 1.0.0 first. Rename again on change.
+
 **`# noqa` / `# type: ignore` are banned by a pygrep hook**, even in docstrings.
 
 **Any module that does `import tkinter as tk` must be added to `TK_MODULES` in
