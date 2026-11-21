@@ -27,19 +27,35 @@ fail() {
     exit 1
 }
 
-# Every input the shard's result depends on, hashed into one key.
+# Every input the shard's result depends on, hashed into one key: every
+# non-ignored file under app/ (assets, web/, tool/ and fixtures count, not just
+# lib/ and test/), this script, the shard's file list and the Flutter SDK.
+# A key that misses an input would replay a green over a red tree.
 tree_key() {
-    local spec=$1 path
-    shift
-    local -a inputs=()
-    for path in lib test pubspec.yaml pubspec.lock; do
-        [[ -e "$APP_DIR/$path" ]] && inputs+=("$APP_DIR/$path")
-    done
+    local file
     {
-        printf '%s\n' "$spec" "$@"
+        printf '%s\n' "$@"
         sha256sum <"${BASH_SOURCE[0]}"
-        find "${inputs[@]}" -type f | LC_ALL=C sort | xargs -r -d '\n' sha256sum
+        sdk_identity
+        git -C "$ROOT" ls-files -co --exclude-standard -z -- app | LC_ALL=C sort -z \
+            | while IFS= read -r -d '' file; do
+                [[ -f "$ROOT/$file" ]] && sha256sum -- "$ROOT/$file"
+            done
     } | sha256sum | cut -d' ' -f1
+}
+
+# The SDK's version file, read directly: `flutter --version` would queue on
+# the machine-wide build lock just to say the cache is still good.
+sdk_identity() {
+    local bin dir
+    while IFS= read -r bin; do
+        dir="$(dirname "$(readlink -f "$bin")")"
+        if [[ -f "$dir/cache/flutter.version.json" ]]; then
+            cat "$dir/cache/flutter.version.json"
+            return 0
+        fi
+    done < <(type -ap flutter)
+    echo "sdk-unknown"
 }
 
 # `flutter test` re-resolves packages online on every call (~6 s of an 8 s

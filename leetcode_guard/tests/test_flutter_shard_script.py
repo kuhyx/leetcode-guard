@@ -82,6 +82,10 @@ def _sandbox(tmp_path: Path) -> Sandbox:
     fake = bin_dir / "flutter"
     fake.write_text(_FAKE_FLUTTER, encoding="utf-8")
     fake.chmod(0o755)
+    (bin_dir / "cache").mkdir()
+    (bin_dir / "cache" / "flutter.version.json").write_text(
+        '{"frameworkVersion": "1"}', encoding="utf-8"
+    )
     shared = tmp_path / "shared-tmp"
     shared.mkdir()
     log = tmp_path / "flutter.log"
@@ -193,3 +197,24 @@ def test_a_malformed_shard_fails(tmp_path: Path) -> None:
     result = _sandbox(tmp_path).run("x")
     assert result.returncode != 0
     assert "I/N" in result.stderr
+
+
+def test_an_asset_edit_outside_lib_and_test_reruns_the_shard(tmp_path: Path) -> None:
+    """Assets, web/ and tool/ feed the tests too; a stale green must not replay."""
+    box = _sandbox(tmp_path)
+    assert box.run("0/2").returncode == 0
+    asset = box.repo / "app" / "assets" / "x.json"
+    asset.parent.mkdir()
+    asset.write_text("{}", encoding="utf-8")
+    assert box.run("0/2").returncode == 0
+    assert len(box.test_calls()) == 2
+
+
+def test_a_flutter_upgrade_reruns_the_shard(tmp_path: Path) -> None:
+    """A new SDK can break a test the old one passed."""
+    box = _sandbox(tmp_path)
+    assert box.run("0/2").returncode == 0
+    version = tmp_path / "bin" / "cache" / "flutter.version.json"
+    version.write_text('{"frameworkVersion": "2"}', encoding="utf-8")
+    assert box.run("0/2").returncode == 0
+    assert len(box.test_calls()) == 2
