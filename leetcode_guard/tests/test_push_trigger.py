@@ -45,6 +45,7 @@ DECIDING = (
 SNAPSHOT_SIDE = (
     "_coach_grades",
     "_coach_log",
+    "_coach_reviews",
     "_coach_view",
     "_profile",
     "_profile_cache",
