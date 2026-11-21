@@ -66,6 +66,10 @@ def fake_gatelock_widgets(monkeypatch: pytest.MonkeyPatch, fake: MagicMock) -> N
     for name in _GATELOCK_TK_MODULES:
         module = importlib.import_module(name)
         monkeypatch.setattr(module, "tk", fake, raising=True)
+    # kuhy_credit's logo subclasses a real tk.Canvas, which cannot be built
+    # over a mocked parent: swap the class itself, like GateRoot.
+    credit = importlib.import_module("leetcode_guard._view_credit")
+    monkeypatch.setattr(credit, "KuhyCredit", fake.KuhyCredit, raising=True)
 
 
 TK_MODULES = (

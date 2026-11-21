@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
     show AppErrors, AppErrorsRouteObserver;
 import 'package:design_system/design_system.dart';
+import 'package:kuhy_credit/kuhy_credit.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
@@ -198,6 +199,10 @@ class _ShellState extends State<_Shell> {
               ),
               onPressed: () => _openSettings(settings),
             ),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: KuhyCredit(size: 32, below: true),
+          ),
         ],
       ),
       body: wide

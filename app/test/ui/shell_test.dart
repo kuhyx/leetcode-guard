@@ -1,6 +1,7 @@
 import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
     show E2ePassphraseButton;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kuhy_credit/kuhy_credit.dart';
 import 'package:leetcode_guard/src/data/snapshot_source.dart';
 import 'package:leetcode_guard/src/format.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
@@ -18,6 +19,7 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.text(asOf(kGeneratedAt)), findsOneWidget);
     expect(find.byKey(const Key('stale-banner')), findsNothing);
+    expect(find.byType(KuhyCredit), findsOneWidget);
     // One chip per Status section, the first one selected.
     expect(find.byType(ChoiceChip), findsNWidgets(9));
     expect(

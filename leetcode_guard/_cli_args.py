@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import argparse
 
+from kuhy_credit import credit_line
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Define the command line."""
     parser = argparse.ArgumentParser(
         prog="leetcode-guard",
         description="Lock the PC until a LeetCode problem is solved.",
+        epilog=credit_line(),
     )
     parser.add_argument(
         "--production",

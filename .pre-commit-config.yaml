@@ -138,9 +138,10 @@ repos:
           - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.16.0#subdirectory=gatelock
           - earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.22.0#subdirectory=earned_time
           - crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync
-          - leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.4#subdirectory=leetcode_coach
+          - leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.5#subdirectory=leetcode_coach
           - freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.3#subdirectory=freedays
-          - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.5#subdirectory=sickdays
+          - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.6#subdirectory=sickdays
+          - kuhy-credit @ git+https://github.com/kuhyx/utils@kuhy-credit-v0.3.0#subdirectory=kuhy_credit
           - mcp>=2,<3
           - pydantic
           - genanki==0.13.1

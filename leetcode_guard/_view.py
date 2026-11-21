@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import breakglass_lines
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
+from leetcode_guard._view_credit import place_credit
 from leetcode_guard._view_icons import Padlock
 from leetcode_guard._view_problems import build_problem_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
@@ -217,6 +218,7 @@ def build_guard_view(
     if hooks.on_escape is not None:
         _add_escape_button(view, inner, config, model)
 
+    place_credit(container, config)
     return view
 
 
