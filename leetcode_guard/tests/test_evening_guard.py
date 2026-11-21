@@ -184,11 +184,11 @@ def test_evening_has_no_carrot_watch_and_no_escape_hatch(
     assert guard.should_offer_escape() is False
 
 
-def test_the_evening_lock_ranks_150(tmp_path: Path, hmac_key: Path) -> None:
+def test_the_evening_lock_ranks_125(tmp_path: Path, hmac_key: Path) -> None:
     """Below screen-locker (200), per the contract."""
     guard = _guard(tmp_path, hmac_key)
 
-    assert guard.run_state.config.rank == RANK_LEETCODE_GUARD == 150
+    assert guard.run_state.config.rank == RANK_LEETCODE_GUARD == 125
 
 
 def test_the_break_glass_line_stops_the_unit_that_owns_the_process(

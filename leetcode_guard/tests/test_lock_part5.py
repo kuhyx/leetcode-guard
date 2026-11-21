@@ -103,7 +103,7 @@ def test_the_queue_wait_can_be_skipped(tmp_path: Path):
     lockers rather than drawing over them."""
     guard, _ = create_guard(tmp_path, wait_turn=False)
 
-    assert guard.run_state.config.rank == 150
+    assert guard.run_state.config.rank == 125
 
 
 def test_an_outage_unlock_stops_the_poll_handler_early(tmp_path: Path, hmac_key: Path):

@@ -131,8 +131,9 @@ outstanding.
 
 ## Layered with the other lockers
 
-Ranks: `wake_alarm` (300) → `screen_locker` (200) → **`leetcode_guard` (150)** →
-`diet_guard` (100).
+Ranks (`DOCS-lock-order.md`): `wake_alarm` (300) → `screen_locker` (200) →
+`book_guard` (175) → `tutor_gate` (150) → `diet_guard` (130) → `focus_guard`
+(128) → **`leetcode_guard` (125)**, last of all.
 
 If the workout lock is up, this one **waits with no window at all** and arms
 when that one finishes. It never exits because another lock is running —

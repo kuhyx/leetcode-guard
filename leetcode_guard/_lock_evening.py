@@ -15,8 +15,8 @@ morning gate's code path is untouched. Three differences:
   settles with exactly such a charge -- is not offered.
 
 No morning-session carrot poll either: the contract ignores it. The rank stays
-:data:`~leetcode_guard._constants.RANK_LEETCODE_GUARD` (150, below
-screen-locker's 200), which is what the contract asks of evening gates.
+:data:`~leetcode_guard._constants.RANK_LEETCODE_GUARD` (125, the lowest
+lock, ``DOCS-lock-order.md``); the chain runs its rungs one at a time anyway.
 """
 
 from __future__ import annotations

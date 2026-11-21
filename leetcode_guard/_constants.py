@@ -22,12 +22,12 @@ DEVICE_ID: Final = "pc"
 trusted when HMAC verification is unavailable -- see the integrity table in
 :mod:`leetcode_guard._balance`."""
 
-RANK_LEETCODE_GUARD: Final = 150
-"""Arbiter priority: below screen_locker (200), above diet_guard (100).
+RANK_LEETCODE_GUARD: Final = 125
+"""Arbiter priority: the lowest lock, so LeetCode shows last (``DOCS-lock-order.md``).
 
 A literal on purpose: a ``gatelock.RANK_*`` constant would bump gatelock and force
 a re-pin across three live consumers for a number only this repo uses.
-The ladder is gatelock's own: wake up, work out, grind, eat."""
+The ladder: wake up, work out, read, tutor, eat, focus, grind."""
 
 GATE_START_DATE: Final = date(2026, 8, 4)
 """The first day the gate is allowed to lock. Before this it exits instantly.

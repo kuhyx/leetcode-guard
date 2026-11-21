@@ -45,7 +45,7 @@ def test_the_arbiter_rank_sits_between_diet_guard_and_screen_locker(tmp_path: Pa
     and force a re-pin across three live consumers."""
     guard, _ = create_guard(tmp_path)
 
-    assert guard.run_state.config.rank == 150
+    assert guard.run_state.config.rank == 125
 
 
 def test_overrideredirect_stays_on_even_in_demo(tmp_path: Path):
