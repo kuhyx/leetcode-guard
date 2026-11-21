@@ -18,7 +18,9 @@
 #   render     the real-Tk renders under Xvfb (mirrors the real-tk-render job).
 #              The suite mocks tkinter away, so without this a widget
 #              regression is green locally and red in CI;
-#   all        every stage above, in that order (the default).
+#   flutter-test I/N  shard I of N of app/test (scripts/flutter_test_shard.sh;
+#              one ci-mirror-flutter-test-N hook each, not part of `all`);
+#   all        every stage above but flutter-test, in that order (the default).
 #
 # Each stage is its own manual-stage pre-commit hook (ci-venv, ci-precommit,
 # ci-pytest, ci-render) so no single call outlives the 60 s action cap;
@@ -155,6 +157,7 @@ main() {
         precommit) run_precommit_all_files ;;
         pytest) run_pytest_clean_venv "$@" ;;
         render) run_real_tk_render ;;
+        flutter-test) bash "$ROOT/scripts/flutter_test_shard.sh" "$@" ;;
         all)
             ensure_venv
             run_precommit_all_files
@@ -162,7 +165,7 @@ main() {
             run_real_tk_render
             log "all CI gates passed locally — safe to push"
             ;;
-        *) fail "unknown stage '$stage' (venv|precommit|pytest|render|all)" ;;
+        *) fail "unknown stage '$stage' (venv|precommit|pytest|render|flutter-test|all)" ;;
     esac
 }
 

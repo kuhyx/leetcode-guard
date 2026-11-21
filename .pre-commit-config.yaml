@@ -198,6 +198,38 @@ repos:
         always_run: true
         require_serial: true
         stages: [manual]
+      - id: ci-mirror-flutter-test-1
+        name: CI mirror - flutter test 1/4 (private TMPDIR, cached green)
+        entry: bash scripts/ci_mirror.sh flutter-test 0/4
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-mirror-flutter-test-2
+        name: CI mirror - flutter test 2/4 (private TMPDIR, cached green)
+        entry: bash scripts/ci_mirror.sh flutter-test 1/4
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-mirror-flutter-test-3
+        name: CI mirror - flutter test 3/4 (private TMPDIR, cached green)
+        entry: bash scripts/ci_mirror.sh flutter-test 2/4
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
+      - id: ci-mirror-flutter-test-4
+        name: CI mirror - flutter test 4/4 (private TMPDIR, cached green)
+        entry: bash scripts/ci_mirror.sh flutter-test 3/4
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
       # Pre-push rather than pre-commit: it needs a real X server and a few
       # seconds. No unit test can replace it -- over a mocked root a released
       # grab and a held one look identical, which is the exact state the
