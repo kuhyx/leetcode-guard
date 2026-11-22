@@ -9,22 +9,17 @@ X server knows whether a grab is held.
 
 So this asks gatelock's own question, ``RecoveryLoop.holds_grab()`` -- public
 and documented for exactly this use -- around a real suspend/resume cycle on a
-throwaway display::
+throwaway display, as a *module* so ``leetcode_guard`` resolves from the
+checkout (``verify_screen_fits`` says why)::
 
-    Xvfb :81 -screen 0 1600x1200x24 &
-    echo $! > /tmp/lg-xvfb.pid
-    DISPLAY=:81 python3 -m scripts.verify_study_grab
+    xvfb-run -a -s "-screen 0 1600x1200x24" python3 -m scripts.verify_study_grab
 
-Run as a *module*, for the same reason ``verify_screen_fits`` does: ``-m`` puts
-the repo root on ``sys.path``, so ``leetcode_guard`` resolves from the checkout
-rather than from wherever it happens to be installed.
-
-Never ``pkill -f leetcode_guard`` afterwards (it matches the shell running
-it); kill by the recorded PID.
-
-The check that matters most is step 4. A grab that comes *back* a second after
-being released is the original bug wearing the fix as a disguise, and it is the
-single most likely thing to regress when gatelock is bumped.
+Both ways into study mode are driven: Open, then the THEORY card's learn
+button, pressed for real, with a fake ``tutor`` first on ``PATH`` and a scratch
+``HOME`` so the real tutor never starts. The check that matters most is "STAYS
+released": a grab that comes *back* a second after being released is the
+original bug wearing the fix as a disguise, the likeliest regression when
+gatelock is bumped.
 """
 
 from __future__ import annotations
@@ -32,9 +27,11 @@ from __future__ import annotations
 from concurrent.futures import Future
 from datetime import UTC, date, datetime
 import logging
+import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 from typing import TYPE_CHECKING, Final
 
 import freedays
@@ -49,6 +46,7 @@ from leetcode_guard._gatelock_internals import surface_map
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._lock_deps import GuardDeps, GuardSeams
+from leetcode_guard._phase_view import PhaseView
 from leetcode_guard._pool_cache import read_cache
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._problem import rank_pool
@@ -57,13 +55,25 @@ from leetcode_guard._submissions import ProbeStatus, SolveProbe
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-_logger: Final = logging.getLogger(__name__)
-
 NOW: Final = datetime.now(tz=UTC).astimezone()
 PROBLEM_URL: Final = "https://example.invalid/problems/two-sum/"
-SETTLE_TICKS: Final = 20
-"""``update()`` pumps between assertions: twenty at ~100ms each outlast
-``recovery_tick_ms`` (1s), so a stopped recovery loop must stay stopped."""
+SUBJECT: Final = "leetcode-easy-algorithms-in-typescript"
+ROUTE: Final = f"/learn/{SUBJECT}/prefix-sums"
+THEORY: Final = PhaseView(  # so the learn button is on the surface to press
+    unit="prefix-sums",
+    phase="theory",
+    cards_taught=0,
+    cards_total=1,
+    lessons_ready=True,
+    minutes_per_credit=12,
+    theory_minutes_today=1,
+    solved=0,
+    total=2,
+    learn_target=(SUBJECT, "prefix-sums"),
+)
+SETTLE_SECONDS: Final = 2.5
+"""Real time pumped before "STAYS released": 2.5 ``recovery_tick_ms`` (1 s).
+Counting ``update()`` calls measured nothing; twenty return in milliseconds."""
 
 
 class _Inline:
@@ -117,6 +127,7 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
                 wait_turn=False,
                 executor=_Inline(),
                 now=lambda: NOW,
+                phase=lambda: THEORY,
             ),
         ),
     )
@@ -127,19 +138,20 @@ class _Recorder:
 
     def __init__(self) -> None:
         self.urls: list[str] = []
-        self.detached = False
 
-    def __call__(self, args: Sequence[str], *, start_new_session: bool) -> object:
-        # Recorded: detaching is what keeps a browser alive past a unit stop.
-        self.detached = start_new_session
+    def __call__(self, args: Sequence[str], **_kwargs: object) -> object:
         self.urls.append(args[-1])
         return object()
 
 
-def _pump(guard: LeetcodeGuard, ticks: int = 2) -> None:
-    """Let Tk process what it has been asked to do."""
+def _pump(guard: LeetcodeGuard, ticks: int = 2, seconds: float = 0.0) -> None:
+    """Let Tk process what it was asked to, ``ticks`` times and for ``seconds``."""
+    deadline = time.monotonic() + seconds
     for _ in range(ticks):
         guard.root.update()
+    while time.monotonic() < deadline:
+        guard.root.update()
+        time.sleep(0.05)
 
 
 def _holds_grab(guard: LeetcodeGuard) -> bool:
@@ -147,20 +159,44 @@ def _holds_grab(guard: LeetcodeGuard) -> bool:
     return bool(guard.lock.recovery.holds_grab())
 
 
-def _check(results: list[bool], label: str, *, actual: bool, expected: bool) -> None:
+def _check(results: list[bool], label: str, *, ok: bool) -> None:
     """Record one assertion and print it either way."""
-    ok = actual is expected
     results.append(ok)
-    verdict = "PASS" if ok else "FAIL"
-    print(f"  [{verdict}] {label} (expected {expected}, got {actual})")
+    print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
+
+
+def _fake_tutor(workdir: Path) -> Path:
+    """A ``tutor`` first on PATH and a scratch HOME: the real one never runs."""
+    bin_dir = workdir / "bin"
+    bin_dir.mkdir()
+    args = workdir / "tutor-args"
+    (bin_dir / "tutor").write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > "{args}"\n')
+    (bin_dir / "tutor").chmod(0o700)
+    os.environ["HOME"] = str(workdir)
+    os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
+    return args
+
+
+def _cycle(guard: LeetcodeGuard, results: list[bool], what: str) -> None:
+    """After a press: grab down, STILL down past a recovery tick, then back."""
+    _pump(guard)
+    # The feature rests on this: while held, the window gets no keystrokes.
+    _check(results, f"{what}: study mode released the grab", ok=not _holds_grab(guard))
+    _pump(guard, seconds=SETTLE_SECONDS)
+    _check(results, f"{what}: the grab STAYS released", ok=not _holds_grab(guard))
+    guard.back_to_lock()
+    _pump(guard)
+    _check(results, f"{what}: the lock took the grab back", ok=_holds_grab(guard))
+    _check(results, f"{what}: every surface is mapped", ok=_surfaces_mapped(guard))
 
 
 def main() -> int:
-    """Drive one suspend/resume cycle under production config."""
+    """Drive a suspend/resume cycle per entry (Open, learn) under production."""
     logging.basicConfig(level=logging.WARNING, format="%(message)s", stream=sys.stdout)
     print("Verifying the study-mode grab handover under PRODUCTION config:")
 
     workdir = Path(tempfile.mkdtemp(prefix="lg-grab-check-"))
+    tutor_args = _fake_tutor(workdir)
     guard = _build_production_guard(workdir)
     # "Launch" without starting anything real: this harness is about the grab.
     spawn = _Recorder()
@@ -173,50 +209,17 @@ def main() -> int:
         if guard.run_state.config.resolved_grab() != "global":
             print("  [FAIL] this is not a production lock; nothing to prove")
             return 1
-
-        _check(
-            results, "the lock holds the grab", actual=_holds_grab(guard), expected=True
-        )
+        _check(results, "the lock holds the grab", ok=_holds_grab(guard))
 
         guard.open_problem(PROBLEM_URL)
-        _pump(guard)
-        # The feature rests on this: while held, the browser gets no keystrokes.
-        _check(
-            results,
-            "study mode released the grab",
-            actual=_holds_grab(guard),
-            expected=False,
-        )
+        _cycle(guard, results, "Open")
+        _check(results, "the browser got the problem", ok=spawn.urls == [PROBLEM_URL])
 
-        _pump(guard, SETTLE_TICKS)
-        _check(
-            results,
-            "the grab STAYS released past a recovery tick",
-            actual=_holds_grab(guard),
-            expected=False,
-        )
-
-        _check(
-            results,
-            "the browser was asked to open the problem",
-            actual=spawn.urls == [PROBLEM_URL],
-            expected=True,
-        )
-
-        guard.back_to_lock()
-        _pump(guard)
-        _check(
-            results,
-            "the lock took the grab back",
-            actual=_holds_grab(guard),
-            expected=True,
-        )
-        _check(
-            results,
-            "every surface is mapped again",
-            actual=_surfaces_mapped(guard),
-            expected=True,
-        )
+        views = guard.frames.views.values()  # press the real learn button
+        next(v.phase.learn for v in views if v.phase is not None).invoke()
+        _cycle(guard, results, "learn")
+        asked = tutor_args.read_text().split() if tutor_args.exists() else []
+        _check(results, "the tutor got the route", ok=asked == ["--route", ROUTE])
     finally:
         guard.close()
 

@@ -22,6 +22,7 @@ why it passed locally and died in CI.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 import os
 from pathlib import Path
@@ -35,12 +36,15 @@ from gatelock import LockConfig, measure_fit, report_fit
 from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
+from leetcode_guard._phase_view import PhaseView
 from leetcode_guard._view import build_guard_view
 from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._viewmodel import ViewModel
 from leetcode_guard._viewmodel_lines import ProblemLine
+from leetcode_guard._viewmodel_phase import build_phase_screen
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     import tkinter as tk
 
     from gatelock import FitResult, ScrollableSurface
@@ -95,6 +99,24 @@ _MODEL = ViewModel(
     show_escape=True,
 )
 
+# The two unit screens lead with more than the list: THEORY's card (title,
+# taught bar, rate, the display-font learn button) and SOLVE's unit bar. Both
+# list five rows and scroll the rest, so they are measured on the same model.
+_UNIT = PhaseView(
+    unit="sorting-greedy",
+    phase="theory",
+    cards_taught=None,
+    cards_total=None,
+    lessons_ready=False,
+    minutes_per_credit=12,
+    theory_minutes_today=240,
+    solved=120,
+    total=130,
+    learn_target=("leetcode-easy-algorithms-in-typescript", "sorting-greedy"),
+)
+_THEORY = replace(_MODEL, screen=build_phase_screen(_UNIT))
+_SOLVE = replace(_MODEL, screen=build_phase_screen(replace(_UNIT, phase="solve")))
+
 
 def reexec_under_xvfb() -> int:
     """Re-run this script on a throwaway X display, returning its exit code."""
@@ -140,7 +162,12 @@ def _placed_child(parent: tk.Misc) -> tk.Misc:
     return parent
 
 
-def _build_lock(surface: ScrollableSurface) -> tk.Misc:
+def _lock_of(model: ViewModel) -> Callable[[ScrollableSurface], tk.Misc]:
+    """A builder for :func:`_build_lock` on ``model``."""
+    return lambda surface: _build_lock(surface, model)
+
+
+def _build_lock(surface: ScrollableSurface, model: ViewModel = _MODEL) -> tk.Misc:
     """Paint the main lock screen and return the frame to measure.
 
     Both callbacks are passed because both add height that the user sees: without
@@ -151,9 +178,13 @@ def _build_lock(surface: ScrollableSurface) -> tk.Misc:
     build_guard_view(
         surface.content,
         LockConfig(),
-        _MODEL,
+        model,
         output_name="fit-check",
-        hooks=ViewHooks(on_escape=lambda: None, on_open=lambda _url: None),
+        hooks=ViewHooks(
+            on_escape=lambda: None,
+            on_open=lambda _url: None,
+            on_learn=lambda _route: None,
+        ),
     )
     return _placed_child(surface.content)
 
@@ -171,6 +202,8 @@ def measure_all() -> list[FitResult]:
     """Measure every lock screen at the supported size."""
     return [
         measure_fit("lock-surface", _build_lock, width=WIDTH, height=HEIGHT),
+        measure_fit("theory", _lock_of(_THEORY), width=WIDTH, height=HEIGHT),
+        measure_fit("solve", _lock_of(_SOLVE), width=WIDTH, height=HEIGHT),
         measure_fit("escape-hatch", _build_escape, width=WIDTH, height=HEIGHT),
     ]
 
