@@ -91,6 +91,7 @@ def test_the_lock_is_wired_to_the_right_paths_for_its_mode(
         pool_result([problem_row("still-open")], total=1),
     )
     patch_cli(monkeypatch, "LeetcodeGuard", FakeGuard)
+    patch_cli(monkeypatch, "unit_view", lambda path: ("unit view of", path))
     if production:
         # The run that creates a ledger defers before building a guard at all.
         _seeded_ledger(data_dir)
@@ -109,6 +110,8 @@ def test_the_lock_is_wired_to_the_right_paths_for_its_mode(
     assert deps.ledger_path != deps.escape_path
     # A demo must never push to the shared sync repo.
     assert deps.seams.sync_on_close is production
+    # The unit screen reads the ledger this run decides on (SPEC C5).
+    assert deps.seams.phase == ("unit view of", deps.ledger_path)
     # And the live data the surface renders from reaches it intact.
     assert deps.username == "kuchy"
     assert deps.probe.submissions[0].title_slug == "solved-already"

@@ -1,4 +1,4 @@
-"""The argument parser, on its own so ``_cli.py`` stays under the line cap.
+"""The argument parser and the one-shot dispatch, apart for ``_cli.py``'s line cap.
 
 Subcommand-free by design, matching the sibling lockers: every flag is a
 boolean except ``--by``, which qualifies ``--status``.
@@ -7,8 +7,24 @@ boolean except ``--by``, which qualifies ``--status``.
 from __future__ import annotations
 
 import argparse
+from typing import TYPE_CHECKING
 
 from kuhy_credit import credit_line
+
+from leetcode_guard._cli_commands import (
+    cmd_cache_statements,
+    cmd_check,
+    cmd_login,
+    cmd_probe,
+    cmd_status,
+    cmd_sync,
+)
+from leetcode_guard._cli_difficulty import cmd_backfill_difficulty
+from leetcode_guard._flagged_cli import cmd_flagged
+from leetcode_guard._snapshot_push import cmd_push_snapshot
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -142,3 +158,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Log at DEBUG.",
     )
     return parser
+
+
+def chosen_command(args: argparse.Namespace) -> Callable[[], int] | None:
+    """The first one-shot command the flags ask for, or ``None`` to lock.
+
+    First match wins, in this order. Built per call, so the commands are looked
+    up when ``main`` runs rather than frozen at import.
+    """
+    commands: tuple[tuple[bool, Callable[[], int]], ...] = (
+        (args.probe, cmd_probe),
+        (
+            args.status,
+            lambda: cmd_status(by=args.by, price=args.price, goals=args.goal),
+        ),
+        (args.check, cmd_check),
+        (args.login, cmd_login),
+        (args.sync, cmd_sync),
+        (args.cache_statements, cmd_cache_statements),
+        (
+            args.backfill_difficulty,
+            lambda: cmd_backfill_difficulty(max_fetch=args.max_fetch),
+        ),
+        (args.push_snapshot, cmd_push_snapshot),
+        (args.flagged, lambda: cmd_flagged(as_json=args.json)),
+    )
+    return next((run for chosen, run in commands if chosen), None)

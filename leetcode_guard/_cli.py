@@ -16,21 +16,11 @@ from __future__ import annotations
 
 from datetime import datetime
 import sys
-from typing import TYPE_CHECKING
 
 from gatelock import wait_for_x_server
 
 from leetcode_guard import _errors
-from leetcode_guard._cli_args import build_parser
-from leetcode_guard._cli_commands import (
-    cmd_cache_statements,
-    cmd_check,
-    cmd_login,
-    cmd_probe,
-    cmd_status,
-    cmd_sync,
-)
-from leetcode_guard._cli_difficulty import cmd_backfill_difficulty
+from leetcode_guard._cli_args import build_parser, chosen_command
 from leetcode_guard._constants import (
     DEMO_ESCAPE_HISTORY_FILE,
     DEMO_LEDGER_FILE,
@@ -44,7 +34,6 @@ from leetcode_guard._constants import (
 )
 from leetcode_guard._daycost import local_today
 from leetcode_guard._evening import busy_exit, evening_paid, evening_preflight
-from leetcode_guard._flagged_cli import cmd_flagged
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import SeedStamp, needs_seeding, seed_ledger
@@ -60,12 +49,8 @@ from leetcode_guard._nudge_server import NUDGE_PORT
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
-from leetcode_guard._snapshot_push import cmd_push_snapshot
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
-
-if TYPE_CHECKING:
-    from argparse import Namespace
-    from collections.abc import Callable
+from leetcode_guard._unit_view import unit_view
 
 
 def cmd_lock(*, demo_mode: bool, evening: bool = False) -> int:
@@ -194,7 +179,12 @@ def _run_lock(*, demo_mode: bool, evening: bool) -> int:
             auth=client.auth,
             pool=pool,
             probe=probe,
-            seams=GuardSeams(sync_on_close=not demo_mode, nudge_port=NUDGE_PORT),
+            seams=GuardSeams(
+                sync_on_close=not demo_mode,
+                nudge_port=NUDGE_PORT,
+                # Read once per poll (``_lock_phase``), never on the paint path.
+                phase=unit_view(ledger_path),
+            ),
         ),
     )
     guard.run()
@@ -215,33 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--json needs --flagged")
     configure_logging(verbose=args.verbose)
     _errors.install()
-    command = _chosen_command(args)
+    command = chosen_command(args)
     if command is not None:
         return command()
     return cmd_lock(demo_mode=not args.production, evening=args.evening)
-
-
-def _chosen_command(args: Namespace) -> Callable[[], int] | None:
-    """The first one-shot command the flags ask for, or ``None`` to lock.
-
-    First match wins, in this order. Built per call, so the commands are looked
-    up when ``main`` runs rather than frozen at import.
-    """
-    commands: tuple[tuple[bool, Callable[[], int]], ...] = (
-        (args.probe, cmd_probe),
-        (
-            args.status,
-            lambda: cmd_status(by=args.by, price=args.price, goals=args.goal),
-        ),
-        (args.check, cmd_check),
-        (args.login, cmd_login),
-        (args.sync, cmd_sync),
-        (args.cache_statements, cmd_cache_statements),
-        (
-            args.backfill_difficulty,
-            lambda: cmd_backfill_difficulty(max_fetch=args.max_fetch),
-        ),
-        (args.push_snapshot, cmd_push_snapshot),
-        (args.flagged, lambda: cmd_flagged(as_json=args.json)),
-    )
-    return next((run for chosen, run in commands if chosen), None)

@@ -26,6 +26,7 @@ from leetcode_guard._harvest import (
 )
 from leetcode_guard._ledger_io import solved_slugs
 from leetcode_guard._lock_phase import unit_rows
+from leetcode_guard._lock_theory import mint_theory
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel
@@ -216,6 +217,7 @@ class PollMixin:
                 key_file=self.deps.key_file,
             )
             commit_harvest(self.ledger, result, self.deps.ledger_path)
+            mint_theory(self.ledger, self.deps, demo=self.run_state.demo)
             if result.gained:
                 self._end_burst()
 
