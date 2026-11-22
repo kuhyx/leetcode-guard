@@ -167,7 +167,7 @@ it live; never `MemoryLow`/mlock (no-ops), Open's browser gets its own scope. `v
 opens a real fullscreen window, or hangs holding a grab. The list runs both ways: a module that
 *stops* importing tkinter must come **out**, or patching an attribute it no longer has raises at
 fixture time and fails the entire suite at once. `_lock.py` left the list when its last widget call
-moved to `_view.install_demo_close_button`. Verify with `grep -l '^import tkinter as tk'
+moved to `_view_evening.install_demo_close_button`. Verify with `grep -l '^import tkinter as tk'
 leetcode_guard/*.py`.
 
 **Shipped code reaches gatelock's privates from exactly one file.** `_recovery`, `_detector`,
