@@ -283,6 +283,20 @@ repos:
         always_run: true
         require_serial: true
         stages: [manual]
+      # The review-first row, end to end: the real lock per scenario, each on
+      # its own Xvfb (row shown, swap on the tutor's rename, planted file,
+      # failed spawn, working launcher, demo). The id is snake_case on purpose:
+      # it is the module name, and the todo done_check greps for it.
+      - id: verify_review_first
+        name: Review-first row on a real lock (Xvfb)
+        entry: >-
+          xvfb-run -a -s "-screen 0 1600x1200x24"
+          python3 -m scripts.verify_review_first
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
       # Same reason, for stacking: over a mocked root a tooltip buried under a
       # surface gatelock keeps raising looks shown (live demo, 2026-11-22).
       - id: tooltip-stack

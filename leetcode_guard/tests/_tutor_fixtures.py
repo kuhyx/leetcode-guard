@@ -120,3 +120,33 @@ def write_tutor(name: str, rows: list[object]) -> Path:
         document = {"version": 1, **document}
     path.write_text(json.dumps(document), encoding="utf-8")
     return path
+
+
+def due_row(
+    module: str,
+    due_ms: list[int],
+    *,
+    at: float,
+    key_file: Path,
+    where: str = ALGO,
+) -> dict[str, object]:
+    """A signed C4 ``review_due`` row (``DOCS-contract-review-due.md``).
+
+    ``due`` is Unix milliseconds, ``at`` Unix seconds, both as the tutor
+    writes them; the row is signed with the tutor's library like the others.
+    """
+    row = {
+        "kind": "review_due",
+        "entry_id": f"due:{where}:{module}:1",
+        "day": datetime.fromtimestamp(at, tz=UTC).astimezone().date().isoformat(),
+        "detail": {"subject": where, "module": module, "due_ms": due_ms, "at": at},
+    }
+    return signed(row, key_file)
+
+
+def write_due(rows: list[object]) -> Path:
+    """Write ``review_due.json`` (``version`` 1) to the scratch tutor dir."""
+    path = _tutor_signed.TUTOR_DIR / "review_due.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"version": 1, "entries": rows}), encoding="utf-8")
+    return path

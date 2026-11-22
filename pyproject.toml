@@ -125,6 +125,12 @@ unfixable = []
 "scripts/e2e_theory.py" = ["T201"]
 "scripts/e2e_theory_roles.py" = ["T201"]
 "leetcode_guard/tests/_e2e_world.py" = ["S607"]
+# The review-first e2e: its PASS/FAIL lines ARE its output (T201). Its world
+# starts Xvfb and xdotool by name (S607). A raise in one scenario or in the
+# child's observer is logged and turns into a FAIL line, never a crash (BLE001).
+"scripts/verify_review_first.py" = ["BLE001", "T201"]
+"scripts/verify_review_first_child.py" = ["BLE001"]
+"leetcode_guard/tests/_review_e2e.py" = ["S607"]
 # The solved-semantics harness. Same reasoning as the grab check: its printed
 # PASS/FAIL lines and its SKIP instructions ARE its output, so T201 is wrong
 # here. The fixer proved the point by deleting all thirteen prints on the first

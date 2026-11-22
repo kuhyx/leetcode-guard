@@ -125,6 +125,12 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
         self._started: float = 0.0
         self._withdrawn: list[Withdrawn] = []
         self._vt_restored = False
+        self._generation = 0
+
+    @property
+    def generation(self) -> int:
+        """Counts entries into study mode: tells one session from the next."""
+        return self._generation
 
     @property
     def active(self) -> bool:
@@ -186,6 +192,7 @@ class StudySession(ResumeMixin, SuspendStepsMixin):
         self._withdraw_surfaces(steps)
 
         self._state = StudyState.STUDYING
+        self._generation += 1
         self._started = self._now()
         _logger.warning(
             "study mode ON: the global grab is released and this machine is "

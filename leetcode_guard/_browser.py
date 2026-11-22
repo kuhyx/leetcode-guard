@@ -77,6 +77,9 @@ class LaunchResult:
     ok: bool
     reason: str
     command: tuple[str, ...] = ()
+    process: object = None
+    """What the spawn returned (a ``Popen``), so a caller can watch the exit
+    (``_launch_watch``); ``None`` when nothing was spawned."""
 
 
 def _scope_prefix() -> tuple[str, ...]:
@@ -153,7 +156,7 @@ def _run_detached(
     """Spawn ``command`` in a new session; a failure is a result, not a raise."""
     launcher = spawn if spawn is not None else subprocess.Popen
     try:
-        launcher(command, start_new_session=True)
+        process = launcher(command, start_new_session=True)
     except (OSError, ValueError) as exc:
         # OSError: the opener was unlinked between `which` and here, or the
         # process table is full. ValueError: the URL carries an embedded NUL,
@@ -167,4 +170,6 @@ def _run_detached(
         return LaunchResult(ok=False, reason=reason, command=command)
 
     _logger.info("opened %s with %s", what, opener)
-    return LaunchResult(ok=True, reason=f"opened with {opener}", command=command)
+    return LaunchResult(
+        ok=True, reason=f"opened with {opener}", command=command, process=process
+    )

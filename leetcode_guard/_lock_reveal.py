@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard._constants import POLL_DRAIN_MS, SUGGESTION_COUNT
 from leetcode_guard._live_solved import LiveSolved, check_solved
+from leetcode_guard._lock_phase import unit_rows
 from leetcode_guard._view_problems import ROW_BATCH
 from leetcode_guard._view_update import apply_viewmodel
 
@@ -46,6 +47,8 @@ class RevealMixin:
     model: ViewModel
     run_state: RunState
     build_model: Callable[[SolveProbe], ViewModel]
+    refresh_strip: Callable[[], None]
+    _last_probe: SolveProbe
 
     def start_reveal(self) -> None:
         """Record what the pool resolution already verified."""
@@ -62,6 +65,22 @@ class RevealMixin:
             if self.deps.seams.executor is not None
             else ThreadPoolExecutor(max_workers=1)
         )
+
+    def repaint(self, probe: SolveProbe) -> None:
+        """Re-read the screen, rebuild the model from ``probe``, paint it.
+
+        The one repaint path: the poll's tail, and the review fall-open.
+        """
+        unit_changed = self.run_state.phases.refresh()
+        self.model = self.build_model(probe)
+        apply_viewmodel(self.frames.views.values(), self.model)
+        self.on_reveal(unit_rows(self.model, changed=unit_changed))
+        self.refresh_strip()
+
+    def fall_open_review(self) -> None:
+        """The review Open failed to launch: SOLVE rows now, for the whole run."""
+        self.run_state.phases.fall_open()
+        self.repaint(self._last_probe)
 
     def stop_reveal(self) -> None:
         """Release the executor if it is ours."""

@@ -7,7 +7,9 @@ from unittest.mock import MagicMock
 
 from gatelock import LockConfig
 
+from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._view import GuardView
+from leetcode_guard._view_types import ProblemList, ViewHooks
 from leetcode_guard._viewmodel import ViewModel
 from leetcode_guard._viewmodel_lines import ProblemLine
 
@@ -39,4 +41,22 @@ def mock_view(**extra: Any) -> GuardView:
         status_line=MagicMock(),
         notes_label=MagicMock(),
         **extra,
+    )
+
+
+def rows_view(count: int, *, rows: int = PROBLEM_DISPLAY_LIMIT):
+    """A surface with ``count`` built rows, each row frame its own mock."""
+    labels = [MagicMock(name=f"label{i}") for i in range(count)]
+    for label in labels:
+        label.master = MagicMock(name="row")
+    return mock_view(
+        problems=ProblemList(
+            labels=labels,
+            buttons=[MagicMock(name=f"open{i}") for i in range(count)],
+            marks=[MagicMock(name=f"mark{i}") for i in range(count)],
+            scroll=MagicMock(),
+            shown=count,
+            fitted=(rows, min(count, rows)),
+        ),
+        hooks=ViewHooks(on_open=lambda _u: None),
     )

@@ -13,7 +13,7 @@ The parent ends the process with SIGTERM.
 from __future__ import annotations
 
 from contextlib import ExitStack
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 import json
 import logging
 from pathlib import Path
@@ -22,11 +22,7 @@ from types import SimpleNamespace
 from typing import Any, Final
 from unittest.mock import patch
 
-import freedays
-import sickdays
-
-from leetcode_guard import _cli, _focus, _lock_study
-from leetcode_guard import _lock as lock_module
+from leetcode_guard import _cli, _lock_study
 from leetcode_guard._auth import AuthState
 from leetcode_guard._daycost import local_today
 from leetcode_guard._ledger_entries import bootstrap_entry
@@ -35,34 +31,13 @@ from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._lock import LeetcodeGuard
 from leetcode_guard._pool_resolve import PoolResolution
 from leetcode_guard._settings import Client
+from leetcode_guard.tests._e2e_fakes import ordinary_day, quiet_cli
 
 SETTLE_MS: Final = 2500
 """Real time before "STAYS": 2.5 ``recovery_tick_ms`` (1 s) ticks."""
 START_PROBE_MS: Final = 700
 URL: Final = "https://example.invalid/problems/two-sum/"
 ARGC: Final = 3  # module, role, status file
-
-
-def _no(*_args: object, **_kwargs: object) -> bool:
-    """Stands in for every "is today special?" probe."""
-    return False
-
-
-def _pinned_day() -> list[tuple[object, str, object]]:
-    """Today is an ordinary gating day (a free or sick day would unlock)."""
-    patches: list[tuple[object, str, object]] = [
-        (freedays, "is_free_day", _no),
-        (_focus, "stands_down", _no),
-        (sickdays, "is_sick_day", _no),
-        (sickdays, "stands_down", _no),
-        (sickdays, "kept_lockers", lambda *_a, **_k: frozenset()),
-    ]
-    patches.extend(
-        (module, "GATE_START_DATE", date(2000, 1, 1))
-        for name, module in list(sys.modules.items())
-        if name.startswith("leetcode_guard.") and hasattr(module, "GATE_START_DATE")
-    )
-    return patches
 
 
 def _stubs() -> list[tuple[object, str, object]]:
@@ -74,14 +49,9 @@ def _stubs() -> list[tuple[object, str, object]]:
     )
     empty_pool = PoolResolution(problems=(), source="cache", notes=())
     return [
+        *quiet_cli(client),
         (_cli, "wait_for_x_server", lambda **_k: None),
-        (_cli, "defer_for_morning_session", lambda *_a, **_k: None),
-        (_cli, "defer_for_evening_lockdown", lambda _now: None),
-        (_cli, "refresh_progress", lambda *_a, **_k: None),
-        (_cli, "build_client", lambda: client),
         (_cli, "resolve_pool", lambda *_a, **_k: empty_pool),
-        (_cli, "NUDGE_PORT", None),
-        (lock_module, "sync_quietly", lambda *_a, **_k: None),
         (_lock_study, "find_opener", lambda: "/bin/true"),
         (
             _lock_study,
@@ -142,7 +112,7 @@ def main(role: str, status: Path) -> int:
         append(ledger, [bootstrap_entry(day=local_today(), now=now, seeded=0)])
         save_ledger(_cli.LEDGER_FILE, ledger)
     patches = [
-        *_pinned_day(),
+        *ordinary_day(),
         *_stubs(),
         (_cli, "LeetcodeGuard", _probed(role, status)),
     ]

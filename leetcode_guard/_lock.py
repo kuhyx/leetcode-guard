@@ -152,9 +152,8 @@ class LeetcodeGuard(
         )
         arbiter.publish()
         if deps.seams.wait_turn:
-            # Published first so anything lower-ranked queues behind us in
-            # turn, then wait with nothing on screen. Never exits here: a
-            # higher-ranked locker means "later", never "skip".
+            # Published first so lower-ranked lockers queue behind us, then wait
+            # with nothing on screen. Never exits: higher rank is "later", not "skip".
             wait_for_turn(arbiter)
         arbiter.acquire_holder()
 
@@ -170,6 +169,7 @@ class LeetcodeGuard(
                 work=self.check,
                 on_result=self.on_poll_result,
                 executor=deps.seams.executor,
+                on_watch=self.run_state.phases.file_watch,
             ),
         )
         self.poller.start()

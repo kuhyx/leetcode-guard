@@ -50,14 +50,8 @@ from leetcode_guard._problem import parse_problem
 from leetcode_guard._settings import Client
 from leetcode_guard._snapshot_push import PushResult
 from leetcode_guard.tests._e2e_c3 import began
-from leetcode_guard.tests._net_fixtures import (
-    null_data_result,
-    pool_result,
-    problem_row,
-    recent_ac_result,
-    status_result,
-    submission_row,
-)
+from leetcode_guard.tests._e2e_fakes import fake_leetcode
+from leetcode_guard.tests._net_fixtures import problem_row, submission_row
 
 if TYPE_CHECKING:
     from leetcode_guard._submissions import SolveProbe
@@ -83,22 +77,15 @@ def _rows() -> list[dict[str, object]]:
     return [*rows, problem_row("ps-medium", difficulty="Medium", topics=["prefix-sum"])]
 
 
-def _post(query: str, variables: object) -> object:
-    """LeetCode, faked: the pool, ``$E2E_AC`` as accepted, never attempted."""
-    if "recentAcSubmissions" in query:
-        stamp = int(datetime.now(tz=UTC).timestamp()) - 60
-        ac = [s for s in os.environ.get("E2E_AC", "").split(",") if s]
-        return recent_ac_result(
-            [
-                submission_row(f"9{i}", slug, timestamp=stamp)
-                for i, slug in enumerate(ac)
-            ]
-        )
-    if "problemsetQuestionList" in query:
-        return pool_result(_rows(), total=len(_rows()))
-    if "questionStatus" in query and isinstance(variables, dict):
-        return status_result(str(variables.get("titleSlug")), None)
-    return null_data_result()
+def _accepted() -> list[dict[str, object]]:
+    """``$E2E_AC``'s slugs, as accepted a minute ago."""
+    stamp = int(datetime.now(tz=UTC).timestamp()) - 60
+    ac = [s for s in os.environ.get("E2E_AC", "").split(",") if s]
+    return [submission_row(f"9{i}", slug, timestamp=stamp) for i, slug in enumerate(ac)]
+
+
+_post = fake_leetcode(_rows, _accepted)
+"""LeetCode, faked: the pool, ``$E2E_AC`` as accepted, never attempted."""
 
 
 def _no_push(**_k: object) -> PushResult:

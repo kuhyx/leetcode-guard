@@ -24,9 +24,12 @@ from typing import TYPE_CHECKING, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
+from leetcode_guard._review_due import DueStatus
+from leetcode_guard._viewmodel_lines import ProblemLine
 
 if TYPE_CHECKING:
     from leetcode_guard._phase_view import Phase, PhaseView
+    from leetcode_guard._review_due import DueRead
 
 PHASE_ROWS: Final = 5
 """Rows visible on a unit screen; the rest are reached by scrolling."""
@@ -53,6 +56,16 @@ class TheoryCard:
 
 
 @dataclass(frozen=True)
+class ReviewRow:
+    """SOLVE with tutor cards due: the one row that replaces the SOLVE rows."""
+
+    route: str
+    """The tutor route Open launches (:func:`review_route`)."""
+    count: int
+    """How many cards of the module are due now."""
+
+
+@dataclass(frozen=True)
 class PhaseScreen:
     """Which screen the surface shows and what leads it."""
 
@@ -64,6 +77,8 @@ class PhaseScreen:
     """SOLVE only: the unit and ``solved / total``; the view adds the check."""
     rework: tuple[str, str] | None = None
     """SOLVE only: (subject, module) the rows' ``?`` sends the chat to."""
+    review: ReviewRow | None = None
+    """SOLVE only, cards due: the review row stands in for the SOLVE rows."""
 
     @property
     def unit_list(self) -> bool:
@@ -119,17 +134,50 @@ def _card(view: PhaseView) -> TheoryCard:
     )
 
 
-def build_phase_screen(view: PhaseView | None) -> PhaseScreen:
-    """The screen for ``view``; ``None`` (no phase known) is today's list."""
+def review_route(target: tuple[str, str]) -> str:
+    """The tutor route the review row opens: the module's due cards."""
+    subject, module = target
+    return f"/review/{subject}/{module}"
+
+
+def review_line(row: ReviewRow) -> ProblemLine:
+    """The one row for ``row``: the glyph and the count, Open on the route.
+
+    ``url`` carries the tutor route (``is_review_route``); no slug, so nothing
+    asks LeetCode about it and the rework ``?`` stays blank.
+    """
+    return ProblemLine(label=f"{g.REVIEW}  {row.count}", url=row.route)
+
+
+def is_review_route(url: str) -> bool:
+    """Whether an Open press is the review row's (a real problem URL is https)."""
+    return url.startswith("/review/")
+
+
+def build_phase_screen(
+    view: PhaseView | None, review: DueRead | None = None
+) -> PhaseScreen:
+    """The screen for ``view``; ``None`` (no phase known) is today's list.
+
+    ``review`` only matters on SOLVE, and only when it says cards are due:
+    "nothing due" and "cannot check" both leave the SOLVE rows.
+    """
     if view is None or view.phase == "none":
         return NONE_SCREEN
     if view.phase == "theory":
         return PhaseScreen(phase="theory", unit=view.unit, card=_card(view))
+    due = review is not None and review.status is DueStatus.DUE
+    row = (
+        ReviewRow(review_route(review.target), review.count)
+        if due and review.target is not None
+        else None
+    )
     return PhaseScreen(
         phase="solve",
         unit=view.unit,
         unit_bar=f"{view.unit}  {view.solved} / {view.total}",
-        rework=view.rework_target,
+        rework=None if row else view.rework_target,
+        review=row,
     )
 
 

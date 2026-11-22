@@ -20,12 +20,14 @@ class _Spawn:
     def __init__(self, *, fail: Exception | None = None) -> None:
         self.calls: list[tuple[tuple[str, ...], bool]] = []
         self.fail = fail
+        self.last: object = None
 
     def __call__(self, args, *, start_new_session):
         if self.fail is not None:
             raise self.fail
         self.calls.append((tuple(args), start_new_session))
-        return object()
+        self.last = object()
+        return self.last
 
 
 def _home(
@@ -82,6 +84,7 @@ def test_launch_without_systemd_run_runs_the_bare_command(monkeypatch, tmp_path:
     result = launch_tutor(ROUTE, spawn=spawn)
 
     assert result.ok
+    assert result.process is spawn.last  # the handle the lock watches the exit on
     assert spawn.calls == [(("/fake/bin/tutor", "--route", ROUTE), True)]
 
 

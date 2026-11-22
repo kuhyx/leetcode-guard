@@ -54,6 +54,10 @@ import `attempts.json` readers (`_attempt_*`, `_attempts`, `--flagged`, `get_fla
 `test_display_only_imports.py` bans it, transitively. `_attempt_line` is the only one `_harvest_run`
 imports; flags are derived at read time, only `theory_at_solve` is stored. `DOCS-attempts.md`.
 
+**Review first is a view rule, never a decision.** A due tutor card of the SOLVE unit shows one
+`↻ n` row in place of the SOLVE rows, from signed `review_due.json` (`DOCS-review-first.md`); cannot
+check shows the SOLVE rows. `decide`, charges, credits, harvester never import it (a test bans it).
+
 **Seeding is not optional.** Without it the first run harvests ~20 recent submissions as credits
 (three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by
 a solve that has not happened yet — the state that armed on 2026-08-05 — so the run that *creates*
@@ -73,9 +77,9 @@ break-glass command on the surface.
 browser gets keystrokes; no timeout, until a solve lands or "Back to lock" (`DOCS-incident-2026-08-05.md`).
 `verify_study_grab.py` proves the grab drops; a mock reports success either way. **A restart keeps study
 mode** (`_study_restart.py`): a marker under `$XDG_RUNTIME_DIR`, never ledger state, set on entry, cleared
-only by Back to lock or a landed solve (SIGTERM keeps it), read by `_cli._run_lock` after `decide_today` and
-every deferral; a valid marker arms grab-free, anything else means LOCKED. `verify_restart_study.py` proves
-it. No strip clock; its filled dots (`_earned_today.py`) are display-only.
+only by Back to lock, a landed solve or a tutor launcher that exits non-zero (`_launch_watch.py`; SIGTERM
+keeps it), read by `_cli._run_lock` after `decide_today` and every deferral; a valid marker arms grab-free,
+anything else means LOCKED. `verify_restart_study.py` proves it. No strip clock; its dots are display-only.
 
 **The suggestion list repaints live, and scrolls.** A solve mid-lock frees its slot and the next
 *pre-verified* candidate moves up; rows are reconfigured, never rebuilt, and Open buttons re-bound
@@ -131,21 +135,16 @@ capped at **20 rows** regardless of `limit` (verified against an account with th
 so it can never enumerate a full solved set; do not raise `RECENT_AC_LIMIT` to try — it feeds the
 harvest path, where every unseen submission id mints a credit.
 
-**The demo deletes its ledger every run**, so anything derived from ledger state is empty there.
-That put two already-solved problems back at the top of the demo surface after the filter was fixed
-everywhere else, and **only the screenshot caught it** — the unit tests all passed. Screenshot the
-demo after any change to the suggestion list.
+**The demo deletes its ledger every run**, so anything derived from ledger state is empty there;
+two solved problems sat on top of the demo surface and **only the screenshot caught it**.
+Screenshot the demo after any change to the suggestion list.
 
 **Ruff runs with `--unsafe-fixes` and `T201` is auto-fixable.** Without the per-file ignore, the
 fixer deleted every `print` in `cmd_probe` and replaced the loops with `pass`. It still exited 0.
 Assert on stdout, not on exit codes.
 
-**With `overrideredirect=True` the root is a backdrop behind the surfaces.** A widget placed on the
-root is invisible and unclickable. The demo close button goes on the surface. Only a screenshot
-caught this — screenshot the demo.
-
-**`EscapeTracker.validate` rejects a blank `onset`.** A form without that field
-can never be submitted; the hatch was clickable but always refused.
+**With `overrideredirect=True` the root is a backdrop behind the surfaces:** a widget on it is
+invisible. **`EscapeTracker.validate` rejects a blank `onset`**, so a form without it never submits.
 
 **A `from scripts.x import y` breaks mypy, and only in CI.** `scripts/` is not a package and must
 not become one, so importing one script from another makes mypy see that file under two module names
@@ -225,7 +224,7 @@ xvfb-run -a -s "-screen 0 1600x1200x24" python3 -m scripts.verify_study_grab
 
 It runs as a `pre-push` hook. The load-bearing assertion is that the grab is
 *still* released after a recovery tick: a grab that comes back a second later is
-the original bug wearing the fix as a disguise.
+the original bug wearing the fix as a disguise. Review first: `scripts/verify_review_first.py`.
 
 Developer verification windows never go on kuhy's live display: never open
 windows, send input or play sound on :0 unless he explicitly allows it for that

@@ -51,6 +51,13 @@ DISPLAY_PRODUCERS = {
     # verified ledger like the balance does, but a decider that came to depend
     # on it would let a display count steer a lock or a credit.
     "_earned_today",
+    # Review first: tutor cards due, read from a signed file but used only to
+    # pick the lock's rows. A decider that read it would let a tutor file
+    # (edited, deleted, restored) steer a lock, a charge or a credit.
+    "_review_due",
+    # Its file watch: only brings the lock's poll forward, but it stats the same
+    # tutor file, so no decider may depend on it either.
+    "_review_file_watch",
 }
 DECIDER_PREFIXES = (
     "_balance",
@@ -129,3 +136,28 @@ def test_the_theory_route_reads_signed_inputs_only():
 
     assert {"_phase_inputs", "_tutor_signed", "_theory_credit"} <= reached
     assert not reached & (DISPLAY_ONLY | DISPLAY_PRODUCERS | {"_status_unit"})
+
+
+def test_the_review_reader_reads_signed_rows_only():
+    """Review first sees ``review_due.json`` through ``_tutor_signed``, never the
+    unsigned tutor files, and no display-only module sits behind it."""
+    reached = _closure(("_review_due",))
+
+    assert "_tutor_signed" in reached
+    assert not reached & (DISPLAY_ONLY | {"_unit_view", "_earned_today"})
+
+
+def test_only_the_lock_side_imports_the_review_reader():
+    """The view model (and its source record), the phase reader, the file watch."""
+    importers = {
+        path.stem
+        for path in PACKAGE.glob("_*.py")
+        if "_review_due" in _imports(path.stem)
+    }
+
+    assert importers == {
+        "_lock_phase",
+        "_review_file_watch",
+        "_viewmodel_phase",
+        "_viewmodel_source",
+    }

@@ -31,6 +31,7 @@ from leetcode_guard._viewmodel_phase import (
     NONE_SCREEN,
     PhaseScreen,
     build_phase_screen,
+    review_line,
 )
 
 if TYPE_CHECKING:
@@ -201,7 +202,7 @@ def build_viewmodel(
     Returns:
         The rendered marks.
     """
-    screen = build_phase_screen(source.phase)
+    screen = build_phase_screen(source.phase, source.review)
     problems, dropped = build_problem_lines(
         source.pool,
         limit=source.limit,
@@ -209,6 +210,10 @@ def build_viewmodel(
         unit=screen.unit if screen.unit_list else "",
         easy_only=screen.easy_only,
     )
+    if screen.review is not None:
+        # Review first: one row in place of the SOLVE rows. ``dropped`` stays,
+        # so a solve landing now is still acknowledged on the status line.
+        problems = (review_line(screen.review),)
     return ViewModel(
         headline=_headline(decision),
         balance_line=_balance_line(decision),

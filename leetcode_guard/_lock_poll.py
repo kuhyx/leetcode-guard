@@ -25,7 +25,6 @@ from leetcode_guard._harvest import (
     seed_ledger,
 )
 from leetcode_guard._ledger_io import solved_slugs
-from leetcode_guard._lock_phase import unit_rows
 from leetcode_guard._lock_progress import record_progress
 from leetcode_guard._lock_theory import mint_theory
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
@@ -67,7 +66,7 @@ class PollMixin:
     frames: FrameGroup
     model: ViewModel
     root: Any
-    on_reveal: Callable[[int], None]
+    repaint: Callable[[SolveProbe], None]
     _blind_seconds: Callable[[], float]
     _blind_for_long_enough: Callable[[], bool]
     incident_form_due: Callable[[], bool]
@@ -117,6 +116,7 @@ class PollMixin:
                 limit=len(self.deps.pool.problems),
                 solved_slugs=self._solved_slugs(probe),
                 phase=self.run_state.phases.view,
+                review=self.run_state.phases.review,
             ),
             probe,
             checked_at=self.deps.moment(),
@@ -229,11 +229,7 @@ class PollMixin:
 
         record_progress(self.ledger, decision, self.deps, demo=self.run_state.demo)
         self._last_probe = probe
-        unit_changed = self.run_state.phases.refresh()
-        self.model = self.build_model(probe)
-        apply_viewmodel(self.frames.views.values(), self.model)
-        self.on_reveal(unit_rows(self.model, changed=unit_changed))
-        self.refresh_strip()
+        self.repaint(probe)
 
     def _release(self, probe: SolveProbe) -> None:
         """Show the unlocked screen briefly, then let go.

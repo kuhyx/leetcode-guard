@@ -43,37 +43,78 @@ Row = dict[str, object]
 ModuleKey = tuple[str, str]
 
 
+class _Reasons(logging.Logger):
+    """A logger that keeps each message in a list and logs nothing.
+
+    For a caller that logs once itself (``_review_due.ReviewWatch``). A
+    subclass, not ``getLogger``: a registered logger would be shared, and
+    would pile up handlers across reads.
+    """
+
+    def __init__(self, into: list[str]) -> None:
+        """Append every message to ``into``."""
+        super().__init__(f"{__name__}.reasons")
+        self._into = into
+
+    def handle(self, record: logging.LogRecord) -> None:
+        """Keep the message; no handler, no parent logger sees it."""
+        self._into.append(record.getMessage())
+
+
+def _reporter(reasons: list[str] | None) -> logging.Logger:
+    """This module's logger, or (``reasons`` given) one that only collects."""
+    return _logger if reasons is None else _Reasons(reasons)
+
+
+def _verified(row: object, key_file: Path | None, logger: logging.Logger) -> bool:
+    """Whether ``row`` is a dict with a valid HMAC; a check that RAISES fails the row.
+
+    A planted ``hmac`` of non-ASCII text makes ``hmac.compare_digest`` raise
+    ``TypeError``; such a row is unverified like any forgery, never a crash.
+    """
+    if not isinstance(row, dict):
+        return False
+    try:
+        return verify_entry_hmac(row, key_file=key_file)
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("a signature check raised: row unverified")
+        return False
+
+
 def signed_rows(
-    name: str, *, key_file: Path | None = None, strict: bool = False
+    name: str,
+    *,
+    key_file: Path | None = None,
+    strict: bool = False,
+    reasons: list[str] | None = None,
 ) -> list[Row] | None:
     """The verified rows of ``<TUTOR_DIR>/<name>``, or ``None`` if it cannot be read.
 
-    A row whose signature fails is dropped, with one warning per read; it can
-    never be counted, and dropping it never raises. ``strict`` (C2) makes such
-    a row "cannot check" instead: a dropped minutes row can only pay less, but
-    a dropped state row can un-do a module, which would pay theory again.
+    A row whose signature fails (or whose check raises) is dropped, with one
+    warning per read; it can never be counted, and dropping it never raises.
+    ``strict`` (C2) makes such a row "cannot check" instead: a dropped minutes
+    row can only pay less, but a dropped state row can un-do a module, which
+    would pay theory again. ``reasons`` (a per-poll reader that logs once itself)
+    logs nothing and collects each message there instead.
     """
     path = TUTOR_DIR / name
+    log = _reporter(reasons)
     if not key_available(key_file=key_file):
-        _logger.warning("HMAC key unreadable: %s cannot be verified", path)
+        log.warning("HMAC key unreadable: %s cannot be verified", path)
         return None
-    document = read_tutor_json(path, _logger)
+    document = read_tutor_json(path, log)
     rows = document.get("entries") if isinstance(document, dict) else None
     if document is MISSING or not isinstance(rows, list):
-        _logger.warning("tutor file %s missing or malformed: cannot check", path)
+        log.warning("tutor file %s missing or malformed: cannot check", path)
         return None
-    kept = [
-        row
-        for row in rows
-        if isinstance(row, dict) and verify_entry_hmac(row, key_file=key_file)
-    ]
+    kept = [row for row in rows if _verified(row, key_file, log)]
     if len(kept) != len(rows):
         if strict:
-            _logger.warning(
+            log.warning(
                 "%s: %d unverified rows: cannot check", path, len(rows) - len(kept)
             )
             return None
-        _logger.warning("%s: %d unverified rows ignored", path, len(rows) - len(kept))
+        log.warning("%s: %d unverified rows ignored", path, len(rows) - len(kept))
     return kept
 
 

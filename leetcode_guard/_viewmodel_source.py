@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from leetcode_guard._auth import AuthState
     from leetcode_guard._phase_view import PhaseView
     from leetcode_guard._pool_resolve import PoolResolution
+    from leetcode_guard._review_due import DueRead
 
 
 @dataclass(frozen=True)
@@ -37,3 +38,7 @@ class ViewSource:
     phase: PhaseView | None = None
     """The current unit and screen (SPEC C5), from the rules side; ``None``
     paints today's list as it was before the theory-first flow."""
+
+    review: DueRead | None = None
+    """Tutor cards due in the SOLVE unit (``_review_due``), read once per poll;
+    ``None`` and "cannot check" leave the SOLVE rows as they are."""

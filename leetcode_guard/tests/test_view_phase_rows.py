@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
-from leetcode_guard._view_types import ProblemList, ViewHooks
+from leetcode_guard._view_types import ProblemList
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel_lines import ProblemLine
 from leetcode_guard._viewmodel_phase import PHASE_ROWS, build_phase_screen
 from leetcode_guard.tests._phase_fixtures import NEXT, THEORY
-from leetcode_guard.tests._view_fixtures import mock_view, model
+from leetcode_guard.tests._view_fixtures import mock_view, model, rows_view
 
 
 def _lines(*slugs: str) -> tuple[ProblemLine, ...]:
@@ -20,27 +19,9 @@ def _lines(*slugs: str) -> tuple[ProblemLine, ...]:
     )
 
 
-def _rows_view(count: int, *, rows: int = PROBLEM_DISPLAY_LIMIT):
-    """A surface with ``count`` built rows, each row frame its own mock."""
-    labels = [MagicMock(name=f"label{i}") for i in range(count)]
-    for label in labels:
-        label.master = MagicMock(name="row")
-    return mock_view(
-        problems=ProblemList(
-            labels=labels,
-            buttons=[MagicMock(name=f"open{i}") for i in range(count)],
-            marks=[MagicMock(name=f"mark{i}") for i in range(count)],
-            scroll=MagicMock(),
-            shown=count,
-            fitted=(rows, min(count, rows)),
-        ),
-        hooks=ViewHooks(on_open=lambda _u: None),
-    )
-
-
 def test_rows_hidden_by_solves_come_back_for_the_next_unit():
     """SOLVE(u) with one row left, then THEORY(next) with three: re-packed."""
-    view = _rows_view(4)
+    view = rows_view(4)
     apply_viewmodel([view], model(problems=_lines("a")))
     hidden = [label.master for label in view.problems.labels[1:]]
     assert all(row.pack_forget.called for row in hidden)
@@ -55,7 +36,7 @@ def test_rows_hidden_by_solves_come_back_for_the_next_unit():
 
 def test_a_longer_next_unit_builds_rows_at_the_tail(tk_mock):
     """More problems than built rows: the next batch is built, not rebuilt."""
-    view = _rows_view(2)
+    view = rows_view(2)
     before = list(view.problems.labels)
 
     apply_viewmodel([view], model(problems=_lines(*"abcdefg")))
@@ -68,7 +49,7 @@ def test_a_longer_next_unit_builds_rows_at_the_tail(tk_mock):
 
 def test_the_viewport_refits_when_the_screen_height_changes():
     """none (8 rows) -> THEORY (5 rows): fitted once, then left alone."""
-    view = _rows_view(6)
+    view = rows_view(6)
     theory = model(problems=_lines(*"abcdef"), screen=build_phase_screen(THEORY))
 
     apply_viewmodel([view], theory)
@@ -80,7 +61,7 @@ def test_the_viewport_refits_when_the_screen_height_changes():
 
 def test_a_solve_never_shrinks_the_viewport_but_returning_rows_grow_it():
     """A hidden row leaves its gap; a unit with more rows refits."""
-    view = _rows_view(3, rows=PHASE_ROWS)
+    view = rows_view(3, rows=PHASE_ROWS)
     screen = build_phase_screen(THEORY)
     apply_viewmodel([view], model(problems=_lines("a"), screen=screen))
     view.problems.scroll.fit_rows.assert_not_called()

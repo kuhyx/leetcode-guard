@@ -26,3 +26,6 @@ class PhaseView:  # pylint: disable=too-many-instance-attributes
     learn_target: tuple[str, str] | None
     rework_target: tuple[str, str] | None = None
     """SOLVE only: (subject, the unit's first module), where rework cards go."""
+    review_targets: tuple[tuple[str, str], ...] = ()
+    """SOLVE only: (subject, module) of every module of the unit, in the unit's
+    order. Review first looks for due cards in these (``_review_due``)."""

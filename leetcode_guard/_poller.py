@@ -72,6 +72,8 @@ class PollerSettings[R]:
             thread pool the poller owns and shuts down; tests pass an inline
             one so ordering is deterministic and no threads are involved.
         drain_ms: How often to check whether the future has finished.
+        on_watch: Run on every watch step (``drain_ms``) on the Tk thread; ``True``
+            brings the next check forward (:meth:`SolvePoller.check_now`).
     """
 
     interval_ms: int
@@ -79,6 +81,7 @@ class PollerSettings[R]:
     on_result: Callable[[R | None], None]
     executor: SubmitsWork | None = None
     drain_ms: int = POLL_DRAIN_MS
+    on_watch: Callable[[], bool] | None = None
 
 
 @dataclass
@@ -161,7 +164,10 @@ class SolvePoller[R]:
         """On the Tk thread: turn a pending poke into an immediate check."""
         if self.stopped:
             return
-        self._fire_poke()
+        if self._settings.on_watch is not None and self._settings.on_watch():
+            self.check_now()  # coalesces with a check already in flight
+        else:
+            self._fire_poke()
         self._root.after(self._settings.drain_ms, self._watch)
 
     def _fire_poke(self) -> None:

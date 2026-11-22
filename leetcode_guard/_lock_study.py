@@ -1,13 +1,12 @@
 """Wire study mode into the lock: the Open button, the strip, the way back.
 
-Split out of ``_lock.py``; like ``ReleaseMixin`` it is the right seam anyway: the
-whole "let them actually reach a problem" surface (the 2026-08-05 fix) in one place.
+Split out of ``_lock.py``: the whole "let them actually reach a problem" surface
+(the 2026-08-05 fix) in one place.
 
 The ordering that matters is in :meth:`StudyMixin.open_problem`: **find the
-browser before touching the grab.** The common failure is having no browser
-installed at all, and discovering that after standing the lock down would leave
-the machine unguarded for nothing. A lock weakened for a browser that never
-starts is strictly worse than a lock that says it could not open one.
+browser before touching the grab.** Discovering there is none after standing the
+lock down would leave the machine unguarded for nothing: a lock weakened for a
+browser that never starts is strictly worse than one that says it could not open.
 """
 
 from __future__ import annotations
@@ -23,6 +22,7 @@ from leetcode_guard._study import StudySession
 from leetcode_guard._study_restart import forget_study, remember_study
 from leetcode_guard._study_strip import build_strip, pick_primary_rect
 from leetcode_guard._study_strip_text import StripText
+from leetcode_guard._viewmodel_phase import is_review_route
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,11 +41,9 @@ _logger: Final = logging.getLogger(__name__)
 
 
 class StudyMixin:
-    """Study mode, mixed into the lock.
+    """Study mode, mixed into the lock; owns ``_study`` and ``strip``.
 
-    Owns ``_study`` and ``strip`` (``None`` until a session starts) and reads
-    the attributes below from the class it is mixed into, declared rather than
-    assumed (``ReleaseMixin``: a silent expectation breaks only at runtime).
+    Reads the attributes below from the host class (``ReleaseMixin``: declared).
     """
 
     _study: StudySession | None = None
@@ -59,6 +57,7 @@ class StudyMixin:
     ledger: Ledger
     nudge_verifying: bool
     nudge_down: bool
+    fall_open_review: Callable[[], None]
     remembers_study: bool = True  # ``_study_restart``; the evening lock opts out
 
     def decision(self) -> GateDecision:
@@ -68,25 +67,26 @@ class StudyMixin:
     # -- entering ---------------------------------------------------------
 
     def open_problem(self, url: str) -> None:
-        """Open one problem, standing the lock down so it can be used.
+        """Open one problem (or the review row's tutor route), standing the lock down.
 
-        Order is deliberate and each step can refuse:
-
-        1. Resolve a browser **without spawning**. No browser means no suspend.
-        2. Suspend. A failure leaves the lock fully asserted and stops here.
-        3. Spawn for real. A failure here rolls the suspend back.
-        4. Show the strip.
+        Order is deliberate and each step can refuse: 1. resolve a browser
+        **without spawning** (none: no suspend); 2. suspend (a failure leaves the
+        lock fully asserted); 3. spawn for real (a failure rolls the suspend
+        back), then the strip. The review row's failed launch falls open.
         """
+        if is_review_route(url):  # the review row: the tutor, not a browser
+            if not self.open_learn(url):
+                self.fall_open_review()
+            return
         if find_opener() is None:
             self._say("no browser launcher found", url=url)
             _logger.warning("no browser to open %s with; the lock is unchanged", url)
             return
         self.enter_study(lambda: self._spawn(url))
 
-    def open_learn(self, route: str) -> None:
-        """The theory card's learn button; a ``LearnButton`` per press (no state)."""
-        config = self.run_state.config
-        LearnButton(self.enter_study, self._say, self.frames, config).open_learn(route)
+    def open_learn(self, route: str) -> bool:
+        """The theory card's learn button; ``False``: the launcher failed."""
+        return LearnButton(self, self._say).open_learn(route)
 
     def open_rework(self, slug: str) -> None:
         """A SOLVE row's ``?``: the rework chat via the learn path (``_lock_learn``)."""
