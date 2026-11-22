@@ -28,9 +28,17 @@ class _Spawn:
         return object()
 
 
-def _home(monkeypatch: pytest.MonkeyPatch, home: Path, *, on_path: str | None) -> None:
+def _home(
+    monkeypatch: pytest.MonkeyPatch,
+    home: Path,
+    *,
+    on_path: str | None,
+    runner: str | None = None,
+) -> None:
+    """Scratch HOME; ``which`` knows ``tutor`` and ``systemd-run`` only."""
+    table = {"tutor": on_path, "systemd-run": runner}
     monkeypatch.setattr(_browser.Path, "home", lambda: home)
-    monkeypatch.setattr("leetcode_guard._browser.shutil.which", lambda _n: on_path)
+    monkeypatch.setattr("leetcode_guard._browser.shutil.which", table.get)
 
 
 def _install(home: Path, *, mode: int = 0o755) -> Path:
@@ -66,8 +74,8 @@ def test_a_missing_or_non_executable_launcher_is_none(monkeypatch, tmp_path: Pat
     assert find_tutor() is None
 
 
-def test_launch_runs_the_route_detached(monkeypatch, tmp_path: Path):
-    """``tutor --route <route>`` in a new session, so break-glass spares it."""
+def test_launch_without_systemd_run_runs_the_bare_command(monkeypatch, tmp_path: Path):
+    """No ``systemd-run`` on PATH: the tutor runs bare, as the browser does."""
     _home(monkeypatch, tmp_path, on_path="/fake/bin/tutor")
     spawn = _Spawn()
 
@@ -75,6 +83,24 @@ def test_launch_runs_the_route_detached(monkeypatch, tmp_path: Path):
 
     assert result.ok
     assert spawn.calls == [(("/fake/bin/tutor", "--route", ROUTE), True)]
+
+
+def test_launch_gets_its_own_scope_outside_the_lock_cgroup(monkeypatch, tmp_path: Path):
+    """The tutor's ``setsid -f`` stays in the caller's cgroup, so a window
+    cold-started from the lock died with ``leetcode-guard.service``: mid-lesson,
+    the moment the lock cleared. A transient scope is its own cgroup."""
+    _home(
+        monkeypatch, tmp_path, on_path="/fake/bin/tutor", runner="/usr/bin/systemd-run"
+    )
+    spawn = _Spawn()
+
+    result = launch_tutor(ROUTE, spawn=spawn)
+
+    flags = ["--user", "--scope", "--collect", "--quiet"]
+    expected = ("/usr/bin/systemd-run", *flags, "/fake/bin/tutor", "--route", ROUTE)
+    assert spawn.calls == [(expected, True)]
+    assert result.command == expected
+    assert "/fake/bin/tutor" in result.reason
 
 
 def test_no_launcher_is_reported_not_raised(monkeypatch, tmp_path: Path, caplog):

@@ -26,7 +26,9 @@ in ``leetcode-guard.service``'s cgroup (2026-11-22: Chrome ran there, peak
 --user stop leetcode-guard.service`` -- the break-glass command printed on the
 lock itself -- kills the whole cgroup, the tab the user is solving in included.
 ``start_new_session=True`` stays as well, so the lock's session ending cannot
-signal it either.
+signal it either. The tutor's learn window is launched the same way: its
+``setsid -f`` leaves the caller's cgroup untouched, so without the scope the
+lesson window died with the lock.
 """
 
 from __future__ import annotations
@@ -77,6 +79,12 @@ class LaunchResult:
     command: tuple[str, ...] = ()
 
 
+def _scope_prefix() -> tuple[str, ...]:
+    """``systemd-run`` and its flags, or nothing when it is not installed."""
+    runner = shutil.which("systemd-run")
+    return () if runner is None else (runner, *SCOPE_FLAGS)
+
+
 def find_opener() -> str | None:
     """The absolute path of the first available opener, or ``None``.
 
@@ -110,9 +118,7 @@ def launch(url: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
         _logger.warning("could not open %s: %s", url, reason)
         return LaunchResult(ok=False, reason=reason)
 
-    runner = shutil.which("systemd-run")
-    scope = () if runner is None else (runner, *SCOPE_FLAGS)
-    command = (*scope, opener, url)
+    command = (*_scope_prefix(), opener, url)
     return _run_detached(command, opener=opener, what=url, spawn=spawn)
 
 
@@ -131,13 +137,13 @@ def find_tutor() -> str | None:
 
 
 def launch_tutor(route: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
-    """Run ``tutor --route <route>`` detached, like a browser. Never raises."""
+    """Run ``tutor --route <route>`` detached and scoped. Never raises."""
     tutor = find_tutor()
     if tutor is None:
         reason = f"no {TUTOR} launcher on PATH or in ~/.local/bin"
         _logger.warning("could not open %s: %s", route, reason)
         return LaunchResult(ok=False, reason=reason)
-    command = (tutor, "--route", route)
+    command = (*_scope_prefix(), tutor, "--route", route)
     return _run_detached(command, opener=tutor, what=route, spawn=spawn)
 
 
