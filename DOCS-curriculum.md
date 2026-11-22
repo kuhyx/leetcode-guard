@@ -15,7 +15,15 @@ topic tags (`leetcode_guard/curriculum.json`, read by `_curriculum.py`).
 `rank_pool(..., block=...)` in `_problem.py` sorts by difficulty, then block,
 then acceptance (highest first). Within a block the old acceptance order holds.
 
-- **A problem belongs to the LATEST unit among its tags.** An `array` problem
+- **Teaching order and claim order are two lists (stage 4, 2026-11-22).**
+  `units` is the teaching order, smallest unit first by Easy problems
+  (`prefix-sums` ... `scans`, kuhy's list). `claim_order` settles membership
+  and keeps the 2026-11-21 order the counts were measured with. Applying
+  "latest unit" to the teaching order instead put 664 Easy problems in
+  `scans` and none in `prefix-sums`. Without `claim_order` the teaching order
+  is used for both; a `claim_order` that does not list every id once refuses
+  the whole file.
+- **A problem belongs to the LATEST unit among its tags** (latest in `claim_order`). An `array` problem
   that also carries `bit-manipulation` waits for the bits block, so every idea
   it needs comes first.
 - A tag no unit claims is ignored when another tag maps. A problem with no
@@ -115,7 +123,7 @@ in the tutor mid-lock changes nothing on the open window.
    when the tutor has no data.
 3. Screenshots on a private `Xvfb :81` with `scripts/screenshot_lock.sh`, never
    on `:0`, with a scratch `HOME` and `XDG_RUNTIME_DIR`. The demo shows the
-   curriculum order (`scans` first). The mark needs a scratch curriculum with a
+   curriculum order (`prefix-sums` first). The mark needs a scratch curriculum with a
    tutor mapping and a scratch tutor dir: point `_curriculum.CURRICULUM_FILE`
    and `_theory.TUTOR_DATA_DIR` at them (both are read at call time). Trim the
    scratch pool so pending rows fit in the 14 slots: with the full pool, taught

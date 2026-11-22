@@ -149,6 +149,9 @@ def test_a_broken_file_warns_and_keeps_the_acceptance_order(
             ]
         },
         {"units": [{"id": "a", "tags": [], "tutor": {"subject": "s", "modules": []}}]},
+        {"units": [{"id": "a", "tags": ["x"]}], "claim_order": "a"},
+        {"units": [{"id": "a", "tags": ["x"]}], "claim_order": ["a", "a"]},
+        {"units": [{"id": "a", "tags": ["x"]}], "claim_order": ["b"]},
     ],
 )
 def test_a_malformed_document_is_refused(
@@ -162,13 +165,13 @@ def test_a_malformed_document_is_refused(
 
 
 def test_the_shipped_curriculum_parses():
-    """The real file: every unit distinct, and the basics come first."""
+    """The real file: every unit distinct, the smallest unit taught first."""
     shipped = load_curriculum(_curriculum.SHIPPED_CURRICULUM_FILE)
 
     assert shipped is not None
-    assert shipped.units[0].unit_id == "scans"
-    assert shipped.unit_index(("array",)) == 0
-    assert shipped.unit_index(("array", "bit-manipulation")) > 0
+    assert shipped.units[0].unit_id == "prefix-sums"
+    assert shipped.unit_index(("array",)) == len(shipped.units) - 1
+    assert shipped.unit_index(("array", "bit-manipulation")) < len(shipped.units) - 1
     assert shipped.unit_index(()) < len(shipped.units)
 
 
@@ -202,6 +205,20 @@ def test_a_waiting_block_is_pushed_below_the_taught_ones():
     assert [p.title_slug for p in ranked] == ["bits", "scan", "js"]
     assert [state.waits(p) for p in ranked] == [False, True, True]
     assert [state.unit_id(p) for p in ranked] == ["bits", "scans", "js"]
+
+
+def test_the_claim_order_settles_membership_not_the_teaching_order():
+    """Taught first, claimed first: an array+bits problem still waits for bits."""
+    scans = {"id": "scans", "tags": ["array", "string"]}
+    bits = {"id": "bits", "tags": ["bit-manipulation"]}
+    js = {"id": "js", "tags": [], "untagged": True}
+    parsed = parse_curriculum(
+        {"units": [bits, scans, js], "claim_order": ["scans", "bits", "js"]}
+    )
+
+    assert parsed is not None
+    assert parsed.unit_index(("array", "bit-manipulation")) == 0
+    assert parsed.unit_index(("array",)) == 1
 
 
 def test_a_problem_no_unit_claims_never_waits():

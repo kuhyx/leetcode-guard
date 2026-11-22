@@ -63,22 +63,34 @@ class Unit:
 
 @dataclass(frozen=True)
 class Curriculum:
-    """The ordered units."""
+    """The units in teaching order, and the order that settles membership."""
 
     units: tuple[Unit, ...]
+    claim_rank: tuple[int, ...] = ()
+    """Per unit, its place in the file's ``claim_order``; empty = teaching order.
+
+    Membership ("the latest claiming unit") is ranked by this, not by the
+    teaching order, so reordering what is taught first never moves a problem
+    to another unit (stage 4, 2026-11-22: the new order applied to membership
+    left ``prefix-sums`` with no Easy problem and ``scans`` with 664)."""
+
+    def _rank(self, index: int) -> int:
+        """Where unit ``index`` stands when two units claim one problem."""
+        return self.claim_rank[index] if self.claim_rank else index
 
     def unit_index(self, topics: Iterable[str]) -> int:
-        """Position of the block a problem with these tags is served in.
+        """Position (teaching order) of the unit a problem with these tags is in.
 
         Returns:
-            The latest claiming unit's index, or ``len(units)`` -- after every
-            block -- when no unit claims any of the tags.
+            The index of the claiming unit latest in the claim order, or
+            ``len(units)`` -- after every block -- when no unit claims a tag.
         """
         tags = frozenset(topics)
         last = len(self.units)
         if not tags:
             return next((i for i, u in enumerate(self.units) if u.untagged), last)
-        return max((i for i, u in enumerate(self.units) if u.tags & tags), default=last)
+        claiming = [i for i, u in enumerate(self.units) if u.tags & tags]
+        return max(claiming, key=self._rank, default=last)
 
 
 class Theory(enum.Enum):
@@ -174,10 +186,23 @@ def _units(document: object) -> tuple[Unit, ...]:
     return units
 
 
+def _claim_rank(document: object, units: tuple[Unit, ...]) -> tuple[int, ...]:
+    """Each unit's place in ``claim_order``, which must list every id once."""
+    order = document.get("claim_order") if isinstance(document, dict) else None
+    if order is None:
+        return ()
+    ids = [unit.unit_id for unit in units]
+    if not isinstance(order, list) or sorted(map(str, order)) != sorted(ids):
+        message = "claim_order must list every unit id exactly once"
+        raise _MalformedError(message)
+    return tuple(order.index(unit_id) for unit_id in ids)
+
+
 def parse_curriculum(document: object) -> Curriculum | None:
     """The curriculum in ``document``, or ``None`` (logged) when malformed."""
     try:
-        return Curriculum(units=_units(document))
+        units = _units(document)
+        return Curriculum(units=units, claim_rank=_claim_rank(document, units))
     except _MalformedError as exc:
         _logger.warning("curriculum refused, keeping the acceptance order: %s", exc)
         return None

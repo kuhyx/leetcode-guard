@@ -70,7 +70,7 @@ def test_every_unit_maps_a_tutor_subject():
     """Each algorithm unit maps its own same-named module; js-pandas maps four."""
     mapped = {unit.unit_id: unit for unit in shipped().units if unit.subject}
 
-    assert list(mapped) == [*ALGO_UNITS, "sql", "js-pandas"]
+    assert sorted(mapped) == sorted([*ALGO_UNITS, "sql", "js-pandas"])
     for unit_id in ALGO_UNITS:
         assert mapped[unit_id].subject == ALGO_SUBJECT
         assert mapped[unit_id].modules == (unit_id,)
@@ -106,3 +106,45 @@ def test_the_sql_unit_is_pending_until_every_module_is_taught(tmp_path: Path):
     assert full[index] is Theory.DONE
     # The scratch tutor has no cards for the other subjects: unknown, never done.
     assert {state for i, state in enumerate(full) if i != index} == {Theory.UNKNOWN}
+
+
+TEACHING_ORDER = [
+    "prefix-sums",
+    "stack-queue",
+    "lists-recursion",
+    "binary-search",
+    "bits",
+    "heap-dp",
+    "trees",
+    "js-pandas",
+    "pointers-window",
+    "sorting-greedy",
+    "hashing",
+    "sql",
+    "math",
+    "scans",
+]
+"""kuhy's list (stage 4 SPEC, 2026-11-22): smallest unit first by Easy problems."""
+
+
+def test_the_units_are_taught_smallest_first():
+    """The theory-first flow walks the units in kuhy's confirmed order."""
+    assert [unit.unit_id for unit in shipped().units] == TEACHING_ORDER
+
+
+def test_membership_keeps_the_claim_order_the_counts_were_measured_with():
+    """A problem's unit does not move when the teaching order does.
+
+    kuhy's order is the 2026-11-21 per-unit Easy counts (20 .. 194), measured
+    with "latest unit among the tags" over the OLD unit order. Applying that
+    rule to the new order puts every ``array`` problem in ``scans`` (664 Easy)
+    and leaves ``prefix-sums`` with none, so membership reads the claim order.
+    """
+    curriculum = shipped()
+    ids = [unit.unit_id for unit in curriculum.units]
+
+    assert ids[curriculum.unit_index(("array", "prefix-sum"))] == "prefix-sums"
+    assert ids[curriculum.unit_index(("array", "bit-manipulation"))] == "bits"
+    assert ids[curriculum.unit_index(("hash-table", "sorting"))] == "sorting-greedy"
+    assert ids[curriculum.unit_index(("array",))] == "scans"
+    assert ids[curriculum.unit_index(())] == "js-pandas"
