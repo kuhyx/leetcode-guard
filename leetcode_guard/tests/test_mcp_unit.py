@@ -114,16 +114,18 @@ def test_get_credits_tells_theory_credits_from_solve_credits(
 def test_get_suggested_problems_lead_with_the_current_unit(
     tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
 ):
-    """THEORY(b): b's Easy leads, the order the lock ranks (``focus_key``)."""
+    """THEORY(a) with b's cards taught: the old key serves taught b first; the
+    lock's ``focus_key`` (and so this list) leads with a's Easy problem."""
     world(tmp_path, monkeypatch)
-    states(hmac_key, "a")
-    solved(data_dir, hmac_key, "a1")
+    states(hmac_key)
+    cards = {f"{m}-1": {"module": m, "suspended": False} for m in ("b1", "b2")}
+    display_files(*cards, cards=cards)
     seam(monkeypatch, data_dir, hmac_key)
 
     rows = _mcp.get_suggested_problems()
 
-    assert rows
-    assert rows[0]["unit"] == "b"
+    assert [row["unit"] for row in rows] == ["a", "b"]
+    assert (rows[0]["theory"], rows[1]["theory"]) == ("pending", "done")
 
 
 def test_no_tool_wrote_the_ledger(
