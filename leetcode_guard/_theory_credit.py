@@ -1,19 +1,23 @@
-"""Theory credits: 12 signed teaching minutes on the current unit pay 1 credit.
+"""Theory credits: 12 signed tutor minutes (lesson plus review) pay 1 credit.
 
 A theory credit is an ordinary signed ledger row: ``kind: credit``,
 ``amount: 1``, ``entry_id: theory:<day>:<n>``, ``detail.source:
-"tutor-theory"``, ``detail.unit`` and ``detail.minutes`` (the day's minutes
-on the unit when it was minted). ``source`` is not ``"leetcode"``, so it
-prices at 1 (``_balance.credit_value``) and never backs a review.
+"tutor-theory"``, ``detail.unit``, ``detail.minutes`` (the day's pool when it
+was minted) and ``detail.reviews`` (how many review minutes the unit's credits
+had spent). ``source`` is not ``"leetcode"``, so it prices at 1
+(``_balance.credit_value``) and never backs a review.
 
-Rules (stage-4 SPEC, 2026-11-22):
+Rules (stage-4 SPEC, 2026-11-22; the pool is ``_theory_pool``):
 
-* Only in THEORY(u), only minutes on u's modules (C1 ``detail.subject`` and
-  ``detail.module``), only TODAY's (local day of ``ended_at``). Minutes taught
-  before u's theory was done still pay in SOLVE(u); minutes after never do.
-* The k-th credit for u on a day is minted once those minutes reach 12*k.
-  ``n`` in the id is the day's running count over every unit. Minted rows are
-  never revoked; a deleted ledger re-mints at most today's.
+* Lesson minutes: only in THEORY(u), only on u's modules (C1 ``detail.subject``
+  and ``detail.module``), only TODAY's (local day of ``ended_at``). Minutes
+  taught before u's theory was done still pay in SOLVE(u); minutes after never
+  do.
+* Review minutes (``detail.activity == "review"``) on any mapped card count
+  one for one in every phase, ``none`` included, and share the counter.
+* The k-th credit for u on a day is minted once the pool reaches 12*k. ``n`` in
+  the id is the day's running count over every unit. Minted rows are never
+  revoked; a deleted ledger re-mints at most today's.
 * A module signed done today also pays +1, once per module ever
   (``_theory_finish``; ``theory-done:<subject>:<module>``, no day in the id,
   so it is never a minute credit).
@@ -37,10 +41,17 @@ from leetcode_guard._balance import is_trusted
 from leetcode_guard._daycost import day_key
 from leetcode_guard._ledger import CREDIT, LedgerEntry, sign
 from leetcode_guard._ledger_io import append, save_ledger
-from leetcode_guard._phase_file import phase_since, read_phase, write_phase
+from leetcode_guard._phase_file import read_phase, write_phase
 from leetcode_guard._phase_inputs import gather_phase
 from leetcode_guard._theory_finish import SOURCE_THEORY, due_finish
-from leetcode_guard._tutor_signed import signed_rows, teaching_minutes
+from leetcode_guard._theory_pool import (
+    MINUTES_PER_CREDIT,
+    Tier,
+    label,
+    minted_for,
+    minted_today,
+    paying_pool,
+)
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -48,11 +59,11 @@ if TYPE_CHECKING:
 
     from leetcode_guard._ledger_io import Ledger
     from leetcode_guard._phase import PhaseState
+    from leetcode_guard._theory_pool import Pool
 
 _logger: Final = logging.getLogger(__name__)
 
-MINUTES_PER_CREDIT: Final = 12
-TUTOR_LEDGER: Final = "ledger.json"
+__all__ = ["MINUTES_PER_CREDIT", "SOURCE_THEORY"]
 
 
 @dataclass(frozen=True)
@@ -62,20 +73,17 @@ class TheoryPoll:
     state: PhaseState | None
     """The phase decided now; ``None`` = an input could not be read."""
     minutes: int = 0
-    """Today's paying minutes on the current unit."""
+    """Today's pool: lesson minutes on the current unit plus free review minutes."""
     minted: tuple[LedgerEntry, ...] = ()
 
 
 def theory_entry(
-    stamp: tuple[date, datetime],
-    *,
-    n: int,
-    unit: str,
-    minutes: int,
-    key_file: Path | None,
+    stamp: tuple[date, datetime], tier: Tier, *, n: int, key_file: Path | None
 ) -> LedgerEntry:
     """The signed ``theory:<day>:<n>`` credit; ``stamp`` is (day, now)."""
     day, now = stamp
+    detail = {"source": SOURCE_THEORY, "unit": tier.unit}
+    detail |= {"minutes": str(tier.minutes), "reviews": str(tier.reviews)}
     return sign(
         LedgerEntry(
             entry_id=f"theory:{day_key(day)}:{n}",
@@ -83,50 +91,43 @@ def theory_entry(
             day=day_key(day),
             created_at=now.isoformat(),
             amount=1,
-            detail={"source": SOURCE_THEORY, "unit": unit, "minutes": str(minutes)},
+            detail=detail,
         ),
         key_file=key_file,
     )
 
 
-def _minted_today(ledger: Ledger, day: date) -> list[LedgerEntry]:
-    """Every ``theory:<day>:<n>`` row in the ledger, trusted or not."""
-    prefix = f"theory:{day_key(day)}:"
-    return [e for e in ledger.entries.values() if e.entry_id.startswith(prefix)]
-
-
-def _minted_for(today: list[LedgerEntry], unit: str) -> int:
-    """How many of today's theory rows are for ``unit``."""
-    return sum(1 for e in today if e.detail.get("unit") == unit)
-
-
 def due_credits(
     ledger: Ledger,
     state: PhaseState,
-    minutes: int,
+    pool: Pool,
     *,
     stamp: tuple[date, datetime],
     key_file: Path | None = None,
 ) -> list[LedgerEntry]:
-    """The credits ``minutes`` earn for ``state.unit`` today and are not minted yet."""
+    """The credits ``pool`` earns the unit today and are not minted yet.
+
+    The k-th credit records the ``max(0, 12*k - pool.lessons)`` review minutes
+    it spent (``detail.reviews``). The unit is ``state.unit``, or ``review``
+    in ``none``.
+    """
     day = stamp[0]
-    if state.phase == "none":
-        return []
+    unit = label(state)
     prefix = f"theory:{day_key(day)}:"
-    today = _minted_today(ledger, day)
-    have = _minted_for(today, state.unit)
+    today = minted_today(ledger, day)
+    have = minted_for(today, unit)
     fresh: list[LedgerEntry] = []
     n = len(today)
-    for k in range(have + 1, minutes // MINUTES_PER_CREDIT + 1):
+    for k in range(have + 1, pool.total // MINUTES_PER_CREDIT + 1):
         n += 1
         while ledger.has(f"{prefix}{n}"):
             n += 1
+        cut = k * MINUTES_PER_CREDIT
         fresh.append(
             theory_entry(
                 stamp,
+                Tier(unit, cut, max(0, cut - pool.lessons)),
                 n=n,
-                unit=state.unit,
-                minutes=k * MINUTES_PER_CREDIT,
                 key_file=key_file,
             )
         )
@@ -141,11 +142,10 @@ def minutes_into_credit(
     The read side of :func:`due_credits`, over the same rows: ``minutes`` less
     12 for each credit minted for ``state.unit`` today. A credit due but not
     minted yet (``minutes // 12`` above the minted count) reads a full 12, so
-    12 means "mint pending" and nothing else; ``none`` has no next credit.
+    12 means "mint pending" and nothing else. ``minutes`` is the pool
+    (``paying_minutes``); in ``none`` the credits are labelled ``review``.
     """
-    if state.phase == "none":
-        return 0
-    have = _minted_for(_minted_today(ledger, day), state.unit)
+    have = minted_for(minted_today(ledger, day), label(state))
     return min(MINUTES_PER_CREDIT, max(0, minutes - MINUTES_PER_CREDIT * have))
 
 
@@ -164,23 +164,6 @@ def theory_credits(ledger: Ledger, *, day: date) -> tuple[int, int]:
     return today, sum(entry.amount for entry in trusted)
 
 
-def paying_minutes(
-    state: PhaseState, *, day: date, key_file: Path | None = None
-) -> int | None:
-    """Today's signed minutes that pay for ``state``; ``None`` = cannot check."""
-    if state.phase == "none" or not state.modules:
-        return 0
-    rows = signed_rows(TUTOR_LEDGER, key_file=key_file)
-    if rows is None:
-        return None
-    since = phase_since(state, key_file)
-    if since is None:
-        return 0
-    return teaching_minutes(
-        rows, state.subject, state.modules, day=day, window=(since, state.done_at)
-    )
-
-
 def _poll(
     ledger: Ledger,
     ledger_path: Path,
@@ -194,16 +177,16 @@ def _poll(
         return TheoryPoll(state=None)
     before = read_phase(key_file)  # the phase this poll starts in, before C3 moves
     write_phase(state, day=day, now=now, key_file=key_file)
-    minutes = paying_minutes(state, day=day, key_file=key_file)
-    if minutes is None:
+    pool = paying_pool(state, ledger, day=day, key_file=key_file)
+    if pool is None:
         return TheoryPoll(state=state)
-    fresh = due_credits(ledger, state, minutes, stamp=stamp, key_file=key_file)
+    fresh = due_credits(ledger, state, pool, stamp=stamp, key_file=key_file)
     fresh += due_finish(ledger, state, before, stamp=stamp, key_file=key_file)
     if fresh:
         append(ledger, fresh)
         save_ledger(ledger_path, ledger)
         _logger.info("theory: %d credit(s) for %s", len(fresh), state.unit)
-    return TheoryPoll(state=state, minutes=minutes, minted=tuple(fresh))
+    return TheoryPoll(state=state, minutes=pool.total, minted=tuple(fresh))
 
 
 def poll_theory(

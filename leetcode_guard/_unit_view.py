@@ -8,8 +8,9 @@ Where each field comes from:
 
 * ``unit``, ``phase``, ``solved``, ``total``: ``gather_phase`` over the guard
   ledger, signed C2 and the pool, the decision the minting itself makes.
-* ``theory_minutes_today``: ``_theory_credit.paying_minutes``, the number the
-  minting counts; "cannot check" (logged there) shows 0.
+* ``theory_minutes_today``: ``_theory_pool.paying_minutes``, the number the
+  minting counts (lesson minutes plus free review minutes); "cannot check"
+  (logged there) shows 0.
 * ``minutes_per_credit``: ``_theory_credit.MINUTES_PER_CREDIT``.
 * ``learn_target``: THEORY only, the unit's first module (curriculum order)
   whose latest signed C2 row is not done.
@@ -43,7 +44,8 @@ from leetcode_guard._phase_file import read_phase
 from leetcode_guard._phase_inputs import MODULE_STATE, gather_phase
 from leetcode_guard._phase_view import PhaseView
 from leetcode_guard._theory import module_cards
-from leetcode_guard._theory_credit import MINUTES_PER_CREDIT, paying_minutes
+from leetcode_guard._theory_credit import MINUTES_PER_CREDIT
+from leetcode_guard._theory_pool import paying_minutes
 from leetcode_guard._tutor_signed import module_done, signed_rows
 
 if TYPE_CHECKING:
@@ -120,7 +122,7 @@ def _live(ledger_path: Path, day: date, key_file: Path | None) -> UnitRead:
     state = gather_phase(ledger, key_file=key_file)
     if state is None:
         return _held(key_file)
-    minutes = paying_minutes(state, day=day, key_file=key_file)
+    minutes = paying_minutes(state, ledger, day=day, key_file=key_file)
     rows = signed_rows(MODULE_STATE, key_file=key_file, strict=True)
     done = {} if rows is None else module_done(rows)
     cards = module_cards(state.subject, state.modules) if state.modules else None

@@ -18,6 +18,7 @@ from leetcode_guard._phase_file import write_phase
 from leetcode_guard._status import gather_status
 from leetcode_guard._status_format import format_status
 from leetcode_guard._theory_credit import theory_entry
+from leetcode_guard._theory_pool import Tier
 from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO
 from leetcode_guard.tests.test_unit_view import DAY, NOW, display_files, solved
@@ -41,9 +42,8 @@ def minted(data_dir: Path, key: Path, *days_and_units: tuple[int, str]) -> None:
     rows = [
         theory_entry(
             (DAY - timedelta(days=back), NOW - timedelta(days=back)),
+            Tier(unit, 12 * n),
             n=n,
-            unit=unit,
-            minutes=12 * n,
             key_file=key,
         )
         for n, (back, unit) in enumerate(days_and_units, start=1)
@@ -199,7 +199,7 @@ def test_forged_and_past_theory_credits_are_not_todays(
     began(hmac_key)
     minted(data_dir, hmac_key, (0, "a"), (2, "a"))
     ledger = load_ledger(data_dir / "ledger.json", key_file=hmac_key)
-    forged = theory_entry((DAY, NOW), n=9, unit="a", minutes=99, key_file=hmac_key)
+    forged = theory_entry((DAY, NOW), Tier("a", 99), n=9, key_file=hmac_key)
     append(ledger, [replace(forged, signature="0" * 64)])
     save_ledger(data_dir / "ledger.json", ledger)
 

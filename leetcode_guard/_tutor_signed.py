@@ -6,8 +6,9 @@ Two files, both rows signed by the tutor with the shared key
 ``gatelock.log_integrity`` verifies):
 
 * ``ledger.json`` (contract C1): credit rows. A TEACHING turn's row carries
-  ``detail.subject`` and ``detail.module``; review, drill, leftover and carry
-  rows carry no ``module`` and so never count here.
+  ``detail.subject`` and ``detail.module``; a REVIEW minute row adds
+  ``detail.activity == "review"``; drill, leftover, carry and the tutor's old
+  review rows carry none of those keys (counting them: ``_tutor_minutes``).
 * ``module_state.json`` (contract C2): one row per flip of a module's
   ``done``; the latest verified row per (subject, module) wins.
 
@@ -23,10 +24,9 @@ which no tutor signature could ever match.
 
 from __future__ import annotations
 
-from datetime import datetime
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 from gatelock.log_integrity import verify_entry_hmac
 
@@ -34,23 +34,10 @@ from leetcode_guard._ledger import key_available
 from leetcode_guard._read_json import MISSING
 from leetcode_guard._tutor_read import read_tutor_json
 
-if TYPE_CHECKING:
-    from collections.abc import Collection
-    from datetime import date
-
 _logger: Final = logging.getLogger(__name__)
 
 TUTOR_DIR = Path.home() / ".local" / "share" / "tutor"
 """Read at call time, so the test suite can point it at a scratch dir."""
-
-UNTIL_SLACK_S: Final = 2.0
-"""Seconds a teaching row may end after C2's ``at`` and still count as before it.
-
-The tutor stamps the module-state row after the credit row of the turn that
-finished the module, so that turn normally ends at or before ``at``. The two
-are separate writes; a reorder by a second must not drop the last turn.
-``test_theory_last_turn.py`` pins it.
-"""
 
 Row = dict[str, object]
 ModuleKey = tuple[str, str]
@@ -90,7 +77,7 @@ def signed_rows(
     return kept
 
 
-def _detail(row: Row) -> dict[str, object]:
+def detail_of(row: Row) -> dict[str, object]:
     """The row's ``detail`` object, or an empty one."""
     detail = row.get("detail")
     return detail if isinstance(detail, dict) else {}
@@ -98,7 +85,7 @@ def _detail(row: Row) -> dict[str, object]:
 
 def _state(row: Row) -> tuple[ModuleKey, float, bool] | None:
     """A ``module_state`` row's key, ``at`` and ``done``, or ``None`` if malformed."""
-    detail = _detail(row)
+    detail = detail_of(row)
     subject, module = detail.get("subject"), detail.get("module")
     done, at = detail.get("done"), detail.get("at")
     if row.get("kind") != "module_state" or not isinstance(done, bool):
@@ -142,67 +129,3 @@ def done_days(rows: list[Row]) -> dict[ModuleKey, object]:
 def module_done(rows: list[Row]) -> dict[ModuleKey, bool]:
     """The latest ``done`` per (subject, module)."""
     return {key: done for key, (_, done) in module_states(rows).items()}
-
-
-def _minutes(detail: dict[str, object]) -> int | None:
-    """``detail.minutes`` when it is a positive int (never a bool), else ``None``."""
-    raw = detail.get("minutes")
-    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
-        return None
-    return raw
-
-
-def _ended_on(
-    detail: dict[str, object], day: date, window: tuple[float | None, float | None]
-) -> bool:
-    """Whether ``detail.ended_at`` falls on local ``day``, inside (since, until)."""
-    raw = detail.get("ended_at")
-    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
-        return False
-    since, until = window
-    if until is not None and raw > until + UNTIL_SLACK_S:
-        return False
-    if since is not None and raw < since:
-        return False
-    return datetime.fromtimestamp(raw).astimezone().date() == day
-
-
-def teaching_minutes(
-    rows: list[Row],
-    subject: str,
-    modules: Collection[str],
-    *,
-    day: date,
-    window: tuple[float | None, float | None] = (None, None),
-) -> int:
-    """Signed TEACHING minutes on ``modules`` of ``subject`` that ended on ``day``.
-
-    ``window`` is (``since``, ``until``) in unix seconds, ``None`` = open.
-    ``until`` drops rows that ended later: the minutes taught before a unit's
-    theory was done still pay once the machine is in SOLVE, the ones after it
-    never do. ``since`` drops rows that ended before the unit's THEORY began
-    (C3 ``theory_since``).
-
-    earned_time's tutor rules, copied so both readers pay the same minutes:
-    the local day of ``ended_at``, a positive-int ``minutes``, and an
-    ``entry_id`` repeated by a replayed write pays once, at its smallest count.
-    """
-    by_id: dict[object, int] = {}
-    anonymous = 0
-    for row in rows:
-        detail = _detail(row)
-        minutes = _minutes(detail)
-        if (
-            row.get("kind") != "credit"
-            or detail.get("subject") != subject
-            or detail.get("module") not in modules
-            or minutes is None
-            or not _ended_on(detail, day, window)
-        ):
-            continue
-        entry_id = row.get("entry_id")
-        if entry_id is None:
-            anonymous += minutes
-        else:
-            by_id[entry_id] = min(minutes, by_id.get(entry_id, minutes))
-    return anonymous + sum(by_id.values())

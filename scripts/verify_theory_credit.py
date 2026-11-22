@@ -9,7 +9,8 @@ Three checks for the day (default today), each printed as ``ok``/``FAIL``:
 
 1. the guard ledger holds a signed ``theory:<day>:<n>`` row with
    ``detail.source`` ``tutor-theory``, written within ``LAG_S`` of the moment
-   the tutor rows of its unit reached ``n * 12`` minutes;
+   the day's pool reached ``n * 12`` minutes (the unit's lesson rows plus every
+   tagged review row, plus what other units' credits spent of those reviews);
 2. the day has signed tutor teaching rows carrying a string
    ``detail.subject`` and ``detail.module`` (C1), and no row carries only one;
 3. ``earned_time`` pays the tutor exactly what its quota rule makes of the sum
@@ -35,7 +36,8 @@ from leetcode_guard._constants import LEDGER_FILE
 from leetcode_guard._curriculum import load_curriculum
 from leetcode_guard._ledger import verify
 from leetcode_guard._ledger_io import load_ledger
-from leetcode_guard._theory_credit import MINUTES_PER_CREDIT, SOURCE_THEORY
+from leetcode_guard._theory_credit import SOURCE_THEORY
+from leetcode_guard._theory_pool import spent_elsewhere
 from leetcode_guard._tutor_read import read_tutor_json
 from leetcode_guard._tutor_signed import TUTOR_DIR
 
@@ -88,23 +90,53 @@ def _minutes(row: Row) -> int:
 
 
 def _reached_at(rows: list[Row], unit: str, target: int) -> float | None:
-    """When the unit's modules reached ``target`` minutes, by ``ended_at``."""
+    """When the unit's lessons plus every mapped review reached ``target`` minutes.
+
+    A review row is a tagged one (``activity == "review"``) on any mapped card;
+    the ``review`` label (phase ``none``) has no lessons, only reviews.
+    """
     curriculum = load_curriculum()
-    found = [u for u in curriculum.units if u.unit_id == unit] if curriculum else []
-    if not found:
+    if curriculum is None:
         return None
-    subject, modules = found[0].subject, set(found[0].modules)
+    found = [u for u in curriculum.units if u.unit_id == unit]
+    subject, modules = (
+        (found[0].subject, set(found[0].modules)) if found else ("", set())
+    )
+    mapped = {(u.subject, m) for u in curriculum.units for m in u.modules}
     total = 0
-    on_unit = [
-        r
-        for r in rows
-        if _detail(r).get("subject") == subject and _detail(r).get("module") in modules
-    ]
+    on_unit = [r for r in rows if _counts(r, (subject, modules), mapped)]
     for row in sorted(on_unit, key=lambda r: float(str(_detail(r)["ended_at"]))):
         total += _minutes(row)
         if total >= target:
             return float(str(_detail(row)["ended_at"]))
     return None
+
+
+def _counts(
+    row: Row, lessons: tuple[str, set[str]], mapped: set[tuple[str, str]]
+) -> bool:
+    """Whether the row is a lesson on the unit or a tagged review on a mapped card."""
+    detail = _detail(row)
+    pair = (detail.get("subject"), detail.get("module"))
+    if detail.get("activity") == "review":
+        return pair in mapped
+    return pair[0] == lessons[0] and pair[1] in lessons[1]
+
+
+def _lag(
+    entry: LedgerEntry,
+    minted: list[LedgerEntry],
+    rows: list[Row],
+    *,
+    integrity_ok: bool,
+) -> float | None:
+    """Seconds from the pool reaching a credit's cut to its write; None = never."""
+    unit = str(entry.detail.get("unit"))
+    cut = int(entry.detail.get("minutes", "0"))  # 12*k for the unit's k-th credit
+    spent = spent_elsewhere(minted, unit, integrity_ok=integrity_ok)
+    reached = _reached_at(rows, unit, cut + spent)
+    written = datetime.fromisoformat(entry.created_at).timestamp()
+    return None if reached is None else written - reached
 
 
 def check_theory_rows(day: date, rows: list[Row]) -> bool:
@@ -120,11 +152,7 @@ def check_theory_rows(day: date, rows: list[Row]) -> bool:
         return _say(ok=False, what=f"no {prefix}<n> row with source {SOURCE_THEORY}")
     ok = True
     for entry in minted:
-        n = int(entry.entry_id.rsplit(":", 1)[1])
-        unit = str(entry.detail.get("unit"))
-        reached = _reached_at(rows, unit, n * MINUTES_PER_CREDIT)
-        written = datetime.fromisoformat(entry.created_at).timestamp()
-        lag = None if reached is None else written - reached
+        lag = _lag(entry, minted, rows, integrity_ok=ledger.integrity_ok)
         signed = verify(entry, key_file=KEY_FILE)
         good = signed and lag is not None and 0 <= lag <= LAG_S
         what = f"{entry.entry_id} signed={signed} lag_s={lag} (max {LAG_S:.0f})"
@@ -135,9 +163,10 @@ def check_theory_rows(day: date, rows: list[Row]) -> bool:
 def check_tutor_rows(rows: list[Row]) -> bool:
     """Check 2: signed teaching rows carry both keys; no row carries one alone.
 
-    Only a teaching turn carries them (tutor ``DOCS-contract.md`` §7, C1);
-    review, drill, carry and leftover rows carry neither, so they are not
-    counted against it.
+    A teaching turn carries them (tutor ``DOCS-contract.md`` §7, C1), and so
+    does a review-minute row (plus ``activity``); drill, carry, leftover and
+    the old untagged review rows carry neither, so they are not counted
+    against it.
     """
     keys = ("subject", "module")
     tagged = [r for r in rows if all(isinstance(_detail(r).get(k), str) for k in keys)]

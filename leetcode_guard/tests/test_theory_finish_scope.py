@@ -15,6 +15,7 @@ from leetcode_guard._theory_credit import (
     minutes_into_credit,
     theory_credits,
 )
+from leetcode_guard._theory_pool import Pool
 from leetcode_guard.tests._finish_fixtures import (
     A_ID,
     B1_ID,
@@ -148,7 +149,7 @@ def test_a_finish_credit_is_not_a_minute_credit(hmac_key: Path):
     )
     append(ledger, [finish])
 
-    fresh = due_credits(ledger, state, 12, stamp=stamp, key_file=hmac_key)
+    fresh = due_credits(ledger, state, Pool(12, 0), stamp=stamp, key_file=hmac_key)
 
     assert [e.entry_id for e in fresh] == [f"theory:{DAY}:1"]
     assert [minutes_into_credit(ledger, state, m, day=DAY) for m in (0, 7, 12)] == [

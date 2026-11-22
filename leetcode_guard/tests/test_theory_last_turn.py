@@ -4,7 +4,7 @@ The tutor writes the module-state row (C2 ``at``) after the credit row of the
 turn that finished the module (C1 ``ended_at``), so the turn's end is normally
 at or before the moment theory became done. Both are wall-clock stamps from
 separate writes; a reorder by a second or two must not silently drop the turn
-that finished the unit (``_tutor_signed.UNTIL_SLACK_S``).
+that finished the unit (``_tutor_minutes.UNTIL_SLACK_S``).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._theory_credit import poll_theory
-from leetcode_guard._tutor_signed import UNTIL_SLACK_S, teaching_minutes
+from leetcode_guard._tutor_minutes import UNTIL_SLACK_S, teaching_minutes
 from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO, teaching_row
 

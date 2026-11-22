@@ -72,6 +72,32 @@ def teaching_row(
     return signed(row, key_file)
 
 
+def review_row(
+    entry_id: str,
+    minutes: int,
+    *,
+    ended: datetime,
+    key_file: Path,
+    where: tuple[str, str] | None = (ALGO, "b1"),
+) -> dict[str, object]:
+    """A signed C1 review-minute row.
+
+    Tagged (the tutor's new shape, 2026-11-22): ``detail.subject``,
+    ``detail.module`` of the card whose review completed the minute, and
+    ``detail.activity == "review"``. ``where=None`` is the old, untagged shape:
+    none of the three.
+    """
+    row = teaching_row(
+        entry_id, minutes, ended=ended, key_file=key_file, where=(ALGO, None)
+    )
+    row.pop("hmac")
+    detail = row["detail"]
+    assert isinstance(detail, dict)
+    if where is not None:
+        detail |= {"subject": where[0], "module": where[1], "activity": "review"}
+    return signed(row, key_file)
+
+
 def state_row(
     module: str, *, done: bool, at: float, key_file: Path, n: int = 1
 ) -> dict[str, object]:

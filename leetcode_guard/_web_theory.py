@@ -32,9 +32,9 @@ from leetcode_guard._phase_inputs import gather_phase
 from leetcode_guard._theory_credit import (
     MINUTES_PER_CREDIT,
     minutes_into_credit,
-    paying_minutes,
     theory_credits,
 )
+from leetcode_guard._theory_pool import paying_minutes
 
 if TYPE_CHECKING:
     from datetime import date
@@ -95,7 +95,7 @@ def _block(moment: datetime, day: date, key_file: Path | None) -> dict[str, Any]
     if state is None:
         return block
     block["unit"], block["phase"] = state.unit, state.phase
-    minutes = paying_minutes(state, day=day, key_file=key_file)
+    minutes = paying_minutes(state, ledger, day=day, key_file=key_file)
     block["minutes_today"] = minutes
     if minutes is not None:
         block["minutes_into_credit"] = minutes_into_credit(

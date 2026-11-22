@@ -8,7 +8,8 @@ import logging
 from typing import TYPE_CHECKING
 
 from leetcode_guard import _tutor_signed
-from leetcode_guard._tutor_signed import module_done, signed_rows, teaching_minutes
+from leetcode_guard._tutor_minutes import teaching_minutes
+from leetcode_guard._tutor_signed import module_done, signed_rows
 from leetcode_guard.tests._tutor_fixtures import (
     ALGO,
     state_row,

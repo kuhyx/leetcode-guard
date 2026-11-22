@@ -12,9 +12,9 @@ done AND every free Easy problem of it is solved.
 
 | phase | when | teachable | what pays |
 |---|---|---|---|
-| `theory` | u's theory not done | u's modules | solves, and teaching minutes on u's modules |
-| `solve` | theory done, Easy left | nothing | solves (and minutes taught before the flip) |
-| `none` | every unit finished | nothing | solves |
+| `theory` | u's theory not done | u's modules | solves, lesson minutes on u's modules, review minutes |
+| `solve` | theory done, Easy left | nothing | solves (lesson minutes taught before the flip), review minutes |
+| `none` | every unit finished | nothing | solves, review minutes |
 
 Rework needs no code: a module whose latest signed row says not done puts its
 unit back in `theory`.
@@ -57,21 +57,45 @@ holds the last signed phase.
 `poll_theory(ledger, ledger_path, *, day, now, key_file=None)` decides the
 phase, rewrites C3 on change, mints and saves. It never raises.
 
-- Minutes: verified C1 rows (`ledger.json`, `detail.subject` +
+- **Lesson minutes**: verified C1 rows (`ledger.json`, `detail.subject` +
   `detail.module`) on the current unit's modules whose `ended_at` falls on
   today; earned_time's rules (positive-int `minutes`, a repeated `entry_id`
-  pays its smallest count). Review, drill, leftover and carry rows have no
+  pays its smallest count). A row tagged `detail.activity == "review"` is
+  never a lesson minute (`_tutor_minutes.teaching_minutes`), or a review on
+  the current unit would count twice. Drill, leftover and carry rows have no
   `module` and never count. In `solve`, rows that ended after the unit's
   theory became done (its modules' latest `at`) do not count; a row that
   ended up to 2 s after it still does (`UNTIL_SLACK_S`: the tutor stamps
   C2 after the turn that finished the module). Rows that ended before
   THEORY(u) began (C3 `theory_since`) never count: the tutor does not gate
   SQL, so morning SQL minutes would otherwise pay when THEORY(sql) begins
-  (red-team R2, `e2e_theory i`). No C3 agreeing with the live phase pays 0.
-- The k-th credit for a unit on a day is minted at 12*k minutes:
+  (red-team R2, `e2e_theory i`). No C3 agreeing with the live phase pays 0
+  lesson minutes.
+- **Review minutes** (kuhy 2026-11-22; `_tutor_minutes.review_minutes`): a
+  verified C1 row with `kind: credit`, `detail.activity == "review"`, a
+  positive-int `minutes`, `ended_at` on today and `(detail.subject,
+  detail.module)` mapped by ANY unit of `curriculum.json`. One review minute
+  = one lesson minute, in every phase (`theory`, `solve`, `none`), whatever the
+  current unit; no `since`/`until` window, no C3. The tutor's old review rows
+  have none of the three keys and pay nothing; the tutor backfills each with a
+  re-signed twin (same `entry_id` and `minutes`, plus the keys), and a repeated
+  `entry_id` pays once at its smallest count counted over qualifying rows only,
+  so the untagged original is ignored.
+- **One shared pool per day** (`_theory_pool.py`). For the current unit u the
+  pool is `L_u + R_free`: `L_u` the lesson minutes above, `R_free` all of
+  today's review minutes `R` less the review minutes already spent by credits
+  minted today under OTHER unit labels. Each minted row records what its unit
+  had spent: `detail.reviews` = `str(max(0, 12*k - L_u))` for the k-th credit
+  of u today; another label's spend is the `reviews` of its highest-`minutes`
+  row today, counting only trusted rows, and a row without the key (minted
+  before this) spent 0. So a unit change never re-pays a review and never eats
+  a lesson-backed credit. In `none` the label is `detail.unit: "review"`.
+  The tutor ledger must be readable in every phase now: unreadable = cannot
+  check = nothing mints (a warning is logged), also in `none`.
+- The k-th credit for a unit on a day is minted when the pool reaches 12*k:
   `kind: credit`, `amount: 1`, `entry_id: theory:<day>:<n>` (n runs over the
-  day), `detail: {source: tutor-theory, unit, minutes}`. It prices at 1 and is
-  never revoked. A deleted ledger re-mints at most today's.
+  day), `detail: {source: tutor-theory, unit, minutes, reviews}`. It prices at
+  1 and is never revoked. A deleted ledger re-mints at most today's.
 - **The finish credit** (`_theory_finish.py`, kuhy 2026-11-22): finishing a
   module pays +1 on top of the minute credits (9 min + finish = 1, 24 min +
   finish = 3), so a module finished in under 12 minutes is not worth nothing.
@@ -136,7 +160,7 @@ its source: `live`, `held` = the last signed C3 phase, `unknown`) and counts
 today's trusted `theory:<day>:` credits. It never polls, mints or writes C3,
 and it shows "cannot check" as unknown where the lock shows 0.
 
-- `--status`: `unit`, `theory` (today's minutes, the rate, credits minted
+- `--status`: `unit`, `theory` (today's pool minutes, the rate, credits minted
   today) and, in THEORY, `learn` lines. The status snapshot gets the same as
   data in `status.unit` (`unit_dict`, no prose): `unit`, `phase`, `source`,
   `leads_with` (`theory`/`problems`), `solved`/`total` (`null` unless
@@ -159,7 +183,8 @@ The tutor server fetches it over loopback (port 8771, beside `/api/status`)
 for its lesson bar and only displays it. One `theory` object: `checked`,
 `day`, `unit`, `phase`, `minutes_today`, `minutes_into_credit` (towards the
 next credit, `0..minutes_per_credit`; a full 12 means a mint is pending, from
-`_theory_credit.minutes_into_credit`, the read side of `due_credits`),
+`_theory_credit.minutes_into_credit`, the read side of `due_credits`; both
+minute fields are the pool: lesson plus free review minutes),
 `minutes_per_credit`, `credits_today` (trusted rows, `theory_credits`) and
 `needed` (the gate's `verdict.needed`).
 

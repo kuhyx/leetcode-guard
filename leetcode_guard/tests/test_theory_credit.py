@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -15,6 +14,7 @@ from leetcode_guard._ledger_entries import credit_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger
 from leetcode_guard._phase import PhaseState
 from leetcode_guard._theory_credit import due_credits, poll_theory, theory_entry
+from leetcode_guard._theory_pool import Pool, Tier
 from leetcode_guard.tests._ledger_fixtures import submission
 from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO, state_row, write_tutor
@@ -57,6 +57,7 @@ def test_24_minutes_in_theory_mint_two_credits_and_pay_the_day(
         "source": "tutor-theory",
         "unit": "a",
         "minutes": "24",
+        "reviews": "0",
     }
     assert set(load_ledger(data_dir / "ledger.json", key_file=hmac_key).entries) == set(
         ids
@@ -75,7 +76,7 @@ def test_24_minutes_in_theory_mint_two_credits_and_pay_the_day(
 def test_other_modules_and_review_rows_mint_nothing(
     tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
 ):
-    """b's module (learning ahead) and a review row (no module) never pay."""
+    """b's module (learning ahead) and an untagged review row never pay."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
     taught(hmac_key, NOW, ("b1", 30), (None, 30))
@@ -192,20 +193,17 @@ def test_a_bug_in_the_poll_never_raises(
 def test_numbering_runs_over_the_day_and_skips_taken_ids(hmac_key: Path):
     """A unit switch keeps counting the day; a taken id is never reused."""
     ledger = Ledger()
-    old = theory_entry((DAY, NOW), n=2, unit="a", minutes=12, key_file=hmac_key)
+    old = theory_entry((DAY, NOW), Tier("a", 12), n=2, key_file=hmac_key)
     ledger.entries[old.entry_id] = old
     state = PhaseState("b", "theory", ALGO, ("b1",))
 
-    fresh = due_credits(ledger, state, 25, stamp=(DAY, NOW), key_file=hmac_key)
+    fresh = due_credits(ledger, state, Pool(25, 0), stamp=(DAY, NOW), key_file=hmac_key)
 
     assert [e.entry_id for e in fresh] == [f"theory:{DAY}:3", f"theory:{DAY}:4"]
-    assert due_credits(ledger, PhaseState("", "none"), 99, stamp=(DAY, NOW)) == []
-
-
-def test_nothing_is_read_when_nothing_can_pay():
-    """In ``none`` (or a unit with no module) the tutor ledger is not even opened."""
-    assert _theory_credit.paying_minutes(PhaseState("", "none"), day=DAY) == 0
-    assert json.dumps(_theory_credit.MINUTES_PER_CREDIT) == "12"
+    in_none = due_credits(
+        ledger, PhaseState("", "none"), Pool(10, 15), stamp=(DAY, NOW)
+    )
+    assert [e.detail["unit"] for e in in_none] == ["review", "review"]
 
 
 def test_minutes_into_credit_follows_the_due_rule(hmac_key: Path):
@@ -218,11 +216,13 @@ def test_minutes_into_credit_follows_the_due_rule(hmac_key: Path):
         return _theory_credit.minutes_into_credit(ledger, phase_state, minutes, day=DAY)
 
     assert [into(m) for m in (0, 7, 11, 12, 30)] == [0, 7, 11, 12, 12]
-    append(ledger, due_credits(ledger, state, 24, stamp=stamp, key_file=hmac_key))
+    append(
+        ledger, due_credits(ledger, state, Pool(24, 0), stamp=stamp, key_file=hmac_key)
+    )
     assert [into(m) for m in (24, 30, 36, 40)] == [0, 6, 12, 12]
     assert into(5) == 0
     assert into(30, PhaseState(unit="b", phase="theory")) == 12
-    assert into(30, PhaseState(unit="", phase="none")) == 0
+    assert into(30, PhaseState(unit="", phase="none")) == 12  # reviews pay in none
 
 
 def test_one_bad_row_in_module_state_mints_nothing_and_holds_the_phase(

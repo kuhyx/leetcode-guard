@@ -18,6 +18,7 @@ from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._theory_credit import poll_theory
 from leetcode_guard._web_theory import build_theory_payload
 from leetcode_guard.tests._theory_scenario import began, states, taught, world
+from leetcode_guard.tests._tutor_fixtures import write_tutor
 from leetcode_guard.tests.test_status_unit import minted
 from leetcode_guard.tests.test_unit_view import solved
 
@@ -129,10 +130,11 @@ def test_solve_phase_still_counts_minutes_taught_before_the_flip(
 def test_every_unit_finished_is_none_with_zero_minutes(
     tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
 ):
-    """No unit: the guard's own ``""`` and ``none``; nothing counts, all checked."""
+    """No unit: the guard's own ``""`` and ``none``; no review minutes, all checked."""
     world(tmp_path, monkeypatch)
     states(hmac_key, "a", "b1", "b2")
     solved(data_dir, hmac_key, "a1", "b1-easy")
+    write_tutor("ledger.json", [])
 
     block = theory(hmac_key)
 

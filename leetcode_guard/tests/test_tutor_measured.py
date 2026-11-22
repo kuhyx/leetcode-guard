@@ -24,7 +24,8 @@ import earned_time
 from gatelock.log_integrity import compute_entry_hmac, verify_entry_hmac
 
 from leetcode_guard import _tutor_signed
-from leetcode_guard._tutor_signed import module_states, signed_rows, teaching_minutes
+from leetcode_guard._tutor_minutes import teaching_minutes
+from leetcode_guard._tutor_signed import module_states, signed_rows
 from leetcode_guard.tests._tutor_fixtures import ALGO
 
 GOLDEN = Path(__file__).with_name("tutor_measured_2026-11-22.json")

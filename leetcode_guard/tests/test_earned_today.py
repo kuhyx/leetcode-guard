@@ -17,6 +17,7 @@ from leetcode_guard._ledger_entries import charge_entry, credit_entry
 from leetcode_guard._ledger_io import Ledger, append
 from leetcode_guard._theory_credit import theory_entry
 from leetcode_guard._theory_finish import finish_entry
+from leetcode_guard._theory_pool import Tier
 from leetcode_guard.tests._ledger_fixtures import (
     FRIDAY,
     MONDAY,
@@ -56,7 +57,7 @@ def test_every_source_counts_once_each(hmac_key: Path):
     """A solve, a theory-minute credit and a finished module are one apiece."""
     ledger = ledger_of(
         solve(hmac_key, "s1"),
-        theory_entry(STAMP, n=1, unit="u", minutes=12, key_file=hmac_key),
+        theory_entry(STAMP, Tier("u", 12), n=1, key_file=hmac_key),
         finish_entry(STAMP, unit="u", subject="s", module="m", key_file=hmac_key),
     )
 
@@ -76,7 +77,7 @@ def test_another_days_credits_do_not_count(hmac_key: Path):
     ledger = ledger_of(
         solve(hmac_key, "old", day=FRIDAY),
         solve(hmac_key, "now"),
-        theory_entry((FRIDAY, NOW), n=1, unit="u", minutes=12, key_file=hmac_key),
+        theory_entry((FRIDAY, NOW), Tier("u", 12), n=1, key_file=hmac_key),
     )
 
     assert earned_today(ledger, day=MONDAY, weights=None) == 1
