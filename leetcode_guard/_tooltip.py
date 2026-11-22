@@ -1,7 +1,14 @@
 # Copyright (c) 2026 Krzysztof Rudnicki
 """Tkinter tooltip helper (textgate: one word on hover).
 
-Each interactive icon/button gets a one-word tooltip naming what it does.
+Each icon-only button gets a one-word tooltip naming what it does.
+
+The tip is a Label ``place()``d inside the button's own toplevel (the lock
+surface), never a Toplevel of its own. gatelock's recovery tick lifts every
+surface while the grab is held, so a separate tip window painted for half a
+second and then stayed buried under the surface (live demo, 2026-11-22).
+Inside the surface it rises with it. ``scripts/verify_tooltip_stack.py``
+checks this on a real X server; the mocked suite cannot see stacking.
 """
 
 from __future__ import annotations
@@ -9,7 +16,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Final
 
-_TOPMOST_ON: Final = 1
+_POINTER_GAP_PX: Final = 10
 
 
 class Tooltip:
@@ -26,7 +33,7 @@ class Tooltip:
         self.text = text
         self.delay_ms = delay_ms
         self._job: str | None = None
-        self._tip: tk.Toplevel | None = None
+        self._tip: tk.Label | None = None
         widget.bind("<Enter>", self._schedule)
         widget.bind("<Leave>", self._hide)
         widget.bind("<ButtonPress>", self._hide)
@@ -40,14 +47,9 @@ class Tooltip:
         self._job = None
         if self._tip is not None:
             return
-        x = self.widget.winfo_pointerx() + 10
-        y = self.widget.winfo_pointery() + 10
-        tip = tk.Toplevel(self.widget)
-        tip.wm_overrideredirect(boolean=True)
-        tip.attributes("-topmost", _TOPMOST_ON)
-        tip.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(
-            tip,
+        top = self.widget.winfo_toplevel()
+        tip = tk.Label(
+            top,
             text=self.text,
             background="#1e1e1e",
             foreground="#d4d4d4",
@@ -57,7 +59,13 @@ class Tooltip:
             padx=6,
             pady=2,
         )
-        label.pack()
+        # Below-right of the pointer, pulled back inside the surface's edges.
+        x = self.widget.winfo_pointerx() - top.winfo_rootx() + _POINTER_GAP_PX
+        y = self.widget.winfo_pointery() - top.winfo_rooty() + _POINTER_GAP_PX
+        x = max(0, min(x, top.winfo_width() - tip.winfo_reqwidth()))
+        y = max(0, min(y, top.winfo_height() - tip.winfo_reqheight()))
+        tip.place(x=x, y=y)
+        tip.lift()
         self._tip = tip
 
     def _hide(self, _event: tk.Event[tk.Misc] | None = None) -> None:

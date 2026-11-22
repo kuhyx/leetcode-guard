@@ -107,6 +107,8 @@ unfixable = []
 # never by the adapter's verdicts; its one gatelock read is the adapter's plain ``surface_map`` accessor,
 # which carries no logic to mark. Its printed PASS/FAIL lines are its output.
 "scripts/verify_study_grab.py" = ["T201"]
+# The tooltip stacking check: its PASS/FAIL lines ARE its output (T201).
+"scripts/verify_tooltip_stack.py" = ["T201"]
 # The evening-chain e2e: its PASS/FAIL lines ARE its output (T201); it starts
 # Xvfb/xwininfo/import/xdotool by name (S607); and its roles stub the gate's
 # private push spawner so a scratch ledger can never request a live push (SLF001).

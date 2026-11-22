@@ -1,221 +1,134 @@
 # Copyright (c) 2026 Krzysztof Rudnicki
-"""Tests for the Tk tooltip helper."""
+"""Tests for the Tk tooltip helper.
+
+Stacking (the tip staying above a raised surface) needs a real X server:
+``scripts/verify_tooltip_stack.py``. These pin the wiring around it.
+"""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
+import pytest
 
 from leetcode_guard._tooltip import Tooltip, add_tooltip
 
 
-def _make_parent() -> MagicMock:
-    """A minimally-Tk parent with after/winfo_* wired on a mock."""
-    p = MagicMock()
-    p.after = MagicMock(return_value="job-id")
-    p.winfo_pointerx = MagicMock(return_value=100)
-    p.winfo_pointery = MagicMock(return_value=200)
-    return p
+def _widget(*, pointer: tuple[int, int] = (130, 240)) -> MagicMock:
+    """A button inside a 600x300 surface whose top-left is at (100, 200)."""
+    w = MagicMock()
+    w.after.return_value = "job-id"
+    w.winfo_pointerx.return_value = pointer[0]
+    w.winfo_pointery.return_value = pointer[1]
+    top = w.winfo_toplevel.return_value
+    top.winfo_rootx.return_value = 100
+    top.winfo_rooty.return_value = 200
+    top.winfo_width.return_value = 600
+    top.winfo_height.return_value = 300
+    return w
 
 
 def _handlers(w: MagicMock) -> dict[str, MagicMock]:
-    """Extract bound handlers from a widget's bind call_args_list."""
+    """The bound handlers, by event name."""
     return {str(call.args[0]): call.args[1] for call in w.bind.call_args_list}
 
 
+@pytest.fixture(name="label")
+def _label(tk_mock: MagicMock) -> MagicMock:
+    """The tip Label the helper builds, measuring 40x20."""
+    built = tk_mock.Label.return_value
+    built.winfo_reqwidth.return_value = 40
+    built.winfo_reqheight.return_value = 20
+    return built
+
+
+def _hover_and_show(w: MagicMock) -> None:
+    """Enter the widget and fire the scheduled show."""
+    _handlers(w)["<Enter>"](None)
+    w.after.call_args.args[1]()
+
+
 def test_add_tooltip_returns_a_tooltip() -> None:
-    """add_tooltip constructs and returns a Tooltip instance."""
+    """add_tooltip builds a Tooltip."""
     assert isinstance(add_tooltip(MagicMock(), "help"), Tooltip)
 
 
-def test_tooltip_registers_enter_and_leave_bindings() -> None:
-    """Adding a tooltip binds <Enter>, <Leave> and <ButtonPress>."""
+def test_tooltip_binds_enter_leave_and_press() -> None:
+    """Hover shows it; leaving or clicking hides it."""
     w = MagicMock()
     Tooltip(w, "hint")
-    assert w.bind.call_count == 3
-    events = [str(call.args[0]) for call in w.bind.call_args_list]
-    assert "<Enter>" in events
-    assert "<Leave>" in events
-    assert "<ButtonPress>" in events
+    assert set(_handlers(w)) == {"<Enter>", "<Leave>", "<ButtonPress>"}
 
 
-def test_hover_schedules_a_delayed_show() -> None:
-    """Hover enters a binding that schedules _show after delay_ms."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=0)
-        handlers = _handlers(w)
-        handlers["<Enter>"](None)
-        # Execute the scheduled callback.
-        cb = w.after.call_args.args[1]
-        cb()
-    assert tip_tk.wm_geometry.called
-    assert tip_tk.wm_overrideredirect.called
+def test_hover_shows_a_label_placed_inside_the_surface(
+    tk_mock: MagicMock, label: MagicMock
+) -> None:
+    """The tip is a child of the button's toplevel, never a Toplevel of its own."""
+    w = _widget()
+    Tooltip(w, "go", delay_ms=0)
+    _hover_and_show(w)
+    tk_mock.Toplevel.assert_not_called()
+    assert tk_mock.Label.call_args.args == (w.winfo_toplevel.return_value,)
+    assert tk_mock.Label.call_args.kwargs["text"] == "go"
+    label.place.assert_called_once_with(x=40, y=50)
+    label.lift.assert_called_once_with()
 
 
-def test_topmost_attribute_is_set_on_the_tip_window() -> None:
-    """The tip is forced above the lock window with -topmost."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=0)
-        handlers = _handlers(w)
-        handlers["<Enter>"](None)
-        cb = w.after.call_args.args[1]
-        cb()
-    tip_tk.attributes.assert_called_once_with("-topmost", 1)
+@pytest.mark.parametrize(
+    ("pointer", "expected"),
+    [((690, 490), {"x": 560, "y": 280}), ((50, 100), {"x": 0, "y": 0})],
+)
+def test_the_tip_is_kept_inside_the_surface(
+    label: MagicMock, pointer: tuple[int, int], expected: dict[str, int]
+) -> None:
+    """Near an edge the tip is pulled back so it never draws off the surface."""
+    w = _widget(pointer=pointer)
+    Tooltip(w, "go", delay_ms=0)
+    _hover_and_show(w)
+    label.place.assert_called_once_with(**expected)
 
 
-def test_double_enter_schedules_only_once() -> None:
-    """Two rapid <Enter> events produce exactly one scheduled show."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=0)
-        handlers = _handlers(w)
-        handlers["<Enter>"](None)
-        cb = w.after.call_args.args[1]
-        cb()
-        # Second <Enter> should be a no-op since _tip is already set.
-        handlers["<Enter>"](None)
-    # Only one Toplevel should be constructed despite two <Enter> events.
-    assert tip_tk.wm_geometry.call_count == 1
-
-
-def test_leaving_cancels_any_scheduled_show_and_destroys_tip() -> None:
-    """Exit hides the tip immediately and clears the timer job."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.after_cancel = MagicMock()
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    tip_tk.destroy = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=500)
-        handlers = _handlers(w)
-        # Trigger <Enter> to schedule a show, then trigger <Leave>
-        # BEFORE the callback fires - this tests that a scheduled show
-        # gets cancelled.
-        handlers["<Enter>"](None)
-        handlers["<Leave>"](None)
-    w.after_cancel.assert_called_once_with("job-id")
-    # The tip was never created since we left before the callback.
-    tip_tk.destroy.assert_not_called()
-
-
-def test_leaving_without_an_open_tip_is_harmless() -> None:
-    """No scheduled show and no tip to destroy: no-op."""
-    w = MagicMock()
-    w.after = MagicMock()
-    w.after_cancel = MagicMock()
+def test_a_second_enter_while_pending_schedules_nothing() -> None:
+    """One pending show at a time."""
+    w = _widget()
     Tooltip(w, "go")
-    handlers = _handlers(w)
-    handlers["<Leave>"](None)
-    w.after_cancel.assert_not_called()
-
-
-def test_button_press_hides_a_visible_tip() -> None:
-    """Pressing any button closes an open tooltip."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.after_cancel = MagicMock()
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    tip_tk.destroy = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go")
-        handlers = _handlers(w)
-        handlers["<Enter>"](None)
-        cb = w.after.call_args.args[1]
-        cb()
-        # Now the tip is open; trigger <ButtonPress>.
-        handlers["<ButtonPress>"](None)
-    # After callback fires, _job is None, so after_cancel is not called.
-    # But tip is open, so destroy is called.
-    tip_tk.destroy.assert_called_once()
-
-
-def test_schedule_early_return_when_job_already_pending() -> None:
-    """If a job is already scheduled, a second Enter does nothing."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=0)
-        handlers = _handlers(w)
-        # First <Enter> schedules a show.
-        handlers["<Enter>"](None)
-        # A second <Enter> should be silently ignored (early return).
-        handlers["<Enter>"](None)
-    # after was called only once.
+    _handlers(w)["<Enter>"](None)
+    _handlers(w)["<Enter>"](None)
     assert w.after.call_count == 1
 
 
-def test_show_early_return_when_tip_already_open() -> None:
-    """Calling _show while a tip is already visible makes no second Toplevel."""
-    parent = _make_parent()
-    w = MagicMock()
-    w.after = parent.after
-    w.winfo_pointerx = parent.winfo_pointerx
-    w.winfo_pointery = parent.winfo_pointery
-    tip_tk = MagicMock()
-    tip_tk.wm_overrideredirect = MagicMock()
-    tip_tk.attributes = MagicMock()
-    tip_tk.wm_geometry = MagicMock()
-    tip_tk.pack = MagicMock()
-    with patch("leetcode_guard._tooltip.tk.Toplevel", return_value=tip_tk):
-        Tooltip(w, "go", delay_ms=0)
-        handlers = _handlers(w)
-        # First hover creates the tip.
-        handlers["<Enter>"](None)
-        cb = w.after.call_args.args[1]
-        cb()
-        # Second hover while tip is open should be ignored.
-        handlers["<Enter>"](None)
-        cb2 = w.after.call_args.args[1]
-        cb2()
-    # Only one Toplevel created despite two shows.
-    assert tip_tk.wm_geometry.call_count == 1
+@pytest.mark.usefixtures("label")
+def test_a_shown_tip_is_not_shown_twice(tk_mock: MagicMock) -> None:
+    """A visible tip is not built again."""
+    w = _widget()
+    Tooltip(w, "go", delay_ms=0)
+    _hover_and_show(w)
+    _hover_and_show(w)
+    assert tk_mock.Label.call_count == 1
+
+
+def test_leaving_cancels_a_pending_show() -> None:
+    """Leaving before the delay cancels the show."""
+    w = _widget()
+    Tooltip(w, "go")
+    _handlers(w)["<Enter>"](None)
+    _handlers(w)["<Leave>"](None)
+    w.after_cancel.assert_called_once_with("job-id")
+
+
+def test_leaving_without_a_tip_is_harmless() -> None:
+    """Nothing pending and nothing shown: a no-op."""
+    w = _widget()
+    Tooltip(w, "go")
+    _handlers(w)["<Leave>"](None)
+    w.after_cancel.assert_not_called()
+
+
+def test_a_click_removes_a_visible_tip(label: MagicMock) -> None:
+    """Pressing the button removes the tip."""
+    w = _widget()
+    Tooltip(w, "go", delay_ms=0)
+    _hover_and_show(w)
+    _handlers(w)["<ButtonPress>"](None)
+    label.destroy.assert_called_once_with()
+    w.after_cancel.assert_not_called()
