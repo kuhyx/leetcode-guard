@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import breakglass_lines
+from leetcode_guard._tooltip import add_tooltip
 from leetcode_guard._view_credit import place_credit
 from leetcode_guard._view_icons import Padlock
 from leetcode_guard._view_phase import build_phase_slot
@@ -153,6 +154,7 @@ def _add_escape_button(
         command=view.hooks.on_escape,
         relief="flat",
     )
+    add_tooltip(view.decor.escape_button, "escape")
     view.decor.escape_button.pack(pady=(_PAD, 0))
     if not model.show_escape:
         view.decor.escape_button.pack_forget()

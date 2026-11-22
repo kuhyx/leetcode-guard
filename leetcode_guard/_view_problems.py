@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
+from leetcode_guard._tooltip import add_tooltip
 from leetcode_guard._view_types import RowWiring
 
 if TYPE_CHECKING:
@@ -158,6 +159,7 @@ def append_rows(
                 command=lambda url=line.url: on_open(url),
                 relief="flat",
             )
+            add_tooltip(button, "open")
             button.pack(side="right", padx=_PAD // 2)
             buttons.append(button)
             widgets.append(button)

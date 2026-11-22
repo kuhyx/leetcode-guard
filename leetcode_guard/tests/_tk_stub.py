@@ -84,6 +84,7 @@ TK_MODULES = (
     "leetcode_guard._study_resume",
     "leetcode_guard._study_steps",
     "leetcode_guard._study_strip",
+    "leetcode_guard._tooltip",
 )
 """Every module that does ``import tkinter as tk``.
 

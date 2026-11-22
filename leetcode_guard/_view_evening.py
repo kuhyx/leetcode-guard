@@ -10,6 +10,7 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 
 from leetcode_guard import _glyphs as g
+from leetcode_guard._tooltip import add_tooltip
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -36,6 +37,7 @@ def install_end_evening_button(
         command=on_press,
         relief="flat",
     )
+    add_tooltip(button, "end")
     button.place(relx=1.0, x=-10, y=10, anchor="ne")
     return button
 
@@ -62,5 +64,6 @@ def install_demo_close_button(
         command=on_close,
         relief="flat",
     )
+    add_tooltip(button, "close")
     button.place(x=10, y=10)
     return button

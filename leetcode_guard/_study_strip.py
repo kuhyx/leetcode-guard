@@ -30,6 +30,7 @@ from leetcode_guard._constants import (
     STUDY_STRIP_TICK_MS,
     STUDY_STRIP_WIDTH_PX,
 )
+from leetcode_guard._tooltip import add_tooltip
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -191,6 +192,7 @@ def build_strip(
         command=on_back,
         relief="flat",
     )
+    add_tooltip(back, "relock")
     back.pack(pady=(config.space("xs"), config.space("sm")))
 
     return StudyStrip(
