@@ -13,22 +13,40 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard import _browser, open_cli
 from leetcode_guard._browser import LaunchResult
+from leetcode_guard._phase_view import PhaseView
 
 if TYPE_CHECKING:
     import pytest
 
 FIRST = "https://leetcode.com/problems/two-sum/"
 SECOND = "https://leetcode.com/problems/add-two-numbers/"
+NONE_VIEW = PhaseView(
+    unit="",
+    phase="none",
+    learn_target=None,
+    lessons_ready=False,
+    solved=0,
+    total=0,
+    cards_taught=None,
+    cards_total=None,
+    theory_minutes_today=0,
+    minutes_per_credit=12,
+)
+"""Every unit finished: the lock's first action is its first problem."""
 
 
-def _cache(monkeypatch: pytest.MonkeyPatch, *urls: str) -> list[int]:
+def _cache(
+    monkeypatch: pytest.MonkeyPatch, *urls: str, view: PhaseView = NONE_VIEW
+) -> list[int]:
     """Serve ``urls`` as the cached suggestions; returns the limits asked for."""
     limits: list[int] = []
 
     def gather(*, limit: int) -> SimpleNamespace:
         limits.append(limit)
         rows = [SimpleNamespace(url=url) for url in urls]
-        return SimpleNamespace(pool=SimpleNamespace(suggestions=rows))
+        return SimpleNamespace(
+            pool=SimpleNamespace(suggestions=rows), unit=SimpleNamespace(view=view)
+        )
 
     monkeypatch.setattr(open_cli, "gather_status", gather)
     return limits
