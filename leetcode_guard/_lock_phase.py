@@ -80,6 +80,7 @@ def demo_phase(name: str, pool: PoolResolution) -> PhaseView | None:
         solved=0 if theory else 1,
         total=count if theory else count + 1,
         learn_target=(_DEMO_SUBJECT, unit) if theory else None,
+        rework_target=None if theory else (_DEMO_SUBJECT, unit),
     )
 
 

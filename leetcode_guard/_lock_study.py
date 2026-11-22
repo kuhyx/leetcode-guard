@@ -1,9 +1,7 @@
 """Wire study mode into the lock: the Open button, the strip, the way back.
 
-Split out of ``_lock.py`` for the 400-line cap, and like ``ReleaseMixin`` it is
-the right seam anyway -- this is the whole "let them actually reach a problem"
-surface in one place, which is the part worth reading before changing anything
-about the 2026-08-05 fix.
+Split out of ``_lock.py``; like ``ReleaseMixin`` it is the right seam anyway: the
+whole "let them actually reach a problem" surface (the 2026-08-05 fix) in one place.
 
 The ordering that matters is in :meth:`StudyMixin.open_problem`: **find the
 browser before touching the grab.** The common failure is having no browser
@@ -19,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
-from leetcode_guard._lock_learn import LearnButton
+from leetcode_guard._lock_learn import LearnButton, rework_route_for
 from leetcode_guard._study import StudySession
 from leetcode_guard._study_restart import forget_study, remember_study
 from leetcode_guard._study_strip import build_strip
@@ -35,6 +33,7 @@ if TYPE_CHECKING:
     from leetcode_guard._lock_state import RunState
     from leetcode_guard._study_strip import StudyStrip
     from leetcode_guard._view_group import FrameGroup
+    from leetcode_guard._viewmodel import ViewModel
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -43,10 +42,8 @@ class StudyMixin:
     """Study mode, mixed into the lock.
 
     Owns ``_study`` and ``_strip`` (``None`` until a session starts) and reads
-    ``_frames``, ``_run`` and ``_lock`` from the class it is mixed into.
-    Declared rather than assumed, for the reason ``ReleaseMixin`` gives: a mixin
-    that quietly expects attributes breaks on a
-    refactor and says nothing until runtime.
+    the attributes below from the class it is mixed into, declared rather than
+    assumed (``ReleaseMixin``: a silent expectation breaks only at runtime).
     """
 
     _study: StudySession | None = None
@@ -57,6 +54,7 @@ class StudyMixin:
     frames: FrameGroup
     run_state: RunState
     deps: GuardDeps
+    model: ViewModel
     lock: Any
     nudge_verifying: bool
     nudge_down: bool
@@ -88,6 +86,11 @@ class StudyMixin:
         """The theory card's learn button; a ``LearnButton`` per press (no state)."""
         config = self.run_state.config
         LearnButton(self.enter_study, self._say, self.frames, config).open_learn(route)
+
+    def open_rework(self, slug: str) -> None:
+        """A SOLVE row's ``?``: the rework chat via the learn path (``_lock_learn``)."""
+        if (route := rework_route_for(self.model.screen.rework, slug)) is not None:
+            self.open_learn(route)
 
     def enter_study(self, spawn: Callable[[], bool]) -> None:
         """Steps 2-4 of :meth:`open_problem`, shared with the learn button.

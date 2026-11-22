@@ -62,6 +62,8 @@ class PhaseScreen:
     """THEORY only."""
     unit_bar: str = ""
     """SOLVE only: the unit and ``solved / total``; the view adds the check."""
+    rework: tuple[str, str] | None = None
+    """SOLVE only: (subject, module) the rows' ``?`` sends the chat to."""
 
     @property
     def unit_list(self) -> bool:
@@ -125,4 +127,11 @@ def build_phase_screen(view: PhaseView | None) -> PhaseScreen:
         phase="solve",
         unit=view.unit,
         unit_bar=f"{view.unit}  {view.solved} / {view.total}",
+        rework=view.rework_target,
     )
+
+
+def rework_route(target: tuple[str, str], slug: str) -> str:
+    """The tutor route a row's ``?`` opens: the chat that adds cards to ``target``."""
+    subject, module = target
+    return f"/rework/{subject}/{module}/{slug}"

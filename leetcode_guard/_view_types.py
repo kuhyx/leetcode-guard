@@ -28,6 +28,10 @@ class ProblemList:
     """What the rows were last painted from; rows built on scroll read it."""
     marks: list[Any] = field(default_factory=list)
     """Each row's weight-mark label (``◆◆  48%``), in list order."""
+    rework: list[Any] = field(default_factory=list)
+    """Each row's ``?`` button (empty when no rework handler is wired)."""
+    rework_live: bool = False
+    """Whether the last paint was SOLVE, so rows built later show ``?``."""
     shown: int | None = None
     """How many rows, from the top, are packed; ``None`` on hand-made views,
     which are never re-shown. Hidden rows are always a tail, so re-showing
@@ -45,6 +49,12 @@ class RowWiring:
     marks: list[Any] = field(default_factory=list)
     """Receives each row's weight-mark label, so a repaint can move a new
     problem's mark (and its colour) into a reused row."""
+    on_rework: Callable[[str], None] | None = None
+    """Called with a row's slug when its ``?`` is pressed; ``None``: a blank slot."""
+    rework: list[Any] = field(default_factory=list)
+    """Receives each row's ``?`` button, so a repaint can show and rebind it."""
+    rework_live: bool = False
+    """Build the ``?`` showing (SOLVE) or blank and inert (any other screen)."""
 
 
 @dataclass(frozen=True)
@@ -68,6 +78,9 @@ class ViewHooks:
 
     on_escape: Callable[[], None] | None = None
     """Invoked when the escape hatch is pressed; ``None`` builds no button."""
+
+    on_rework: Callable[[str], None] | None = None
+    """Invoked with a SOLVE row's slug when its ``?`` is pressed (phase 2)."""
 
     on_learn: Callable[[str], None] | None = None
     """Invoked with a tutor route when the theory card's button is pressed.

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Final
 
 from leetcode_guard._browser import find_tutor, launch_tutor
 from leetcode_guard._view_phase import mark_learn_unavailable
+from leetcode_guard._viewmodel_phase import rework_route
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -77,3 +78,15 @@ class LearnButton:
     def _cannot_open(self, message: str) -> None:
         self._say(message)
         mark_learn_unavailable(self._frames.views.values(), self._config)
+
+
+def rework_route_for(target: tuple[str, str] | None, slug: str) -> str | None:
+    """The rework route for a SOLVE row's ``?``; ``None`` (logged) off SOLVE.
+
+    The target is read at press time, not when the row was built: a press that
+    lands after the screen left SOLVE opens nothing and keeps the grab.
+    """
+    if target is None or not slug:
+        _logger.warning("rework %r pressed off SOLVE; ignored", slug)
+        return None
+    return rework_route(target, slug)

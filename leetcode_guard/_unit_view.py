@@ -13,6 +13,7 @@ Where each field comes from:
 * ``minutes_per_credit``: ``_theory_credit.MINUTES_PER_CREDIT``.
 * ``learn_target``: THEORY only, the unit's first module (curriculum order)
   whose latest signed C2 row is not done.
+* ``rework_target``: SOLVE only, the unit's first module (phase 2's ``?``).
 * ``cards_taught``, ``cards_total``, ``lessons_ready``: the tutor's UNSIGNED
   ``cards.json``/``log.jsonl`` (``_theory.module_cards``) over the unit's
   modules; ``None`` when unreadable. ``lessons_ready``: the learn target's
@@ -182,4 +183,9 @@ def _assemble(
         solved=state.solved,
         total=state.total,
         learn_target=target,
+        rework_target=(
+            (state.subject, state.modules[0])
+            if state.phase == "solve" and state.modules
+            else None
+        ),
     )

@@ -12,10 +12,9 @@ and no window is itself the bypass.
 
 That invariant has one stated exception. **No window is the bypass while the
 lock is asserted** -- but :mod:`leetcode_guard._lock_study` stands the assertion
-down on request (Open, or the theory card's learn button), releasing the grab:
-until 2026-08-05 the lock demanded a solve its grabbed browser could not type.
-Study mode is explicit and user-initiated, with no timeout; both transitions
-log at warning with elapsed time, so the journal says how long it was open.
+down on request (Open, learn, a SOLVE row's ``?``), releasing the grab: until
+2026-08-05 the lock demanded a solve its grabbed browser could not type. Study
+mode is explicit, no timeout; both transitions log at warning with elapsed time.
 """
 
 from __future__ import annotations
@@ -192,6 +191,7 @@ class LeetcodeGuard(
                 on_open=self.open_problem,
                 on_reveal=self.on_reveal,
                 on_learn=self.open_learn,
+                on_rework=self.open_rework,
             ),
         )
         self.frames.views[surface.output_name] = view

@@ -75,7 +75,10 @@ def _build_problems(
     """The scrolling suggestion list, with an Open button per row if wired."""
     scroll = ScrollArea(inner, config, on_near_end=lambda: [g() for g in grow])
     scroll.outer.pack(pady=(0, _PAD), padx=_PAD, fill="x")
-    wiring = RowWiring(bind=scroll.bind_wheel)
+    live = model.screen.rework is not None
+    wiring = RowWiring(
+        bind=scroll.bind_wheel, on_rework=hooks.on_rework, rework_live=live
+    )
     labels, buttons = build_problem_rows(
         scroll.inner, config, model, hooks.on_open, wiring
     )
@@ -88,6 +91,8 @@ def _build_problems(
         scroll=scroll,
         lines=model.problems,
         marks=wiring.marks,
+        rework=wiring.rework,
+        rework_live=live,
         shown=len(labels),
         fitted=(rows, min(len(labels), rows)),
     )

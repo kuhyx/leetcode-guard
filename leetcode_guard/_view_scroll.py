@@ -146,7 +146,13 @@ def grow_rows(view: GuardView, config: LockConfig) -> int:
         config,
         extra,
         view.hooks.on_open,
-        RowWiring(bind=view.problems.scroll.bind_wheel, marks=view.problems.marks),
+        RowWiring(
+            bind=view.problems.scroll.bind_wheel,
+            marks=view.problems.marks,
+            on_rework=view.hooks.on_rework,
+            rework=view.problems.rework,
+            rework_live=view.problems.rework_live,
+        ),
     )
     view.problems.labels.extend(labels)
     view.problems.buttons.extend(buttons)

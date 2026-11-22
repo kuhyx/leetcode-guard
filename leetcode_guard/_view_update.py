@@ -32,6 +32,7 @@ from leetcode_guard._view_problems import (
     INITIAL_ROWS,
     NO_PROBLEMS_TEXT,
     mark_colour,
+    rework_look,
 )
 from leetcode_guard._view_scroll import grow_rows
 
@@ -81,6 +82,7 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
             paint_phase(view.phase, _config_of(view), model.screen, view.hooks.on_learn)
         view.problems.lines = model.problems
         _apply_problem_rows(view, model.problems)
+        _apply_rework(view, model)
         _refit(view, model.screen.rows)
         _apply_escape_visibility(view, model)
         count += 1
@@ -126,6 +128,22 @@ def _rebind_open_button(view: GuardView, index: int, url: str) -> None:
     # Same default-argument trick as the builder: a bare closure would capture
     # the loop variable and every button would open the last problem.
     view.problems.buttons[index].configure(command=lambda target=url: handler(target))
+
+
+def _apply_rework(view: GuardView, model: ViewModel) -> None:
+    """Show ``?`` on SOLVE, blank it elsewhere, and point it at each row's slug."""
+    live = model.screen.rework is not None
+    view.problems.rework_live = live
+    handler = view.hooks.on_rework
+    if handler is None:
+        return
+    slugs = [line.slug for line in model.problems]
+    for index, button in enumerate(view.problems.rework):
+        slug = slugs[index] if index < len(slugs) else ""
+        button.configure(
+            **rework_look(live=live and bool(slug)),
+            command=lambda target=slug: handler(target),
+        )
 
 
 def _hide_open_button(view: GuardView, index: int) -> None:

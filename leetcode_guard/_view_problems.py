@@ -132,16 +132,9 @@ def append_rows(
         )
         mark.pack(side="left", padx=_PAD // 2)
         wiring.marks.append(mark)
-        # Room for the later rework button (``?``), the width of an Open
-        # button, rightmost. Packed before Open so a re-packed Open still
-        # lands to its left. Empty on purpose: the button is not built yet.
-        spare = tk.Label(
-            row,
-            text="",
-            width=3,
-            font=config.font("subtitle", bold=True),
-            bg=config.palette.field_bg,
-        )
+        # The rework button (``?``), the width of an Open button, rightmost.
+        # Packed before Open so a re-packed Open still lands to its left.
+        spare = _rework_slot(row, config, line.slug, wiring)
         spare.pack(side="right", padx=_PAD // 2)
         widgets: list[Any] = [row, label, mark, spare]
         if on_open is not None:
@@ -167,3 +160,37 @@ def append_rows(
             for widget in widgets:
                 wiring.bind(widget)
     return labels, buttons
+
+
+def rework_look(*, live: bool) -> dict[str, str]:
+    """The ``?`` showing on SOLVE, or a blank inert slot on any other screen."""
+    return {"text": g.REWORK if live else "", "state": "normal" if live else "disabled"}
+
+
+def _rework_slot(
+    row: tk.Misc, config: LockConfig, slug: str, wiring: RowWiring
+) -> tk.Widget:
+    """The ``?`` button when a handler is wired, else the blank reserved slot."""
+    common: dict[str, Any] = {
+        "width": 3,
+        "font": config.font("subtitle", bold=True),
+        "bg": config.palette.field_bg,
+    }
+    handler = wiring.on_rework
+    if handler is None:
+        return tk.Label(row, text="", **common)
+    button = tk.Button(
+        row,
+        **common,
+        **rework_look(live=wiring.rework_live),
+        fg=config.palette.accent,
+        relief="flat",
+        # No outline: off SOLVE the slot must read as empty, not as a box.
+        borderwidth=0,
+        highlightthickness=0,
+        # Default argument: a bare closure would capture the loop's last slug.
+        command=lambda target=slug: handler(target),
+    )
+    add_tooltip(button, "rework")
+    wiring.rework.append(button)
+    return button
