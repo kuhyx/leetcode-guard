@@ -17,6 +17,7 @@ from leetcode_guard import _harvest_run
 from leetcode_guard._auth import AuthState
 from leetcode_guard._constants import EXIT_OK
 from leetcode_guard._daycost import local_today
+from leetcode_guard._gate_state import GateState
 from leetcode_guard._ledger_entries import bootstrap_entry, charge_entry
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._settings import Client
@@ -57,7 +58,9 @@ def seeded_ledger(path: Path, key_file: Path) -> None:
 def unlocked_decision(key_file: Path) -> SimpleNamespace:
     """What ``decide_today`` returns once the credits cover the day."""
     charge = charge_entry(local_today(), now=NOW, key_file=key_file)
-    return SimpleNamespace(locked=False, charge=charge)
+    return SimpleNamespace(
+        locked=False, charge=charge, state=GateState.UNLOCKED_CHARGED_NOW
+    )
 
 
 def test_credits_a_solve_made_with_no_lock_running(
@@ -111,11 +114,6 @@ def test_a_still_locked_day_gets_credit_but_no_charge(
     """Not enough yet: bank the credit, write no charge, open no window."""
     seeded_ledger(data_dir / "ledger.json", hmac_key)
     stub_client(monkeypatch, recent_ac_result([submission_row("42", "two-sum")]))
-    monkeypatch.setattr(
-        _harvest_run,
-        "decide_today",
-        lambda *a, **k: SimpleNamespace(locked=True, charge=None),
-    )
 
     _harvest_run.main(key_file=hmac_key)
 
@@ -138,6 +136,7 @@ def test_stands_aside_while_a_lock_is_up(
 
     assert "lock is up" in capsys.readouterr().out
     assert not load_ledger(data_dir / "ledger.json").of_kind("credit")
+    assert not load_ledger(data_dir / "ledger.json").of_kind("progress")
 
 
 def test_stands_aside_when_a_lock_starts_during_the_probe(

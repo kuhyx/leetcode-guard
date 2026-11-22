@@ -6,5 +6,7 @@ extend = "../pyproject.toml"
 "_theory_credit.py" = ["BLE001"]
 # BLE001: the strip's earned-today read fails to None, drawn as no filled dot; a bug must never cost the strip.
 "_earned_today.py" = ["BLE001"]
+# BLE001: apply_progress fences the inert progress row; a bug there must cost the row, never the credit, the charge or the lock.
+"_gate_progress.py" = ["BLE001"]
 # BLE001: the lock calls view_now on every repaint; a bug must cost the unit card, never the lock.
 "_unit_view.py" = ["BLE001"]

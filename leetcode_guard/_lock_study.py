@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
-from leetcode_guard._earned_today import earned_for_strip
+from leetcode_guard._earned_today import strip_counts
 from leetcode_guard._lock_learn import LearnButton, rework_route_for
 from leetcode_guard._study import StudySession
 from leetcode_guard._study_restart import forget_study, remember_study
@@ -163,16 +163,14 @@ class StudyMixin:
     def strip_text(self) -> StripText:
         """What the strip should say right now.
 
-        (owed, earned today) is read once per refresh, not per 1 s tick: one
-        ``decide_today`` (~35 ms on the Tk thread) and one ledger scan. Owed is
-        at least 1; earned is ``None`` when unreadable (no filled dot).
+        (owed, done) is read once per refresh, not per 1 s tick: one
+        ``decide_today`` (~35 ms on the Tk thread) and one ledger scan, through
+        the function the signed progress row is written from. Owed is at least
+        1; done is ``None`` when unreadable (no filled dot).
         """
         if self._strip_counts is None:
-            self._strip_counts = (
-                max(1, self.decision().needed),
-                earned_for_strip(
-                    self.ledger, now=self.deps.moment(), key_file=self.deps.key_file
-                ),
+            self._strip_counts = strip_counts(
+                self.ledger, self.decision(), key_file=self.deps.key_file
             )
         needed, earned = self._strip_counts
         return StripText(

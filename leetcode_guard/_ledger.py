@@ -8,8 +8,10 @@ key. Two kinds carry value:
   from before the lock engaged count with no timestamp bookkeeping.
 * ``charge:<YYYY-MM-DD>`` -- a debit, worth :func:`day_cost` for that day.
 
-Two more carry none: ``seen:`` marks a submission that existed before the gate
-did (first-run seeding) and ``bootstrap:`` records that seeding happened.
+Three more carry none: ``seen:`` marks a submission that existed before the gate
+did (first-run seeding), ``bootstrap:`` records that seeding happened, and
+``progress:`` signs "done N of target M" for a day still short (read only by
+``earned_time``; the gate never counts it).
 
 Honest scope: the key is world-readable, so this is tamper-*evident*, not
 tamper-*proof*. It stops casual editing of a JSON file and leaves a loud record
@@ -33,6 +35,7 @@ CREDIT: Final = "credit"
 CHARGE: Final = "charge"
 SEEN: Final = "seen"
 BOOTSTRAP: Final = "bootstrap"
+PROGRESS: Final = "progress"
 
 SOURCE_LEETCODE: Final = "leetcode"
 SOURCE_SEED: Final = "seed"
@@ -51,7 +54,7 @@ class LedgerEntry:
             is the dedupe key, so its construction is the whole idempotency
             story.
         kind: One of :data:`CREDIT`, :data:`CHARGE`, :data:`SEEN`,
-            :data:`BOOTSTRAP`.
+            :data:`BOOTSTRAP`, :data:`PROGRESS`.
         day: Local ``YYYY-MM-DD`` the entry belongs to.
         created_at: UTC ISO timestamp. Forensics and HLC ordering only -- never
             day arithmetic, which is local.

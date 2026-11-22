@@ -26,6 +26,7 @@ from leetcode_guard._harvest import (
 )
 from leetcode_guard._ledger_io import solved_slugs
 from leetcode_guard._lock_phase import unit_rows
+from leetcode_guard._lock_progress import record_progress
 from leetcode_guard._lock_theory import mint_theory
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
@@ -80,9 +81,7 @@ class PollMixin:
 
     def _maybe_seed(self) -> None:
         """Initialise a brand-new ledger so the first run still gates."""
-        if not needs_seeding(self.ledger) and self.deps.write_ledger:
-            return
-        if not self.deps.write_ledger:
+        if not (self.deps.write_ledger and needs_seeding(self.ledger)):
             return
         seed_ledger(
             self.ledger,
@@ -228,6 +227,7 @@ class PollMixin:
             self._release(probe)
             return
 
+        record_progress(self.ledger, decision, self.deps, demo=self.run_state.demo)
         self._last_probe = probe
         unit_changed = self.run_state.phases.refresh()
         self.model = self.build_model(probe)

@@ -192,11 +192,11 @@ def test_the_strip_tick_does_not_redecide_every_second(
     monkeypatch.setattr(guard, "decision", counting)
     earned_reads: list[int] = []
 
-    def counting_earned(*_args: object, **_kwargs: object) -> int:
+    def counting_earned(*_args: object, **_kwargs: object) -> tuple[int, int]:
         earned_reads.append(1)
-        return 0
+        return 1, 0
 
-    monkeypatch.setattr("leetcode_guard._lock_study.earned_for_strip", counting_earned)
+    monkeypatch.setattr("leetcode_guard._lock_study.strip_counts", counting_earned)
     first = guard.strip_text()
     guard.strip_text()
     guard.strip_text()

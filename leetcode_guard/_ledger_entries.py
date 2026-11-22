@@ -1,4 +1,4 @@
-"""The four kinds of ledger entry, each signed as it is built.
+"""The kinds of ledger entry, each signed as it is built.
 
 Split out of ``_ledger.py`` for the 250-line cap: that module owns the record
 and its signature, this one the constructors that use them. The dependency
@@ -14,6 +14,7 @@ from leetcode_guard._ledger import (
     BOOTSTRAP,
     CHARGE,
     CREDIT,
+    PROGRESS,
     SEEN,
     SOURCE_LEETCODE,
     SOURCE_SEED,
@@ -137,6 +138,40 @@ def charge_entry(
             created_at=_iso(now),
             amount=day_cost(day) + surcharge,
             detail=detail,
+        ),
+        key_file=key_file,
+    )
+
+
+def progress_entry(
+    *,
+    for_day: date,
+    done: int,
+    target: int,
+    now: datetime,
+    key_file: Path | None = None,
+) -> LedgerEntry:
+    """A signed, zero-value "done ``done`` of ``target``" for one gated day.
+
+    The contract ``earned_time`` reads: the id carries both numbers, ``amount``
+    is 0 and every ``detail`` value is a string. Inert here -- no balance, debt,
+    clock or decision reads this kind (``_balance`` counts credits and charges
+    only), so it cannot unlock anything.
+    """
+    day = day_key(for_day)
+    return sign(
+        LedgerEntry(
+            entry_id=f"progress:{day}:{done}:{target}",
+            kind=PROGRESS,
+            day=day,
+            created_at=_iso(now),
+            amount=0,
+            detail={
+                "source": SOURCE_LEETCODE,
+                "for_day": day,
+                "done": str(done),
+                "target": str(target),
+            },
         ),
         key_file=key_file,
     )

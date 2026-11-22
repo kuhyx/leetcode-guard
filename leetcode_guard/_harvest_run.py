@@ -12,7 +12,9 @@ It is a separate entry point rather than a ``_cli`` flag on purpose: every
 Credits still come only from LeetCode's own recent-AC feed, so the "credits must
 verify" rule holds unchanged.
 
-Four rules, each pinned in ``test_harvest_run.py``:
+Four rules, each pinned in ``test_harvest_run.py``. A fifth, in the run that
+minted: it then signs a progress row for a day still short
+(``_gate_progress``; ``test_harvest_run_progress.py``), never on a deferred day:
 
 * **Never hold the instance lock.** ``cmd_lock`` stands down when it is taken,
   and systemd stamps the slot as run anyway, so a harvest overlapping the 09:00
@@ -50,11 +52,14 @@ from leetcode_guard._display_lines import (
     push_line,
 )
 from leetcode_guard._gate import apply_decision
+from leetcode_guard._gate_progress import apply_progress
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding
 from leetcode_guard._instance import acquire
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._logging_setup import configure_logging
+from leetcode_guard._morning_session import defer_for_morning_session
+from leetcode_guard._night_lockdown import defer_for_evening_lockdown
 from leetcode_guard._settings import build_client
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 from leetcode_guard._theory_credit import poll_theory
@@ -120,7 +125,22 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
         line += f"; theory credited {minted}"
     decision = decide_today(ledger, day=day, now=now, key_file=key_file)
     settled = not decision.locked and apply_decision(ledger, decision, LEDGER_FILE)
+    # After the credit and any charge are saved, so a failure costs only the row.
+    if not gate_deferred(now):
+        apply_progress(ledger, decision, LEDGER_FILE, now=now, key_file=key_file)
     return line + ("; settled today" if settled else "")
+
+
+def gate_deferred(now: datetime) -> bool:
+    """Whether the morning session or tonight's lockdown stands the gate down.
+
+    The arming run defers on these (``_cli``); a harvest minting in the same
+    window must not sign a fraction of a day the gate is not holding.
+    """
+    return (
+        defer_for_morning_session(now) is not None
+        or defer_for_evening_lockdown(now) is not None
+    )
 
 
 def _theory(ledger: Ledger, stamp: tuple[date, datetime, Path | None]) -> int:

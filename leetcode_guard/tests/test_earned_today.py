@@ -7,12 +7,14 @@ finished module, accepted solves (difficulty-weighted).
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import date
 import logging
 from typing import TYPE_CHECKING
 
-from leetcode_guard._difficulty import WeightTable
-from leetcode_guard._earned_today import earned_for_strip, earned_today
+from leetcode_guard._difficulty import WeightTable, load_weights
+from leetcode_guard._earned_today import strip_counts
+from leetcode_guard._gate import decide
+from leetcode_guard._gate_progress import earned_today, progress_counts
 from leetcode_guard._ledger_entries import charge_entry, credit_entry
 from leetcode_guard._ledger_io import Ledger, append
 from leetcode_guard._theory_credit import theory_entry
@@ -34,6 +36,9 @@ if TYPE_CHECKING:
     from leetcode_guard._ledger import LedgerEntry
 
 STAMP = (MONDAY, NOW)
+# Current-era prices (Mon/Fri 3); the fixture week is in the older 1-credit era.
+PRICED_MONDAY = date(2026, 11, 23)
+PRICED_FRIDAY = date(2026, 11, 20)
 
 
 def solve(key: Path, ident: str, slug: str = "two-sum", *, day=MONDAY) -> LedgerEntry:
@@ -107,22 +112,42 @@ def test_a_bad_signature_is_not_drawn(hmac_key: Path):
     assert earned_today(ledger_of(good, edited), day=MONDAY, weights=None) == 1
 
 
-def test_the_strip_reads_the_same_number(hmac_key: Path):
-    """The fenced entry point answers the same count at read time."""
-    ledger = ledger_of(solve(hmac_key, "s1"), solve(hmac_key, "s2"))
+def banked_decision(ledger: Ledger, key: Path):
+    """The gate's verdict for a Monday over ``ledger``."""
+    return decide(ledger, day=PRICED_MONDAY, now=NOW, key_file=key)
 
-    assert (
-        earned_for_strip(
-            ledger, now=datetime(2026, 8, 10, 12, 0).astimezone(), key_file=hmac_key
-        )
-        == 2
+
+def test_the_strip_counts_are_hollow_owed_then_filled_done(hmac_key: Path):
+    """One pure function feeds the dots: 2 banked on Friday, none today, 1 owed."""
+    ledger = ledger_of(
+        solve(hmac_key, "b1", day=PRICED_FRIDAY),
+        solve(hmac_key, "b2", day=PRICED_FRIDAY),
+    )
+
+    assert strip_counts(
+        ledger, banked_decision(ledger, hmac_key), key_file=hmac_key
+    ) == (
+        1,
+        2,
     )
 
 
-def test_a_failed_read_draws_nothing_and_says_so(
+def test_the_strip_and_the_signed_row_never_disagree(hmac_key: Path):
+    """Same inputs, same numbers: filled is done, hollow is target minus done."""
+    ledger = ledger_of(solve(hmac_key, "s1", day=PRICED_MONDAY))
+    decision = banked_decision(ledger, hmac_key)
+    done, target = progress_counts(
+        ledger, decision, weights=load_weights(key_file=hmac_key)
+    )
+
+    assert strip_counts(ledger, decision, key_file=hmac_key) == (target - done, done)
+
+
+def test_a_failed_strip_read_still_draws_what_is_owed(
     hmac_key: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ):
-    """Cannot read is None, never an invented dot, and it is logged."""
+    """Cannot read: hollow dots for the owed credits, no invented filled dot."""
+    ledger = ledger_of(solve(hmac_key, "s1", day=PRICED_MONDAY))
 
     def broken(**_kwargs: object) -> WeightTable:
         message = "difficulty file unreadable"
@@ -131,11 +156,7 @@ def test_a_failed_read_draws_nothing_and_says_so(
     monkeypatch.setattr("leetcode_guard._earned_today.load_weights", broken)
 
     with caplog.at_level(logging.WARNING):
-        got = earned_for_strip(
-            ledger_of(solve(hmac_key, "s1")),
-            now=datetime(2026, 8, 10, 12, 0).astimezone(),
-            key_file=hmac_key,
-        )
+        got = strip_counts(ledger, banked_decision(ledger, hmac_key), key_file=hmac_key)
 
-    assert got is None
+    assert got == (2, None)
     assert any(r.levelno >= logging.WARNING for r in caplog.records)
