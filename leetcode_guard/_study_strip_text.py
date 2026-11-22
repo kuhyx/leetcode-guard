@@ -1,8 +1,8 @@
-"""What the study strip says, as glyphs and a clock (no Tk here).
+"""What the study strip says, as glyphs and dot counts (no Tk here).
 
-Split out of ``_study_strip.py`` for the 250-line cap. **No countdown**: the
-elapsed time only counts up, because study mode has no deadline (see
-``_study_strip``).
+Split out of ``_study_strip.py`` for the 250-line cap. **No time**: kuhy asked
+for time in exactly one place, and it is not the strip. The strip has no clock
+and, as study mode has no deadline, no countdown either.
 """
 
 from __future__ import annotations
@@ -16,8 +16,11 @@ from leetcode_guard import _glyphs as g
 class StripText:
     """What the strip currently says."""
 
-    elapsed_seconds: float
     needed: int
+    """Credits still owed: one hollow dot each."""
+    earned: int | None = None
+    """Credits earned today: one filled dot each. ``None`` = could not be read,
+    drawn as no filled dot, never as an invented one."""
     verifying: bool = False
     """The browser reported an Accepted verdict and LeetCode is being asked."""
     fast_path_down: bool = False
@@ -36,21 +39,25 @@ class StripText:
 
     @property
     def headline(self) -> str:
-        """The accent line: the verdict being checked, else elapsed time.
+        """The accent line: ``✓ …`` while a verdict is checked, else absent.
 
-        The count below never moves on the browser's word alone; this line is
-        the only thing a ring changes, and only for as long as the burst runs.
+        The dots never move on the browser's word alone; this line is the only
+        thing a ring changes, and only for as long as the burst runs. Empty
+        means the line is not drawn at all, so it leaves no gap.
         """
-        if self.verifying:
-            return f"{g.SOLVED} …"
-        return self.elapsed
+        return f"{g.SOLVED} …" if self.verifying else ""
 
     @property
-    def elapsed(self) -> str:
-        """``MM:SS`` -- elapsed only, never a target."""
-        return g.elapsed(self.elapsed_seconds)
+    def paid(self) -> bool:
+        """Nothing owed: the strip shows the solved check instead of dots."""
+        return self.needed <= 0
 
     @property
-    def owed(self) -> str:
-        """One hollow circle per accepted submission still outstanding."""
-        return g.dots(self.needed) or g.SOLVED
+    def filled(self) -> int:
+        """Filled dots: credits earned today, none while paid or unreadable."""
+        return 0 if self.paid else (self.earned or 0)
+
+    @property
+    def hollow(self) -> int:
+        """Hollow dots: credits still owed."""
+        return 0 if self.paid else self.needed

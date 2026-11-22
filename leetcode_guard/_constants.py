@@ -171,7 +171,6 @@ accepted submission on any problem counts, including premium ones. Larger than
 spares -- what a row freed mid-lock refills from (``build_problem_lines``)."""
 
 STUDY_STRIP_WIDTH_PX: Final = 320
-STUDY_STRIP_HEIGHT_PX: Final = 130
 STUDY_STRIP_TICK_MS: Final = 1_000
 """The strip shown while the lock is stood down for study.
 

@@ -47,6 +47,10 @@ DISPLAY_PRODUCERS = {
     # above, but the lock windows may import it: ``cmd_lock`` hands it to the
     # window as ``GuardSeams.phase``, fenced so it never raises into the lock.
     "_unit_view",
+    # Credits earned today, for the study strip's filled dots. It reads the
+    # verified ledger like the balance does, but a decider that came to depend
+    # on it would let a display count steer a lock or a credit.
+    "_earned_today",
 }
 DECIDER_PREFIXES = (
     "_balance",

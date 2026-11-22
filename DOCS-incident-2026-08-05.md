@@ -111,8 +111,8 @@ holds an X *global* grab (`XGrabPointer` + `XGrabKeyboard`) and no other client
 receives a keystroke while it is held. `_study.py` stands the lock down: it stops
 gatelock's `RecoveryLoop` (first, or the grab is re-taken within a tick),
 releases the grab, restores VT switching and withdraws the surfaces. A small
-always-on-top strip stays up with elapsed time, solves still owed, and
-`Back to lock`.
+always-on-top strip stays up with elapsed time (no clock since 2026-11-22; see
+`DOCS-scroll-and-nudge.md`), solves still owed, and `Back to lock`.
 
 **Study mode genuinely unlocks the machine, and that was chosen knowingly.**
 There is no timeout: press Open and walk away and it stays open until a solve

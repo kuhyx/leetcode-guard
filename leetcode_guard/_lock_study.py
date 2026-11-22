@@ -17,10 +17,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
+from leetcode_guard._earned_today import earned_for_strip
 from leetcode_guard._lock_learn import LearnButton, rework_route_for
 from leetcode_guard._study import StudySession
 from leetcode_guard._study_restart import forget_study, remember_study
-from leetcode_guard._study_strip import build_strip
+from leetcode_guard._study_strip import build_strip, pick_primary_rect
 from leetcode_guard._study_strip_text import StripText
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from gatelock import OutputRect
 
     from leetcode_guard._gate import GateDecision
+    from leetcode_guard._ledger_io import Ledger
     from leetcode_guard._lock_deps import GuardDeps
     from leetcode_guard._lock_state import RunState
     from leetcode_guard._study_strip import StudyStrip
@@ -41,21 +43,20 @@ _logger: Final = logging.getLogger(__name__)
 class StudyMixin:
     """Study mode, mixed into the lock.
 
-    Owns ``_study`` and ``_strip`` (``None`` until a session starts) and reads
+    Owns ``_study`` and ``strip`` (``None`` until a session starts) and reads
     the attributes below from the class it is mixed into, declared rather than
     assumed (``ReleaseMixin``: a silent expectation breaks only at runtime).
     """
 
     _study: StudySession | None = None
     strip: StudyStrip | None = None
-    _strip_needed: int | None = None
-    # The 1 s strip tick reuses the last decide_today answer (~35 ms and
-    # dozens of pool reads on the Tk thread) until refresh_strip() asks again.
+    _strip_counts: tuple[int, int | None] | None = None  # until refresh_strip()
     frames: FrameGroup
     run_state: RunState
     deps: GuardDeps
     model: ViewModel
     lock: Any
+    ledger: Ledger
     nudge_verifying: bool
     nudge_down: bool
     remembers_study: bool = True  # ``_study_restart``; the evening lock opts out
@@ -102,7 +103,7 @@ class StudyMixin:
         session = self.session()
         if session.active:
             # A second problem while already studying is a legitimate thing to
-            # want. Nothing to tear down, and the elapsed clock keeps running.
+            # want. Nothing to tear down; the session keeps running.
             spawn()
             return
 
@@ -142,11 +143,10 @@ class StudyMixin:
         rect = self.primary_rect()
         if rect is None:
             # Zero live outputs: nothing to place it on. The poller still runs
-            # and a real solve still unlocks, so this is a degraded study
-            # session rather than a broken one.
+            # and a real solve still unlocks: degraded, not broken.
             _logger.warning("no output to place the study strip on")
             return
-        self._strip_needed = None
+        self._strip_counts = None
         self.strip = build_strip(
             self.lock.root,
             self.run_state.config,
@@ -158,33 +158,33 @@ class StudyMixin:
 
     def primary_rect(self) -> OutputRect | None:
         """The primary output's rectangle, or the first, or ``None``."""
-        infos = self.lock.surfaces.infos()
-        if not infos:
-            return None
-        for info in infos:
-            if info.is_primary:
-                return info.rect
-        return infos[0].rect
-
-    def _needed_for_strip(self) -> int:
-        """Problems still owed, computed once per refresh, not per tick."""
-        if self._strip_needed is None:
-            self._strip_needed = max(1, self.decision().needed)
-        return self._strip_needed
+        return pick_primary_rect(self.lock.surfaces.infos())
 
     def strip_text(self) -> StripText:
-        """What the strip should say right now."""
-        session = self.session()
+        """What the strip should say right now.
+
+        (owed, earned today) is read once per refresh, not per 1 s tick: one
+        ``decide_today`` (~35 ms on the Tk thread) and one ledger scan. Owed is
+        at least 1; earned is ``None`` when unreadable (no filled dot).
+        """
+        if self._strip_counts is None:
+            self._strip_counts = (
+                max(1, self.decision().needed),
+                earned_for_strip(
+                    self.ledger, now=self.deps.moment(), key_file=self.deps.key_file
+                ),
+            )
+        needed, earned = self._strip_counts
         return StripText(
-            elapsed_seconds=session.elapsed_seconds(),
-            needed=self._needed_for_strip(),
+            needed=needed,
+            earned=earned,
             verifying=self.nudge_verifying,
             fast_path_down=self.nudge_down,
         )
 
     def refresh_strip(self) -> None:
         """Repaint the strip now, not on its next one-second tick."""
-        self._strip_needed = None
+        self._strip_counts = None
         if self.strip is not None:
             self.strip.tick(self.strip_text())
 

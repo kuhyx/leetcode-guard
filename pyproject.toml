@@ -103,6 +103,8 @@ unfixable = []
 # It drives the lock only through public seams (``LeetcodeGuard.build_model``),
 # so it needs no SLF001 exemption (pylint 10.00, 2026-11-12).
 "scripts/screenshot_states.py" = ["T201"]
+# The strip photographer: starts ImageMagick's `import` by name, fixed argv (S603, S607).
+"scripts/screenshot_strip.py" = ["S603", "S607"]
 # The grab harness. It judges the grab by gatelock's public ``holds_grab()``,
 # never by the adapter's verdicts; its one gatelock read is the adapter's plain ``surface_map`` accessor,
 # which carries no logic to mark. Its printed PASS/FAIL lines are its output.

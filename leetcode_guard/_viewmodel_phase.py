@@ -45,7 +45,7 @@ class TheoryCard:
     fraction: float | None
     """How full the bar is drawn; ``None`` draws it empty (unknown or no cards)."""
     rate: str
-    """Today's taught minutes, then the minutes that buy one credit."""
+    """The minutes that buy one credit; the running minutes are not shown."""
     button: str
     """:data:`~leetcode_guard._glyphs.LEARN`, or the plan glyph while not ready."""
     route: str | None
@@ -108,10 +108,7 @@ def _card(view: PhaseView) -> TheoryCard:
         ready_mark="" if view.lessons_ready else g.NOT_READY,
         counts=f"{_count(view.cards_taught)} / {_count(view.cards_total)}",
         fraction=_fraction(view.cards_taught, view.cards_total),
-        rate=(
-            f"{view.theory_minutes_today}{g.MINUTES}{g.SEP}"
-            f"{minutes}{g.MINUTES} {g.RATE} 1{g.CREDIT}"
-        ),
+        rate=f"{minutes}{g.MINUTES} {g.RATE} 1{g.CREDIT}",
         button=g.LEARN if view.lessons_ready else g.PLAN,
         route=learn_route(view),
     )

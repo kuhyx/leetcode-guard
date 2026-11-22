@@ -103,12 +103,6 @@ def weight_mark(difficulty: str) -> str:
     return CREDIT * _WEIGHT.get(difficulty, 1)
 
 
-def elapsed(seconds: float) -> str:
-    """``MM:SS`` -- elapsed only, never a target (see ``_study_strip``)."""
-    total = max(0, int(seconds))
-    return f"{total // 60:02d}:{total % 60:02d}"
-
-
 def problem_mark(difficulty: str, ac_rate: float, *, waits: bool = False) -> str:
     """A row's mark: ``◆◆  48%``, led by the pencil while its theory waits."""
     mark = f"{weight_mark(difficulty)}  {ac_rate:.0f}%"

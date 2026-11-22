@@ -10,12 +10,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from leetcode_guard import _glyphs as g
+from leetcode_guard._daycost import local_today
 from leetcode_guard._gatelock_internals import arming, set_arming, vt_disabled
+from leetcode_guard._ledger_entries import credit_entry
+from leetcode_guard._ledger_io import append
 from leetcode_guard.tests._guard_factories import (
     UNVERIFIABLE,
     guard_with_fresh_solves,
 )
+from leetcode_guard.tests._ledger_fixtures import submission
 from leetcode_guard.tests.test_lock_study import (
     URL,
     locked_guard,
@@ -82,15 +85,40 @@ def test_an_unverifiable_poll_during_study_leaves_it_running(
 
 
 @pytest.mark.usefixtures("no_spawn")
-def test_the_strip_text_reports_what_is_still_owed(tmp_path: Path, hmac_key: Path):
-    """The study strip names the problems still owed and the time studied."""
+def test_the_strip_text_reports_what_is_owed_and_earned(tmp_path: Path, hmac_key: Path):
+    """The study strip carries the problems still owed and the credits earned
+    today -- and no time."""
     guard = locked_guard(tmp_path, hmac_key)
 
     text = guard.strip_text()
 
     assert text.needed >= 1
-    assert text.owed.startswith(g.OWED)
-    assert text.elapsed.count(":") == 1
+    assert text.hollow == text.needed
+    assert text.earned == 0
+    assert not hasattr(text, "elapsed_seconds")
+
+
+@pytest.mark.usefixtures("no_spawn")
+def test_the_strip_fills_a_dot_for_each_credit_earned_today(
+    tmp_path: Path, hmac_key: Path
+):
+    """A credit recorded today for any reason is one filled dot, after a refresh."""
+    guard = locked_guard(tmp_path, hmac_key)
+    now = guard.deps.moment()
+    append(
+        guard.ledger,
+        [
+            credit_entry(
+                submission("won"),
+                day=local_today(now=now),
+                now=now,
+                key_file=hmac_key,
+            )
+        ],
+    )
+    guard.refresh_strip()
+
+    assert guard.strip_text().earned == 1
 
 
 @pytest.mark.usefixtures("no_spawn")
@@ -162,11 +190,20 @@ def test_the_strip_tick_does_not_redecide_every_second(
         return real()
 
     monkeypatch.setattr(guard, "decision", counting)
+    earned_reads: list[int] = []
+
+    def counting_earned(*_args: object, **_kwargs: object) -> int:
+        earned_reads.append(1)
+        return 0
+
+    monkeypatch.setattr("leetcode_guard._lock_study.earned_for_strip", counting_earned)
     first = guard.strip_text()
     guard.strip_text()
     guard.strip_text()
     assert len(calls) == 1
+    assert len(earned_reads) == 1
     guard.refresh_strip()
     again = guard.strip_text()
     assert len(calls) == 2
+    assert len(earned_reads) == 2
     assert again.needed == first.needed

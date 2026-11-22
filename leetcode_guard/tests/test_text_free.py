@@ -181,11 +181,11 @@ def test_the_study_strip_paints_no_word(tk_mock):
     strip = build_strip(
         MagicMock(),
         LockConfig(),
-        StripText(elapsed_seconds=75.0, needed=2),
+        StripText(needed=2, earned=1),
         rect=rect,
         on_back=lambda: None,
     )
-    strip.tick(StripText(elapsed_seconds=80.0, needed=1, verifying=True))
-    strip.tick(StripText(elapsed_seconds=81.0, needed=1, fast_path_down=True))
+    strip.tick(StripText(needed=1, verifying=True))
+    strip.tick(StripText(needed=1, fast_path_down=True))
 
     assert_text_free(tk_mock)

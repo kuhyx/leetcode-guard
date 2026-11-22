@@ -2,18 +2,20 @@
 
 Study mode hides every lock surface, so without this the screen would simply
 clear and the re-lock would arrive out of nowhere. The strip keeps the gate
-present: how long you have been at it, how many solves are still owed, and the
-way back.
+present: how many credits are earned today (filled dots), how many are still
+owed (hollow dots), and the way back.
 
-**No countdown.** There is no deadline to count down to -- study mode ends on a
-verified solve or on the button below, and nothing else. Showing a timer would
-be inventing a pressure the gate does not actually apply, and the tests assert
-the absence of "remaining", "left" and "until" for exactly that reason.
+**No time at all** (kuhy, 2026-11-22: time in exactly one place, and it is not
+here). There is no clock and no countdown -- study mode has no deadline, it
+ends on a verified solve or on the button below, and a timer would invent a
+pressure the gate does not apply. The window has no fixed height: it takes it
+from its contents, so a verdict line that is absent leaves no gap and a grid of
+many dots wraps without being clipped (:mod:`leetcode_guard._strip_dots`).
 
 Staying on top is this window's own job. gatelock's ``RecoveryLoop`` is stopped
 for the duration -- it is what would otherwise re-take the grab -- so nothing
-else is re-lifting anything. The one-second tick that refreshes the elapsed
-label therefore also calls ``lift()``. Deliberately *not* a second recovery
+else is re-lifting anything. The one-second tick therefore calls ``lift()``
+(and repaints the dots if a count moved). Deliberately *not* a second recovery
 loop: re-asserting the grab is precisely what must not happen here.
 """
 
@@ -25,17 +27,14 @@ import tkinter as tk
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard import _glyphs as g
-from leetcode_guard._constants import (
-    STUDY_STRIP_HEIGHT_PX,
-    STUDY_STRIP_TICK_MS,
-    STUDY_STRIP_WIDTH_PX,
-)
+from leetcode_guard._constants import STUDY_STRIP_TICK_MS, STUDY_STRIP_WIDTH_PX
+from leetcode_guard._strip_dots import DotPainter
 from leetcode_guard._tooltip import add_tooltip
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
-    from gatelock import LockConfig, OutputRect
+    from gatelock import LockConfig, OutputRect, SurfaceInfo
 
     from leetcode_guard._study_strip_text import StripText
 
@@ -59,8 +58,8 @@ class StudyStrip:
     def __init__(
         self,
         window: tk.Toplevel,
-        elapsed_label: tk.Label,
-        needed_label: tk.Label,
+        headline_label: tk.Label,
+        dots: DotPainter,
         *,
         title: StripTitle | None = None,
         tick_ms: int = STUDY_STRIP_TICK_MS,
@@ -68,8 +67,9 @@ class StudyStrip:
         """Wrap an already-built strip window."""
         self.window = window
         self._title = title
-        self._elapsed_label = elapsed_label
-        self._needed_label = needed_label
+        self._headline_label = headline_label
+        self._dots = dots
+        self._headline_shown = False
         self._tick_ms = tick_ms
         self._job: str | None = None
         self._destroyed = False
@@ -84,14 +84,25 @@ class StudyStrip:
                     text=text.title,
                     fg=title.warn if text.fast_path_down else title.normal,
                 )
-            self._elapsed_label.configure(text=text.headline)
-            self._needed_label.configure(text=text.owed)
+            self._show_headline(text.headline)
+            self._dots.paint(text.filled, text.hollow)
             self.window.lift()
         except tk.TclError:
             # A browser going fullscreen over us is cosmetic; a raised
             # exception inside a Tk callback is not. Stop ticking and say so.
             _logger.warning("the study strip could not refresh", exc_info=True)
             self._destroyed = True
+
+    def _show_headline(self, headline: str) -> None:
+        """Write the verdict line, or take it off the window so it leaves no gap."""
+        if headline:
+            self._headline_label.configure(text=headline)
+            if not self._headline_shown:
+                self._headline_label.pack(before=self._dots.canvas)
+                self._headline_shown = True
+        elif self._headline_shown:
+            self._headline_label.pack_forget()
+            self._headline_shown = False
 
     def schedule(self, supply: Callable[[], StripText]) -> None:
         """Start the one-second tick that updates and re-lifts."""
@@ -162,23 +173,29 @@ def build_strip(
     )
     title.pack(pady=(config.space("sm"), 0))
 
-    elapsed_label = tk.Label(
+    headline_label = tk.Label(
         window,
         text=text.headline,
         font=config.font("body"),
         fg=config.palette.accent,
         bg=config.palette.field_bg,
     )
-    elapsed_label.pack()
-
-    needed_label = tk.Label(
+    canvas = tk.Canvas(
         window,
-        text=text.owed,
-        font=config.font("body"),
-        fg=config.palette.muted,
+        width=STUDY_STRIP_WIDTH_PX,
+        height=0,
         bg=config.palette.field_bg,
+        highlightthickness=0,
+        bd=0,
     )
-    needed_label.pack()
+    dots = DotPainter(
+        canvas,
+        STUDY_STRIP_WIDTH_PX,
+        filled_colour=config.palette.success,
+        hollow_colour=config.palette.muted,
+        check_font=config.font("body"),
+    )
+    canvas.pack(pady=(config.space("xs"), 0))
 
     back = tk.Button(
         window,
@@ -195,12 +212,14 @@ def build_strip(
     add_tooltip(back, "relock")
     back.pack(pady=(config.space("xs"), config.space("sm")))
 
-    return StudyStrip(
+    strip = StudyStrip(
         window,
-        elapsed_label,
-        needed_label,
+        headline_label,
+        dots,
         title=StripTitle(title, config.palette.fg, config.palette.warning),
     )
+    strip.tick(text)
+    return strip
 
 
 def _geometry(config: LockConfig, rect: OutputRect) -> str:
@@ -208,11 +227,18 @@ def _geometry(config: LockConfig, rect: OutputRect) -> str:
 
     Top-right because the centre is where a browser puts the problem statement
     the user is trying to read, and the bottom-right is where desktop
-    notifications land.
+    notifications land. Position only: the size is the contents' (a fixed one
+    would clip a wrapped dot grid or leave a gap where the verdict line is not).
     """
     inset = config.space("md")
-    width = STUDY_STRIP_WIDTH_PX
-    height = STUDY_STRIP_HEIGHT_PX
-    x = rect.x + rect.width - width - inset
+    x = rect.x + rect.width - STUDY_STRIP_WIDTH_PX - inset
     y = rect.y + inset
-    return f"{width}x{height}+{x}+{y}"
+    return f"+{x}+{y}"
+
+
+def pick_primary_rect(infos: Sequence[SurfaceInfo]) -> OutputRect | None:
+    """The primary output's rectangle, or the first, or ``None`` if none."""
+    for info in infos:
+        if info.is_primary:
+            return info.rect
+    return infos[0].rect if infos else None

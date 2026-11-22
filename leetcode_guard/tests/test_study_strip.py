@@ -26,12 +26,12 @@ def rect(x: int = 0, y: int = 0, width: int = 1920, height: int = 1080):
     return SimpleNamespace(x=x, y=y, width=width, height=height)
 
 
-def build(*, on_back=None, at=None) -> StudyStrip:
-    """A strip on a mocked parent showing zero elapsed and one owed solve."""
+def build(*, on_back=None, at=None, text: StripText | None = None) -> StudyStrip:
+    """A strip on a mocked parent showing one owed solve."""
     return build_strip(
         MagicMock(),
         CONFIG,
-        StripText(elapsed_seconds=0.0, needed=1),
+        text if text is not None else StripText(needed=1),
         rect=at if at is not None else rect(),
         on_back=on_back or (lambda: None),
     )
@@ -97,33 +97,29 @@ def test_the_back_button_is_wired_and_is_not_styled_as_destructive(tk_mock):
 
 
 def test_it_says_what_it_is_and_what_is_owed(tk_mock):
-    """The labels name study mode, the elapsed time and what is still owed."""
+    """The title names study mode and the canvas draws one hollow dot per solve
+    owed; no label carries a time."""
     build()
 
     texts = [str(call.kwargs.get("text", "")) for call in tk_mock.Label.call_args_list]
     assert g.WATCHING in texts
-    assert "00:00" in texts
-    assert g.OWED in texts
+    assert not any(":" in text for text in texts)
+    assert tk_mock.Canvas.return_value.create_oval.call_count == 1
 
 
 # -- ticking ---------------------------------------------------------------
 
 
-def test_the_tick_refreshes_the_labels_and_re_lifts(tk_mock):
+def test_the_tick_refreshes_the_dots_and_re_lifts(tk_mock):
     """Nothing else is keeping this on top: the recovery loop is stopped, which
     is the entire reason study mode works at all."""
     strip = build()
+    canvas = tk_mock.Canvas.return_value
+    canvas.create_oval.reset_mock()
 
-    strip.tick(StripText(elapsed_seconds=61.0, needed=2))
+    strip.tick(StripText(needed=2, earned=1))
 
-    # Every label is the same shared ``tk.Label`` mock, so read the calls rather than
-    # expecting two distinct widgets.
-    written = {
-        call.kwargs.get("text")
-        for call in tk_mock.Label.return_value.configure.call_args_list
-    }
-    assert "01:01" in written
-    assert g.OWED * 2 in written
+    assert canvas.create_oval.call_count == 3
     strip.window.lift.assert_called()
 
 
@@ -138,7 +134,7 @@ def test_scheduling_drives_the_tick_from_a_supplier():
         calls["n"] += 1
         if calls["n"] > 2:
             strip.destroy()
-        return StripText(elapsed_seconds=float(calls["n"]), needed=1)
+        return StripText(needed=1)
 
     strip.schedule(supply)
 
@@ -151,10 +147,12 @@ def test_a_tick_after_destroy_does_nothing(tk_mock):
     strip.destroy()
     label = tk_mock.Label.return_value
     label.reset_mock()
+    tk_mock.Canvas.return_value.reset_mock()
 
-    strip.tick(StripText(elapsed_seconds=1.0, needed=1))
+    strip.tick(StripText(needed=3))
 
     label.configure.assert_not_called()
+    tk_mock.Canvas.return_value.create_oval.assert_not_called()
 
 
 def test_scheduling_after_destroy_does_nothing():
@@ -163,7 +161,7 @@ def test_scheduling_after_destroy_does_nothing():
     strip.destroy()
     strip.window.after.reset_mock()
 
-    strip.schedule(lambda: StripText(elapsed_seconds=0.0, needed=1))
+    strip.schedule(lambda: StripText(needed=1))
 
     strip.window.after.assert_not_called()
 
@@ -175,11 +173,11 @@ def test_a_tick_that_raises_stops_the_strip_rather_than_the_lock(caplog):
     strip.window.lift.side_effect = tk.TclError("window is gone")
 
     with caplog.at_level(logging.WARNING):
-        strip.tick(StripText(elapsed_seconds=1.0, needed=1))
+        strip.tick(StripText(needed=1))
 
     # Stopped: a later schedule() no longer books a tick.
     strip.window.after.reset_mock()
-    strip.schedule(lambda: StripText(elapsed_seconds=0.0, needed=1))
+    strip.schedule(lambda: StripText(needed=1))
     strip.window.after.assert_not_called()
     assert caplog.records
 
@@ -191,7 +189,7 @@ def test_destroy_cancels_the_tick_and_the_window():
     """destroy() cancels the pending tick and destroys the window."""
     strip = build()
     strip.window.after.return_value = "job-1"
-    strip.schedule(lambda: StripText(elapsed_seconds=0.0, needed=1))
+    strip.schedule(lambda: StripText(needed=1))
 
     strip.destroy()
 

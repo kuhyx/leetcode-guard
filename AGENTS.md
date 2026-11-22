@@ -69,13 +69,13 @@ lock strength). Never remove: an `Open` button per problem, the escape hatch fro
 break-glass command on the surface.
 `test_scenarios.py::test_a_freshly_seeded_lock_offers_a_way_out_at_t0` pins it.
 
-**Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases the X global grab so
-a browser gets keystrokes; no timeout, until a solve lands or "Back to lock"
-(`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; a mocked root reports
-success either way. **A restart keeps study mode** (`_study_restart.py`): a marker under
-`$XDG_RUNTIME_DIR`, never ledger state, written on entry and cleared only by Back to lock or a landed
-solve (SIGTERM keeps it), read by `_cli._run_lock` after `decide_today` and every deferral; a valid
-marker arms with no grab at all, anything else means LOCKED. `verify_restart_study.py` proves it.
+**Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases the X global grab so a
+browser gets keystrokes; no timeout, until a solve lands or "Back to lock" (`DOCS-incident-2026-08-05.md`).
+`verify_study_grab.py` proves the grab drops; a mock reports success either way. **A restart keeps study
+mode** (`_study_restart.py`): a marker under `$XDG_RUNTIME_DIR`, never ledger state, set on entry, cleared
+only by Back to lock or a landed solve (SIGTERM keeps it), read by `_cli._run_lock` after `decide_today` and
+every deferral; a valid marker arms grab-free, anything else means LOCKED. `verify_restart_study.py` proves
+it. No strip clock; its filled dots (`_earned_today.py`) are display-only.
 
 **The suggestion list repaints live, and scrolls.** A solve mid-lock frees its slot and the next
 *pre-verified* candidate moves up; rows are reconfigured, never rebuilt, and Open buttons re-bound

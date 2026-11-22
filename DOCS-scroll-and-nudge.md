@@ -79,3 +79,28 @@ visible again, and once a minute; it sends nothing while the tab is hidden.
 `python3 -m scripts.verify_heartbeat_extension` checks this headlessly against a
 stub listener (a copy of the extension with a free port and a 4 s interval).
 Like the nudge check, it is not a pre-push hook.
+
+## The study strip: dots, no clock (2026-11-22)
+
+kuhy: time in exactly one place, and it is not the strip. The strip has no clock
+(no `MM:SS`, no elapsed seconds fed to it). Its one-second tick stays because it
+re-lifts the window (gatelock's recovery loop is stopped during study mode), and
+it repaints the dots only when a count moved. The accent line is `✓ …` while a
+verdict is being checked and is not packed at all otherwise, so it leaves no gap.
+
+The row is `● ○ ○ ○ …`: filled = credits earned today, hollow = credits still
+owed (the number `needed` of `/api/theory`, floor 1 while a lock is up).
+
+- **Earned** (`_earned_today.py`): every credit row dated today that the balance
+  counts, each priced by `_balance.credit_value` (a Medium solve fills two). It
+  is read at call time from the ledger the lock holds, once per `refresh_strip`
+  next to the owed count (caf304e's cache), never stored. **Display only**:
+  `_earned_today` is in `DISPLAY_PRODUCERS` of `test_display_only_imports.py`,
+  so nothing that decides, charges or credits may import it. A read that fails
+  is `None` and draws no filled dot.
+- **Layout** (`_strip_dots.py`): dots up to 26 px with a gap of half a dot (at
+  least 4 px), wrapped onto rows. Past 100 px of rows the dots shrink one pixel
+  at a time down to 8 px; past that the grid grows taller. The window has no
+  fixed height (`_geometry` places it, the contents size it), so no dot is ever
+  clipped or dropped. `scripts/screenshot_strip.py EARNED OWED OUT.png` photographs it.
+- Nothing owed keeps the `✓`, drawn on the same canvas.

@@ -4,5 +4,7 @@ extend = "../pyproject.toml"
 [lint.extend-per-file-ignores]
 # BLE001: poll_theory's fence makes a theory bug cost the theory credit, never the harvest or lock.
 "_theory_credit.py" = ["BLE001"]
+# BLE001: the strip's earned-today read fails to None, drawn as no filled dot; a bug must never cost the strip.
+"_earned_today.py" = ["BLE001"]
 # BLE001: the lock calls view_now on every repaint; a bug must cost the unit card, never the lock.
 "_unit_view.py" = ["BLE001"]

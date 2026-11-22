@@ -33,7 +33,7 @@ def _slugs(unit: str, *, blocks: bool = True) -> list[str]:
 
 
 def test_theory_leads_with_a_card_for_the_unit():
-    """Pencil, unit name, taught / total, the 12 -> 1 rate and a learn route."""
+    """Pencil, unit name, taught / total, the 12 -> 1 price (no running minutes), a learn route."""
     screen = build_phase_screen(THEORY)
 
     assert screen.phase == "theory"
@@ -41,7 +41,7 @@ def test_theory_leads_with_a_card_for_the_unit():
     assert screen.card.title == f"{g.THEORY_PENDING}  prefix-sums"
     assert screen.card.counts == "3 / 12"
     assert screen.card.fraction == 3 / 12
-    assert screen.card.rate == f"7{g.MINUTES}{g.SEP}12{g.MINUTES} {g.RATE} 1{g.CREDIT}"
+    assert screen.card.rate == f"12{g.MINUTES} {g.RATE} 1{g.CREDIT}"
     assert screen.card.ready_mark == ""
     assert screen.card.button == g.LEARN
     assert screen.card.route == f"/learn/{SUBJECT}/prefix-sums"
