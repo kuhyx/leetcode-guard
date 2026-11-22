@@ -6,12 +6,15 @@ scratch ``$HOME`` and key, a private Xvfb, LeetCode faked (``e2e_theory_roles``)
 One case per call; the exit code is the verdict, and one line per case is
 appended to ``~/data/claude-scratch/lc-stage4/e2e/results.txt``::
 
-    python3 -m scripts.e2e_theory a|b|c|d|e|f
+    python3 -m scripts.e2e_theory a|b|c|d|e|f|g
 
 Cases (SPEC "The flow", "Guard rules for the new credit"): a THEORY arms with
 the theory card; b teaching minutes pay the day, other modules pay nothing;
 c SOLVE mints nothing after the flip and still pays solves; d cannot check;
-e a finished unit moves on; f deleting files cannot mint.
+e a finished unit moves on; f deleting files cannot mint; g kuhy's real state
+(copied, read-only) decides the same on base and new for 14 days, and
+``--status`` says 'could not check' until the tutor's C2 file exists. g skips
+loudly (exit 0) when the real files are absent.
 """
 
 from __future__ import annotations
@@ -21,6 +24,13 @@ import logging
 import sys
 from typing import TYPE_CHECKING
 
+from leetcode_guard.tests._e2e_replay import (
+    SkipError,
+    canary,
+    copy_real,
+    replay,
+    status_pair,
+)
 from leetcode_guard.tests._e2e_theory_cases import (
     case_d,
     case_e,
@@ -29,7 +39,7 @@ from leetcode_guard.tests._e2e_theory_cases import (
     needed,
     seeded,
 )
-from leetcode_guard.tests._e2e_world import ALGO, OUT, World
+from leetcode_guard.tests._e2e_world import ALGO, OUT, ROOT, World
 from leetcode_guard.tests._e2e_world import PAINTED_BYTES as PAINTED
 
 if TYPE_CHECKING:
@@ -141,6 +151,19 @@ def case_c(world: World) -> str:
     )
 
 
+def case_g(world: World) -> str:
+    """Real state, copied: base and new decide alike; originals stay untouched."""
+    stamp = copy_real(world)
+    decided = replay(world, OUT.parent / "wt-guard-base", ROOT)
+    status = status_pair(world)
+    hit, churn = canary(stamp)
+    check(not hit, f"originals changed since the stamp: {hit}")
+    return (
+        f"{decided}; {status}; "
+        f"canary: no original written ({len(churn)} live-unit files churned)"
+    )
+
+
 CASES: dict[str, Callable[[World], str]] = {
     "a": case_a,
     "b": case_b,
@@ -148,6 +171,7 @@ CASES: dict[str, Callable[[World], str]] = {
     "d": case_d,
     "e": case_e,
     "f": case_f,
+    "g": case_g,
 }
 
 
@@ -156,6 +180,9 @@ def main(name: str) -> int:
     world = World(f"case-{name}")
     try:
         fact, verdict = CASES[name](world), "PASS"
+    except SkipError as why:
+        fact, verdict = str(why), "SKIP"
+        logging.getLogger(__name__).warning("case %s SKIPPED: %s", name, why)
     except AssertionError as failure:
         logging.getLogger(__name__).warning("case %s failed: %s", name, failure)
         fact, verdict = str(failure).splitlines()[0][:300], "FAIL"
@@ -166,7 +193,7 @@ def main(name: str) -> int:
     with (OUT / "results.txt").open("a", encoding="utf-8") as results:
         results.write(line + "\n")
     print(line)
-    return 0 if verdict == "PASS" else 1
+    return 0 if verdict in {"PASS", "SKIP"} else 1
 
 
 if __name__ == "__main__":
