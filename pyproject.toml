@@ -112,6 +112,12 @@ unfixable = []
 # private push spawner so a scratch ledger can never request a live push (SLF001).
 "scripts/e2e_evening.py" = ["S607", "T201"]
 "scripts/e2e_evening_roles.py" = ["SLF001"]
+# The theory-chain e2e: its PASS/FAIL lines ARE its output (T201; the fixer
+# would delete them and still exit 0, see AGENTS.md). Its world starts Xvfb and
+# friends by name (S607).
+"scripts/e2e_theory.py" = ["T201"]
+"scripts/e2e_theory_roles.py" = ["T201"]
+"leetcode_guard/tests/_e2e_world.py" = ["S607"]
 # The solved-semantics harness. Same reasoning as the grab check: its printed
 # PASS/FAIL lines and its SKIP instructions ARE its output, so T201 is wrong
 # here. The fixer proved the point by deleting all thirteen prints on the first

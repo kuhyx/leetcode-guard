@@ -29,7 +29,7 @@ repos:
         # Shared, non-test helpers (fixtures, factories) imported by the
         # real test modules — deliberately not collected as tests, hence the
         # leading underscore rather than a test_/*_test name.
-        exclude: ^leetcode_guard/tests/_[a-z][a-z_]*\.py$
+        exclude: ^leetcode_guard/tests/_[a-z][a-z0-9_]*\.py$
       - id: check-ast
       - id: mixed-line-ending
         args: [--fix=lf]
