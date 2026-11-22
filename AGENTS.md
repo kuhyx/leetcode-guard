@@ -156,6 +156,9 @@ cached worker across a manifest bump and a browser restart while the file name s
 heartbeat never ran in the live Helium (still 1.0.0's `background.js`). A fresh-profile check cannot
 see it; `scripts/verify_heartbeat_upgrade.py` seeds a profile with 1.0.0 first. Rename again on change.
 
+**A swapped idle lock stalls Tk >1 s** (2026-11-22): the unit pins `MemorySwapMax=0`, deploy sets
+it live; never `MemoryLow`/mlock (no-ops), Open's browser gets its own scope. `verify_stall_swap.py`.
+
 **`# noqa` / `# type: ignore` are banned by a pygrep hook**, even in docstrings.
 
 **Any module that does `import tkinter as tk` must be added to `TK_MODULES` in

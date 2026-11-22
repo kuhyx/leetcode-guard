@@ -19,11 +19,14 @@ browser and run it *in process*, which inside a Tk mainloop under a lock is a
 hang with the screen still grabbed. An explicit :func:`subprocess.Popen` of a
 resolved absolute path has no such mode.
 
-``start_new_session=True`` is load-bearing, not hygiene. The service unit reaps
-its control group, so without a new session ``systemctl --user stop
-leetcode-guard.service`` -- the break-glass command printed on the lock itself
--- would kill the browser the user is mid-solve in. Detached, the browser
-outlives the lock that opened it.
+The browser gets its own cgroup: the opener runs under ``systemd-run --user
+--scope`` whenever that exists. A browser cold-started from Open otherwise lands
+in ``leetcode-guard.service``'s cgroup (2026-11-22: Chrome ran there, peak
+2 GB), where the unit's ``MemorySwapMax=0`` would pin it in RAM and ``systemctl
+--user stop leetcode-guard.service`` -- the break-glass command printed on the
+lock itself -- kills the whole cgroup, the tab the user is solving in included.
+``start_new_session=True`` stays as well, so the lock's session ending cannot
+signal it either.
 """
 
 from __future__ import annotations
@@ -42,6 +45,11 @@ _logger: Final = logging.getLogger(__name__)
 OPENERS: Final = ("xdg-open", "x-www-browser", "firefox")
 """Tried in order. ``xdg-open`` honours the desktop's own default, which is
 what the user expects; the rest are fallbacks for a bare X session."""
+
+
+SCOPE_FLAGS: Final = ("--user", "--scope", "--collect", "--quiet")
+"""``systemd-run`` flags for the browser's own transient scope. ``--scope``
+runs the opener in place, so the opener still inherits ``DISPLAY``."""
 
 
 class SpawnFn(Protocol):
@@ -94,7 +102,9 @@ def launch(url: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
         _logger.warning("could not open %s: %s", url, reason)
         return LaunchResult(ok=False, reason=reason)
 
-    command = (opener, url)
+    runner = shutil.which("systemd-run")
+    scope = () if runner is None else (runner, *SCOPE_FLAGS)
+    command = (*scope, opener, url)
     launcher = spawn if spawn is not None else subprocess.Popen
     try:
         launcher(command, start_new_session=True)

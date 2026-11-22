@@ -13,14 +13,16 @@
 #      Its two pip phases run side by side and are skipped while their stamps
 #      match, which keeps a deploy under the 60 s action cap (2026-11-21: 68 s).
 #      `deploy.sh --force` reinstalls both;
-#   3. restart the two long-running units so they load the new code;
+#   3. restart the two long-running units so they load the new code, and
+#      keep a running lock out of swap (set-property, never a restart);
 #   4. health-check, exiting non-zero and naming the first check that fails.
 #
 # Never starts or restarts leetcode-guard.service: that pops a lock window on
 # the live display. It and the harvest oneshot pick the code up on their next
 # timer run. Idempotent: a rerun with nothing to pull reinstalls and rechecks.
 #
-# Test seams: DEPLOY_LIVE_DIR, DEPLOY_PYTHON, DEPLOY_HEALTH_TIMEOUT.
+# Test seams: DEPLOY_LIVE_DIR, DEPLOY_PYTHON, DEPLOY_HEALTH_TIMEOUT,
+# DEPLOY_CGROUP_ROOT.
 # ============================================================================
 
 set -euo pipefail
@@ -28,6 +30,8 @@ set -euo pipefail
 readonly LIVE_DIR="${DEPLOY_LIVE_DIR:-${HOME}/src/leetcode-guard}"
 readonly SYSTEM_PYTHON="${DEPLOY_PYTHON:-/usr/bin/python3}"
 readonly HEALTH_TIMEOUT="${DEPLOY_HEALTH_TIMEOUT:-20}"
+readonly CGROUP_ROOT="${DEPLOY_CGROUP_ROOT:-/sys/fs/cgroup}"
+readonly LOCK_UNIT=leetcode-guard.service
 readonly WEB_URL="http://127.0.0.1:8771/api/health"
 readonly RELAY_URL="http://127.0.0.1:8777/coach/heartbeat"
 readonly SERVICES=(leetcode-guard-web.service leetcode-coach-relay.service)
@@ -86,6 +90,31 @@ check_units() {
     log "ok: services active and fresh, timers scheduled"
 }
 
+# The unit pins MemorySwapMax=0 (a swapped idle lock stalls its Tk loop for
+# over a second, 2026-11-22). A lock that is up keeps the cgroup it started
+# with, so set the limit on it live; restarting it would re-lock the screen.
+limit_lock_swap() {
+    if systemctl --user is-active --quiet "$LOCK_UNIT"; then
+        systemctl --user set-property --runtime "$LOCK_UNIT" MemorySwapMax=0
+    fi
+}
+
+check_lock_swap() {
+    local configured cgroup live
+    configured="$(systemctl --user show "$LOCK_UNIT" -p MemorySwapMax --value)"
+    [[ "$configured" == 0 ]] \
+        || fail "health: $LOCK_UNIT has MemorySwapMax=$configured, not 0"
+    if ! systemctl --user is-active --quiet "$LOCK_UNIT"; then
+        log "ok: $LOCK_UNIT pins MemorySwapMax=0 (no lock running)"
+        return
+    fi
+    cgroup="$(systemctl --user show "$LOCK_UNIT" -p ControlGroup --value)"
+    live="$(cat "$CGROUP_ROOT$cgroup/memory.swap.max" 2>/dev/null || echo unreadable)"
+    [[ "$live" == 0 ]] \
+        || fail "health: running lock's memory.swap.max is $live, not 0"
+    log "ok: lock is out of swap (memory.swap.max=0)"
+}
+
 check_imports() {
     # The interpreter systemd runs must load the package from the live clone;
     # anything else means the units run code this deploy did not update.
@@ -104,7 +133,9 @@ main() {
     update_clone
     "$LIVE_DIR/install.sh" "$@"
     restart_units
+    limit_lock_swap
     check_units "$started"
+    check_lock_swap
     probe_url web "$WEB_URL" '"ok": true'
     probe_url relay "$RELAY_URL" '"beat"'
     check_imports

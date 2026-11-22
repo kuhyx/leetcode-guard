@@ -15,6 +15,14 @@ Environment=XAUTHORITY=%h/.Xauthority
 # that takes (gatelock.wait_for_x_server, unbounded). A fixed delay is either
 # too short on a slow boot or wasted on a fast one.
 ExecStart=/usr/bin/python3 -m leetcode_guard --production
+# Never swapped (2026-11-22, perf.slow tk.mainloop c890f31a, up to 1.7 s).
+# The idle lock had 57 MB in swap; with zram full its pages went to the disk
+# swapfiles, and under build load every Tk tick waited on swap-in. Only the
+# swap limit works here: MemoryLow/MemoryMin are capped by user.slice's
+# memory.low=0 (root's config), and mlockall by the 8 MB memlock limit.
+# The browser Open starts runs in its own scope (_browser.py), not in here.
+# scripts/verify_stall_swap.py is the red/green check.
+MemorySwapMax=0
 Restart=on-failure
 RestartSec=2s
 RestartPreventExitStatus=0

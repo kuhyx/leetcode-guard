@@ -127,3 +127,31 @@ def test_a_null_byte_in_the_url_is_reported_not_raised(monkeypatch, caplog):
     assert result.ok is False
     assert "null byte" in result.reason
     assert caplog.records
+
+
+def test_the_browser_gets_its_own_scope_outside_the_lock_cgroup(monkeypatch):
+    """A browser cold-started from Open lands in the lock's cgroup otherwise:
+    2026-11-22 Chrome ran inside leetcode-guard.service (peak 2 GB), where
+    ``MemorySwapMax=0`` would pin it in RAM and ``systemctl --user stop`` kills
+    it, new session or not. A transient scope is its own cgroup."""
+    _only(
+        monkeypatch,
+        {"xdg-open": "/usr/bin/xdg-open", "systemd-run": "/usr/bin/systemd-run"},
+    )
+    spawn = _Recorder()
+    url = "https://leetcode.com/problems/two-sum/"
+
+    result = launch(url, spawn=spawn)
+
+    expected = (
+        "/usr/bin/systemd-run",
+        "--user",
+        "--scope",
+        "--collect",
+        "--quiet",
+        "/usr/bin/xdg-open",
+        url,
+    )
+    assert spawn.calls[0][0] == expected
+    assert result.command == expected
+    assert "xdg-open" in result.reason
