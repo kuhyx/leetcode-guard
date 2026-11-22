@@ -51,6 +51,7 @@ from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 from leetcode_guard._unit_view import unit_view
+from leetcode_guard._x_probe import QuietXProbe
 
 
 def cmd_lock(*, demo_mode: bool, evening: bool = False) -> int:
@@ -66,7 +67,7 @@ def cmd_lock(*, demo_mode: bool, evening: bool = False) -> int:
         # Timer catch-up fires before X exists: wait for the server, no
         # clock, before the first fetch, and *before* the instance lock (a
         # holder stalls the harvest all night lockdown; 2026-10-17).
-        wait_for_x_server()
+        wait_for_x_server(probe=QuietXProbe())
     instance = acquire_instance(INSTANCE_LOCK_FILE)
     if instance is None:
         # The afternoon retry firing while the morning run is still queued

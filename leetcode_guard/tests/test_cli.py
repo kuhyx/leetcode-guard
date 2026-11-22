@@ -175,7 +175,7 @@ def test_production_waits_for_an_x_server_before_touching_the_network(
         order.append("client")
         raise _StopError
 
-    monkeypatch.setattr(_cli, "wait_for_x_server", lambda: order.append("x"))
+    monkeypatch.setattr(_cli, "wait_for_x_server", lambda **_: order.append("x"))
     monkeypatch.setattr(_cli, "build_client", stop_at_client)
     _seeded_ledger(data_dir)
 

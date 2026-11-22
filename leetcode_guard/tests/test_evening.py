@@ -139,8 +139,9 @@ def test_no_x_within_ten_seconds_exits_three(monkeypatch, data_dir: Path) -> Non
     _seeded_ledger(data_dir)
     seen: list[float | None] = []
 
-    def no_x(*, timeout_s: float | None = None) -> bool:
+    def no_x(*, timeout_s: float | None = None, probe: object = None) -> bool:
         seen.append(timeout_s)
+        assert probe is not None, "the evening wait must use the quiet probe"
         return False
 
     monkeypatch.setattr(_evening, "wait_for_x_server", no_x)

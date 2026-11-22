@@ -33,6 +33,7 @@ import earned_time
 from gatelock import log_integrity, wait_for_x_server
 
 from leetcode_guard._constants import EXIT_OK
+from leetcode_guard._x_probe import QuietXProbe
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -96,7 +97,7 @@ def evening_preflight(ledger_path: Path) -> int | None:
     if evening_paid(ledger_path, key_file=None):
         sys.stdout.write("evening: today's leetcode rung is already paid\n")
         return EXIT_OK
-    if not wait_for_x_server(timeout_s=X_WAIT_SECONDS):
+    if not wait_for_x_server(timeout_s=X_WAIT_SECONDS, probe=QuietXProbe()):
         sys.stderr.write(f"evening: no X server within {X_WAIT_SECONDS:.0f} s\n")
         return EXIT_NO_X
     return None

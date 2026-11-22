@@ -37,7 +37,7 @@ def test_a_solve_during_lockdown_is_credited_while_the_lock_waits_for_x(
         _cli, "build_client", lambda: pytest.fail("no X: must not reach LeetCode")
     )
 
-    def harvest_tick_during_the_wait() -> bool:
+    def harvest_tick_during_the_wait(**_: object) -> bool:
         _harvest_run.main(key_file=hmac_key)
         raise _XNeverCameBackError
 
@@ -54,7 +54,7 @@ def test_a_solve_during_lockdown_is_credited_while_the_lock_waits_for_x(
 def test_the_instance_lock_is_taken_only_once_x_answers(monkeypatch):
     """Still single-instance: the lock is acquired, just after the display."""
     order: list[str] = []
-    monkeypatch.setattr(_cli, "wait_for_x_server", lambda: order.append("x"))
+    monkeypatch.setattr(_cli, "wait_for_x_server", lambda **_: order.append("x"))
 
     def stand_down(_path: Path) -> None:
         order.append("instance")
