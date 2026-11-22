@@ -112,3 +112,12 @@ def test_the_lock_and_study_windows_never_import_them_directly(name: str):
     hands them ``blocks``); a direct import is a second reader of editable files
     inside the window that holds the grab."""
     assert not _imports(name) & DISPLAY_ONLY
+
+
+def test_the_theory_route_reads_signed_inputs_only():
+    """``/api/theory`` is a display mirror of signed data: its closure must not
+    reach the unsigned tutor files, and it must not use ``_status_unit``."""
+    reached = _closure(("_web_theory",))
+
+    assert {"_phase_inputs", "_tutor_signed", "_theory_credit"} <= reached
+    assert not reached & (DISPLAY_ONLY | DISPLAY_PRODUCERS | {"_status_unit"})

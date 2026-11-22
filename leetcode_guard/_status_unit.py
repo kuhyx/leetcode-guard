@@ -21,10 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from leetcode_guard._balance import is_trusted
-from leetcode_guard._daycost import day_key
-from leetcode_guard._ledger import CREDIT
-from leetcode_guard._theory_credit import SOURCE_THEORY
+from leetcode_guard._theory_credit import theory_credits
 from leetcode_guard._unit_view import read_unit
 from leetcode_guard._viewmodel_phase import learn_route
 
@@ -64,20 +61,6 @@ def gather_unit(
         credits_today=today,
         credits_total=total,
     )
-
-
-def theory_credits(ledger: Ledger, *, day: date) -> tuple[int, int]:
-    """(today's count, all-time value) of the trusted theory credits."""
-    prefix = f"theory:{day_key(day)}:"
-    trusted = [
-        entry
-        for entry in ledger.entries.values()
-        if entry.kind == CREDIT
-        and entry.detail.get("source") == SOURCE_THEORY
-        and is_trusted(entry, integrity_ok=ledger.integrity_ok)
-    ]
-    today = sum(1 for entry in trusted if entry.entry_id.startswith(prefix))
-    return today, sum(entry.amount for entry in trusted)
 
 
 def leads_with(status: UnitStatus) -> str:

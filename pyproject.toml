@@ -188,6 +188,10 @@ unfixable = []
 # does wrong must cost the ordering, never the arming run
 # (test_theory_hostile.py).
 "leetcode_guard/_pool_resolve.py" = ["BLE001"]
+# BLE001: ``_web_theory.build_theory_payload`` is the display route's last-resort
+# fence (logged at warning, with the type): a bug in it answers null, never a 500
+# or a stalled tutor lesson bar (test_web_theory.py).
+"leetcode_guard/_web_theory.py" = ["BLE001"]
 # --push-snapshot's one printed line is its whole outcome (pushed N bytes, or
 # why not); same auto-fix trap, same commit as the print.
 "leetcode_guard/_snapshot_push.py" = ["T201"]

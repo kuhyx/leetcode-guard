@@ -192,3 +192,20 @@ def test_nothing_is_read_when_nothing_can_pay():
     """In ``none`` (or a unit with no module) the tutor ledger is not even opened."""
     assert _theory_credit.paying_minutes(PhaseState("", "none"), day=DAY) == 0
     assert json.dumps(_theory_credit.MINUTES_PER_CREDIT) == "12"
+
+
+def test_minutes_into_credit_follows_the_due_rule(hmac_key: Path):
+    """0..12; 12 only while a mint is pending; never negative; none has no next."""
+    state = PhaseState(unit="a", phase="theory", subject=ALGO, modules=("a",))
+    ledger = Ledger()
+    stamp = (DAY, NOW)
+
+    def into(minutes: int, phase_state: PhaseState = state) -> int:
+        return _theory_credit.minutes_into_credit(ledger, phase_state, minutes, day=DAY)
+
+    assert [into(m) for m in (0, 7, 11, 12, 30)] == [0, 7, 11, 12, 12]
+    append(ledger, due_credits(ledger, state, 24, stamp=stamp, key_file=hmac_key))
+    assert [into(m) for m in (24, 30, 36, 40)] == [0, 6, 12, 12]
+    assert into(5) == 0
+    assert into(30, PhaseState(unit="b", phase="theory")) == 12
+    assert into(30, PhaseState(unit="", phase="none")) == 0

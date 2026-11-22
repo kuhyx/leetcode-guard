@@ -30,6 +30,7 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard._balance import is_trusted
 from leetcode_guard._daycost import day_key
 from leetcode_guard._ledger import CREDIT, LedgerEntry, sign
 from leetcode_guard._ledger_io import append, save_ledger
@@ -85,6 +86,17 @@ def theory_entry(
     )
 
 
+def _minted_today(ledger: Ledger, day: date) -> list[LedgerEntry]:
+    """Every ``theory:<day>:<n>`` row in the ledger, trusted or not."""
+    prefix = f"theory:{day_key(day)}:"
+    return [e for e in ledger.entries.values() if e.entry_id.startswith(prefix)]
+
+
+def _minted_for(today: list[LedgerEntry], unit: str) -> int:
+    """How many of today's theory rows are for ``unit``."""
+    return sum(1 for e in today if e.detail.get("unit") == unit)
+
+
 def due_credits(
     ledger: Ledger,
     state: PhaseState,
@@ -98,8 +110,8 @@ def due_credits(
     if state.phase == "none":
         return []
     prefix = f"theory:{day_key(day)}:"
-    today = [e for e in ledger.entries.values() if e.entry_id.startswith(prefix)]
-    have = sum(1 for e in today if e.detail.get("unit") == state.unit)
+    today = _minted_today(ledger, day)
+    have = _minted_for(today, state.unit)
     fresh: list[LedgerEntry] = []
     n = len(today)
     for k in range(have + 1, minutes // MINUTES_PER_CREDIT + 1):
@@ -116,6 +128,36 @@ def due_credits(
             )
         )
     return fresh
+
+
+def minutes_into_credit(
+    ledger: Ledger, state: PhaseState, minutes: int, *, day: date
+) -> int:
+    """Minutes already counted towards the next credit, 0..``MINUTES_PER_CREDIT``.
+
+    The read side of :func:`due_credits`, over the same rows: ``minutes`` less
+    12 for each credit minted for ``state.unit`` today. A credit due but not
+    minted yet (``minutes // 12`` above the minted count) reads a full 12, so
+    12 means "mint pending" and nothing else; ``none`` has no next credit.
+    """
+    if state.phase == "none":
+        return 0
+    have = _minted_for(_minted_today(ledger, day), state.unit)
+    return min(MINUTES_PER_CREDIT, max(0, minutes - MINUTES_PER_CREDIT * have))
+
+
+def theory_credits(ledger: Ledger, *, day: date) -> tuple[int, int]:
+    """(today's count, all-time value) of the trusted theory credits."""
+    trusted = [
+        entry
+        for entry in ledger.entries.values()
+        if entry.kind == CREDIT
+        and entry.detail.get("source") == SOURCE_THEORY
+        and is_trusted(entry, integrity_ok=ledger.integrity_ok)
+    ]
+    prefix = f"theory:{day_key(day)}:"
+    today = sum(1 for entry in trusted if entry.entry_id.startswith(prefix))
+    return today, sum(entry.amount for entry in trusted)
 
 
 def paying_minutes(

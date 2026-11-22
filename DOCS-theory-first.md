@@ -114,6 +114,23 @@ and it shows "cannot check" as unknown where the lock shows 0.
   first problem; a missing or failing tutor logs a warning and opens the first
   problem.
 
+## `GET /api/theory` (display mirror, `_web_theory.py`)
+
+The tutor server fetches it over loopback (port 8771, beside `/api/status`)
+for its lesson bar and only displays it. One `theory` object: `checked`,
+`day`, `unit`, `phase`, `minutes_today`, `minutes_into_credit` (towards the
+next credit, `0..minutes_per_credit`; a full 12 means a mint is pending, from
+`_theory_credit.minutes_into_credit`, the read side of `due_credits`),
+`minutes_per_credit`, `credits_today` (trusted rows, `theory_credits`) and
+`needed` (the gate's `verdict.needed`).
+
+- Signed inputs only (guard ledger, gate decision, tutor C1/C2, the phase
+  machine); it must not import `_theory` or `_status_unit`
+  (`test_display_only_imports.py`). Read-only: no write, mint, seed or lock.
+- `null` = cannot check, never 0; `checked` is true only when nothing is
+  `null`. In `none` the unit is `""`. A bug inside answers `null` and logs a
+  warning (HTTP 200).
+
 ## Known limits
 
 - "Solved" is the guard ledger only, while `rank_pool` also hides problems
