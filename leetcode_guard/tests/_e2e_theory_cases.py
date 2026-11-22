@@ -52,6 +52,14 @@ def _phase_text(world: World) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
+def _one_bad(signed: str) -> str:
+    """The signed C2 rows plus one forged copy: the one-bad-row rule (R3)."""
+    document = json.loads(signed)
+    forged = dict(document["entries"][0], hmac="0" * 64)
+    document["entries"].append(forged)
+    return json.dumps(document)
+
+
 def case_d(world: World) -> str:
     """Cannot check: nothing minted, a warning, the last signed phase kept."""
     seeded(world)
@@ -68,7 +76,7 @@ def case_d(world: World) -> str:
     ledger.write_text(good, encoding="utf-8")
     state = world.tutor / "module_state.json"
     signed = state.read_text(encoding="utf-8")
-    for broken in ("", signed.replace('"hmac": "', '"hmac": "0')):
+    for broken in ("", signed.replace('"hmac": "', '"hmac": "0'), _one_bad(signed)):
         if broken:
             state.write_text(broken, encoding="utf-8")
         else:
@@ -78,7 +86,7 @@ def case_d(world: World) -> str:
             "WARNING" in out and not world.entry_ids("theory:"), f"bad C2 minted: {out}"
         )
         check(_phase_text(world) == kept, "the last signed phase was not kept")
-    code, log, most = world.lock(seconds=12, until="model.json")
+    code, log, most = world.lock(seconds=12, until="model.json", shot="held")
     model = world.model() or {}
     check(
         most > 0 and (model.get("screen") or {}).get("phase") == "theory",
@@ -97,7 +105,7 @@ def case_d(world: World) -> str:
     paid = world.entry_ids("charge:")
     check(code == 0 and paid, f"solves did not pay: {code} {paid} {log[-600:]}")
     return (
-        "bad C1, missing C2, forged C2: 0 minted, WARNING, C3 bytes kept; "
+        "bad C1, missing C2, forged C2, one bad C2 row: 0 minted, WARNING, C3 bytes kept; "
         "lock held theory; "
         f"no C3: old list, armed, {need} solves paid ({paid[0]})"
     )

@@ -17,7 +17,7 @@ from leetcode_guard._phase import PhaseState
 from leetcode_guard._theory_credit import due_credits, poll_theory, theory_entry
 from leetcode_guard.tests._ledger_fixtures import submission
 from leetcode_guard.tests._theory_scenario import states, taught, world
-from leetcode_guard.tests._tutor_fixtures import ALGO
+from leetcode_guard.tests._tutor_fixtures import ALGO, state_row, write_tutor
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -209,3 +209,26 @@ def test_minutes_into_credit_follows_the_due_rule(hmac_key: Path):
     assert into(5) == 0
     assert into(30, PhaseState(unit="b", phase="theory")) == 12
     assert into(30, PhaseState(unit="", phase="none")) == 0
+
+
+def test_one_bad_row_in_module_state_mints_nothing_and_holds_the_phase(
+    tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
+):
+    """The one rule for C2 (both repos' docs): a row that fails its signature
+    makes the whole file "cannot check". Dropping it instead could only un-do a
+    module and pay its theory again; held, solves still pay and the lock keeps
+    its Open rows, hatch and break-glass (the THEORY card is only a slot)."""
+    world(tmp_path, monkeypatch)
+    states(hmac_key)
+    taught(hmac_key, NOW, ("a", 24))
+    poll(Ledger(), data_dir, hmac_key)
+    before = _phase_file.PHASE_FILE.read_bytes()
+    good = state_row("b", done=False, at=1.0, key_file=hmac_key)
+    bad = state_row("a", done=False, at=2.0, key_file=hmac_key)
+    bad["hmac"] = "0" + str(bad["hmac"])
+    write_tutor("module_state.json", [good, bad])
+
+    result = poll(Ledger(), data_dir, hmac_key)
+
+    assert (result.state, result.minted) == (None, ())
+    assert _phase_file.PHASE_FILE.read_bytes() == before

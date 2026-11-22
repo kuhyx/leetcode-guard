@@ -25,7 +25,12 @@ unit back in `theory`.
   latest per (subject, module) by `at`, then file order. No row = not done.
   One row that fails its signature makes the whole file "cannot check":
   dropping it could only un-do a module and pay theory again (e2e,
-  2026-11-22). Unverified C1 rows are just dropped: that only pays less.
+  2026-11-22). The tutor's `DOCS-contract-module-state.md` "Reader rules"
+  states the same rule. While it holds, the last signed phase stays, no
+  theory credit mints, solves still pay, and the lock keeps its Open rows,
+  hatch and break-glass. The tutor never writes an unsigned row, so the fix
+  is to delete the bad row by hand. Unverified C1 rows are just dropped:
+  that only pays less.
   The tutor's unsigned `log.jsonl`/`cards.json` never decide (`_theory` is
   banned from every decider, `test_display_only_imports.py`).
 - **Solved**: trusted `credit` and `seen` rows in the guard ledger.
