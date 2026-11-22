@@ -73,15 +73,21 @@ mark, and the lower sort slot. `PoolResolution.blocks` carries the states to
 `_viewmodel.build_problem_lines`; the status snapshot and MCP
 `get_suggested_problems` return `unit` and `theory` per problem.
 
-## Display-only
+## Display-only, and what decides since stage 4
 
-Anyone can edit both files, so nothing that decides may read them: editing JSON
-would steer a lock or a credit (the `progress_cache.json` rule again).
-`tests/test_display_only_imports.py` bans the gate, balance, debt, difficulty,
-ledger and harvest modules from reaching `_curriculum` or `_theory`, through any
-import chain. `_harvest_run` pushes the status snapshot, so it gets the direct
-ban only. The `_lock*`, `_cli*` and `_study*` modules get the direct ban too:
-they receive the order from `resolve_pool`, never read the files themselves.
+`_theory` reads files anyone can edit (`log.jsonl`, `cards.json`), so nothing
+that decides may read it: editing JSON would steer a lock or a credit (the
+`progress_cache.json` rule again). `tests/test_display_only_imports.py` bans
+the gate, balance, debt, difficulty, ledger, harvest, phase and theory-credit
+modules from reaching `_theory`, through any import chain. `_harvest_run`
+pushes the status snapshot, so it gets the direct ban only. The `_lock*`,
+`_cli*` and `_study*` modules get the direct ban too.
+
+Since 2026-11-22 the ORDER and MAPPING are decider input: the theory-first
+phase machine (`_phase.py`, `DOCS-theory-first.md`) walks the units in
+teaching order and asks which modules each maps. `_curriculum` and the bounded
+reader `_tutor_read` left the ban for that reason. "Theory done" there comes
+only from the tutor's signed `module_state.json`, never from `_theory`.
 
 ## Failure
 

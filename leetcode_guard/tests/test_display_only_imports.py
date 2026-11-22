@@ -1,8 +1,14 @@
-"""The curriculum and the tutor reader order rows; they never decide.
+"""The tutor's unsigned files and the attempt log order rows; they never decide.
 
-Both read files anyone can edit (``curriculum.json``, the tutor's data dir). The
-moment the gate, the balance or the harvester consulted either, editing JSON
-would steer a lock or a credit -- the ``progress_cache.json`` rule again.
+``_theory`` reads the tutor's ``log.jsonl``/``cards.json``, which anyone can
+edit. The moment the gate, the balance or the harvester consulted it, editing
+JSON would steer a lock or a credit -- the ``progress_cache.json`` rule again.
+
+Since stage 4 (2026-11-22) the curriculum's ORDER and MAPPING are decider
+input: the theory-first phase machine (``_phase``) walks the units in order,
+so ``_curriculum`` left this list. It ships inside the package; the unsigned
+tutor files did not move. ``_tutor_read`` left it too: it is only a bounded
+file reader, and the signed tutor files (``_tutor_signed``) go through it.
 """
 
 from __future__ import annotations
@@ -12,9 +18,7 @@ import pytest
 from leetcode_guard.tests.test_push_trigger import PACKAGE, _closure, _imports
 
 DISPLAY_ONLY = {
-    "_curriculum",
     "_theory",
-    "_tutor_read",
     # attempts.json: heartbeats and submissions measured for display. A decider
     # that read it would turn "open the editorial" into a bypass.
     "_attempt_paths",
@@ -41,6 +45,9 @@ DECIDER_PREFIXES = (
     "_gate",
     "_harvest",
     "_ledger",
+    "_phase",
+    "_theory_credit",
+    "_tutor_signed",
 )
 WINDOW_PREFIXES = ("_lock", "_cli", "_study")
 WINDOWS = sorted(
@@ -59,6 +66,16 @@ DECIDERS = sorted(
 def test_the_decider_list_is_not_empty():
     """A renamed package would otherwise make the ban below vacuous."""
     assert {"_gate", "_balance", "_harvest", "_debt"} <= set(DECIDERS)
+    assert {"_phase", "_phase_inputs", "_tutor_signed"} <= set(DECIDERS)
+
+
+def test_the_phase_machine_reads_the_order_but_not_the_unsigned_tutor_files():
+    """Order and mapping decide now; ``log.jsonl``/``cards.json`` still never do."""
+    reached = _closure(("_phase_inputs",))
+
+    assert "_curriculum" in reached
+    assert "_tutor_signed" in reached
+    assert "_theory" not in reached
 
 
 @pytest.mark.parametrize("name", DECIDERS)

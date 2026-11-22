@@ -43,11 +43,12 @@ renders "unknown", never `0 / 4055` — an unknown username answers HTTP 200 wit
 `allQuestionsCount` and `matchedUser: null`, so a good denominator says nothing about the numerator
 (`_progress.parse_progress`).
 
-**The curriculum and the tutor reader are display-only.** `_curriculum.py` (order) and `_theory.py`
-(tutor files, pencil mark) only sort and mark rows, and read files anyone can edit, so nothing that
-decides, charges or credits may import either: `test_display_only_imports.py` bans it, transitively.
-A missing or bad file keeps the acceptance order; an unreadable tutor reads "unknown", shown as
-pending, never taught. `DOCS-curriculum.md` has the rules.
+**The unsigned tutor files are display-only; the curriculum order decides (stage 4).** `_theory.py`
+reads the tutor's `log.jsonl`/`cards.json` (pencil mark, cards taught/total) and anyone can edit
+them, so nothing that decides, charges or credits may import it: `test_display_only_imports.py`
+bans it, transitively. The unit ORDER and MAPPING (`curriculum.json`, `_curriculum.py`) now feed
+the theory-first phase machine (`_phase.py`), whose other inputs are signed: the guard ledger and
+the tutor's signed `ledger.json`/`module_state.json` (`_tutor_signed.py`). `DOCS-curriculum.md`.
 
 **The attempt log and the flag are display-only.** Nothing that decides, charges or credits may
 import `attempts.json` readers (`_attempt_*`, `_attempts`, `--flagged`, `get_flagged`):

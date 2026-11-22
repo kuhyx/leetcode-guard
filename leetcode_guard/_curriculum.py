@@ -13,11 +13,11 @@ when another tag maps, and sorts after every unit when none does; advanced
 tags such as ``rolling-hash`` are left unclaimed on purpose, because an Easy
 tagged that way is solvable without it.
 
-**Display-only**, exactly like ``progress_cache.json``. It orders rows and
-nothing else: no module that decides, charges or credits may import this one
-(``test_display_only_imports.py`` pins it). A missing or malformed file falls back
-to the acceptance order rather than emptying the list -- the lock must always
-offer something to solve.
+**Decider input since stage 4 (2026-11-22).** It orders rows, and the
+theory-first phase machine (``_phase``) walks its units and mappings; the
+tutor's unsigned files stay display-only (``_theory``). A missing or malformed
+file falls back to the acceptance order rather than emptying the list -- the
+lock must always offer something to solve -- and leaves the phase undecided.
 """
 
 from __future__ import annotations

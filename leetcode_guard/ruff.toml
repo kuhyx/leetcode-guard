@@ -1,0 +1,9 @@
+# Inherit the whole repo config; the one addition is below.
+extend = "../pyproject.toml"
+
+[lint.extend-per-file-ignores]
+# SPEC C5 (stage 4, 2026-11-22) fixes this file's content byte for byte: both
+# guard agents create it, so the merge is trivial. Its first line is 89 chars.
+# Here, not in pyproject.toml: touching that manifest trips the dependency-
+# freshness gate on pins this change does not own (kuhy-credit, sickdays).
+"_phase_view.py" = ["E501"]
