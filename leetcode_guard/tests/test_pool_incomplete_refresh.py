@@ -83,7 +83,10 @@ def test_an_incomplete_fetch_keeps_a_good_cache_byte_identical(
     assert gather_phase(Ledger(), key_file=hmac_key) is not None
     assert resolution.source == "stale-cache"
     assert [p.title_slug for p in resolution.problems] == ["a1"]
-    assert any("refresh was incomplete" in note for note in resolution.notes)
+    assert any(
+        n.startswith("Could not refresh the problem list") for n in resolution.notes
+    )
+    assert not any("incomplete" in note for note in resolution.notes)
     assert "kept the last complete problem list" in caplog.text
 
 

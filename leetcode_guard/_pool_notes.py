@@ -36,3 +36,8 @@ def ledger_note(count: int) -> str:
         f"Hiding at least {count} problem{plural} already solved on this "
         "device, from the local ledger."
     )
+
+
+def refresh_failed_note(reason: str) -> str:
+    """Say the refresh failed (or came back cut short) and why."""
+    return f"Could not refresh the problem list: {reason}."

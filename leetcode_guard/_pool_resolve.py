@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Final, Literal, TypeGuard
 from leetcode_guard._constants import POOL_TTL_SECONDS, SUGGESTION_COUNT
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_fetch import fetch_pool
-from leetcode_guard._pool_notes import ledger_note, stale_note
+from leetcode_guard._pool_notes import ledger_note, refresh_failed_note, stale_note
 from leetcode_guard._pool_verify import (
     live_note,
     verify_live,
@@ -152,7 +152,7 @@ def resolve_pool(
                 solved=solved,
                 post=post,
             )
-        notes.append(f"Could not refresh the problem list: {fetched.reason}.")
+        notes.append(refresh_failed_note(fetched.reason))
 
     if cached is not None:
         notes.append(stale_note(cached, now=now))
@@ -191,10 +191,7 @@ def _kept(
     _logger.warning(
         "pool refresh incomplete (%s): kept the last complete problem list", reason
     )
-    notes.append(
-        f"Problem list refresh was incomplete: {reason}. "
-        "Showing the last complete list."
-    )
+    notes.append(refresh_failed_note(reason))
     return _resolved(cached.problems, "stale-cache", notes, solved=solved, post=post)
 
 
