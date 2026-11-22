@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from leetcode_guard._debt import Debt
+    from leetcode_guard._status_unit import UnitStatus
 
 
 @dataclass(frozen=True)
@@ -86,3 +87,5 @@ class StatusSnapshot:
     verdict: Verdict
     balance: BalanceView
     pool: PoolView
+    unit: UnitStatus
+    """The current unit and phase (stage 4), read like the lock reads it."""

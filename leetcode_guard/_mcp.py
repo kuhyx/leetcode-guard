@@ -15,6 +15,10 @@ windows and calls ``sys.exit``.
 **3. No secret ever leaves.** Nothing returns the sync token, the cookie file
 or any HMAC key.
 
+The current unit and phase (stage 4) come from ``_status_unit``, the same
+read-only view the lock paints: it never polls the tutor ledger for credit,
+never mints and never writes ``theory_phase.json``.
+
 Suggestions come from the on-disk cache only: ``resolve_pool`` is called with
 ``post=None``, so an MCP call can never trigger a live fetch and can never
 count against the LeetCode rate limit.
@@ -29,7 +33,7 @@ from typing import Any, Final
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
-from leetcode_guard import _attempt_report, _coach_reviews
+from leetcode_guard import _attempt_report, _coach_reviews, _status_unit
 from leetcode_guard._constants import SUGGESTION_COUNT
 from leetcode_guard._status import gather_status, snapshot_dict
 
@@ -55,15 +59,31 @@ def get_status() -> dict[str, Any]:
     """Everything the gate currently knows.
 
     Today's cost, the ledger position, the decision and its reason, integrity
-    flags, and the cached suggestion list.
+    flags, the cached suggestion list, and ``unit``: the current unit, its
+    phase (``theory``/``solve``/``none``), what the lock leads with and why.
+    ``null`` means "could not check", never zero.
     """
-    return snapshot_dict(gather_status())
+    snapshot = gather_status()
+    return {**snapshot_dict(snapshot), "unit": _unit(snapshot.unit)}
+
+
+def _unit(unit: _status_unit.UnitStatus) -> dict[str, Any]:
+    return {
+        **_status_unit.unit_dict(unit),
+        "lead_reason": _status_unit.lead_reason(unit),
+    }
 
 
 @mcp.tool(title="Solve credits and cost", annotations=_READS_ONLY)
 def get_credits() -> dict[str, Any]:
-    """Just the credit position, for a status line or a quick check."""
+    """Just the credit position, for a status line or a quick check.
+
+    ``theory_credits`` (all time) and ``theory_credits_today`` are the ledger's
+    trusted ``tutor-theory`` credits (``entry_id`` ``theory:<day>:<n>``, 12
+    taught minutes each); ``solve_credits`` is the rest of ``credits``.
+    """
     snapshot = gather_status()
+    unit = snapshot.unit
     return {
         "credits": snapshot.balance.credits,
         "charged": snapshot.balance.charged,
@@ -75,15 +95,20 @@ def get_credits() -> dict[str, Any]:
         "needed": snapshot.verdict.needed,
         "locked": snapshot.verdict.locked,
         "integrity_ok": snapshot.balance.integrity_ok,
+        "theory_credits": unit.credits_total,
+        "theory_credits_today": unit.credits_today,
+        "solve_credits": snapshot.balance.credits - unit.credits_total,
     }
 
 
 @mcp.tool(title="Suggested problems", annotations=_READS_ONLY)
 def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]]:
-    """Non-premium problems, easiest first, in curriculum (theory block) order.
+    """Non-premium problems in the order the lock ranks them.
 
-    ``unit`` names the block; ``theory`` says whether the tutor has taught it
-    (``pending``/``unknown`` rows are served after the taught blocks).
+    In THEORY(u) and SOLVE(u) the current unit u's Easy problems lead
+    (``_unit_rank.focus_key``); in ``none`` the curriculum order. ``unit``
+    names each row's block; ``theory`` says whether the tutor has taught it.
+    The lock checks its top rows live; this list is the cache's order.
 
     Served from the cached pool. This never fetches, so it is always instant
     and never contributes to rate limiting.
@@ -104,9 +129,14 @@ def get_suggested_problems(limit: int = SUGGESTION_COUNT) -> list[dict[str, Any]
 
 @mcp.tool(title="Why the gate is locked", annotations=_READS_ONLY)
 def explain_lock() -> dict[str, Any]:
-    """Why the gate would lock or unlock right now, with the evidence."""
+    """Why the gate would lock or unlock right now, with the evidence.
+
+    Also the current unit and phase, and ``leads_with``/``lead_reason``: why the
+    lock leads with theory or with problems.
+    """
     snapshot = gather_status()
     return {
+        **_unit(snapshot.unit),
         "day": snapshot.day,
         "weekday": snapshot.weekday,
         "cost": snapshot.cost,

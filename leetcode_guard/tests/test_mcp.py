@@ -123,6 +123,9 @@ def test_get_credits_reports_the_position():
         "needed",
         "locked",
         "integrity_ok",
+        "theory_credits",
+        "theory_credits_today",
+        "solve_credits",
     }
 
 

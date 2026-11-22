@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 from leetcode_guard._daycost import CURRENT_PRICING, INTERIM_PRICING, REPRICE_DATE
 from leetcode_guard._debt import debt_summary
 from leetcode_guard._status_full import explain_not_triggered
+from leetcode_guard._status_unit import unit_dict
 
 if TYPE_CHECKING:
     from leetcode_guard._status_extra import BudgetStatus, CacheStatus
@@ -149,6 +150,7 @@ def status_section(full: FullStatus) -> dict[str, Any]:
             "incidents": _budget(full.incidents),
         },
         **_health(full),
+        "unit": unit_dict(full.gate.unit),
         "suggestions": [
             {
                 "title": item.title,

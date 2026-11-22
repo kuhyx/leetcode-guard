@@ -207,6 +207,8 @@ Deltas from the first draft of this block (exporter, 2026-10-23):
   `pricing_note`, `integrity.{clock_trusted,total_entries,bootstrapped,ledger_path}`,
   `environment.{cookies_configured,sync_configured,timer,pool_cache,statement_cache}`.
 - `progress` is per difficulty plus `solved_all`/`total_all`/`fetched_at`.
+- 2026-11-22: `status.unit` = `_status_unit.unit_dict`, data only (keys and
+  nulls: `DOCS-theory-first.md`, "The read-only surfaces"); never mints.
 - `projected` is keyed by difficulty (Easy filled first, as the window does);
   each projection also has `first_day`. `projection_price` is the Tue-Thu
   price they were computed at. Keys: today + 89 days, plus the last day of

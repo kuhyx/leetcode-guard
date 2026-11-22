@@ -34,6 +34,7 @@ from leetcode_guard._status_model import (
     Suggestion,
     Verdict,
 )
+from leetcode_guard._status_unit import gather_unit, unit_lines
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -83,9 +84,8 @@ def gather_status(
     moment = now if now is not None else datetime.now().astimezone()
     day = local_today(now=moment)
 
-    ledger = load_ledger(
-        LEDGER_FILE if ledger_path is None else ledger_path, key_file=key_file
-    )
+    path = LEDGER_FILE if ledger_path is None else ledger_path
+    ledger = load_ledger(path, key_file=key_file)
     decision = decide_today(ledger, day=day, now=moment, key_file=key_file)
 
     return StatusSnapshot(
@@ -100,6 +100,7 @@ def gather_status(
         pool=_pool_view(
             ledger, pool_files or PoolFiles(), now=moment.timestamp(), limit=limit
         ),
+        unit=gather_unit(ledger, path, day=day, key_file=key_file),
     )
 
 
@@ -228,6 +229,7 @@ def format_status(snapshot: StatusSnapshot) -> str:
         lines.append(f"unreadable {balance.unparsable} ledger rows could not be parsed")
     if not snapshot.clock_trusted:
         lines.append("clock      UNTRUSTED -- the system date moved backwards")
+    lines.extend(unit_lines(snapshot.unit))
     lines.append(
         f"pool       {len(snapshot.pool.suggestions)} suggestions "
         f"from {snapshot.pool.source}"
