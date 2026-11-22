@@ -20,7 +20,13 @@ from leetcode_guard._view_types import ProblemList, RowWiring, ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel_lines import ProblemLine
 from leetcode_guard._viewmodel_phase import build_phase_screen, rework_route
-from leetcode_guard.tests._phase_fixtures import SOLVE, SUBJECT, THEORY, unit_pool
+from leetcode_guard.tests._phase_fixtures import (
+    PREFIX,
+    SOLVE,
+    SUBJECT,
+    THEORY,
+    unit_pool,
+)
 from leetcode_guard.tests._view_fixtures import mock_view, model
 from leetcode_guard.tests.test_lock_learn import _no_tutor_spawn  # fixture
 from leetcode_guard.tests.test_lock_study import locked_guard
@@ -145,3 +151,14 @@ def test_no_target_opens_nothing(
 
     assert no_tutor_spawn == []
     guard.lock.root.grab_release.assert_not_called()
+
+
+def test_solve_rows_are_the_units_own_so_the_route_names_their_unit(
+    tmp_path: Path, hmac_key: Path
+):
+    """``?`` routes every row to the current unit's module; that is only right
+    because SOLVE(u) lists u's problems alone (``build_problem_lines(unit=)``).
+    The pool interleaves a stack problem and an unclaimed one; neither shows."""
+    guard = locked_guard(tmp_path, hmac_key, pool=unit_pool(), phase=lambda: REWORKABLE)
+
+    assert {line.slug for line in guard.model.problems} == set(PREFIX)
