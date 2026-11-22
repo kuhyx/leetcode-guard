@@ -1,4 +1,4 @@
-"""What the lock shows about the current unit (display side of the theory-first flow)."""
+"""What the lock shows about the current unit."""
 
 from __future__ import annotations
 
