@@ -34,7 +34,7 @@ from leetcode_guard._balance import is_trusted
 from leetcode_guard._daycost import day_key
 from leetcode_guard._ledger import CREDIT, LedgerEntry, sign
 from leetcode_guard._ledger_io import append, save_ledger
-from leetcode_guard._phase_file import write_phase
+from leetcode_guard._phase_file import phase_since, write_phase
 from leetcode_guard._phase_inputs import gather_phase
 from leetcode_guard._tutor_signed import signed_rows, teaching_minutes
 
@@ -169,8 +169,11 @@ def paying_minutes(
     rows = signed_rows(TUTOR_LEDGER, key_file=key_file)
     if rows is None:
         return None
+    since = phase_since(state, key_file)
+    if since is None:
+        return 0
     return teaching_minutes(
-        rows, state.subject, state.modules, day=day, until=state.done_at
+        rows, state.subject, state.modules, day=day, window=(since, state.done_at)
     )
 
 

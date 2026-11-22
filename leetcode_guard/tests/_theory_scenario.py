@@ -7,11 +7,13 @@ suite's scratch dirs (``_paths_fixture``), never in ``~/.local/share``.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 import json
 from typing import TYPE_CHECKING
 
 from leetcode_guard import _constants, _curriculum
+from leetcode_guard._phase import PhaseState
+from leetcode_guard._phase_file import write_phase
 from leetcode_guard._pool_cache import CachedPool, write_cache
 from leetcode_guard.tests._tutor_fixtures import (
     ALGO,
@@ -23,7 +25,6 @@ from leetcode_guard.tests.test_phase import DOCUMENT as PHASE_DOCUMENT
 from leetcode_guard.tests.test_problem import make
 
 if TYPE_CHECKING:
-    from datetime import datetime
     from pathlib import Path
 
     import pytest
@@ -65,3 +66,23 @@ def taught(key_file: Path, now: datetime, *spans: tuple[str | None, int]) -> Non
         for i, (module, minutes) in enumerate(spans)
     ]
     write_tutor("ledger.json", rows)
+
+
+# Long before any row a test teaches: C3's ``theory_since`` for ``began``.
+EARLY = datetime(2026, 1, 1).astimezone()
+_MODULES = {"a": ("a",), "b": ("b1", "b2")}
+
+
+def began(key_file: Path, unit: str = "a", phase: str = "theory") -> None:
+    """A signed C3 saying ``unit`` entered ``phase`` at ``EARLY``.
+
+    Minutes that ended before THEORY(u) began never pay (``theory_since``),
+    so a test that teaches first and polls after states when the phase began.
+    """
+    state = PhaseState(
+        unit=unit,
+        phase="solve" if phase == "solve" else "theory",
+        subject=ALGO,
+        modules=_MODULES[unit],
+    )
+    write_phase(state, day=EARLY.date(), now=EARLY, key_file=key_file)

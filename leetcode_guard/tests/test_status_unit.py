@@ -18,7 +18,7 @@ from leetcode_guard._phase_file import write_phase
 from leetcode_guard._status import gather_status
 from leetcode_guard._status_format import format_status
 from leetcode_guard._theory_credit import theory_entry
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO
 from leetcode_guard.tests.test_unit_view import DAY, NOW, display_files, solved
 
@@ -57,6 +57,7 @@ def test_theory_shows_the_unit_the_rate_todays_credits_and_the_learn_route(
 ):
     """THEORY(a): 30 minutes today, two credits already minted, lessons ready."""
     world(tmp_path, monkeypatch)
+    began(hmac_key)
     states(hmac_key)
     taught(hmac_key, NOW, ("a", 30))
     display_files("a-1")
@@ -75,16 +76,18 @@ def test_a_status_read_never_mints_and_never_writes_the_phase_file(
     """36 minutes would mint 3 credits in a poll; a status read mints none."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 36))
     save_ledger(data_dir / "ledger.json", load_ledger(data_dir / "ledger.json"))
     before = (data_dir / "ledger.json").read_bytes()
+    c3 = _phase_file.PHASE_FILE.read_bytes()
 
     unit = snapshot(data_dir, hmac_key).unit
 
     assert unit.minutes == 36
     assert unit.credits_today == 0
     assert (data_dir / "ledger.json").read_bytes() == before
-    assert not _phase_file.PHASE_FILE.exists()
+    assert _phase_file.PHASE_FILE.read_bytes() == c3
 
 
 def test_lessons_not_ready_route_to_the_plan_screen_like_the_lock(
@@ -93,6 +96,7 @@ def test_lessons_not_ready_route_to_the_plan_screen_like_the_lock(
     """No card for the module: the lock's learn button opens the plan; so does this."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     display_files(cards={})
 
     text = format_status(snapshot(data_dir, hmac_key))
@@ -135,6 +139,7 @@ def test_an_unreadable_tutor_ledger_reads_unknown_minutes_not_zero(
     """C2 readable, C1 missing: the lock shows 0, the status says unknown."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
 
     status = snapshot(data_dir, hmac_key)
 
@@ -149,6 +154,7 @@ def test_unreadable_tutor_cards_read_unknown(
     """A torn cards.json: the card counts are null, never 0 of 0."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     display_files()
     (tmp_path / "tutor" / "subjects" / ALGO / "cards.json").write_text("{")
 
@@ -190,6 +196,7 @@ def test_forged_and_past_theory_credits_are_not_todays(
     """Only trusted ``theory:<today>:`` rows count; a forged one never does."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     minted(data_dir, hmac_key, (0, "a"), (2, "a"))
     ledger = load_ledger(data_dir / "ledger.json", key_file=hmac_key)
     forged = theory_entry((DAY, NOW), n=9, unit="a", minutes=99, key_file=hmac_key)

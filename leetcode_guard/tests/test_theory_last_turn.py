@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from leetcode_guard._ledger_io import Ledger
 from leetcode_guard._theory_credit import poll_theory
 from leetcode_guard._tutor_signed import UNTIL_SLACK_S, teaching_minutes
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO, teaching_row
 
 if TYPE_CHECKING:
@@ -31,6 +31,7 @@ def test_last_teaching_turn_pays_when_c2_is_stamped_a_second_before_it(
 ):
     """6 + 6 minutes finish module a; C2 says done 1 s before the 2nd ended."""
     world(tmp_path, monkeypatch)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 6), ("a", 6))
     states(hmac_key, "a", at=LAST_END.timestamp() - 1)
 
@@ -56,7 +57,7 @@ def test_last_teaching_turn_slack_is_a_boundary_not_a_window(hmac_key: Path):
             key_file=hmac_key,
             where=(ALGO, "a"),
         )
-        return teaching_minutes([row], ALGO, ("a",), day=DAY, until=until)
+        return teaching_minutes([row], ALGO, ("a",), day=DAY, window=(None, until))
 
     assert minutes_ending(UNTIL_SLACK_S) == 6
     assert minutes_ending(UNTIL_SLACK_S + 0.01) == 0

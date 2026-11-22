@@ -136,12 +136,17 @@ def _minutes(detail: dict[str, object]) -> int | None:
     return raw
 
 
-def _ended_on(detail: dict[str, object], day: date, until: float | None) -> bool:
-    """Whether ``detail.ended_at`` falls on local ``day`` (and not after ``until``)."""
+def _ended_on(
+    detail: dict[str, object], day: date, window: tuple[float | None, float | None]
+) -> bool:
+    """Whether ``detail.ended_at`` falls on local ``day``, inside (since, until)."""
     raw = detail.get("ended_at")
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
         return False
+    since, until = window
     if until is not None and raw > until + UNTIL_SLACK_S:
+        return False
+    if since is not None and raw < since:
         return False
     return datetime.fromtimestamp(raw).astimezone().date() == day
 
@@ -152,13 +157,15 @@ def teaching_minutes(
     modules: Collection[str],
     *,
     day: date,
-    until: float | None = None,
+    window: tuple[float | None, float | None] = (None, None),
 ) -> int:
     """Signed TEACHING minutes on ``modules`` of ``subject`` that ended on ``day``.
 
-    ``until`` (unix seconds) drops rows that ended later: the minutes taught
-    before a unit's theory was done still pay once the machine is in SOLVE,
-    the ones after it never do.
+    ``window`` is (``since``, ``until``) in unix seconds, ``None`` = open.
+    ``until`` drops rows that ended later: the minutes taught before a unit's
+    theory was done still pay once the machine is in SOLVE, the ones after it
+    never do. ``since`` drops rows that ended before the unit's THEORY began
+    (C3 ``theory_since``).
 
     earned_time's tutor rules, copied so both readers pay the same minutes:
     the local day of ``ended_at``, a positive-int ``minutes``, and an
@@ -174,7 +181,7 @@ def teaching_minutes(
             or detail.get("subject") != subject
             or detail.get("module") not in modules
             or minutes is None
-            or not _ended_on(detail, day, until)
+            or not _ended_on(detail, day, window)
         ):
             continue
         entry_id = row.get("entry_id")

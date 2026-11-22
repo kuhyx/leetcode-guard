@@ -12,6 +12,7 @@ changes (the ``at`` stamp alone never rewrites it)::
             "phase": "theory" | "solve" | "none",
             "teachable": [["<subject>", "<module>"], ...],
             "at": 1.0,
+            "theory_since": 1.0,
         },
         "hmac": "...",
     }
@@ -21,6 +22,13 @@ over the row without ``hmac``). The tutor fails closed on a missing or bad
 file, so a write that cannot be signed is skipped, logged, and the old file
 stays. The same file is this guard's "last signed phase": when the inputs
 cannot be read, the display holds it (:func:`read_phase`).
+
+``theory_since`` is when THEORY(u) began: set on entering THEORY(u) from
+anything else (SOLVE(u) included, so a re-entry starts over), carried into
+SOLVE(u). Teaching minutes that ended before it never pay
+(:func:`phase_since`): a subject the tutor does not gate (SQL) could
+otherwise be taught in the morning and paid when its unit starts. A row
+written before the key existed uses its ``at``. The tutor ignores the key.
 """
 
 from __future__ import annotations
@@ -75,6 +83,42 @@ def _stored(key_file: Path | None) -> dict[str, object] | None:
     return detail
 
 
+def _carried(stored: dict[str, object]) -> float | None:
+    """The stored ``theory_since``, else (a row from before it) the stored ``at``."""
+    for key in ("theory_since", "at"):
+        raw = stored.get(key)
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            return float(raw)
+    return None
+
+
+def _since(stored: dict[str, object] | None, state: PhaseState, now: float) -> float:
+    """``theory_since`` for a rewrite to ``state``: carried, or ``now``."""
+    if stored is None or stored.get("unit") != state.unit:
+        return now
+    if stored.get("phase") == "theory" or (
+        stored.get("phase") == "solve" and state.phase == "solve"
+    ):
+        carried = _carried(stored)
+        return now if carried is None else carried
+    return now
+
+
+def phase_since(state: PhaseState, key_file: Path | None = None) -> float | None:
+    """When ``state``'s THEORY began, by the signed file; ``None`` if it disagrees.
+
+    ``None`` (no file, a bad signature, another unit or phase) pays nothing:
+    the caller may not guess an earlier start.
+    """
+    stored = _stored(key_file)
+    if stored is None or {k: stored.get(k) for k in ("unit", "phase")} != {
+        "unit": state.unit,
+        "phase": state.phase,
+    }:
+        return None
+    return _carried(stored)
+
+
 def write_phase(
     state: PhaseState, *, day: date, now: datetime, key_file: Path | None = None
 ) -> bool:
@@ -83,11 +127,12 @@ def write_phase(
     stored = _stored(key_file)
     if stored is not None and {k: stored.get(k) for k in content} == content:
         return False
+    since = _since(stored, state, now.timestamp())
     row: dict[str, object] = {
         "kind": "theory_phase",
         "entry_id": "phase",
         "day": day.isoformat(),
-        "detail": {**content, "at": now.timestamp()},
+        "detail": {**content, "at": now.timestamp(), "theory_since": since},
     }
     signature = compute_entry_hmac(row, key_file=key_file)
     if signature is None:

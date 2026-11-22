@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from leetcode_guard import _mcp, _phase_file, _status
 from leetcode_guard._ledger_io import load_ledger
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO
 from leetcode_guard.tests.test_status_unit import minted
 from leetcode_guard.tests.test_unit_view import NOW, display_files, solved
@@ -42,9 +42,11 @@ def test_get_status_and_explain_lock_lead_with_theory_in_theory(
     """THEORY(a): the unit, the phase, the learn route and why it leads."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 30))
     display_files("a-1")
     seam(monkeypatch, data_dir, hmac_key)
+    c3 = _phase_file.PHASE_FILE.read_bytes()
 
     unit = _mcp.get_status()["unit"]
     why = _mcp.explain_lock()
@@ -58,7 +60,7 @@ def test_get_status_and_explain_lock_lead_with_theory_in_theory(
     assert unit["theory_minutes_today"] == 30
     assert (why["unit"], why["phase"], why["leads_with"]) == ("a", "theory", "theory")
     assert "theory is not done" in why["lead_reason"]
-    assert not _phase_file.PHASE_FILE.exists()
+    assert _phase_file.PHASE_FILE.read_bytes() == c3
 
 
 def test_explain_lock_leads_with_problems_in_solve(
@@ -100,6 +102,7 @@ def test_get_credits_tells_theory_credits_from_solve_credits(
     """One solve plus two theory credits today and one yesterday."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     solved(data_dir, hmac_key, "a1")
     minted(data_dir, hmac_key, (0, "a"), (0, "a"), (1, "a"))
     seam(monkeypatch, data_dir, hmac_key)
@@ -118,6 +121,7 @@ def test_get_suggested_problems_lead_with_the_current_unit(
     lock's ``focus_key`` (and so this list) leads with a's Easy problem."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     cards = {f"{m}-1": {"module": m, "suspended": False} for m in ("b1", "b2")}
     display_files(*cards, cards=cards)
     seam(monkeypatch, data_dir, hmac_key)
@@ -131,11 +135,13 @@ def test_get_suggested_problems_lead_with_the_current_unit(
 def test_no_tool_wrote_the_ledger(
     tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
 ):
-    """Every tool, 36 minutes taught: no theory credit appears, no C3 file."""
+    """Every tool, 36 minutes taught: no theory credit appears, C3 untouched."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 36))
     seam(monkeypatch, data_dir, hmac_key)
+    c3 = _phase_file.PHASE_FILE.read_bytes()
 
     for tool in (
         _mcp.get_status,
@@ -147,4 +153,4 @@ def test_no_tool_wrote_the_ledger(
 
     ledger = load_ledger(data_dir / "ledger.json", key_file=hmac_key)
     assert not any(e.startswith("theory:") for e in ledger.entries)
-    assert not _phase_file.PHASE_FILE.exists()
+    assert _phase_file.PHASE_FILE.read_bytes() == c3

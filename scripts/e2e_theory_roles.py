@@ -49,6 +49,7 @@ from leetcode_guard._pool_cache import CachedPool, write_cache
 from leetcode_guard._problem import parse_problem
 from leetcode_guard._settings import Client
 from leetcode_guard._snapshot_push import PushResult
+from leetcode_guard.tests._e2e_c3 import began
 from leetcode_guard.tests._net_fixtures import (
     null_data_result,
     pool_result,
@@ -229,9 +230,9 @@ def main(role: str, args: list[str]) -> int:
         stamp = datetime.now(tz=UTC).timestamp()
         pool = CachedPool(problems=problems, fetched_at=stamp, complete=True)
         return 0 if write_cache(_constants.POOL_CACHE_FILE, pool) else 1
-    if role in {"teach", "flip"}:
+    if write := {"teach": teach, "flip": flip, "began": began}.get(role):
         for spec in args:
-            (teach if role == "teach" else flip)(spec)
+            write(spec)
         return 0
     if role == "needed":
         return needed()

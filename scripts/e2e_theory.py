@@ -6,7 +6,7 @@ scratch ``$HOME`` and key, a private Xvfb, LeetCode faked (``e2e_theory_roles``)
 One case per call; the exit code is the verdict, and one line per case is
 appended to ``~/data/claude-scratch/lc-stage4/e2e/results.txt``::
 
-    python3 -m scripts.e2e_theory a|b|c|d|e|f|g|h
+    python3 -m scripts.e2e_theory a|b|c|d|e|f|g|h|i
 
 Cases (SPEC "The flow", "Guard rules for the new credit"): a THEORY arms with
 the theory card; b teaching minutes pay the day, other modules pay nothing;
@@ -15,7 +15,8 @@ e a finished unit moves on; f deleting files cannot mint; g kuhy's real state
 (copied, read-only) decides the same on base and new for 14 days, and
 ``--status`` says 'could not check' until the tutor's C2 file exists. g skips
 loudly (exit 0) when the real files are absent. h the turn that finished a
-unit pays though C2 is stamped 1 s before it ended (part 10c553bc).
+unit pays though C2 is stamped 1 s before it ended (part 10c553bc); i minutes
+taught before THEORY(u) began pay nothing (red-team R2, part 00aacb35).
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from leetcode_guard.tests._e2e_theory_cases import (
     case_e,
     case_f,
     case_h,
+    case_i,
     check,
     needed,
     seeded,
@@ -96,6 +98,7 @@ def case_b(world: World) -> str:
     )
     _, out = world.role("harvest")
     check(not world.entry_ids("theory:"), f"another module or subject minted: {out}")
+    world.role("began", "40")
     world.role(
         "teach", f"{ALGO}/prefix-sums/{12 * need - 5}/20", f"{ALGO}/prefix-sums/5/10"
     )
@@ -175,6 +178,7 @@ CASES: dict[str, Callable[[World], str]] = {
     "f": case_f,
     "g": case_g,
     "h": case_h,
+    "i": case_i,
 }
 
 

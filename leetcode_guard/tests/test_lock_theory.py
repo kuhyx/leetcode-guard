@@ -14,7 +14,7 @@ from leetcode_guard import _phase_file
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard.tests._guard_factories import create_guard, probe_of
 from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,6 +36,7 @@ def _theory_guard(tmp_path: Path, hmac_key: Path, *, demo_mode: bool):
         seeded=True,
     )
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 24))
     return guard
 
@@ -65,9 +66,10 @@ def test_the_demo_lock_never_polls_theory(
     """The demo must not mint from real minutes nor rewrite the live C3 file."""
     world(tmp_path, monkeypatch)
     guard = _theory_guard(tmp_path, hmac_key, demo_mode=True)
+    c3 = _phase_file.PHASE_FILE.read_bytes()
 
     guard.on_poll_result(guard.check())
 
     ledger = load_ledger(tmp_path / "ledger.json", key_file=hmac_key)
     assert not any(key.startswith("theory:") for key in ledger.entries)
-    assert not _phase_file.PHASE_FILE.exists()
+    assert _phase_file.PHASE_FILE.read_bytes() == c3

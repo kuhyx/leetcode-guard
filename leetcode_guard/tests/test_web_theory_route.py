@@ -9,7 +9,7 @@ from threading import Thread
 from typing import TYPE_CHECKING
 
 from leetcode_guard._web_server import create_server
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests.test_web_theory import KEYS
 
 if TYPE_CHECKING:
@@ -36,6 +36,7 @@ def test_the_route_serves_the_block_as_json(tmp_path, monkeypatch, hmac_key: Pat
     """200, ``application/json``, one ``theory`` object with the contract keys."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, datetime.now().astimezone(), ("a", 7))
 
     status, ctype, body = _fetch("/api/theory")

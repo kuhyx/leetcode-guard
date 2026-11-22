@@ -9,7 +9,7 @@ from leetcode_guard import _unit_view
 from leetcode_guard._phase import PhaseState
 from leetcode_guard._phase_file import write_phase
 from leetcode_guard._unit_view import unit_view, view_now
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests.test_unit_view import DAY, NOW
 
 if TYPE_CHECKING:
@@ -58,6 +58,7 @@ def test_the_day_is_read_on_every_repaint(
     """A lock left open past midnight counts the new day's minutes."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 30))
     days = iter([DAY, DAY.replace(day=DAY.day + 1)])
     repaint = unit_view(

@@ -17,7 +17,7 @@ from leetcode_guard import _web_theory
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._theory_credit import poll_theory
 from leetcode_guard._web_theory import build_theory_payload
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests.test_status_unit import minted
 from leetcode_guard.tests.test_unit_view import solved
 
@@ -54,6 +54,7 @@ def test_in_theory_it_counts_the_minutes_towards_the_next_credit(
     """THEORY(a), 7 minutes, nothing minted: 7 of 12, the day still owes 2."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 7))
 
     payload = build_theory_payload(now=NOW, key_file=hmac_key)
@@ -80,6 +81,7 @@ def test_a_credit_due_but_not_minted_reads_a_full_twelve_then_zero(
     """12 minutes: pending mint shows 12; once minted the next credit starts at 0."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 12))
 
     assert theory(hmac_key)["minutes_into_credit"] == 12
@@ -98,6 +100,7 @@ def test_minutes_past_the_minted_credits_are_the_remainder(
     """30 minutes with two minted (24 paid for): 6 into the third."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 30))
     minted(data_dir, hmac_key, (0, "a"), (0, "a"))
 
@@ -114,6 +117,7 @@ def test_solve_phase_still_counts_minutes_taught_before_the_flip(
     """SOLVE(a): the phase machine's own word, minutes before the flip pay."""
     world(tmp_path, monkeypatch)
     states(hmac_key, "a", at=NOW.timestamp() - 30)
+    began(hmac_key, "a", "solve")
     taught(hmac_key, NOW, ("a", 5))
 
     block = theory(hmac_key)
@@ -143,6 +147,7 @@ def test_unreadable_tutor_minutes_are_null_never_zero(
     """No signed tutor ledger: the phase is known, the minutes are not."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
 
     block = theory(hmac_key)
 
@@ -177,6 +182,7 @@ def test_only_trusted_credits_count(
     """A forged theory row (bad signature) is not a minted credit."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 7))
     minted(data_dir, hmac_key, (0, "a"))
     path = data_dir / "ledger.json"
@@ -193,6 +199,7 @@ def test_a_bug_inside_answers_nulls_and_logs_a_warning(
     """Fail-open to null: nothing raises into the handler, the journal hears it."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     caplog.set_level(logging.WARNING)
 
     with patch.object(_web_theory, "decide_today", side_effect=RuntimeError("boom")):
@@ -216,6 +223,7 @@ def test_it_writes_nothing(tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
     """Not the ledger, not C3, not the pool: a credit due is shown, never minted."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 30))
     before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
 
@@ -224,4 +232,3 @@ def test_it_writes_nothing(tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
     after = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert after == before
     assert not (data_dir / "ledger.json").exists()
-    assert not (data_dir / "theory_phase.json").exists()

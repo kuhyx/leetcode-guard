@@ -39,6 +39,7 @@ def test_the_row_has_the_contract_shape_and_verifies(hmac_key: Path):
         "phase": "theory",
         "teachable": [[ALGO, "a"]],
         "at": NOW.timestamp(),
+        "theory_since": NOW.timestamp(),
     }
     # The tutor verifies with earned_time: the other library must agree.
     assert row["hmac"] == earned_time.entry_signature(

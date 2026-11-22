@@ -137,6 +137,8 @@ def case_f(world: World) -> str:
     """Deleting the ledger re-mints only today's; deleting C3/C2 mints nothing."""
     seeded(world)
     world.role("flip", "prefix-sums/0/3000")
+    world.role("harvest")
+    world.role("began", "3000")
     world.role("teach", f"{ALGO}/prefix-sums/60/1500", f"{ALGO}/prefix-sums/24/5")
     world.role("harvest")
     first = world.entry_ids("theory:")
@@ -171,6 +173,7 @@ def case_h(world: World) -> str:
     seeded(world)
     world.role("flip", "prefix-sums/0/180")
     world.role("harvest")
+    world.role("began", "40")
     world.role("teach", f"{ALGO}/prefix-sums/6/30")
     world.role("teach", f"{ALGO}/prefix-sums/6/10")
     world.role("flip", f"prefix-sums/1/{10 + 1 / 60}")
@@ -179,3 +182,25 @@ def case_h(world: World) -> str:
     check('"solve"' in _phase_text(world), f"not SOLVE: {_phase_text(world)}")
     check(len(minted) == 1, f"last turn not paid: {minted} {out[-600:]}")
     return f"THEORY->SOLVE, C2 at 1 s before the last turn ended: minted {minted}"
+
+
+def case_i(world: World) -> str:
+    """R2: minutes taught before THEORY(u) began never pay; later ones do."""
+    seeded(world)
+    world.role("flip", "prefix-sums/0/600", "prefix-sums/1/500")
+    world.role("harvest")
+    morning = [f"{ALGO}/stack-queue/12/{240 - 12 * i}" for i in range(10)]
+    world.role("teach", *morning)
+    _, out = world.role("harvest", ac=PS_EASY)
+    detail = (world.phase_file() or {}).get("detail") or {}
+    check(
+        (detail.get("unit"), detail.get("phase")) == ("stack-queue", "theory"),
+        f"no THEORY(stack-queue): {detail} {out[-400:]}",
+    )
+    early = world.entry_ids("theory:")
+    check(not early, f"morning minutes paid: {early}")
+    world.role("teach", f"{ALGO}/stack-queue/12/0")
+    world.role("harvest")
+    later = world.entry_ids("theory:")
+    check(len(later) == 1, f"a lesson after THEORY began did not pay: {later}")
+    return f"120 morning min before THEORY(stack-queue): 0 minted; 12 after: {later}"

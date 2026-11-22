@@ -14,7 +14,7 @@ from leetcode_guard.tests._net_fixtures import (
     recent_ac_result,
     submission_row,
 )
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests.test_harvest_run import (
     seeded_ledger,
     stub_client,
@@ -32,6 +32,7 @@ def test_theory_minutes_credit_and_settle_while_leetcode_cannot_be_checked(
     seeded_ledger(data_dir / "ledger.json", hmac_key)
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, datetime.now().astimezone(), ("a", 30))
     stub_client(monkeypatch, null_data_result())
     seen: list[str] = []
@@ -60,6 +61,7 @@ def test_no_theory_and_no_solve_settles_nothing(
     seeded_ledger(data_dir / "ledger.json", hmac_key)
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     stub_client(monkeypatch, recent_ac_result([]))
 
     _harvest_run.main(key_file=hmac_key)
@@ -75,7 +77,8 @@ def test_a_solve_that_finishes_the_unit_moves_the_phase_on_in_the_same_run(
 
     The tutor reads C3 to know what it may teach; a phase decided before the
     run's solves were credited left it refusing unit b for one more minute
-    (e2e case e, 2026-11-22). Today's minutes on b pay in the same run too.
+    (e2e case e, 2026-11-22). Minutes taught on b before this run, before
+    THEORY(b) began, pay nothing (C3 ``theory_since``, red-team R2).
     """
     seeded_ledger(data_dir / "ledger.json", hmac_key)
     world(tmp_path, monkeypatch)
@@ -88,6 +91,9 @@ def test_a_solve_that_finishes_the_unit_moves_the_phase_on_in_the_same_run(
     phase = read_phase(hmac_key)
     assert phase is not None
     assert (phase.unit, phase.phase, phase.modules) == ("b", "theory", ("b1", "b2"))
-    assert "credited 1; theory credited 1" in capsys.readouterr().out
-    ids = load_ledger(data_dir / "ledger.json", key_file=hmac_key).entries
-    assert {"ac:42", f"theory:{local_today()}:1"} <= set(ids)
+    out = capsys.readouterr().out
+    assert "credited 1" in out
+    assert "theory credited" not in out
+    ids = set(load_ledger(data_dir / "ledger.json", key_file=hmac_key).entries)
+    assert "ac:42" in ids
+    assert f"theory:{local_today()}:1" not in ids

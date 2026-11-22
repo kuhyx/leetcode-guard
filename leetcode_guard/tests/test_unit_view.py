@@ -19,7 +19,7 @@ from leetcode_guard._phase_file import write_phase
 from leetcode_guard._phase_view import PhaseView
 from leetcode_guard._unit_view import unit_view
 from leetcode_guard.tests._ledger_fixtures import submission
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO
 
 if TYPE_CHECKING:
@@ -72,6 +72,7 @@ def test_theory_leads_with_the_unit_its_cards_and_todays_minutes(
     """THEORY(a): learn a's module; 1 of 2 cards taught; 30 minutes today."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 10), ("a", 20), ("b1", 7))
     display_files("a-1")
 
@@ -97,6 +98,7 @@ def test_the_rate_is_the_minting_constant(
     """One number, owned by the minting: change it there and the lock follows."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     monkeypatch.setattr(_unit_view, "MINUTES_PER_CREDIT", 7)
 
     assert view(data_dir, hmac_key).minutes_per_credit == 7
@@ -159,6 +161,7 @@ def test_unreadable_tutor_display_files_read_as_no_cards(
     """A torn ``cards.json``: cards None, a warning, and the phase still shown."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     display_files()
     (_theory.TUTOR_DATA_DIR / "subjects" / ALGO / "cards.json").write_text("{")
 
@@ -180,6 +183,7 @@ def test_an_unreadable_tutor_ledger_shows_zero_minutes(
     """C2 readable, C1 missing: the minting would pay nothing, the view shows 0."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
 
     assert view(data_dir, hmac_key).theory_minutes_today == 0
 

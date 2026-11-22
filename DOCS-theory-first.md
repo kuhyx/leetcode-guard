@@ -62,7 +62,12 @@ phase, rewrites C3 on change, mints and saves. It never raises.
   today; earned_time's rules (positive-int `minutes`, a repeated `entry_id`
   pays its smallest count). Review, drill, leftover and carry rows have no
   `module` and never count. In `solve`, rows that ended after the unit's
-  theory became done (its modules' latest `at`) do not count.
+  theory became done (its modules' latest `at`) do not count; a row that
+  ended up to 2 s after it still does (`UNTIL_SLACK_S`: the tutor stamps
+  C2 after the turn that finished the module). Rows that ended before
+  THEORY(u) began (C3 `theory_since`) never count: the tutor does not gate
+  SQL, so morning SQL minutes would otherwise pay when THEORY(sql) begins
+  (red-team R2, `e2e_theory i`). No C3 agreeing with the live phase pays 0.
 - The k-th credit for a unit on a day is minted at 12*k minutes:
   `kind: credit`, `amount: 1`, `entry_id: theory:<day>:<n>` (n runs over the
   day), `detail: {source: tutor-theory, unit, minutes}`. It prices at 1 and is
@@ -79,7 +84,11 @@ phase, rewrites C3 on change, mints and saves. It never raises.
 
 `<DATA_DIR>/theory_phase.json`, one signed row (`_phase_file.py`), rewritten
 only when unit, phase or `teachable` changes. Unsignable (key unreadable):
-not written, logged; the tutor then fails closed.
+not written, logged; the tutor then fails closed. `detail.theory_since` is
+when THEORY(u) began: "now" when THEORY(u) is entered from anything else
+(SOLVE(u) too, so a re-entry starts over), carried into SOLVE(u); a row
+without it (an older guard) uses its `at`. Deleting C3 restamps it "now", so
+it can only pay less. The tutor ignores the key.
 
 ## What the lock shows, and in which order
 

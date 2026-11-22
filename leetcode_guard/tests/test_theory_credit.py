@@ -16,7 +16,7 @@ from leetcode_guard._ledger_io import Ledger, append, load_ledger
 from leetcode_guard._phase import PhaseState
 from leetcode_guard._theory_credit import due_credits, poll_theory, theory_entry
 from leetcode_guard.tests._ledger_fixtures import submission
-from leetcode_guard.tests._theory_scenario import states, taught, world
+from leetcode_guard.tests._theory_scenario import began, states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO, state_row, write_tutor
 
 if TYPE_CHECKING:
@@ -39,6 +39,7 @@ def test_24_minutes_in_theory_mint_two_credits_and_pay_the_day(
     """THEORY(a): 10 + 14 minutes on a's module -> theory:<day>:1 and :2."""
     world(tmp_path, monkeypatch)
     states(hmac_key)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 10), ("a", 14))
     ledger = Ledger()
 
@@ -91,6 +92,7 @@ def test_solve_pays_minutes_taught_before_done_and_none_after(
     world(tmp_path, monkeypatch)
     flip = (NOW - timedelta(minutes=1, seconds=30)).timestamp()
     states(hmac_key, "a", at=flip)
+    began(hmac_key)
     taught(hmac_key, NOW, ("a", 12), ("a", 30))
 
     result = poll(Ledger(), data_dir, hmac_key)
@@ -103,7 +105,8 @@ def test_solve_pays_minutes_taught_before_done_and_none_after(
 def test_every_easy_solved_moves_on_to_the_next_units_theory(
     tmp_path, monkeypatch, data_dir: Path, hmac_key: Path
 ):
-    """a done and a1 solved: THEORY(b), b's modules teachable, b's minutes pay."""
+    """a done and a1 solved: THEORY(b), b's modules teachable; b's minutes from
+    before THEORY(b) began pay nothing (``theory_since``), later ones pay."""
     world(tmp_path, monkeypatch)
     states(hmac_key, "a")
     taught(hmac_key, NOW, ("b2", 12))
@@ -118,7 +121,13 @@ def test_every_easy_solved_moves_on_to_the_next_units_theory(
     assert result.state is not None
     assert (result.state.unit, result.state.phase) == ("b", "theory")
     assert result.state.teachable == ((ALGO, "b1"), (ALGO, "b2"))
-    assert len(result.minted) == 1
+    assert result.minted == ()
+    taught(hmac_key, NOW + timedelta(minutes=20), ("b2", 12))
+    later = NOW + timedelta(minutes=20)
+    paid = poll_theory(
+        ledger, data_dir / "ledger.json", day=DAY, now=later, key_file=hmac_key
+    )
+    assert len(paid.minted) == 1
 
 
 def test_an_unreadable_tutor_ledger_mints_nothing_and_warns(
