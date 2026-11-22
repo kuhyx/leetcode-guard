@@ -33,6 +33,10 @@ DISPLAY_ONLY = {
     # (``_attempt_line``, which is NOT listed: the orchestrator imports it on
     # purpose and must not import any module below directly).
     "_attempt_queries",
+    # Per-problem submission history with code (phase 2): context for a
+    # coaching Claude. ``_history_sync`` is NOT listed, like ``_attempt_line``.
+    "_history_queries",
+    "_history_store",
     # The coach log's finished reviews: they clear a flag, so a decider that read
     # them would let an edited JSONL line steer a lock or a credit.
     "_coach_reviews",

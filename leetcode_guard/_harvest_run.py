@@ -43,6 +43,12 @@ from leetcode_guard._constants import (
 from leetcode_guard._daycost import local_today
 from leetcode_guard._difficulty import credited_slugs
 from leetcode_guard._difficulty_resolve import resolve_difficulties
+from leetcode_guard._display_lines import (
+    attempts_line,
+    history_line,
+    phone_errors_line,
+    push_line,
+)
 from leetcode_guard._gate import apply_decision
 from leetcode_guard._gate_today import decide_today
 from leetcode_guard._harvest import commit_harvest, harvest, needs_seeding
@@ -177,67 +183,12 @@ def main(*, key_file: Path | None = None) -> int:
     # Every run, after the harvest lock is released and whatever it found:
     # the heartbeat is the status app's freshness signal. In-process on
     # purpose -- a detached child would die with this oneshot's cgroup.
-    print(f"snapshot: {_push_line()}")
-    print(f"phone errors: {_phone_errors_line()}")
-    # Last, so its network call cannot delay the lines above.
-    print(f"attempts: {_attempts_line(key_file)}")
+    print(f"snapshot: {push_line()}")
+    print(f"phone errors: {phone_errors_line()}")
+    # Last, so their network calls cannot delay the lines above.
+    print(f"attempts: {attempts_line(key_file)}")
+    print(f"history: {history_line(key_file)}")
     return EXIT_OK
-
-
-def _push_line() -> str:
-    """Push the status snapshot; nothing it does can stop a harvest.
-
-    Imported here, not at the top: the harvest mints credits, the snapshot is
-    display-only, and a snapshot-only breakage -- a crdt_sync bump dropping a
-    name only the push uses, a bug in a snapshot module -- must cost the push,
-    never the process start (``test_harvest_isolation.py``).
-    """
-    try:
-        from leetcode_guard._snapshot_push import (  # pylint: disable=import-outside-toplevel
-            push_quietly,
-        )
-
-        return push_quietly().reason
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        _logger.warning("snapshot push unavailable: %s", exc, exc_info=True)
-        return f"push unavailable: {exc}"
-
-
-def _phone_errors_line() -> str:
-    """Notify about the status app's reported errors; isolated like the push.
-
-    Display only, and the phone can write the node: whatever it holds or
-    however this fails, the harvest above has already run.
-    """
-    try:
-        from leetcode_guard._phone_errors_sync import (  # pylint: disable=import-outside-toplevel
-            sync_quietly,
-        )
-
-        return sync_quietly()
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        # The type only, and no traceback: an RTDB failure's message can
-        # carry the request URL, ``?auth=<token>`` and all.
-        _logger.warning("phone errors unavailable: %s", type(exc).__name__)
-        return f"unavailable ({type(exc).__name__})"
-
-
-def _attempts_line(key_file: Path | None) -> str:
-    """Record theory snapshots and failed submissions; isolated like the push.
-
-    Display only: it writes ``attempts.json`` and nothing else, and the harvest
-    above has already run, so whatever it does wrong costs only this line.
-    """
-    try:
-        from leetcode_guard._attempt_line import (  # pylint: disable=import-outside-toplevel
-            attempts_line,
-        )
-
-        return attempts_line(key_file=key_file)
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        # The type only, like the phone errors: a request URL can ride in a message.
-        _logger.warning("attempts line unavailable: %s", type(exc).__name__)
-        return f"unavailable ({type(exc).__name__})"
 
 
 if __name__ == "__main__":
