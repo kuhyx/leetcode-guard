@@ -73,7 +73,7 @@ not written, logged; the tutor then fails closed.
 - Ranking (`_unit_rank.focus_key`, used by `resolve_pool`): in THEORY(u) and
   SOLVE(u) u's Easy problems lead; in `none` the order is the old one. The
   phase is decided from the pool being ranked plus signed C2, else C3, so
-  the rows match the header. Only the key changes; the top N are still the
+  the rows match the header (up to a solve not harvested yet). Only the key changes; the top N are still the
   only rows verified live.
 
 ## Known limits
