@@ -20,7 +20,12 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard import _glyphs as g
 from leetcode_guard._gate import GateDecision, GateState
 from leetcode_guard._submissions import ProbeStatus
-from leetcode_guard._viewmodel_lines import ProblemLine, format_lines, unit_problems
+from leetcode_guard._viewmodel_lines import (
+    ProblemLine,
+    format_lines,
+    note_easy_fallback,
+    unit_problems,
+)
 from leetcode_guard._viewmodel_marks import accepted_prefix, notes_for
 from leetcode_guard._viewmodel_phase import (
     NONE_SCREEN,
@@ -64,6 +69,7 @@ def build_problem_lines(
     limit: int,
     solved_slugs: frozenset[str] = frozenset(),
     unit: str = "",
+    easy_only: bool = False,
 ) -> tuple[tuple[ProblemLine, ...], tuple[str, ...]]:
     """Format the suggestion list, minus anything solved since it was resolved.
 
@@ -83,6 +89,10 @@ def build_problem_lines(
         unit: Narrow the list to this unit's problems (THEORY/SOLVE). A unit
             with nothing left to show falls back to the whole pool: an empty
             list would hide every Open button, the 2026-08-05 trap.
+        easy_only: SOLVE(unit): only the unit's unsolved free Easy problems,
+            no Medium, no Hard, no other unit's; fewer rows when fewer are
+            left. An empty set falls back to ``unit``'s other problems and
+            logs a warning.
 
     Returns:
         The lines to show, and the titles of the problems a solve removed from
@@ -90,8 +100,15 @@ def build_problem_lines(
         that simply vanishes takes with it the only per-problem confirmation
         that the submission registered.
     """
-    own = unit_problems(pool, unit)
+    own = unit_problems(pool, unit, easy_only=easy_only)
     lines, dropped = format_lines(own, pool, limit, solved_slugs, narrowed=bool(unit))
+    if easy_only and own is not pool.problems:
+        note_easy_fallback(unit, empty=not lines)
+        if not lines:
+            # Today's list for the unit: a data race or a stale cache must
+            # never take the Open buttons away (the 2026-08-05 rule).
+            own = unit_problems(pool, unit)
+            lines, dropped = format_lines(own, pool, limit, solved_slugs, narrowed=True)
     if lines or own is pool.problems:
         return lines, dropped
     return format_lines(pool.problems, pool, limit, solved_slugs, narrowed=False)
@@ -190,6 +207,7 @@ def build_viewmodel(
         limit=source.limit,
         solved_slugs=source.solved_slugs,
         unit=screen.unit if screen.unit_list else "",
+        easy_only=screen.easy_only,
     )
     return ViewModel(
         headline=_headline(decision),

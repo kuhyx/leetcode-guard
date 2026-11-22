@@ -71,6 +71,11 @@ class PhaseScreen:
         return self.phase != "none" and bool(self.unit)
 
     @property
+    def easy_only(self) -> bool:
+        """SOLVE of a known unit: the list is that unit's unsolved free Easy only."""
+        return self.phase == "solve" and bool(self.unit)
+
+    @property
     def rows(self) -> int:
         """How many rows the viewport is tall."""
         return PHASE_ROWS if self.unit_list else PROBLEM_DISPLAY_LIMIT

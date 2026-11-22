@@ -152,6 +152,19 @@ it can only pay less. The tutor ignores the key.
   phase is decided from the pool being ranked plus signed C2, else C3, so
   the rows match the header (up to a solve not harvested yet). Only the key changes; the top N are still the
   only rows verified live.
+- Rows in SOLVE(u) (`build_problem_lines(easy_only=...)`, kuhy 2026-11-22): u's
+  unsolved free Easy problems and nothing else, in the ranked order. No
+  Medium or Hard, no other unit's Easy, no backfill; when fewer remain than
+  rows exist the tail rows hide. It is a view filter over the one resolved
+  pool, not a resolve filter, so a hand-over to the next unit still finds that
+  unit's rows in the pool. THEORY, `none` and an unknown phase keep the old
+  lists. Zero rows left while SOLVE holds (stale pool, a solve the ledger
+  has not caught up with) falls back to u's other rows, then the whole
+  pool, and logs one warning per unit: the lock never loses its Open buttons.
+  The unit's last Easy solved mid-lock needs no special case: the next poll
+  re-reads the phase (it becomes THEORY or SOLVE of the next unit, or `none`)
+  and the rows swap to that screen's list; until then the fallback above
+  shows.
 
 ## The read-only surfaces (part F)
 
