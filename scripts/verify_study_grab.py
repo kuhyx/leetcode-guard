@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
 """Prove that study mode really does release the X global grab.
 
-**No unit test can answer this.** In the suite the Tk root is a MagicMock, so
-``grab_release()`` always "succeeds" and ``grab_set_global()`` never fails --
-the mock is happy either way, which is precisely the state the 2026-08-05
-lockout was in: everything looked fine and the user could not type. Only a real
-X server knows whether a grab is held.
-
-So this asks gatelock's own question, ``RecoveryLoop.holds_grab()`` -- public
-and documented for exactly this use -- around a real suspend/resume cycle on a
-throwaway display, as a *module* so ``leetcode_guard`` resolves from the
-checkout (``verify_screen_fits`` says why)::
+**No unit test can answer this**: over a MagicMock Tk root a released grab and
+a held one look the same, the state the 2026-08-05 lockout was in. So this asks
+gatelock's public ``RecoveryLoop.holds_grab()`` around a real suspend/resume
+cycle on a throwaway display, as a module so ``leetcode_guard`` resolves from
+the checkout (add ``--rework`` for the ``?`` entry)::
 
     xvfb-run -a -s "-screen 0 1600x1200x24" python3 -m scripts.verify_study_grab
 
-Both ways into study mode are driven: Open, then the THEORY card's learn
-button, pressed for real, with a fake ``tutor`` first on ``PATH`` and a scratch
-``HOME`` so the real tutor never starts. The check that matters most is "STAYS
-released": a grab that comes *back* a second after being released is the
-original bug wearing the fix as a disguise, the likeliest regression when
-gatelock is bumped.
+Every way into study mode is pressed for real: Open, then the THEORY card's
+learn button (with ``--rework``: a SOLVE row's ``?``), with a fake ``tutor``
+first on ``PATH`` and a scratch ``HOME``, so the real one never runs. The check
+that matters most is "STAYS released": a grab that comes *back* a second later
+is the original bug wearing the fix as a disguise.
 """
 
 from __future__ import annotations
 
 from concurrent.futures import Future
+from dataclasses import replace
 from datetime import UTC, date, datetime
 import logging
 import os
@@ -71,6 +66,9 @@ THEORY: Final = PhaseView(  # so the learn button is on the surface to press
     total=2,
     learn_target=(SUBJECT, "prefix-sums"),
 )
+SOLVE: Final = replace(  # --rework: the ``?`` shows on SOLVE rows only
+    THEORY, phase="solve", learn_target=None, rework_target=(SUBJECT, "prefix-sums")
+)
 SETTLE_SECONDS: Final = 2.5
 """Real time pumped before "STAYS released": 2.5 ``recovery_tick_ms`` (1 s).
 Counting ``update()`` calls measured nothing; twenty return in milliseconds."""
@@ -89,12 +87,11 @@ class _Inline:
         """Nothing to release."""
 
 
-def _build_production_guard(workdir: Path) -> LeetcodeGuard:
+def _build_production_guard(workdir: Path, view: PhaseView) -> LeetcodeGuard:
     """A real production lock: global grab, VT disabled, no ledger writes.
 
     Built here, not imported from ``screenshot_states``: ``scripts/`` is not a
-    package (see ``pyproject.toml``), and such an import made mypy see one file
-    under two module names -- failing in CI on a clean cache only.
+    package, and such an import fails mypy in CI (CLAUDE.md).
 
     Today is pinned to an ordinary day: on a real free or sick day the first
     poll rightly unlocks and ends study mode (2026-10-16 failed so). The poller
@@ -127,7 +124,7 @@ def _build_production_guard(workdir: Path) -> LeetcodeGuard:
                 wait_turn=False,
                 executor=_Inline(),
                 now=lambda: NOW,
-                phase=lambda: THEORY,
+                phase=lambda: view,
             ),
         ),
     )
@@ -191,13 +188,14 @@ def _cycle(guard: LeetcodeGuard, results: list[bool], what: str) -> None:
 
 
 def main() -> int:
-    """Drive a suspend/resume cycle per entry (Open, learn) under production."""
+    """Drive a suspend/resume cycle per entry (Open, learn or ``?``)."""
+    rework = sys.argv[1:] == ["--rework"]
     logging.basicConfig(level=logging.WARNING, format="%(message)s", stream=sys.stdout)
     print("Verifying the study-mode grab handover under PRODUCTION config:")
 
     workdir = Path(tempfile.mkdtemp(prefix="lg-grab-check-"))
     tutor_args = _fake_tutor(workdir)
-    guard = _build_production_guard(workdir)
+    guard = _build_production_guard(workdir, SOLVE if rework else THEORY)
     # "Launch" without starting anything real: this harness is about the grab.
     spawn = _Recorder()
     lock_study.find_opener = lambda: "/bin/true"
@@ -215,27 +213,29 @@ def main() -> int:
         _cycle(guard, results, "Open")
         _check(results, "the browser got the problem", ok=spawn.urls == [PROBLEM_URL])
 
-        views = guard.frames.views.values()  # press the real learn button
-        next(v.phase.learn for v in views if v.phase is not None).invoke()
-        _cycle(guard, results, "learn")
+        views = guard.frames.views.values()  # press the real button
+        if rework:
+            next(v.problems.rework[0] for v in views if v.problems.rework).invoke()
+        else:
+            next(v.phase.learn for v in views if v.phase is not None).invoke()
+        _cycle(guard, results, "?" if rework else "learn")
         asked = tutor_args.read_text().split() if tutor_args.exists() else []
-        _check(results, "the tutor got the route", ok=asked == ["--route", ROUTE])
+        slug = guard.model.problems[0].slug if rework else ""
+        route = f"/rework/{SUBJECT}/prefix-sums/{slug}" if rework else ROUTE
+        _check(results, f"the tutor got {route}", ok=asked == ["--route", route])
     finally:
         guard.close()
 
-    if all(results):
-        print(f"\nOK: {len(results)} checks passed.")
-        return 0
-    print(f"\nFAILED: {results.count(False)} of {len(results)} checks failed.")
-    return 1
+    failed = results.count(False)
+    print(f"\nFAILED: {failed} of {len(results)}" if failed else "\nOK: all passed")
+    return 1 if failed else 0
 
 
 def _surfaces_mapped(guard: LeetcodeGuard) -> bool:
     """Whether every surface came back visible and on its own output.
 
-    The mis-placement this guards against needs a real X server: gatelock's
-    recovery path sets override-redirect *after* mapping, so a surface revived
-    that way can come back window-manager-managed, on the wrong monitor.
+    Needs a real X server: gatelock's recovery sets override-redirect *after*
+    mapping, so a revived surface can come back managed, on the wrong monitor.
     """
     surfaces = guard.lock.surfaces
     for info in surfaces.infos():

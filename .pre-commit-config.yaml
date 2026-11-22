@@ -258,6 +258,18 @@ repos:
         always_run: true
         require_serial: true
         stages: [manual]
+      # The SOLVE row's ``?`` (phase 2 rework chat) is a third way into study
+      # mode, on a SOLVE lock: pressed for real, same grab checks.
+      - id: rework-grab
+        name: A SOLVE row's rework button releases the X grab (Xvfb)
+        entry: >-
+          xvfb-run -a -s "-screen 0 1600x1200x24"
+          python3 -m scripts.verify_study_grab --rework
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
       # A restart (SIGTERM, then a new process) keeps study mode: real lock
       # processes on a real X server, judged by holds_grab(). A mocked root
       # cannot tell a released grab from a held one, so no unit test can.
