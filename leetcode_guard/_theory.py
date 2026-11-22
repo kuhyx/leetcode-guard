@@ -40,6 +40,8 @@ from leetcode_guard._read_json import MISSING
 from leetcode_guard._tutor_read import read_tutor_bytes, read_tutor_json
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from leetcode_guard._curriculum import Curriculum, Unit
 
 _logger: Final = logging.getLogger(__name__)
@@ -158,6 +160,26 @@ def unit_theory(curriculum: Curriculum, root: Path | None = None) -> tuple[Theor
             cards[unit.subject] = _module_cards(root, unit.subject)
         states.append(_state(unit, taught, cards.get(unit.subject)))
     return tuple(states)
+
+
+def module_cards(
+    subject: str, modules: Iterable[str], root: Path | None = None
+) -> dict[str, tuple[int, int]] | None:
+    """(taught, live) card counts per module of ``subject``, for the lock's bar.
+
+    ``None`` (logged) when either file cannot be read: cannot check is never
+    "no cards". ``root=None`` means :data:`TUTOR_DATA_DIR` now.
+    """
+    root = TUTOR_DATA_DIR if root is None else root
+    taught = _taught(root)
+    cards = None if taught is None else _module_cards(root, subject)
+    if taught is None or cards is None:
+        return None
+    counts: dict[str, tuple[int, int]] = {}
+    for module in modules:
+        live = cards.get(module, set())
+        counts[module] = (sum((subject, c) in taught for c in live), len(live))
+    return counts
 
 
 def load_blocks() -> Blocks | None:

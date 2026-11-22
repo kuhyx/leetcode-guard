@@ -62,7 +62,27 @@ phase, rewrites C3 on change, mints and saves. It never raises.
 only when unit, phase or `teachable` changes. Unsignable (key unreadable):
 not written, logged; the tutor then fails closed.
 
+## What the lock shows, and in which order
+
+- `_unit_view.unit_view(ledger_path, *, key_file=None, today=local_today)`
+  returns the `Callable[[], PhaseView]` the window calls on every repaint
+  (`GuardSeams.phase`). Read-only: it never polls or mints. The minutes and
+  the 12 come from `_theory_credit`; the cards bar reads the tutor's unsigned
+  files, so `_unit_view` is display-only (banned from every decider, allowed
+  in the windows). Cannot check or a bug: the last signed phase, no cards.
+- Ranking (`_unit_rank.focus_key`, used by `resolve_pool`): in THEORY(u) and
+  SOLVE(u) u's Easy problems lead; in `none` the order is the old one. The
+  phase is decided from the pool being ranked plus signed C2, else C3, so
+  the rows match the header. Only the key changes; the top N are still the
+  only rows verified live.
+
 ## Known limits
+
+- Open (found 2026-11-22, part E): "solved" is the guard ledger only, but
+  `rank_pool` also hides problems LeetCode marks `ac`. An Easy solved before
+  the guard existed counts as unsolved for the machine and never shows on
+  the lock, so SOLVE(u) can wait on a problem it does not offer. A decision
+  for kuhy (the pool's `status` is unsigned).
 
 - The phase reads the pool cache. A stale cache shifts a unit's Easy set
   until the next refresh.

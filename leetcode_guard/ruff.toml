@@ -1,6 +1,8 @@
-# Inherit the whole repo config; the one addition is below.
+# Inherit the whole repo config; the additions are below.
 extend = "../pyproject.toml"
 
 [lint.extend-per-file-ignores]
 # BLE001: poll_theory's fence makes a theory bug cost the theory credit, never the harvest or lock.
 "_theory_credit.py" = ["BLE001"]
+# BLE001: the lock calls view_now on every repaint; a bug must cost the unit card, never the lock.
+"_unit_view.py" = ["BLE001"]

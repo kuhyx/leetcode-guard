@@ -70,14 +70,31 @@ def gather_phase(ledger: Ledger, *, key_file: Path | None = None) -> PhaseState 
     if pool is None:
         _logger.warning("no problem pool: the theory phase cannot be decided")
         return None
+    return phase_of(
+        curriculum, pool.problems, trusted_solved_slugs(ledger), key_file=key_file
+    )
+
+
+def phase_of(
+    curriculum: Curriculum,
+    problems: Iterable[Problem],
+    solved: frozenset[str],
+    *,
+    key_file: Path | None = None,
+) -> PhaseState | None:
+    """The phase for these inputs plus signed C2; ``None`` when C2 cannot be read.
+
+    :func:`gather_phase` feeds it from disk; the suggestion ranking
+    (``_unit_rank``) feeds it the pool it is ranking, so rows and header agree.
+    """
     rows = signed_rows(MODULE_STATE, key_file=key_file)
     if rows is None:
         return None
     states = module_states(rows)
     state = decide_phase(
         curriculum,
-        easy_by_unit(curriculum, pool.problems),
-        trusted_solved_slugs(ledger),
+        easy_by_unit(curriculum, problems),
+        solved,
         {key: done for key, (_, done) in states.items()},
     )
     if state.phase != "solve":

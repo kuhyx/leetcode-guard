@@ -37,6 +37,13 @@ DISPLAY_ONLY = {
     # them would let an edited JSONL line steer a lock or a credit.
     "_coach_reviews",
 }
+DISPLAY_PRODUCERS = {
+    # The lock's unit view (SPEC C5): it reads the tutor's cards.json and
+    # log.jsonl for the cards bar. Banned from every decider like the set
+    # above, but the lock windows may import it: ``cmd_lock`` hands it to the
+    # window as ``GuardSeams.phase``, fenced so it never raises into the lock.
+    "_unit_view",
+}
 DECIDER_PREFIXES = (
     "_balance",
     "_daycost",
@@ -81,12 +88,17 @@ def test_the_phase_machine_reads_the_order_but_not_the_unsigned_tutor_files():
 @pytest.mark.parametrize("name", DECIDERS)
 def test_nothing_that_decides_can_reach_the_display_only_modules(name: str):
     """Transitively: not even through a helper two imports away."""
-    assert not _closure((name,)) & DISPLAY_ONLY
+    assert not _closure((name,)) & (DISPLAY_ONLY | DISPLAY_PRODUCERS)
 
 
 def test_the_harvester_never_reads_them_itself():
     """Its own code may hand the snapshot off, never consult the curriculum."""
-    assert not _imports(ORCHESTRATOR) & DISPLAY_ONLY
+    assert not _imports(ORCHESTRATOR) & (DISPLAY_ONLY | DISPLAY_PRODUCERS)
+
+
+def test_the_unit_view_is_banned_because_it_reads_the_unsigned_files():
+    """Why it is on the list: its closure reaches ``_theory``."""
+    assert "_theory" in _closure(tuple(DISPLAY_PRODUCERS))
 
 
 def test_the_window_list_is_not_empty():

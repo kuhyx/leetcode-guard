@@ -25,8 +25,10 @@ from leetcode_guard._pool_verify import (
 )
 from leetcode_guard._problem import Problem, rank_pool
 from leetcode_guard._theory import load_blocks
+from leetcode_guard._unit_rank import focus_key
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from leetcode_guard._auth import AuthState
@@ -71,6 +73,10 @@ class SolvedKnowledge:
     a rate limit with the same null payload as an expired session -- so being
     exhaustive is a way to manufacture the failure being checked for."""
 
+    key_file: Path | None = None
+    """The HMAC key the signed theory phase is verified with; ``None`` = the
+    shared key. It decides which unit's Easy problems lead (``_unit_rank``)."""
+
 
 @dataclass(frozen=True)
 class PoolResolution:
@@ -113,17 +119,13 @@ def resolve_pool(
     Returns:
         The resolution. Never raises.
     """
-    slugs = solved.slugs
-    limit = solved.verify_limit
     notes = [solved.auth.note]
-    if slugs:
-        notes.append(_ledger_note(len(slugs)))
+    if solved.slugs:
+        notes.append(_ledger_note(len(solved.slugs)))
 
     cached = read_cache(cache_path)
     if cached is not None and cached.is_fresh(now=now, ttl=ttl):
-        return _resolved(
-            cached.problems, "cache", notes, solved_slugs=slugs, live=(post, limit)
-        )
+        return _resolved(cached.problems, "cache", notes, solved=solved, post=post)
 
     if post is not None:
         fetched = fetch_pool(post)
@@ -142,8 +144,8 @@ def resolve_pool(
                 fetched.problems,
                 "live",
                 notes,
-                solved_slugs=slugs,
-                live=(post, limit),
+                solved=solved,
+                post=post,
             )
         notes.append(f"Could not refresh the problem list: {fetched.reason}.")
 
@@ -153,8 +155,8 @@ def resolve_pool(
             cached.problems,
             "stale-cache",
             notes,
-            solved_slugs=slugs,
-            live=(post, limit),
+            solved=solved,
+            post=post,
         )
 
     _logger.warning("no problem pool available: no live fetch and no cache")
@@ -186,23 +188,30 @@ def _ledger_note(count: int) -> str:
     )
 
 
-def _blocks_or_none() -> Blocks | None:
-    """The curriculum blocks, or ``None`` (the old acceptance order) on any bug.
+def _ordering(
+    problems: tuple[Problem, ...], solved: SolvedKnowledge
+) -> tuple[Blocks | None, Callable[[Problem], tuple[int, ...]] | None]:
+    """The curriculum blocks and the rank key, or ``(None, None)`` on any bug.
 
     The last-resort fence of a display-only read: ``resolve_pool`` runs with
     the instance lock held and before any window opens, so whatever the tutor
-    reader does wrong must cost the ordering, never the lock. ``Exception``
-    only: ``KeyboardInterrupt`` and ``SystemExit`` still stop the process.
+    reader or the unit focus does wrong must cost the ordering, never the
+    lock. ``Exception`` only: ``KeyboardInterrupt`` and ``SystemExit`` still
+    stop the process.
     """
     try:
-        return load_blocks()
+        blocks = load_blocks()
+        if blocks is None:
+            return None, None
+        key = focus_key(blocks, problems, solved.slugs, key_file=solved.key_file)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         _logger.warning(
             "theory order unavailable, using acceptance order: %s",
             type(exc).__name__,
             exc_info=True,
         )
-        return None
+        return None, None
+    return blocks, key
 
 
 def _resolved(
@@ -210,15 +219,13 @@ def _resolved(
     source: PoolSource,
     notes: list[str],
     *,
-    solved_slugs: frozenset[str],
-    live: tuple[PostFn | None, int] = (None, SUGGESTION_COUNT),
+    solved: SolvedKnowledge,
+    post: PostFn | None,
 ) -> PoolResolution:
     """Rank and package a non-empty pool, verifying the top of it live."""
-    post, limit = live
-    blocks = _blocks_or_none()
-    key = None if blocks is None else blocks.key
-    ranked = rank_pool(problems, solved_slugs=solved_slugs, block=key)
-    ranked, evidence = verify_live(ranked, post=post, limit=limit)
+    blocks, key = _ordering(problems, solved)
+    ranked = rank_pool(problems, solved_slugs=solved.slugs, block=key)
+    ranked, evidence = verify_live(ranked, post=post, limit=solved.verify_limit)
     note = live_note(evidence)
     if note is not None:
         notes.append(note)
