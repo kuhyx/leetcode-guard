@@ -99,17 +99,32 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
     ledger = load_ledger(LEDGER_FILE)
     if needs_seeding(ledger):
         return "ledger not seeded yet; the lock's first run seeds it"
+    stamp = (day, now, key_file)
     # Theory minutes are a separately signed source: a LeetCode outage must
     # not hold them back, so they are polled whatever the probe said.
-    theory = poll_theory(ledger, LEDGER_FILE, day=day, now=now, key_file=key_file)
-    line = _solves(ledger, probe, client.post, (day, now, key_file))
-    if not theory.minted and not line.startswith("credited"):
+    minted = _theory(ledger, stamp)
+    line = _solves(ledger, probe, client.post, stamp)
+    if line.startswith("credited"):
+        # A solve can finish the unit. Decide the phase again in this run, or
+        # C3 keeps the tutor on the finished unit for one more minute.
+        minted += _theory(ledger, stamp)
+    elif not minted:
         return line
-    if theory.minted:
-        line += f"; theory credited {len(theory.minted)}"
+    if minted:
+        line += f"; theory credited {minted}"
     decision = decide_today(ledger, day=day, now=now, key_file=key_file)
     settled = not decision.locked and apply_decision(ledger, decision, LEDGER_FILE)
     return line + ("; settled today" if settled else "")
+
+
+def _theory(ledger: Ledger, stamp: tuple[date, datetime, Path | None]) -> int:
+    """One theory poll (phase, C3, due credits); how many credits it minted.
+
+    Cannot check mints nothing and leaves C3 as it is (``poll_theory``).
+    """
+    day, now, key_file = stamp
+    poll = poll_theory(ledger, LEDGER_FILE, day=day, now=now, key_file=key_file)
+    return len(poll.minted)
 
 
 def _solves(

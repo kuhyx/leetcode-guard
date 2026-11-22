@@ -18,8 +18,10 @@ Rules (stage-4 SPEC, 2026-11-22):
   this guard's ledger. "Cannot check" mints nothing, logs a warning and never
   raises into the lock or the harvester.
 
-:func:`poll_theory` is the one entry point; the one-minute harvester and the
-lock's own poll both call it right after harvesting solves.
+:func:`poll_theory` is the one entry point. The lock's own poll calls it right
+after harvesting solves; the one-minute harvester calls it before them (a
+LeetCode outage must not hold theory back) and again after a credited solve,
+so a solve that finishes the unit moves C3 on in the same run.
 """
 
 from __future__ import annotations

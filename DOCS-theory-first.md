@@ -58,6 +58,10 @@ phase, rewrites C3 on change, mints and saves. It never raises.
 - Callers: the one-minute harvester (whatever LeetCode answered; not before
   the ledger is seeded; never while a lock is up) and the lock's own poll. A
   theory credit settles the day exactly like a solve.
+- The harvester polls before it credits solves, and once more in a run that
+  credited one: a solve that finishes the unit rewrites C3 to the next unit
+  in that run, not a minute later (`e2e_theory e`). If the second poll cannot
+  check, C3 stays on the old phase and nothing mints (fails closed).
 
 ## C3: `theory_phase.json`
 
