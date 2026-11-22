@@ -120,7 +120,7 @@ def _live(ledger_path: Path, day: date, key_file: Path | None) -> UnitRead:
     if state is None:
         return _held(key_file)
     minutes = paying_minutes(state, day=day, key_file=key_file)
-    rows = signed_rows(MODULE_STATE, key_file=key_file)
+    rows = signed_rows(MODULE_STATE, key_file=key_file, strict=True)
     done = {} if rows is None else module_done(rows)
     cards = module_cards(state.subject, state.modules) if state.modules else None
     view = _assemble(state, minutes=minutes or 0, done=done, cards=cards)

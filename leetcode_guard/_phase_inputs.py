@@ -87,7 +87,7 @@ def phase_of(
     :func:`gather_phase` feeds it from disk; the suggestion ranking
     (``_unit_rank``) feeds it the pool it is ranking, so rows and header agree.
     """
-    rows = signed_rows(MODULE_STATE, key_file=key_file)
+    rows = signed_rows(MODULE_STATE, key_file=key_file, strict=True)
     if rows is None:
         return None
     states = module_states(rows)

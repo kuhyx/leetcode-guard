@@ -172,3 +172,29 @@ def test_any_unreadable_input_is_cannot_check(
 
     assert "no curriculum" in caplog.text
     assert "no problem pool" in caplog.text
+
+
+def test_a_c2_row_that_fails_its_signature_is_cannot_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    hmac_key: Path,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Dropping a forged C2 row could only un-do a module, which pays theory again.
+
+    A row that does not verify is a module state nobody can read, so the file
+    is "cannot check" (found by the 2026-11-22 e2e: a forged ``done`` row put
+    SOLVE(a) back in THEORY and minted the day's theory credits).
+    """
+    _scratch_inputs(tmp_path, monkeypatch)
+    forged = state_row("a", done=True, at=2.0, key_file=hmac_key)
+    forged["hmac"] = "0" + str(forged["hmac"])
+    write_tutor(
+        "module_state.json",
+        [state_row("a", done=True, at=1.0, key_file=hmac_key), forged],
+    )
+
+    with caplog.at_level(logging.WARNING):
+        assert gather_phase(Ledger(), key_file=hmac_key) is None
+
+    assert "cannot check" in caplog.text

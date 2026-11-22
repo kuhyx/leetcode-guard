@@ -47,11 +47,15 @@ Row = dict[str, object]
 ModuleKey = tuple[str, str]
 
 
-def signed_rows(name: str, *, key_file: Path | None = None) -> list[Row] | None:
+def signed_rows(
+    name: str, *, key_file: Path | None = None, strict: bool = False
+) -> list[Row] | None:
     """The verified rows of ``<TUTOR_DIR>/<name>``, or ``None`` if it cannot be read.
 
     A row whose signature fails is dropped, with one warning per read; it can
-    never be counted, and dropping it never raises.
+    never be counted, and dropping it never raises. ``strict`` (C2) makes such
+    a row "cannot check" instead: a dropped minutes row can only pay less, but
+    a dropped state row can un-do a module, which would pay theory again.
     """
     path = TUTOR_DIR / name
     if not key_available(key_file=key_file):
@@ -68,6 +72,11 @@ def signed_rows(name: str, *, key_file: Path | None = None) -> list[Row] | None:
         if isinstance(row, dict) and verify_entry_hmac(row, key_file=key_file)
     ]
     if len(kept) != len(rows):
+        if strict:
+            _logger.warning(
+                "%s: %d unverified rows: cannot check", path, len(rows) - len(kept)
+            )
+            return None
         _logger.warning("%s: %d unverified rows ignored", path, len(rows) - len(kept))
     return kept
 

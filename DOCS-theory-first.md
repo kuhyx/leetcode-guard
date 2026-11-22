@@ -23,6 +23,9 @@ unit back in `theory`.
 
 - **Theory done**: verified rows of the tutor's `module_state.json` (C2), the
   latest per (subject, module) by `at`, then file order. No row = not done.
+  One row that fails its signature makes the whole file "cannot check":
+  dropping it could only un-do a module and pay theory again (e2e,
+  2026-11-22). Unverified C1 rows are just dropped: that only pays less.
   The tutor's unsigned `log.jsonl`/`cards.json` never decide (`_theory` is
   banned from every decider, `test_display_only_imports.py`).
 - **Solved**: trusted `credit` and `seen` rows in the guard ledger.
