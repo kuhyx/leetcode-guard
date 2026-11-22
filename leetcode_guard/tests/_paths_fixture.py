@@ -20,6 +20,7 @@ from leetcode_guard import (
     _coach_reviews,
     _constants,
     _curriculum,
+    _phase_file,
     _theory,
     _tutor_signed,
 )
@@ -95,6 +96,7 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # The real tutor data dir is live state: a test must never read it.
     monkeypatch.setattr(_theory, "TUTOR_DATA_DIR", tmp_path / "tutor")
     monkeypatch.setattr(_tutor_signed, "TUTOR_DIR", tmp_path / "tutor")
+    monkeypatch.setattr(_phase_file, "PHASE_FILE", data / "theory_phase.json")
     # attempts.json is display-only measurement data with two writer
     # processes: a test must never append to the developer's real record.
     # Its constants live in their own module (``_constants`` is at the line

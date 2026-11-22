@@ -51,9 +51,14 @@ from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._logging_setup import configure_logging
 from leetcode_guard._settings import build_client
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
+from leetcode_guard._theory_credit import poll_theory
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from leetcode_guard._ledger_io import Ledger
+    from leetcode_guard._leetcode import PostFn
+    from leetcode_guard._submissions import SolveProbe
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -87,8 +92,6 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
         return LOCK_IS_UP
     client = build_client()
     probe = fetch_recent_ac(client.post, client.username)
-    if probe.status is not ProbeStatus.OK:
-        return f"could not check: {probe.reason}"
     # Re-peek after the network round trip: a lock armed meanwhile has
     # already loaded the ledger, and it will save over whatever we write.
     if lock_is_up(INSTANCE_LOCK_FILE):
@@ -96,6 +99,29 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
     ledger = load_ledger(LEDGER_FILE)
     if needs_seeding(ledger):
         return "ledger not seeded yet; the lock's first run seeds it"
+    # Theory minutes are a separately signed source: a LeetCode outage must
+    # not hold them back, so they are polled whatever the probe said.
+    theory = poll_theory(ledger, LEDGER_FILE, day=day, now=now, key_file=key_file)
+    line = _solves(ledger, probe, client.post, (day, now, key_file))
+    if not theory.minted and not line.startswith("credited"):
+        return line
+    if theory.minted:
+        line += f"; theory credited {len(theory.minted)}"
+    decision = decide_today(ledger, day=day, now=now, key_file=key_file)
+    settled = not decision.locked and apply_decision(ledger, decision, LEDGER_FILE)
+    return line + ("; settled today" if settled else "")
+
+
+def _solves(
+    ledger: Ledger,
+    probe: SolveProbe,
+    post: PostFn,
+    stamp: tuple[date, datetime, Path | None],
+) -> str:
+    """Harvest accepted submissions into ``ledger``; the line to print."""
+    day, now, key_file = stamp
+    if probe.status is not ProbeStatus.OK:
+        return f"could not check: {probe.reason}"
     result = harvest(ledger, probe, day=day, now=now, key_file=key_file)
     # Price before deciding: fresh credits first, then any credited problem
     # still lacking a signed difficulty row (bounded per tick). Credit is
@@ -104,16 +130,14 @@ def _harvest_once(day: date, now: datetime, key_file: Path | None) -> str:
     fresh = [entry.detail["title_slug"] for entry in result.new_credits]
     resolve_difficulties(
         [*fresh, *credited_slugs(ledger)],
-        post=client.post,
+        post=post,
         now=now,
         key_file=key_file,
     )
     if not result.gained:
         return f"nothing new ({result.already_known} known)"
     commit_harvest(ledger, result, LEDGER_FILE)
-    decision = decide_today(ledger, day=day, now=now, key_file=key_file)
-    settled = not decision.locked and apply_decision(ledger, decision, LEDGER_FILE)
-    return f"credited {result.gained}" + ("; settled today" if settled else "")
+    return f"credited {result.gained}"
 
 
 def run_harvest(*, key_file: Path | None = None) -> str:

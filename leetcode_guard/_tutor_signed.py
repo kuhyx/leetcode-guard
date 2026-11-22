@@ -92,8 +92,8 @@ def _state(row: Row) -> tuple[ModuleKey, float, bool] | None:
     return (subject, module), float(at), done
 
 
-def module_done(rows: list[Row]) -> dict[ModuleKey, bool]:
-    """The latest ``done`` per (subject, module); later ``at``, then later row, wins."""
+def module_states(rows: list[Row]) -> dict[ModuleKey, tuple[float, bool]]:
+    """The latest (``at``, ``done``) per (subject, module); a tie: the later row."""
     latest: dict[ModuleKey, tuple[float, bool]] = {}
     for row in rows:
         state = _state(row)
@@ -102,7 +102,12 @@ def module_done(rows: list[Row]) -> dict[ModuleKey, bool]:
         key, at, done = state
         if key not in latest or at >= latest[key][0]:
             latest[key] = (at, done)
-    return {key: done for key, (_, done) in latest.items()}
+    return latest
+
+
+def module_done(rows: list[Row]) -> dict[ModuleKey, bool]:
+    """The latest ``done`` per (subject, module)."""
+    return {key: done for key, (_, done) in module_states(rows).items()}
 
 
 def _minutes(detail: dict[str, object]) -> int | None:
@@ -113,18 +118,29 @@ def _minutes(detail: dict[str, object]) -> int | None:
     return raw
 
 
-def _ended_on(detail: dict[str, object], day: date) -> bool:
-    """Whether ``detail.ended_at`` (unix seconds) falls on local ``day``."""
+def _ended_on(detail: dict[str, object], day: date, until: float | None) -> bool:
+    """Whether ``detail.ended_at`` falls on local ``day`` (and not after ``until``)."""
     raw = detail.get("ended_at")
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return False
+    if until is not None and raw > until:
         return False
     return datetime.fromtimestamp(raw).astimezone().date() == day
 
 
 def teaching_minutes(
-    rows: list[Row], subject: str, modules: Collection[str], *, day: date
+    rows: list[Row],
+    subject: str,
+    modules: Collection[str],
+    *,
+    day: date,
+    until: float | None = None,
 ) -> int:
     """Signed TEACHING minutes on ``modules`` of ``subject`` that ended on ``day``.
+
+    ``until`` (unix seconds) drops rows that ended later: the minutes taught
+    before a unit's theory was done still pay once the machine is in SOLVE,
+    the ones after it never do.
 
     earned_time's tutor rules, copied so both readers pay the same minutes:
     the local day of ``ended_at``, a positive-int ``minutes``, and an
@@ -140,7 +156,7 @@ def teaching_minutes(
             or detail.get("subject") != subject
             or detail.get("module") not in modules
             or minutes is None
-            or not _ended_on(detail, day)
+            or not _ended_on(detail, day, until)
         ):
             continue
         entry_id = row.get("entry_id")

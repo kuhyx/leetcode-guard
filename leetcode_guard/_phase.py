@@ -57,6 +57,9 @@ class PhaseState:
     solved: int = 0
     total: int = 0
     """Free Easy problems of the current unit: solved, and all of them."""
+    done_at: float | None = None
+    """In SOLVE, when the unit's theory became done (its modules' latest signed
+    ``at``): teaching minutes up to then still pay, later ones never do."""
 
     @property
     def teachable(self) -> tuple[tuple[str, str], ...]:

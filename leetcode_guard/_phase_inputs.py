@@ -9,6 +9,7 @@ had moved on. The caller then holds the last signed phase (``_phase_file``).
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 from typing import TYPE_CHECKING, Final
 
@@ -18,7 +19,7 @@ from leetcode_guard._curriculum import load_curriculum
 from leetcode_guard._ledger import CREDIT, SEEN
 from leetcode_guard._phase import PhaseState, decide_phase
 from leetcode_guard._pool_cache import read_cache
-from leetcode_guard._tutor_signed import module_done, signed_rows
+from leetcode_guard._tutor_signed import module_states, signed_rows
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -72,9 +73,14 @@ def gather_phase(ledger: Ledger, *, key_file: Path | None = None) -> PhaseState 
     rows = signed_rows(MODULE_STATE, key_file=key_file)
     if rows is None:
         return None
-    return decide_phase(
+    states = module_states(rows)
+    state = decide_phase(
         curriculum,
         easy_by_unit(curriculum, pool.problems),
         trusted_solved_slugs(ledger),
-        module_done(rows),
+        {key: done for key, (_, done) in states.items()},
     )
+    if state.phase != "solve":
+        return state
+    stamps = [states[(state.subject, module)][0] for module in state.modules]
+    return replace(state, done_at=max(stamps, default=None))

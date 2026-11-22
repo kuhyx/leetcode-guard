@@ -7,3 +7,7 @@ extend = "../pyproject.toml"
 # Here, not in pyproject.toml: touching that manifest trips the dependency-
 # freshness gate on pins this change does not own (kuhy-credit, sickdays).
 "_phase_view.py" = ["E501"]
+# BLE001: ``poll_theory`` is the fence the harvester and the lock's poll call.
+# A theory bug (logged at warning, with the traceback) must cost the theory
+# credit, never the solve harvest or the lock (test_theory_credit.py).
+"_theory_credit.py" = ["BLE001"]
