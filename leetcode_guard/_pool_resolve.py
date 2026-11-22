@@ -123,8 +123,11 @@ def resolve_pool(
     if solved.slugs:
         notes.append(_ledger_note(len(solved.slugs)))
 
-    cached = read_cache(cache_path)
-    if cached is not None and cached.is_fresh(now=now, ttl=ttl):
+    cached = read_cache(cache_path, key_file=solved.key_file)
+    can_fetch = post is not None
+    if cached is not None and cached.is_current(
+        now=now, ttl=ttl, refreshable=can_fetch
+    ):
         return _resolved(cached.problems, "cache", notes, solved=solved, post=post)
 
     if post is not None:
@@ -139,6 +142,7 @@ def resolve_pool(
                     fetched_at=now,
                     complete=fetched.complete,
                 ),
+                key_file=solved.key_file,
             )
             return _resolved(
                 fetched.problems,

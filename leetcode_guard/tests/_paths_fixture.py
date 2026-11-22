@@ -13,6 +13,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
+from gatelock import log_integrity
 import pytest
 
 from leetcode_guard import (
@@ -97,6 +98,10 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(_theory, "TUTOR_DATA_DIR", tmp_path / "tutor")
     monkeypatch.setattr(_tutor_signed, "TUTOR_DIR", tmp_path / "tutor")
     monkeypatch.setattr(_phase_file, "PHASE_FILE", data / "theory_phase.json")
+    # The shared HMAC key's default is where the ``hmac_key`` fixture writes its
+    # key (absent otherwise): code that signs with no explicit key (the pool
+    # cache) must never reach the live ``/etc/workout-locker/hmac.key``.
+    monkeypatch.setattr(log_integrity, "DEFAULT_HMAC_KEY_FILE", tmp_path / "hmac.key")
     # attempts.json is display-only measurement data with two writer
     # processes: a test must never append to the developer's real record.
     # Its constants live in their own module (``_constants`` is at the line

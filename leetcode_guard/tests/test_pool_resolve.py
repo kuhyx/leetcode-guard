@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard._auth import AuthState, Cookies
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
@@ -24,6 +26,9 @@ if TYPE_CHECKING:
 
 SIGNED_OUT = AuthState(cookies=None, note="signed out note")
 SIGNED_IN = AuthState(cookies=Cookies(session="s", csrf="c"), note="signed in note")
+
+# Caches are written signed (under ``hmac_key``) and a signed one is the fresh one.
+pytestmark = pytest.mark.usefixtures("hmac_key")
 
 
 def path_of(tmp_path: Path) -> Path:

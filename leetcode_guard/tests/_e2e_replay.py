@@ -19,6 +19,7 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Final
 
+from leetcode_guard._pool_cache import read_cache, write_cache
 from leetcode_guard.tests._e2e_theory_cases import check
 from leetcode_guard.tests._e2e_world import ROOT
 
@@ -78,7 +79,21 @@ def copy_real(world: World) -> Path:
         target.mkdir(parents=True, exist_ok=True)
         shutil.copy2(PENALTY, target)
     (world.dir / "key").write_bytes(REAL_KEY.read_bytes())
+    _sign_pool_copy(world)
     return stamp
+
+
+def _sign_pool_copy(world: World) -> None:
+    """Sign the COPIED pool cache the way the first refresh after deploy does.
+
+    The real cache predates signing, and an unsigned pool is "cannot check" by
+    design; the copy stands for the state once ``--probe`` (or the next arming
+    run) has rewritten it. Content, stamp and ``complete`` are kept as they are.
+    """
+    path = world.data / "pool_cache.json"
+    pool = read_cache(path)
+    if pool is not None:
+        write_cache(path, pool, key_file=world.dir / "key")
 
 
 def canary(stamp: Path) -> tuple[list[str], list[str]]:

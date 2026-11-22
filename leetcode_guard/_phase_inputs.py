@@ -2,7 +2,8 @@
 
 Kept apart from :mod:`leetcode_guard._phase` so the decision stays pure. Each
 input that cannot be read answers ``None`` with a warning, and so does the
-whole gather: a missing pool must never read as "every Easy problem solved",
+whole gather: a missing, unsigned, edited or incomplete pool must never read as
+"every Easy problem solved",
 and a missing C2 file must never read as "no theory done" on a machine that
 had moved on. The caller then holds the last signed phase (``_phase_file``).
 """
@@ -66,9 +67,19 @@ def gather_phase(ledger: Ledger, *, key_file: Path | None = None) -> PhaseState 
     if curriculum is None:
         _logger.warning("no curriculum: the theory phase cannot be decided")
         return None
-    pool = read_cache(_constants.POOL_CACHE_FILE)
+    pool = read_cache(_constants.POOL_CACHE_FILE, key_file=key_file)
     if pool is None:
         _logger.warning("no problem pool: the theory phase cannot be decided")
+        return None
+    # The pool file is unsigned data anyone can edit or a fetch can cut short;
+    # only a complete pool the guard itself signed may say "every Easy is solved".
+    if not pool.verified:
+        _logger.warning(
+            "problem pool not signed or edited: the phase cannot be decided"
+        )
+        return None
+    if not pool.complete:
+        _logger.warning("problem pool incomplete: the phase cannot be decided")
         return None
     return phase_of(
         curriculum, pool.problems, trusted_solved_slugs(ledger), key_file=key_file

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from leetcode_guard._leetcode import GraphQLResult
 from leetcode_guard._pool_cache import write_cache
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
@@ -23,6 +25,9 @@ from leetcode_guard.tests.test_pool_resolve import (
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+# Caches are written signed (under ``hmac_key``) and a signed one is the fresh one.
+pytestmark = pytest.mark.usefixtures("hmac_key")
 
 
 def test_a_live_check_drops_a_solve_the_stored_data_missed(tmp_path: Path):

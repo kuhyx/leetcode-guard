@@ -121,6 +121,8 @@ repos:
         # so this is also the only way commit-time and CI agree -- the same
         # "passing or failing by what else was staged" trap the init-hook
         # comment in pyproject.toml describes for import resolution.
+        # Hash-gated (scripts/pylint_cached.sh): the whole-tree run is ~45 s.
+        entry: bash scripts/pylint_cached.sh
         pass_filenames: false
         args:
           - --rcfile=pyproject.toml
