@@ -47,4 +47,6 @@ if [[ $full -eq 0 ]] && ! printf '%s\n' "${CHANGED[@]}" | grep -q '\.py$'; then
     echo "no python changes: nothing to test"; exit 0
 fi
 echo "no mapped tests: running full suite"
-pytest_run -q --tb=short
+# In parallel, like the `- test:` command: serial it took 71 s (2026-11-22),
+# over the 60 s action cap; -n auto ran the same suite in 22 s.
+pytest_run -q --tb=short -n auto --dist worksteal
