@@ -76,13 +76,42 @@ not written, logged; the tutor then fails closed.
   the rows match the header (up to a solve not harvested yet). Only the key changes; the top N are still the
   only rows verified live.
 
+## The read-only surfaces (part F)
+
+`_status_unit.gather_unit` wraps `_unit_view.read_unit` (the lock's view plus
+its source: `live`, `held` = the last signed C3 phase, `unknown`) and counts
+today's trusted `theory:<day>:` credits. It never polls, mints or writes C3,
+and it shows "cannot check" as unknown where the lock shows 0.
+
+- `--status`: `unit`, `theory` (today's minutes, the rate, credits minted
+  today) and, in THEORY, `learn` lines. The status snapshot gets the same as
+  data in `status.unit` (`unit_dict`, no prose): `unit`, `phase`, `source`,
+  `leads_with` (`theory`/`problems`), `solved`/`total` (`null` unless
+  `live`), `theory_minutes_today` (`null` = cannot check),
+  `minutes_per_credit`, `theory_credits_today`, `cards_taught`/`cards_total`
+  (`null` = tutor files unreadable), `lessons_ready`, `learn_target`,
+  `learn_route`.
+- MCP: `get_status.unit` and `explain_lock` carry the unit, phase,
+  `leads_with` and `lead_reason`; `get_credits` splits `theory_credits` /
+  `theory_credits_today` from `solve_credits`; `get_suggested_problems` is
+  `resolve_pool`'s order, the lock's unit-first ranking.
+- `open_cli` (the daily-limits row) opens the lock's first action: in THEORY
+  `tutor --route` on `learn_route` (the learn button's own code), else the
+  first problem; a missing or failing tutor logs a warning and opens the first
+  problem.
+
 ## Known limits
 
-- Open (found 2026-11-22, part E): "solved" is the guard ledger only, but
-  `rank_pool` also hides problems LeetCode marks `ac`. An Easy solved before
-  the guard existed counts as unsolved for the machine and never shows on
-  the lock, so SOLVE(u) can wait on a problem it does not offer. A decision
-  for kuhy (the pool's `status` is unsigned).
+- "Solved" is the guard ledger only, while `rank_pool` also hides problems
+  LeetCode marks `ac`. An Easy solved before the guard existed is NOT a gap:
+  `_phase_inputs.trusted_solved_slugs` counts `credit` AND `seen` rows, and
+  measured on 2026-11-22 the ledger's 187 credited slugs plus the 9 slugs
+  seeded on 2026-08-05 equal the profile's 196 solved exactly (gap 0). What is
+  still open: a solve that neither the seed nor the harvester ever recorded
+  would count as unsolved for the machine and never show on the lock, so
+  SOLVE(u) could wait on a problem it does not offer. The harvester reads the
+  20 most recent accepted submissions every minute, so that needs more than 20
+  accepted submissions between two harvests (or a harvester outage that long).
 
 - The phase reads the pool cache. A stale cache shifts a unit's Easy set
   until the next refresh.
