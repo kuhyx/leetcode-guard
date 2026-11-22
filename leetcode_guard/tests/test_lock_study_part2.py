@@ -24,6 +24,8 @@ from leetcode_guard.tests.test_lock_study import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from leetcode_guard._gate import GateDecision
+
 
 @pytest.mark.usefixtures("no_spawn")
 def test_a_real_solve_while_studying_puts_the_lock_back_first(
@@ -142,3 +144,27 @@ def test_a_launcher_that_raises_never_strands_the_machine_unlocked(
     assert not guard.session().active, "study mode must not stay active"
     guard.lock.root.grab_set_global.assert_called()
     assert caplog.records
+
+
+@pytest.mark.usefixtures("no_spawn")
+def test_the_strip_tick_does_not_redecide_every_second(
+    tmp_path: Path, hmac_key: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """decide_today runs once per refresh, not on every 1 s strip tick."""
+    guard = locked_guard(tmp_path, hmac_key, poll_probe=UNVERIFIABLE)
+    real = guard.decision
+    calls: list[int] = []
+
+    def counting() -> GateDecision:
+        calls.append(1)
+        return real()
+
+    monkeypatch.setattr(guard, "decision", counting)
+    first = guard.strip_text()
+    guard.strip_text()
+    guard.strip_text()
+    assert len(calls) == 1
+    guard.refresh_strip()
+    again = guard.strip_text()
+    assert len(calls) == 2
+    assert again.needed == first.needed

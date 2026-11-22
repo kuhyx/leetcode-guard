@@ -49,6 +49,9 @@ class StudyMixin:
 
     _study: StudySession | None = None
     strip: StudyStrip | None = None
+    _strip_needed: int | None = None
+    # The 1 s strip tick reuses the last decide_today answer (~35 ms and
+    # dozens of pool reads on the Tk thread) until refresh_strip() asks again.
     frames: FrameGroup
     run_state: RunState
     lock: Any
@@ -139,6 +142,7 @@ class StudyMixin:
             # session rather than a broken one.
             _logger.warning("no output to place the study strip on")
             return
+        self._strip_needed = None
         self.strip = build_strip(
             self.lock.root,
             self.run_state.config,
@@ -158,18 +162,25 @@ class StudyMixin:
                 return info.rect
         return infos[0].rect
 
+    def _needed_for_strip(self) -> int:
+        """Problems still owed, computed once per refresh, not per tick."""
+        if self._strip_needed is None:
+            self._strip_needed = max(1, self.decision().needed)
+        return self._strip_needed
+
     def strip_text(self) -> StripText:
         """What the strip should say right now."""
         session = self.session()
         return StripText(
             elapsed_seconds=session.elapsed_seconds(),
-            needed=max(1, self.decision().needed),
+            needed=self._needed_for_strip(),
             verifying=self.nudge_verifying,
             fast_path_down=self.nudge_down,
         )
 
     def refresh_strip(self) -> None:
         """Repaint the strip now, not on its next one-second tick."""
+        self._strip_needed = None
         if self.strip is not None:
             self.strip.tick(self.strip_text())
 
