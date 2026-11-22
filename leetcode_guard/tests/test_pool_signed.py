@@ -84,7 +84,11 @@ def solve_a_then_teach_b(hmac_key: Path) -> None:
 def test_a_signed_complete_pool_decides_as_before(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, data_dir: Path, hmac_key: Path
 ):
-    """SOLVE(a) holds while a1 is unsolved; its credit moves on to THEORY(b)."""
+    """SOLVE(a) holds while a1 is unsolved; its credit moves on to THEORY(b).
+
+    b's minutes were taught before THEORY(b) began, so they pay nothing
+    (C3 ``theory_since``, red-team R2).
+    """
     world(tmp_path, monkeypatch)
     solve_a_then_teach_b(hmac_key)
     ledger = Ledger()
@@ -102,7 +106,7 @@ def test_a_signed_complete_pool_decides_as_before(
     assert (moved.state.unit, moved.state.phase, len(moved.minted)) == (
         "b",
         "theory",
-        3,
+        0,
     )
 
 
