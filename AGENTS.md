@@ -44,11 +44,10 @@ renders "unknown", never `0 / 4055` — an unknown username answers HTTP 200 wit
 (`_progress.parse_progress`).
 
 **The unsigned tutor files are display-only; the curriculum order decides (stage 4).** `_theory.py`
-reads the tutor's `log.jsonl`/`cards.json` (pencil mark, cards taught/total) and anyone can edit
-them, so nothing that decides, charges or credits may import it: `test_display_only_imports.py`
-bans it, transitively. The unit ORDER and MAPPING (`curriculum.json`, `_curriculum.py`) now feed
-the theory-first phase machine (`_phase.py`), whose other inputs are signed: the guard ledger and
-the tutor's signed `ledger.json`/`module_state.json` (`_tutor_signed.py`). `DOCS-curriculum.md`.
+reads the tutor's `log.jsonl`/`cards.json`; anyone can edit them, so nothing that decides, charges
+or credits may import it: `test_display_only_imports.py` bans it, transitively. The unit ORDER and
+MAPPING (`curriculum.json`, `_curriculum.py`) feed the phase machine (`_phase.py`), whose other
+inputs are signed: the guard ledger, the tutor's `ledger.json`/`module_state.json`. `DOCS-curriculum.md`.
 
 **The attempt log and the flag are display-only.** Nothing that decides, charges or credits may
 import `attempts.json` readers (`_attempt_*`, `_attempts`, `--flagged`, `get_flagged`):
