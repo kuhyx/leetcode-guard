@@ -31,9 +31,13 @@ unit back in `theory`.
 - **Solved**: trusted `credit` and `seen` rows in the guard ledger.
 - **A unit's Easy set**: the pool cache split by `claim_order`, premium
   problems left out (a premium Easy can never be opened, so the unit could
-  never finish). The pool is unsigned: editing it can move the phase (for
-  example empty a unit so the machine moves on), but it can never mint a
-  credit: that still needs signed tutor minutes or LeetCode's accepted feed.
+  never finish). The guard signs `pool_cache.json` (HMAC, the ledger's key
+  and scheme) when it writes it after a live fetch, and only a signed,
+  `complete` pool decides: an unsigned, edited or half-fetched one is "cannot
+  check" below, so a text editor or a fetch that stopped early cannot move
+  the phase. Display (suggestions, ranking) still reads an unverified pool.
+  The refresher treats such a pool as stale and rewrites it signed on the
+  next arming run or `--probe`; an incomplete one is retried after an hour.
 - **Order and mapping**: `curriculum.json`, shipped in the package.
 
 Any input that cannot be read makes `gather_phase` answer `None` ("cannot

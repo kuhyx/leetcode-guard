@@ -33,7 +33,7 @@ dates. `DOCS-debt.md` has the rest: why repayment follows the credit rule, and t
 **Credit weight is derived and signed (2026-11-02).** Easy 1 / Medium 2 / Hard 4 per accepted
 submission, priced at read time from `difficulty.json`'s signed rows (`_difficulty.py`); ledger rows
 stay `amount: 1`, never rewritten. A missing, edited or foreign row weighs 1 (never raises), logged
-once per balance. The unsigned pool/statement caches only *write* rows; both harvesters price a
+once per balance. The pool/statement caches are read unverified here (the pool is signed for the phase only, `DOCS-theory-first.md`) and only *write* rows; both harvesters price a
 credit BEFORE `decide_today`. `--backfill-difficulty` is resumable.
 
 **The progress mirror is display-only.** `progress_cache.json` holds the profile's solved/total
