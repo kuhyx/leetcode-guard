@@ -14,11 +14,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, TypeGuard
 
 from leetcode_guard._constants import POOL_TTL_SECONDS, SUGGESTION_COUNT
 from leetcode_guard._pool_cache import CachedPool, read_cache, write_cache
 from leetcode_guard._pool_fetch import fetch_pool
+from leetcode_guard._pool_notes import ledger_note, stale_note
 from leetcode_guard._pool_verify import (
     live_note,
     verify_live,
@@ -39,8 +40,6 @@ _logger: Final = logging.getLogger(__name__)
 
 
 PoolSource = Literal["live", "cache", "stale-cache", "none"]
-
-_SECONDS_PER_DAY: Final = 86_400
 
 NO_SUGGESTIONS_NOTE: Final = (
     "No suggestions available -- pick any LeetCode problem you like. Any "
@@ -121,7 +120,7 @@ def resolve_pool(
     """
     notes = [solved.auth.note]
     if solved.slugs:
-        notes.append(_ledger_note(len(solved.slugs)))
+        notes.append(ledger_note(len(solved.slugs)))
 
     cached = read_cache(cache_path, key_file=solved.key_file)
     can_fetch = post is not None
@@ -133,6 +132,8 @@ def resolve_pool(
     if post is not None:
         fetched = fetch_pool(post)
         if fetched.problems:
+            if not fetched.complete and _is_good(cached):
+                return _kept(cached, fetched.reason, notes, solved=solved, post=post)
             if not fetched.complete:
                 notes.append(f"Problem list may be incomplete: {fetched.reason}.")
             write_cache(
@@ -154,7 +155,7 @@ def resolve_pool(
         notes.append(f"Could not refresh the problem list: {fetched.reason}.")
 
     if cached is not None:
-        notes.append(_stale_note(cached, now=now))
+        notes.append(stale_note(cached, now=now))
         return _resolved(
             cached.problems,
             "stale-cache",
@@ -168,28 +169,33 @@ def resolve_pool(
     return PoolResolution(problems=(), source="none", notes=tuple(notes))
 
 
-def _stale_note(cached: CachedPool, *, now: float) -> str:
-    """Explain how old the fallback list is, in days."""
-    days = max(0, int(cached.age_seconds(now) // _SECONDS_PER_DAY))
-    plural = "" if days == 1 else "s"
-    return (
-        f"Showing a cached problem list last refreshed {days} day{plural} ago "
-        "(LeetCode is unreachable)."
-    )
+def _is_good(cached: CachedPool | None) -> TypeGuard[CachedPool]:
+    """Whether the cache is one the theory phase can decide on."""
+    return cached is not None and cached.verified and cached.complete
 
 
-def _ledger_note(count: int) -> str:
-    """Report the local filter without overstating what it knows.
+def _kept(
+    cached: CachedPool,
+    reason: str,
+    notes: list[str],
+    *,
+    solved: SolvedKnowledge,
+    post: PostFn | None,
+) -> PoolResolution:
+    """Answer from a good cache after a cut-short refresh, writing nothing.
 
-    Deliberately "at least": the ledger only ever saw the handful of
-    submissions the recent-AC feed returns, so it is a lower bound on what has
-    been solved. Claiming more is the exact bug this filter exists to fix.
+    Overwriting it with the partial pool would fail the theory phase closed
+    (it needs a verified, complete pool) until a later fetch works. The file
+    keeps its old stamp, so it stays stale and the next refresher run retries.
     """
-    plural = "" if count == 1 else "s"
-    return (
-        f"Hiding at least {count} problem{plural} already solved on this "
-        "device, from the local ledger."
+    _logger.warning(
+        "pool refresh incomplete (%s): kept the last complete problem list", reason
     )
+    notes.append(
+        f"Problem list refresh was incomplete: {reason}. "
+        "Showing the last complete list."
+    )
+    return _resolved(cached.problems, "stale-cache", notes, solved=solved, post=post)
 
 
 def _ordering(

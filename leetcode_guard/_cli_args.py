@@ -51,7 +51,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--probe",
         action="store_true",
-        help="Print live LeetCode data and exit. Opens no window, writes nothing.",
+        help=(
+            "Print live LeetCode data and exit. Opens no window; "
+            "refreshes the pool cache."
+        ),
     )
     parser.add_argument(
         "--status",

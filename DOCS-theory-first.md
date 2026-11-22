@@ -38,6 +38,9 @@ unit back in `theory`.
   the phase. Display (suggestions, ranking) still reads an unverified pool.
   The refresher treats such a pool as stale and rewrites it signed on the
   next arming run or `--probe`; an incomplete one is retried after an hour.
+  A refresh that comes back incomplete never replaces a signed, complete pool:
+  the file stays as it was (so it stays stale and the next run retries), and
+  an incomplete pool is written only when there is no better one to keep.
 - **Order and mapping**: `curriculum.json`, shipped in the package.
 
 Any input that cannot be read makes `gather_phase` answer `None` ("cannot
