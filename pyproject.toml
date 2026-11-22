@@ -284,10 +284,10 @@ exclude = [".venv/", ".ci-mirror-venv/"]
 init-hook = "import sys; sys.path.insert(0, '.')"
 analyse-fallback-blocks = true
 persistent = true
-# One process, never a pool. `jobs > 1` pickles the PyLinter through `dill`,
-# which crashes on Python 3.15 (`code.co_lnotab` is gone), so a bare `pylint`
-# from a 3.15 shell died before linting anything. The whole tree lints in ~9 s
-# single-threaded; the pre-commit hook passes `--jobs=1` as well.
+# One process for a bare `pylint`. `jobs > 1` pickles the PyLinter through
+# `dill`, which crashes on Python 3.15 (`code.co_lnotab` is gone), so a bare
+# `pylint` from a 3.15 shell died before linting anything. The pre-commit hook
+# pins python3.14 and passes `--jobs=4` itself (scripts/pylint_cached.sh).
 jobs = 1
 py-version = "3.14"
 ignore = [".venv", ".ci-mirror-venv", "__pycache__"]

@@ -105,11 +105,12 @@ repos:
     rev: v4.0.8
     hooks:
       - id: pylint
-        # `--jobs=1` is the real fix: any `--jobs` above 1 pickles the PyLinter
-        # through `dill`, which crashes on Python 3.15 (`code.co_lnotab` no
-        # longer exists), and the default `python3` resolves to 3.15 on some
-        # shells. Single-threaded, the whole tree lints in ~9 s. The 3.14 pin,
-        # matching pyproject.toml's `py-version`, is the second defence.
+        # The 3.14 pin (matching pyproject.toml's `py-version`) is what makes
+        # `--jobs` above 1 safe: that pickles the PyLinter through `dill`, which
+        # crashes on Python 3.15 (`code.co_lnotab` no longer exists), and the
+        # default `python3` resolves to 3.15 on some shells. On 3.15 the gate
+        # would crash, not pass. pyproject.toml keeps `jobs = 1` for a bare
+        # `pylint` run; the script below passes its own `--jobs`.
         language_version: python3.14
         # The gate is 10.00 and never goes down again: a lower bar lets the
         # next message in unnoticed, and each one costs more to clear later.
@@ -121,13 +122,24 @@ repos:
         # so this is also the only way commit-time and CI agree -- the same
         # "passing or failing by what else was staged" trap the init-hook
         # comment in pyproject.toml describes for import resolution.
-        # Hash-gated (scripts/pylint_cached.sh): the whole-tree run is ~45 s.
+        # Speed, measured 2026-11-22: the old single-job run took 37-58 s
+        # (killed at the 60 s action cap once), as ~5 s parsing, ~17 s the
+        # duplicate-code comparison, ~22 s every other checker. Now ~13-17 s,
+        # with the same checks, options, files and 10.00 bar:
+        #  - duplicate-code stays whole-tree and in one process. It hashes
+        #    each file once instead of once per partner file
+        #    (scripts/pylint_dup_memo.py): same chunks, same R0801 messages,
+        #    pinned by a test that diffs it against an unpatched run.
+        #  - everything else runs with `--jobs=4`, which gave the same
+        #    messages as `--jobs=1` on the clean tree and on a tree seeded with
+        #    an R0801, an R0401 cycle, an import that only the init-hook
+        #    resolves, an unused import and too-many-branches.
+        # Hash-gated (scripts/pylint_cached.sh): a tree that passed is skipped.
         entry: bash scripts/pylint_cached.sh
         pass_filenames: false
         args:
           - --rcfile=pyproject.toml
           - --fail-under=10
-          - --jobs=1
           - leetcode_guard
           - scripts
         # Kept byte-identical to pyproject.toml/requirements.txt. This block
