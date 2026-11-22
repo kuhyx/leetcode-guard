@@ -33,6 +33,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import os
+from pathlib import Path
 import shutil
 import subprocess
 from typing import TYPE_CHECKING, Final, Protocol
@@ -45,6 +47,12 @@ _logger: Final = logging.getLogger(__name__)
 OPENERS: Final = ("xdg-open", "x-www-browser", "firefox")
 """Tried in order. ``xdg-open`` honours the desktop's own default, which is
 what the user expects; the rest are fallbacks for a bare X session."""
+
+TUTOR: Final = "tutor"
+"""The tutor's launcher (SPEC C4): ``tutor --route <route>`` opens its own
+Chromium ``--app`` window on that route. Looked up on ``PATH`` first, so a
+check can stand a fake in, then in ``~/.local/bin``, which the systemd user
+manager's ``PATH`` does not include."""
 
 
 SCOPE_FLAGS: Final = ("--user", "--scope", "--collect", "--quiet")
@@ -105,6 +113,38 @@ def launch(url: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
     runner = shutil.which("systemd-run")
     scope = () if runner is None else (runner, *SCOPE_FLAGS)
     command = (*scope, opener, url)
+    return _run_detached(command, opener=opener, what=url, spawn=spawn)
+
+
+def find_tutor() -> str | None:
+    """The tutor launcher's absolute path, or ``None``; spawns nothing.
+
+    Same reason as :func:`find_opener`: the lock asks before it stands down.
+    """
+    found = shutil.which(TUTOR)
+    if found is not None:
+        return found
+    fallback = Path.home() / ".local" / "bin" / TUTOR
+    if fallback.is_file() and os.access(fallback, os.X_OK):
+        return str(fallback)
+    return None
+
+
+def launch_tutor(route: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
+    """Run ``tutor --route <route>`` detached, like a browser. Never raises."""
+    tutor = find_tutor()
+    if tutor is None:
+        reason = f"no {TUTOR} launcher on PATH or in ~/.local/bin"
+        _logger.warning("could not open %s: %s", route, reason)
+        return LaunchResult(ok=False, reason=reason)
+    command = (tutor, "--route", route)
+    return _run_detached(command, opener=tutor, what=route, spawn=spawn)
+
+
+def _run_detached(
+    command: tuple[str, ...], *, opener: str, what: str, spawn: SpawnFn | None
+) -> LaunchResult:
+    """Spawn ``command`` in a new session; a failure is a result, not a raise."""
     launcher = spawn if spawn is not None else subprocess.Popen
     try:
         launcher(command, start_new_session=True)
@@ -117,8 +157,8 @@ def launch(url: str, *, spawn: SpawnFn | None = None) -> LaunchResult:
         # API response left the machine open. "Never raises" has to be true or
         # it is worse than no promise at all.
         reason = f"{opener} could not be started: {exc}"
-        _logger.exception("could not open %s", url)
+        _logger.exception("could not open %s", what)
         return LaunchResult(ok=False, reason=reason, command=command)
 
-    _logger.info("opened %s with %s", url, opener)
+    _logger.info("opened %s with %s", what, opener)
     return LaunchResult(ok=True, reason=f"opened with {opener}", command=command)

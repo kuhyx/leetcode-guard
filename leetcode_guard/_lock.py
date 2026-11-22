@@ -10,15 +10,12 @@ first probe happens *before* the window is built, off the Tk thread. Fetching
 inside a surface builder would mean no window at all when the network is down,
 and no window is itself the bypass.
 
-That last invariant now has a stated exception, and it is worth reading before
-changing anything here. **No window is the bypass while the lock is asserted**
--- but :mod:`leetcode_guard._lock_study` can stand the assertion down on
-request, releasing the grab so the user can actually reach a problem. Until
-2026-08-05 the rule was absolute, and the result was a lock demanding a solve it
-had itself made impossible: the browser needed to produce one could not receive
-a keystroke. Study mode is an explicit, user-initiated, logged release of
-assertion, with no timeout, and both transitions log at warning with elapsed
-time so the journal always says how long the machine was open.
+That invariant has one stated exception. **No window is the bypass while the
+lock is asserted** -- but :mod:`leetcode_guard._lock_study` stands the assertion
+down on request (Open, or the theory card's learn button), releasing the grab:
+until 2026-08-05 the lock demanded a solve its grabbed browser could not type.
+Study mode is explicit and user-initiated, with no timeout; both transitions
+log at warning with elapsed time, so the journal says how long it was open.
 """
 
 from __future__ import annotations
@@ -49,6 +46,7 @@ from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._lock_carrot import CarrotMixin
 from leetcode_guard._lock_nudge import NudgeMixin
+from leetcode_guard._lock_phase import PhaseReader, unit_rows
 from leetcode_guard._lock_poll import PollMixin
 from leetcode_guard._lock_release import ReleaseMixin
 from leetcode_guard._lock_reveal import RevealMixin
@@ -57,7 +55,8 @@ from leetcode_guard._lock_study import StudyMixin
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
 from leetcode_guard._poller import PollerSettings, SolvePoller
 from leetcode_guard._sync import sync_quietly
-from leetcode_guard._view import build_guard_view, install_demo_close_button
+from leetcode_guard._view import build_guard_view
+from leetcode_guard._view_evening import install_demo_close_button
 from leetcode_guard._view_group import FrameGroup
 from leetcode_guard._view_types import ViewHooks
 
@@ -113,6 +112,7 @@ class LeetcodeGuard(
                 POLL_INTERVAL_MS_DEMO if demo_mode else POLL_INTERVAL_MS_PRODUCTION
             ),
             config=config,
+            phases=PhaseReader(deps, demo=demo_mode),
         )
 
         self.ledger = load_ledger(deps.ledger_path, key_file=deps.key_file)
@@ -138,10 +138,11 @@ class LeetcodeGuard(
         self.root = GateRoot()
         self.root.title("LeetCode Guard" + (" [DEMO]" if demo_mode else ""))
 
+        self.run_state.phases.refresh()  # the first screen is the phase's
         self.model = self.build_model(deps.probe)
         self.start_reveal()
-        # ``_study`` and ``_strip`` are built lazily by StudyMixin: the session
-        # needs the LockWindow, which does not exist until further down.
+        self.on_reveal(unit_rows(self.model, changed=True))
+        # StudyMixin builds ``_study``/``_strip`` lazily: they need the LockWindow.
 
         arbiter = Arbiter(
             "leetcode_guard",
@@ -189,6 +190,7 @@ class LeetcodeGuard(
                 on_escape=self.open_escape,
                 on_open=self.open_problem,
                 on_reveal=self.on_reveal,
+                on_learn=self.open_learn,
             ),
         )
         self.frames.views[surface.output_name] = view
@@ -229,7 +231,6 @@ class LeetcodeGuard(
             # and leave the screen grabbed.
             sync_quietly(self.deps.ledger_path, key_file=self.deps.key_file)
 
-    # -- internals --------------------------------------------------------
     def close(self) -> None:
         """Release the lock. Idempotent."""
         if self.run_state.closed:
@@ -241,8 +242,7 @@ class LeetcodeGuard(
         """Hand control to Tk until the lock releases.
 
         The stall watch starts here, not at ``GateRoot()``: construction blocks
-        the Tk thread on purpose (``wait_for_turn``'s grace, the surface build)
-        and was filed as a frozen loop (c890f31a).
+        Tk on purpose (``wait_for_turn``, the surface build), filed as c890f31a.
         """
         if _errors.SLOT.reporter is not None:
             watch_stalls(self.root, _errors.SLOT.reporter)

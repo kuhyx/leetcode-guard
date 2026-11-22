@@ -19,11 +19,14 @@ from typing import TYPE_CHECKING, Any, Final
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
+from leetcode_guard._lock_learn import LearnButton
 from leetcode_guard._study import StudySession
 from leetcode_guard._study_strip import build_strip
 from leetcode_guard._study_strip_text import StripText
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from gatelock import OutputRect
 
     from leetcode_guard._gate import GateDecision
@@ -72,12 +75,29 @@ class StudyMixin:
             self._say("no browser launcher found", url=url)
             _logger.warning("no browser to open %s with; the lock is unchanged", url)
             return
+        self.enter_study(lambda: self._spawn(url))
 
+    def open_learn(self, route: str) -> None:
+        """The theory card's learn button, through a ``LearnButton`` per press.
+
+        Built per press rather than held: it keeps nothing between presses, and
+        the lock is at the lint profile's attribute limit.
+        """
+        config = self.run_state.config
+        LearnButton(self.enter_study, self._say, self.frames, config).open_learn(route)
+
+    def enter_study(self, spawn: Callable[[], bool]) -> None:
+        """Steps 2-4 of :meth:`open_problem`, shared with the learn button.
+
+        The caller has already resolved its launcher without spawning (step 1).
+        ``spawn`` launches for real and reports success; a failure rolls the
+        suspend back, because there is nothing to study with.
+        """
         session = self.session()
         if session.active:
             # A second problem while already studying is a legitimate thing to
             # want. Nothing to tear down, and the elapsed clock keeps running.
-            self._spawn(url)
+            spawn()
             return
 
         outcome = session.suspend()
@@ -85,7 +105,7 @@ class StudyMixin:
             self._say(f"could not stand the lock down ({outcome.reason})")
             return
 
-        if not self._spawn(url):
+        if not spawn():
             # Nothing to study with, so do not leave the machine open.
             session.resume()
             return

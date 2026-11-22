@@ -8,7 +8,8 @@ from unittest.mock import MagicMock
 from gatelock import LockConfig
 
 from leetcode_guard._view import GuardView
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard._viewmodel import ViewModel
+from leetcode_guard._viewmodel_lines import ProblemLine
 
 CONFIG = LockConfig()
 

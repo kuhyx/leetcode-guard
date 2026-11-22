@@ -20,7 +20,13 @@ from typing import TYPE_CHECKING, Final
 from leetcode_guard import _glyphs as g
 from leetcode_guard._gate import GateDecision, GateState
 from leetcode_guard._submissions import ProbeStatus
+from leetcode_guard._viewmodel_lines import ProblemLine, format_lines, unit_problems
 from leetcode_guard._viewmodel_marks import accepted_prefix, notes_for
+from leetcode_guard._viewmodel_phase import (
+    NONE_SCREEN,
+    PhaseScreen,
+    build_phase_screen,
+)
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -28,21 +34,6 @@ if TYPE_CHECKING:
     from leetcode_guard._pool_resolve import PoolResolution
     from leetcode_guard._submissions import SolveProbe
     from leetcode_guard._viewmodel_source import ViewSource
-
-
-@dataclass(frozen=True)
-class ProblemLine:
-    """One suggested problem, ready to render."""
-
-    label: str
-    """Row number and the problem's title (LeetCode's content)."""
-    url: str
-    slug: str = ""
-    """Which problem this is, so rows revealed by scrolling can be verified."""
-    mark: str = ""
-    """Credit weight and acceptance rate: ``◆◆  48%``."""
-    difficulty: str = ""
-    """``Easy``/``Medium``/``Hard``: picks the mark's colour, never painted."""
 
 
 @dataclass(frozen=True)
@@ -63,6 +54,8 @@ class ViewModel:
     "cannot check is not not-solved" rule, and a glyph swap alone is too
     quiet to carry it."""
     needed: int = 0
+    screen: PhaseScreen = NONE_SCREEN
+    """THEORY card, SOLVE bar or neither (``_viewmodel_phase``)."""
 
 
 def build_problem_lines(
@@ -70,6 +63,7 @@ def build_problem_lines(
     *,
     limit: int,
     solved_slugs: frozenset[str] = frozenset(),
+    unit: str = "",
 ) -> tuple[tuple[ProblemLine, ...], tuple[str, ...]]:
     """Format the suggestion list, minus anything solved since it was resolved.
 
@@ -86,6 +80,9 @@ def build_problem_lines(
         limit: How many rows the surface has room for.
         solved_slugs: Everything now known to be solved, from the ledger and
             the latest probe together.
+        unit: Narrow the list to this unit's problems (THEORY/SOLVE). A unit
+            with nothing left to show falls back to the whole pool: an empty
+            list would hide every Open button, the 2026-08-05 trap.
 
     Returns:
         The lines to show, and the titles of the problems a solve removed from
@@ -93,29 +90,11 @@ def build_problem_lines(
         that simply vanishes takes with it the only per-problem confirmation
         that the submission registered.
     """
-    lines: list[ProblemLine] = []
-    dropped: list[str] = []
-    blocks = pool.blocks
-    for problem in pool.problems:
-        if len(lines) == limit:
-            break
-        if problem.title_slug in solved_slugs:
-            dropped.append(problem.title)
-            continue
-        lines.append(
-            ProblemLine(
-                label=f"{len(lines) + 1}  {problem.title}",
-                url=problem.url,
-                slug=problem.title_slug,
-                mark=g.problem_mark(
-                    problem.difficulty,
-                    problem.ac_rate,
-                    waits=blocks is not None and blocks.waits(problem),
-                ),
-                difficulty=problem.difficulty,
-            )
-        )
-    return tuple(lines), tuple(dropped)
+    own = unit_problems(pool, unit)
+    lines, dropped = format_lines(own, pool, limit, solved_slugs, narrowed=bool(unit))
+    if lines or own is pool.problems:
+        return lines, dropped
+    return format_lines(pool.problems, pool, limit, solved_slugs, narrowed=False)
 
 
 _FREE_DAY_MARKS: Final = {
@@ -205,8 +184,12 @@ def build_viewmodel(
     Returns:
         The rendered marks.
     """
+    screen = build_phase_screen(source.phase)
     problems, dropped = build_problem_lines(
-        source.pool, limit=source.limit, solved_slugs=source.solved_slugs
+        source.pool,
+        limit=source.limit,
+        solved_slugs=source.solved_slugs,
+        unit=screen.unit if screen.unit_list else "",
     )
     return ViewModel(
         headline=_headline(decision),
@@ -219,4 +202,5 @@ def build_viewmodel(
         show_escape=show_escape,
         status_ok=probe.status is not ProbeStatus.UNVERIFIABLE,
         needed=decision.needed,
+        screen=screen,
     )

@@ -24,8 +24,11 @@ from leetcode_guard.tests._ledger_fixtures import NOW, submission
 from leetcode_guard.tests._net_fixtures import problem_row
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from datetime import datetime
     from pathlib import Path
+
+    from leetcode_guard._phase_view import PhaseView
 
 SIGNED_OUT = AuthState(cookies=None, note="signed out")
 
@@ -81,6 +84,7 @@ class GuardOptions(TypedDict, total=False):
     now: datetime
     seeded: bool
     evening: bool
+    phase: Callable[[], PhaseView] | None
 
 
 def create_guard(
@@ -157,6 +161,7 @@ def create_guard(
                 wait_turn=options.get("wait_turn", True),
                 executor=InlineExecutor(),
                 now=lambda: now,
+                phase=options.get("phase"),
             ),
         ),
     )

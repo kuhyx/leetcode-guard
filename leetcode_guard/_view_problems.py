@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
     from gatelock import LockConfig
 
-    from leetcode_guard._viewmodel import ProblemLine, ViewModel
+    from leetcode_guard._viewmodel import ViewModel
+    from leetcode_guard._viewmodel_lines import ProblemLine
 
 _PAD = 16
 
@@ -130,7 +131,18 @@ def append_rows(
         )
         mark.pack(side="left", padx=_PAD // 2)
         wiring.marks.append(mark)
-        widgets: list[Any] = [row, label, mark]
+        # Room for the later rework button (``?``), the width of an Open
+        # button, rightmost. Packed before Open so a re-packed Open still
+        # lands to its left. Empty on purpose: the button is not built yet.
+        spare = tk.Label(
+            row,
+            text="",
+            width=3,
+            font=config.font("subtitle", bold=True),
+            bg=config.palette.field_bg,
+        )
+        spare.pack(side="right", padx=_PAD // 2)
+        widgets: list[Any] = [row, label, mark, spare]
         if on_open is not None:
             button = tk.Button(
                 row,

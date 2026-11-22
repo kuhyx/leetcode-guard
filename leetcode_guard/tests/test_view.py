@@ -8,6 +8,7 @@ since no assertion here could have caught it.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 from leetcode_guard import _glyphs as g
@@ -16,8 +17,11 @@ from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_group import FrameGroup
 from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard._viewmodel_lines import ProblemLine
 from leetcode_guard.tests._view_fixtures import CONFIG, model
+
+if TYPE_CHECKING:
+    from leetcode_guard._viewmodel import ViewModel
 
 # -- FrameGroup -----------------------------------------------------------
 
@@ -59,7 +63,7 @@ def test_a_view_is_built_for_one_surface():
 
     assert isinstance(view, GuardView)
     assert view.output_name == "DP-0"
-    assert view.escape_button is None
+    assert view.decor.escape_button is None
     assert len(view.problems.labels) == 1
 
 
@@ -80,8 +84,8 @@ def test_the_escape_button_is_built_but_hidden_until_offered():
         hooks=ViewHooks(on_escape=lambda: None),
     )
 
-    assert view.escape_button is not None
-    view.escape_button.pack_forget.assert_called_once()
+    assert view.decor.escape_button is not None
+    view.decor.escape_button.pack_forget.assert_called_once()
 
 
 def test_the_escape_button_stays_packed_when_offered():
@@ -94,7 +98,7 @@ def test_the_escape_button_stays_packed_when_offered():
         hooks=ViewHooks(on_escape=lambda: None),
     )
 
-    view.escape_button.pack_forget.assert_not_called()
+    view.decor.escape_button.pack_forget.assert_not_called()
 
 
 # -- the Open control ------------------------------------------------------

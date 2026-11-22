@@ -17,7 +17,8 @@ from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_problems import INITIAL_ROWS, ROW_BATCH, append_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
 from leetcode_guard._view_types import ViewHooks
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard._viewmodel import ViewModel
+from leetcode_guard._viewmodel_lines import ProblemLine
 
 CONFIG = LockConfig()
 

@@ -16,7 +16,8 @@ from leetcode_guard._view import GuardView, build_guard_view
 from leetcode_guard._view_problems import NO_PROBLEMS_TEXT
 from leetcode_guard._view_types import ProblemList, ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard._viewmodel import ViewModel
+from leetcode_guard._viewmodel_lines import ProblemLine
 from leetcode_guard.tests._view_fixtures import mock_view
 
 

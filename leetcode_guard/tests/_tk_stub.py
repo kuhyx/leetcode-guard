@@ -76,6 +76,7 @@ TK_MODULES = (
     "leetcode_guard._view",
     "leetcode_guard._view_evening",
     "leetcode_guard._view_icons",
+    "leetcode_guard._view_phase",
     "leetcode_guard._view_problems",
     "leetcode_guard._view_scroll",
     "leetcode_guard._escape_form",
@@ -91,7 +92,7 @@ does not fail -- it opens a real fullscreen window, or worse, hangs holding a
 grab.
 
 The list runs both ways: ``_lock`` was removed when its last widget call moved
-to ``_view.install_demo_close_button``, because patching a ``tk`` attribute a
+to ``_view_evening.install_demo_close_button``, because patching a ``tk`` attribute a
 module no longer has raises at fixture time and fails every test in the suite.
 Verify with ``grep -l '^import tkinter as tk' leetcode_guard/*.py`` after any
 move.

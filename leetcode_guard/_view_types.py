@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from leetcode_guard._viewmodel import ProblemLine
+    from leetcode_guard._viewmodel_lines import ProblemLine
+    from leetcode_guard._viewmodel_phase import PhaseScreen
 
 
 @dataclass
@@ -27,6 +28,12 @@ class ProblemList:
     """What the rows were last painted from; rows built on scroll read it."""
     marks: list[Any] = field(default_factory=list)
     """Each row's weight-mark label (``◆◆  48%``), in list order."""
+    shown: int | None = None
+    """How many rows, from the top, are packed; ``None`` on hand-made views,
+    which are never re-shown. Hidden rows are always a tail, so re-showing
+    them in order keeps the packing order."""
+    fitted: tuple[int, int] = (0, 0)
+    """The viewport's last fit: rows tall, and rows shown when fitted."""
 
 
 @dataclass
@@ -62,6 +69,47 @@ class ViewHooks:
     on_escape: Callable[[], None] | None = None
     """Invoked when the escape hatch is pressed; ``None`` builds no button."""
 
+    on_learn: Callable[[str], None] | None = None
+    """Invoked with a tutor route when the theory card's button is pressed.
+
+    Rebound on every screen change, like Open: a command closing over the
+    route it was built with would open the finished unit after a hand-over.
+    ``None`` leaves the button inert."""
+
+
+@dataclass
+class UnitBar:
+    """The SOLVE screen's slim bar: its frame and the unit / count label."""
+
+    frame: Any = None
+    label: Any = None
+
+
+@dataclass
+class PhaseWidgets:
+    """The THEORY card and the SOLVE bar of one surface (``_view_phase``).
+
+    Both are built once, inside a slot frame that stays packed between the
+    header and the list; a screen change only packs or forgets them. A
+    forgotten widget packed again goes to the end of its parent, so toggling
+    the slot itself would drop the card below the break-glass.
+    """
+
+    slot: Any = None
+    card: Any = None
+    title: Any = None
+    ready_mark: Any = None
+    progress: Any = None
+    """The taught / total bar, a canvas."""
+    counts: Any = None
+    rate: Any = None
+    learn: Any = None
+    """The large learn button."""
+    unit_bar: UnitBar = field(default_factory=UnitBar)
+    painted: PhaseScreen | None = None
+    """What was last painted; an unchanged screen is not repainted, so a
+    "cannot open" mark on the button stays until the screen moves on."""
+
 
 @dataclass
 class SurfaceDecor:
@@ -74,6 +122,8 @@ class SurfaceDecor:
     """The permanent recovery-route label; never unpacked, never rewritten."""
     config: Any = None
     """The ``LockConfig`` the surface was built with, for colours on repaint."""
+    escape_button: Any = None
+    """The escape hatch; only packed or forgotten, ``None`` with no hatch wired."""
 
 
 @dataclass
@@ -86,7 +136,8 @@ class GuardView:
     balance_line: Any
     status_line: Any
     notes_label: Any
-    escape_button: Any = None
     decor: SurfaceDecor = field(default_factory=SurfaceDecor)
     problems: ProblemList = field(default_factory=ProblemList)
     hooks: ViewHooks = field(default_factory=ViewHooks)
+    phase: PhaseWidgets | None = None
+    """``None`` on hand-made views; every built surface has one."""

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from leetcode_guard._auth import AuthState
     from leetcode_guard._leetcode import PostFn
     from leetcode_guard._netcheck import NetworkDiagnosis
+    from leetcode_guard._phase_view import PhaseView
     from leetcode_guard._pool_resolve import PoolResolution
     from leetcode_guard._submissions import SolveProbe
 
@@ -53,6 +54,12 @@ class GuardSeams:
 
     diagnose: Callable[[], NetworkDiagnosis] | None = None
     """Network classifier. ``None`` means use the real one."""
+
+    phase: Callable[[], PhaseView] | None = None
+    """The current unit and screen (SPEC C5), read once per poll (``_lock_phase``).
+
+    Set by the CLI to the rules side's read-only getter; ``None`` paints today's
+    list. It may raise: the lock keeps the last screen it read."""
 
 
 @dataclass

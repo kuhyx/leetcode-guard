@@ -12,10 +12,12 @@ reason that outranks flicker: a destroy/rebuild opens a window, however short,
 in which no ``Open`` button exists on screen, and "the lock must always offer a
 way to do the thing it demands" is the 2026-08-05 rule.
 
-Rows are only ever *added* by scrolling (``_view_scroll.grow_rows``), at the
-tail, from the lines painted here. A repaint never adds or removes any: the
-solved set grows monotonically and the pool is fixed for the life of the
-window, so surplus rows are hidden from the tail and never need re-showing.
+Rows are only ever *added* at the tail (``_view_scroll.grow_rows``) and never
+removed. Within one screen the solved set grows monotonically, so surplus rows
+are hidden from the tail. A unit hand-over (SOLVE(u) -> THEORY(next)) swaps the
+whole list, so a repaint also re-shows hidden tail rows, in order, and builds
+the next batch when the new unit has more problems than rows exist. The THEORY
+card and the SOLVE bar are toggled, never rebuilt (``_view_phase``).
 """
 
 from __future__ import annotations
@@ -25,13 +27,20 @@ from typing import TYPE_CHECKING, Final
 from gatelock import LockConfig
 
 from leetcode_guard import _glyphs as g
-from leetcode_guard._view_problems import NO_PROBLEMS_TEXT, mark_colour
+from leetcode_guard._view_phase import paint_phase
+from leetcode_guard._view_problems import (
+    INITIAL_ROWS,
+    NO_PROBLEMS_TEXT,
+    mark_colour,
+)
+from leetcode_guard._view_scroll import grow_rows
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from leetcode_guard._view import GuardView
-    from leetcode_guard._viewmodel import ProblemLine, ViewModel
+    from leetcode_guard._viewmodel import ViewModel
+    from leetcode_guard._viewmodel_lines import ProblemLine
 
 _DEFAULT_CONFIG: Final = LockConfig()
 """Colours for a view built without one (the tests' hand-made views)."""
@@ -68,8 +77,11 @@ def apply_viewmodel(views: Iterable[GuardView], model: ViewModel) -> int:
             text=model.status_line, fg=status_colour(_config_of(view), model)
         )
         view.notes_label.configure(text=join_notes(model.notes))
+        if view.phase is not None:
+            paint_phase(view.phase, _config_of(view), model.screen, view.hooks.on_learn)
         view.problems.lines = model.problems
         _apply_problem_rows(view, model.problems)
+        _refit(view, model.screen.rows)
         _apply_escape_visibility(view, model)
         count += 1
     return count
@@ -90,6 +102,8 @@ def _apply_problem_rows(view: GuardView, lines: tuple[ProblemLine, ...]) -> None
         _hide_open_button(view, 0)
         _hide_rows_from(view, 1)
         return
+    _show_rows(view, len(lines))
+    labels = view.problems.labels
     visible = lines[: len(labels)]
     marks = view.problems.marks
     for index, line in enumerate(visible):
@@ -124,13 +138,49 @@ def _hide_rows_from(view: GuardView, start: int) -> None:
     """Hide the tail of the list, row frame and button together."""
     for label in view.problems.labels[start:]:
         label.master.pack_forget()
+    if view.problems.shown is not None:
+        view.problems.shown = min(view.problems.shown, start)
+
+
+def _show_rows(view: GuardView, wanted: int) -> None:
+    """Re-pack hidden tail rows, then build more, until ``wanted`` show.
+
+    Only a unit hand-over needs this. Hidden rows are re-packed in index
+    order, before anything is built, so the packing order stays the list
+    order. Building stops at :data:`INITIAL_ROWS`; scrolling builds the rest.
+    """
+    problems = view.problems
+    if problems.shown is None:
+        return
+    for label in problems.labels[problems.shown : wanted]:
+        label.master.pack(fill="x", padx=16, pady=4)
+    problems.shown = max(problems.shown, min(wanted, len(problems.labels)))
+    if len(problems.labels) < min(wanted, INITIAL_ROWS):
+        grow_rows(view, _config_of(view))
+
+
+def _refit(view: GuardView, rows: int) -> None:
+    """Resize the viewport when the screen's height changes or rows came back.
+
+    Never shrinks within a screen: a row hidden by a solve leaves its gap,
+    as it always has, so the centred panel does not jump.
+    """
+    problems = view.problems
+    if problems.scroll is None or problems.shown is None:
+        return
+    shown = min(problems.shown, rows)
+    fitted_rows, fitted_shown = problems.fitted
+    if rows == fitted_rows and shown <= fitted_shown:
+        return
+    problems.scroll.fit_rows(problems.shown, rows)
+    problems.fitted = (rows, shown)
 
 
 def _apply_escape_visibility(view: GuardView, model: ViewModel) -> None:
     """Show or hide the escape button without rebuilding it."""
-    if view.escape_button is None:
+    if view.decor.escape_button is None:
         return
     if model.show_escape:
-        view.escape_button.pack(pady=(16, 0))
+        view.decor.escape_button.pack(pady=(16, 0))
     else:
-        view.escape_button.pack_forget()
+        view.decor.escape_button.pack_forget()

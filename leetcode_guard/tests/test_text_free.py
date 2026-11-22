@@ -25,8 +25,11 @@ from leetcode_guard._gate import DayContext, decide
 from leetcode_guard._ledger_io import Ledger, append, load_ledger, save_ledger
 from leetcode_guard._study_strip import build_strip
 from leetcode_guard._study_strip_text import StripText
-from leetcode_guard._view import build_guard_view, install_demo_close_button
-from leetcode_guard._view_evening import install_end_evening_button
+from leetcode_guard._view import build_guard_view
+from leetcode_guard._view_evening import (
+    install_demo_close_button,
+    install_end_evening_button,
+)
 from leetcode_guard._view_types import ViewHooks
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel

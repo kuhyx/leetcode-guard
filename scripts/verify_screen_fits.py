@@ -37,7 +37,8 @@ from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._escape_flow import EscapeHatch, build_tracker
 from leetcode_guard._view import build_guard_view
 from leetcode_guard._view_types import ViewHooks
-from leetcode_guard._viewmodel import ProblemLine, ViewModel
+from leetcode_guard._viewmodel import ViewModel
+from leetcode_guard._viewmodel_lines import ProblemLine
 
 if TYPE_CHECKING:
     import tkinter as tk

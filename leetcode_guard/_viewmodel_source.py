@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from leetcode_guard._auth import AuthState
+    from leetcode_guard._phase_view import PhaseView
     from leetcode_guard._pool_resolve import PoolResolution
 
 
@@ -32,3 +33,7 @@ class ViewSource:
     """Everything now known to be solved. Unlike ``pool``, which is resolved
     once before the window opens, this is recomputed every tick, so a problem
     solved *during* the lock stops being suggested."""
+
+    phase: PhaseView | None = None
+    """The current unit and screen (SPEC C5), from the rules side; ``None``
+    paints today's list as it was before the theory-first flow."""

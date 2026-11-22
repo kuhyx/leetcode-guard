@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from leetcode_guard import _glyphs as g
 from leetcode_guard._breakglass import breakglass_lines
-from leetcode_guard._constants import PROBLEM_DISPLAY_LIMIT
 from leetcode_guard._view_credit import place_credit
 from leetcode_guard._view_icons import Padlock
+from leetcode_guard._view_phase import build_phase_slot
 from leetcode_guard._view_problems import build_problem_rows
 from leetcode_guard._view_scroll import ScrollArea, grow_rows
 from leetcode_guard._view_types import (
@@ -78,7 +78,8 @@ def _build_problems(
     labels, buttons = build_problem_rows(
         scroll.inner, config, model, hooks.on_open, wiring
     )
-    scroll.fit_rows(len(labels), PROBLEM_DISPLAY_LIMIT)
+    rows = model.screen.rows
+    scroll.fit_rows(len(labels), rows)
     return ProblemList(
         labels=labels,
         frame=scroll.inner,
@@ -86,6 +87,8 @@ def _build_problems(
         scroll=scroll,
         lines=model.problems,
         marks=wiring.marks,
+        shown=len(labels),
+        fitted=(rows, min(len(labels), rows)),
     )
 
 
@@ -138,7 +141,7 @@ def _add_escape_button(
     view: GuardView, inner: tk.Misc, config: LockConfig, model: ViewModel
 ) -> None:
     """The hatch button, built whenever a hatch is wired and hidden if not due."""
-    view.escape_button = tk.Button(
+    view.decor.escape_button = tk.Button(
         inner,
         text=g.ESCAPE,
         font=config.font("title"),
@@ -150,9 +153,9 @@ def _add_escape_button(
         command=view.hooks.on_escape,
         relief="flat",
     )
-    view.escape_button.pack(pady=(_PAD, 0))
+    view.decor.escape_button.pack(pady=(_PAD, 0))
     if not model.show_escape:
-        view.escape_button.pack_forget()
+        view.decor.escape_button.pack_forget()
 
 
 def build_guard_view(
@@ -184,6 +187,8 @@ def build_guard_view(
     inner.place(relx=0.5, rely=0.5, anchor="center")
 
     header = _build_header(inner, config, model)
+    # Between the header and the list, so a THEORY card leads the screen.
+    phase = build_phase_slot(inner, config, model.screen, hooks.on_learn)
 
     grow: list[Callable[[], object]] = []
     problems = _build_problems(inner, config, model, hooks, grow)
@@ -209,6 +214,7 @@ def build_guard_view(
         notes_label=notes_label,
         problems=problems,
         hooks=hooks,
+        phase=phase,
         decor=SurfaceDecor(
             padlock=header.padlock, breakglass=breakglass, config=config
         ),
@@ -220,29 +226,3 @@ def build_guard_view(
 
     place_credit(container, config)
     return view
-
-
-def install_demo_close_button(
-    parent: tk.Misc, config: LockConfig, on_close: Callable[[], None]
-) -> tk.Button:
-    """The escape that makes a demo safe to run.
-
-    Installed on the **surface**, not on the root. With
-    ``overrideredirect=True`` the root is a full-screen backdrop and gatelock's
-    per-output Toplevels sit on top of it, so a button placed on the root is
-    drawn behind them and is invisible and unclickable. Caught by screenshotting
-    the demo rather than by any test -- which is exactly why the demo gets
-    screenshotted.
-    """
-    button = tk.Button(
-        parent,
-        text=g.CLOSE,
-        font=config.font("title"),
-        width=2,
-        fg=config.palette.on_fill,
-        bg=config.palette.danger,
-        command=on_close,
-        relief="flat",
-    )
-    button.place(x=10, y=10)
-    return button

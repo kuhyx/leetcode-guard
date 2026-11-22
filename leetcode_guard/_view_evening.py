@@ -1,4 +1,4 @@
-"""The end-evening control: one glyph button on every surface, from t=0.
+"""The surface buttons placed in a corner: end-evening and the demo close.
 
 Own module because ``_view.py`` is at the 250-line cap. Pure painting, like the
 rest of the view: the press is handed in.
@@ -37,4 +37,30 @@ def install_end_evening_button(
         relief="flat",
     )
     button.place(relx=1.0, x=-10, y=10, anchor="ne")
+    return button
+
+
+def install_demo_close_button(
+    parent: tk.Misc, config: LockConfig, on_close: Callable[[], None]
+) -> tk.Button:
+    """The escape that makes a demo safe to run.
+
+    Installed on the **surface**, not on the root. With
+    ``overrideredirect=True`` the root is a full-screen backdrop and gatelock's
+    per-output Toplevels sit on top of it, so a button placed on the root is
+    drawn behind them and is invisible and unclickable. Caught by screenshotting
+    the demo rather than by any test -- which is exactly why the demo gets
+    screenshotted.
+    """
+    button = tk.Button(
+        parent,
+        text=g.CLOSE,
+        font=config.font("title"),
+        width=2,
+        fg=config.palette.on_fill,
+        bg=config.palette.danger,
+        command=on_close,
+        relief="flat",
+    )
+    button.place(x=10, y=10)
     return button

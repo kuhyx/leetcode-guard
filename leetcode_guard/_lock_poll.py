@@ -25,6 +25,7 @@ from leetcode_guard._harvest import (
     seed_ledger,
 )
 from leetcode_guard._ledger_io import solved_slugs
+from leetcode_guard._lock_phase import unit_rows
 from leetcode_guard._submissions import ProbeStatus, SolveProbe, fetch_recent_ac
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard._viewmodel import build_viewmodel
@@ -44,19 +45,15 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 _UNLOCK_LINGER_MS = 3000
-"""How long the "unlocked" screen stays up. Long enough to read, short enough
-not to feel like the lock is stuck."""
+"""How long the "unlocked" screen stays up: long enough to read, not stuck."""
 
 
 class PollMixin:
     """The tick half of :class:`~leetcode_guard._lock.LeetcodeGuard`.
 
-    Reads ``_deps``, ``_ledger``, ``_escape``, ``_outage``, ``_run``,
-    ``_poller``, ``_frames``, ``_model`` and ``root`` from the
-    class it is mixed into, and calls back into the release and study halves.
-    Declared rather than assumed, as the other two mixins do: a mixin that
-    silently expects attributes is one that breaks on a refactor and says
-    nothing until runtime.
+    Reads the attributes below from the class it is mixed into and calls back
+    into the release and study halves. Declared rather than assumed: a mixin
+    that silently expects attributes breaks on a refactor, quietly.
     """
 
     deps: GuardDeps
@@ -68,6 +65,7 @@ class PollMixin:
     frames: FrameGroup
     model: ViewModel
     root: Any
+    on_reveal: Callable[[int], None]
     _blind_seconds: Callable[[], float]
     _blind_for_long_enough: Callable[[], bool]
     incident_form_due: Callable[[], bool]
@@ -118,6 +116,7 @@ class PollMixin:
                 # Every unsolved problem: the surface scrolls (``_view_scroll``).
                 limit=len(self.deps.pool.problems),
                 solved_slugs=self._solved_slugs(probe),
+                phase=self.run_state.phases.view,
             ),
             probe,
             checked_at=self.deps.moment(),
@@ -228,8 +227,10 @@ class PollMixin:
             return
 
         self._last_probe = probe
+        unit_changed = self.run_state.phases.refresh()
         self.model = self.build_model(probe)
         apply_viewmodel(self.frames.views.values(), self.model)
+        self.on_reveal(unit_rows(self.model, changed=unit_changed))
         self.refresh_strip()
 
     def _release(self, probe: SolveProbe) -> None:

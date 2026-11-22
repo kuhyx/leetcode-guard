@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from gatelock import EscapeTracker, LockConfig
 
     from leetcode_guard._escape_flow import EscapeHatch
+    from leetcode_guard._lock_phase import PhaseReader
     from leetcode_guard._netcheck import NetworkDiagnosis
     from leetcode_guard._network_incident import IncidentPolicy
 
@@ -28,6 +29,8 @@ class RunState:
     started: float
     poll_interval: int
     config: LockConfig
+    phases: PhaseReader
+    """The unit screen last read (``_lock_phase``); refreshed once per poll."""
     closed: bool = False
 
 

@@ -15,6 +15,7 @@ from leetcode_guard._escape_flow import (
     build_tracker,
     is_offerable,
 )
+from leetcode_guard._view_types import SurfaceDecor
 from leetcode_guard._view_update import apply_viewmodel
 from leetcode_guard.tests._view_fixtures import CONFIG, mock_view, model
 
@@ -28,7 +29,8 @@ if TYPE_CHECKING:
 
 def make_view(*, with_button: bool = False) -> GuardView:
     """A surface view built from mocks, with an escape button only on request."""
-    return mock_view(escape_button=MagicMock() if with_button else None)
+    button = MagicMock() if with_button else None
+    return mock_view(decor=SurfaceDecor(escape_button=button))
 
 
 def test_applying_a_model_updates_every_surface():
@@ -46,10 +48,10 @@ def test_applying_a_model_toggles_the_escape_button():
     view = make_view(with_button=True)
 
     apply_viewmodel([view], model(show_escape=True))
-    view.escape_button.pack.assert_called_once()
+    view.decor.escape_button.pack.assert_called_once()
 
     apply_viewmodel([view], model(show_escape=False))
-    view.escape_button.pack_forget.assert_called_once()
+    view.decor.escape_button.pack_forget.assert_called_once()
 
 
 def test_a_surface_without_an_escape_button_is_skipped():

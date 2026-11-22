@@ -150,6 +150,8 @@ def grow_rows(view: GuardView, config: LockConfig) -> int:
     )
     view.problems.labels.extend(labels)
     view.problems.buttons.extend(buttons)
+    if view.problems.shown is not None:
+        view.problems.shown = len(view.problems.labels)
     if view.hooks.on_reveal is not None:
         view.hooks.on_reveal(len(view.problems.labels))
     return len(labels)
