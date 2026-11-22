@@ -42,7 +42,11 @@ def test_last_teaching_turn_pays_when_c2_is_stamped_a_second_before_it(
     assert result.state is not None
     assert (result.state.unit, result.state.phase) == ("a", "solve")
     assert result.minutes == 12
-    assert [e.entry_id for e in result.minted] == [f"theory:{DAY}:1"]
+    # The minute credit, then the finish credit (C2 says done today).
+    assert [e.entry_id for e in result.minted] == [
+        f"theory:{DAY}:1",
+        f"theory-done:{ALGO}:a",
+    ]
 
 
 def test_last_teaching_turn_slack_is_a_boundary_not_a_window(hmac_key: Path):

@@ -99,7 +99,12 @@ def test_solve_pays_minutes_taught_before_done_and_none_after(
 
     assert result.state is not None
     assert (result.state.phase, result.state.teachable) == ("solve", ())
-    assert (result.minutes, len(result.minted)) == (12, 1)
+    assert result.minutes == 12
+    # One minute credit (the 30 after the flip never pay), plus a's finish credit.
+    assert [e.entry_id for e in result.minted] == [
+        f"theory:{DAY}:1",
+        f"theory-done:{ALGO}:a",
+    ]
 
 
 def test_every_easy_solved_moves_on_to_the_next_units_theory(

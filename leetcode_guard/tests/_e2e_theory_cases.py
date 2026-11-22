@@ -1,4 +1,4 @@
-"""Cases d-f of ``scripts/e2e_theory`` and the steps every case shares.
+"""Cases d-f and j of ``scripts/e2e_theory`` and the steps every case shares.
 
 Kept in the package (not ``scripts/``) so the driver imports them without one
 script importing another, which mypy reads as one file under two names.
@@ -204,3 +204,31 @@ def case_i(world: World) -> str:
     later = world.entry_ids("theory:")
     check(len(later) == 1, f"a lesson after THEORY began did not pay: {later}")
     return f"120 morning min before THEORY(stack-queue): 0 minted; 12 after: {later}"
+
+
+def case_j(world: World) -> str:
+    """A module signed done today pays +1 once, even under 12 minutes."""
+    seeded(world)
+    world.role("flip", "prefix-sums/0/180")
+    world.role("harvest")
+    need = needed(world)
+    # 9 minutes pay nothing alone; stack-queue is not the current unit (the
+    # tutor backfills done rows for units nobody taught) and must not pay.
+    world.role("teach", f"{ALGO}/prefix-sums/9/30")
+    world.role("flip", "stack-queue/1/10")
+    _, out = world.role("harvest")
+    check(not world.entry_ids("theory"), f"minted before the finish: {out}")
+    world.role("flip", "prefix-sums/1/5")
+    _, out = world.role("harvest")
+    own = [f"theory-done:{ALGO}:prefix-sums"]
+    check(
+        world.entry_ids("theory") == own, f"finish: {world.entry_ids('theory')} {out}"
+    )
+    check(needed(world) == max(need - 1, 0), f"finish did not pay: {need} {out}")
+    world.role("flip", "prefix-sums/0/3", "prefix-sums/1/1")
+    world.role("harvest")
+    check(world.entry_ids("theory") == own, "flip back and done again paid twice")
+    return (
+        f"9 min + finish -> {own[0]} (needed {need}->{max(need - 1, 0)}); "
+        "non-current unit's done module and a re-done module: 0 more"
+    )

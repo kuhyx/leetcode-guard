@@ -81,7 +81,8 @@ def get_credits() -> dict[str, Any]:
 
     ``theory_credits`` (all time) and ``theory_credits_today`` are the ledger's
     trusted ``tutor-theory`` credits (``entry_id`` ``theory:<day>:<n>``, 12
-    taught minutes each); ``solve_credits`` is the rest of ``credits``.
+    taught minutes each, and +1 per finished module); ``solve_credits`` is the
+    rest of ``credits``.
     """
     snapshot = gather_status()
     unit = snapshot.unit

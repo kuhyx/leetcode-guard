@@ -6,7 +6,7 @@ scratch ``$HOME`` and key, a private Xvfb, LeetCode faked (``e2e_theory_roles``)
 One case per call; the exit code is the verdict, and one line per case is
 appended to ``~/data/claude-scratch/lc-stage4/e2e/results.txt``::
 
-    python3 -m scripts.e2e_theory a|b|c|d|e|f|g|h|i
+    python3 -m scripts.e2e_theory a|b|c|d|e|f|g|h|i|j
 
 Cases (SPEC "The flow", "Guard rules for the new credit"): a THEORY arms with
 the theory card; b teaching minutes pay the day, other modules pay nothing;
@@ -16,7 +16,9 @@ e a finished unit moves on; f deleting files cannot mint; g kuhy's real state
 ``--status`` says 'could not check' until the tutor's C2 file exists. g skips
 loudly (exit 0) when the real files are absent. h the turn that finished a
 unit pays though C2 is stamped 1 s before it ended (part 10c553bc); i minutes
-taught before THEORY(u) began pay nothing (red-team R2, part 00aacb35).
+taught before THEORY(u) began pay nothing (red-team R2, part 00aacb35); j a
+module signed done today pays +1 once (even under 12 minutes), a non-current
+unit's done module 0.
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ from leetcode_guard.tests._e2e_theory_cases import (
     case_f,
     case_h,
     case_i,
+    case_j,
     check,
     needed,
     seeded,
@@ -125,6 +128,10 @@ def case_c(world: World) -> str:
     world.role("teach", f"{ALGO}/prefix-sums/{12 * need}/10")
     _, out = world.role("harvest")
     check(not world.entry_ids("theory:"), f"minted after the flip: {out}")
+    # The module is done today, so its finish credit is the one payment here.
+    finish = world.entry_ids("theory-done:")
+    check(len(finish) == 1, f"finish credit: {finish}")
+    owed = needed(world)
     detail = (world.phase_file() or {}).get("detail") or {}
     check(
         detail.get("phase") == "solve" and detail.get("teachable") == [],
@@ -147,12 +154,12 @@ def case_c(world: World) -> str:
     _, out = world.role("harvest", ac="ps-one")
     after = needed(world)
     check(
-        "credited 1" in out and after == need - 1, f"solve did not pay: {out} {after}"
+        "credited 1" in out and after == owed - 1, f"solve did not pay: {out} {after}"
     )
     return (
         f"0 minted from {12 * need} min after done; C3 solve []; "
         f"slim bar '{screen['unit_bar']}', no learn; "
-        f"solve paid ({need}->{after}); {shot}"
+        f"finish paid 1, solve paid ({owed}->{after}); {shot}"
     )
 
 
@@ -179,6 +186,7 @@ CASES: dict[str, Callable[[World], str]] = {
     "g": case_g,
     "h": case_h,
     "i": case_i,
+    "j": case_j,
 }
 
 

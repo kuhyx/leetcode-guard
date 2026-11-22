@@ -72,6 +72,31 @@ phase, rewrites C3 on change, mints and saves. It never raises.
   `kind: credit`, `amount: 1`, `entry_id: theory:<day>:<n>` (n runs over the
   day), `detail: {source: tutor-theory, unit, minutes}`. It prices at 1 and is
   never revoked. A deleted ledger re-mints at most today's.
+- **The finish credit** (`_theory_finish.py`, kuhy 2026-11-22): finishing a
+  module pays +1 on top of the minute credits (9 min + finish = 1, 24 min +
+  finish = 3), so a module finished in under 12 minutes is not worth nothing.
+  `kind: credit`, `amount: 1`, `entry_id: theory-done:<subject>:<module>`,
+  `detail: {source: tutor-theory, unit, subject, module, finish: "1"}`.
+  - Done = the module's latest verified C2 row says `done: true` (the phase
+    machine's strict read: one bad row is "cannot check" and mints nothing).
+  - **Once per module ever**: the id has no day, so `done` flipping back (a
+    card added or suspended) and true again never pays twice. Per module, not
+    per unit (`js-pandas` and `sql` have four modules: up to four credits).
+  - **Only the day it becomes done**: the latest done row's `day` must be
+    today. A module done on an earlier day never pays (no back-pay), so a
+    deleted ledger re-mints at most today's finish, like the minute credits.
+  - **Only the current unit**: modules of the unit current when the poll
+    starts (the last signed C3) or when it ends (the phase just decided), so
+    the poll that flips THEORY into SOLVE, or moves on to the next unit, still
+    pays the unit it leaves. The tutor backfilled all 25 C2 rows on
+    2026-11-22 (15:09) and `sql-lessons` reads done today, though nobody
+    taught it and `sql` is not current: it pays nothing
+    (`test_theory_finish.py`, `e2e_theory j`).
+  - It is not a minute credit: the id has no `theory:<day>:` prefix, so
+    `due_credits` and `minutes_into_credit` never see it. It does count in
+    `theory_credits` / `credits_today` (by the row's `day`) and settles the
+    day like any theory credit. Like the minute credits it needs C1 readable
+    in the same poll: any unreadable input mints nothing.
 - Callers: the one-minute harvester (whatever LeetCode answered; not before
   the ledger is seeded; never while a lock is up) and the lock's own poll. A
   theory credit settles the day exactly like a solve.

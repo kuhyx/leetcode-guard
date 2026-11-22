@@ -14,6 +14,9 @@ Rules (stage-4 SPEC, 2026-11-22):
 * The k-th credit for u on a day is minted once those minutes reach 12*k.
   ``n`` in the id is the day's running count over every unit. Minted rows are
   never revoked; a deleted ledger re-mints at most today's.
+* A module signed done today also pays +1, once per module ever
+  (``_theory_finish``; ``theory-done:<subject>:<module>``, no day in the id,
+  so it is never a minute credit).
 * Inputs are signed: the tutor's ``ledger.json`` and ``module_state.json`` and
   this guard's ledger. "Cannot check" mints nothing, logs a warning and never
   raises into the lock or the harvester.
@@ -34,8 +37,9 @@ from leetcode_guard._balance import is_trusted
 from leetcode_guard._daycost import day_key
 from leetcode_guard._ledger import CREDIT, LedgerEntry, sign
 from leetcode_guard._ledger_io import append, save_ledger
-from leetcode_guard._phase_file import phase_since, write_phase
+from leetcode_guard._phase_file import phase_since, read_phase, write_phase
 from leetcode_guard._phase_inputs import gather_phase
+from leetcode_guard._theory_finish import SOURCE_THEORY, due_finish
 from leetcode_guard._tutor_signed import signed_rows, teaching_minutes
 
 if TYPE_CHECKING:
@@ -48,7 +52,6 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 MINUTES_PER_CREDIT: Final = 12
-SOURCE_THEORY: Final = "tutor-theory"
 TUTOR_LEDGER: Final = "ledger.json"
 
 
@@ -155,8 +158,9 @@ def theory_credits(ledger: Ledger, *, day: date) -> tuple[int, int]:
         and entry.detail.get("source") == SOURCE_THEORY
         and is_trusted(entry, integrity_ok=ledger.integrity_ok)
     ]
-    prefix = f"theory:{day_key(day)}:"
-    today = sum(1 for entry in trusted if entry.entry_id.startswith(prefix))
+    # By the row's day, not the id: a finish credit (``theory-done:...``) has no
+    # day in its id and still counts as one of today's theory credits.
+    today = sum(1 for entry in trusted if entry.day == day_key(day))
     return today, sum(entry.amount for entry in trusted)
 
 
@@ -188,11 +192,13 @@ def _poll(
     state = gather_phase(ledger, key_file=key_file)
     if state is None:
         return TheoryPoll(state=None)
+    before = read_phase(key_file)  # the phase this poll starts in, before C3 moves
     write_phase(state, day=day, now=now, key_file=key_file)
     minutes = paying_minutes(state, day=day, key_file=key_file)
     if minutes is None:
         return TheoryPoll(state=state)
     fresh = due_credits(ledger, state, minutes, stamp=stamp, key_file=key_file)
+    fresh += due_finish(ledger, state, before, stamp=stamp, key_file=key_file)
     if fresh:
         append(ledger, fresh)
         save_ledger(ledger_path, ledger)

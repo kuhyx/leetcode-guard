@@ -43,7 +43,7 @@ class UnitStatus:
     minutes: int | None
     """Today's paying theory minutes; ``None`` = cannot check."""
     credits_today: int
-    """Trusted ``theory:<today>:<n>`` credits in the guard ledger."""
+    """Trusted theory credits (minute and finish) dated today in the guard ledger."""
     credits_total: int
     """What every trusted theory credit is worth (each prices at its amount)."""
 

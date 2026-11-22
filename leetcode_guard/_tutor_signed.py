@@ -110,17 +110,33 @@ def _state(row: Row) -> tuple[ModuleKey, float, bool] | None:
     return (subject, module), float(at), done
 
 
-def module_states(rows: list[Row]) -> dict[ModuleKey, tuple[float, bool]]:
-    """The latest (``at``, ``done``) per (subject, module); a tie: the later row."""
-    latest: dict[ModuleKey, tuple[float, bool]] = {}
+def _latest(rows: list[Row]) -> dict[ModuleKey, tuple[float, bool, Row]]:
+    """The latest (``at``, ``done``, row) per module; a tie: the later row."""
+    latest: dict[ModuleKey, tuple[float, bool, Row]] = {}
     for row in rows:
         state = _state(row)
         if state is None:
             continue
         key, at, done = state
         if key not in latest or at >= latest[key][0]:
-            latest[key] = (at, done)
+            latest[key] = (at, done, row)
     return latest
+
+
+def module_states(rows: list[Row]) -> dict[ModuleKey, tuple[float, bool]]:
+    """The latest (``at``, ``done``) per (subject, module); a tie: the later row."""
+    return {key: (at, done) for key, (at, done, _) in _latest(rows).items()}
+
+
+def done_days(rows: list[Row]) -> dict[ModuleKey, object]:
+    """Per module whose latest row says done, that row's ``day`` (as signed).
+
+    The same latest-row rule as :func:`module_states`, so a module that flipped
+    back is absent however many times it was done before.
+    """
+    return {
+        key: row.get("day") for key, (_, done, row) in _latest(rows).items() if done
+    }
 
 
 def module_done(rows: list[Row]) -> dict[ModuleKey, bool]:
