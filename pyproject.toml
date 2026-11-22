@@ -107,6 +107,9 @@ unfixable = []
 # never by the adapter's verdicts; its one gatelock read is the adapter's plain ``surface_map`` accessor,
 # which carries no logic to mark. Its printed PASS/FAIL lines are its output.
 "scripts/verify_study_grab.py" = ["T201"]
+# The restart harness: its PASS/FAIL lines are its output (T201), and it starts
+# its own lock processes by design (S603, a fixed argv of this repo's module).
+"scripts/verify_restart_study.py" = ["S603", "T201"]
 # The tooltip stacking check: its PASS/FAIL lines ARE its output (T201).
 "scripts/verify_tooltip_stack.py" = ["T201"]
 # The evening-chain e2e: its PASS/FAIL lines ARE its output (T201); it starts

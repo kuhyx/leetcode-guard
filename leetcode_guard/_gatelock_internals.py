@@ -149,6 +149,11 @@ def set_arming(lock: SuspendableLock, bundle: Any) -> None:
     lock._arming = bundle
 
 
+def start_stepback(lock: SuspendableLock) -> None:
+    """Arm the arbiter step-back watch alone (``grab_input`` minus the grab)."""
+    lock._stepback.start()
+
+
 def surface_map(surfaces: Any) -> dict[str, Any]:
     """The live output-name -> surface map behind ``SurfaceSet``."""
     return surfaces._surfaces

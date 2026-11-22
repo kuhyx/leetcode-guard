@@ -221,6 +221,10 @@ the real display with a real browser — `holds_grab() is False` is strong
 evidence, but a human typing into LeetCode's editor is the proof, and that is
 the one thing no harness covers. Commands are in the section above.
 
+## A restart keeps study mode
+
+Added 2026-11-22; see `DOCS-restart-study.md`.
+
 ## Reproduce
 
 1. Remove/rename the ledger so `_harvest` seeds a fresh one with prior

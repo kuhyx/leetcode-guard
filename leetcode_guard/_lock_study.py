@@ -21,6 +21,7 @@ from leetcode_guard import _glyphs as g
 from leetcode_guard._browser import find_opener, launch
 from leetcode_guard._lock_learn import LearnButton
 from leetcode_guard._study import StudySession
+from leetcode_guard._study_restart import forget_study, remember_study
 from leetcode_guard._study_strip import build_strip
 from leetcode_guard._study_strip_text import StripText
 
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
     from gatelock import OutputRect
 
     from leetcode_guard._gate import GateDecision
+    from leetcode_guard._lock_deps import GuardDeps
     from leetcode_guard._lock_state import RunState
     from leetcode_guard._study_strip import StudyStrip
     from leetcode_guard._view_group import FrameGroup
@@ -54,9 +56,11 @@ class StudyMixin:
     # dozens of pool reads on the Tk thread) until refresh_strip() asks again.
     frames: FrameGroup
     run_state: RunState
+    deps: GuardDeps
     lock: Any
     nudge_verifying: bool
     nudge_down: bool
+    remembers_study: bool = True  # ``_study_restart``; the evening lock opts out
 
     def decision(self) -> GateDecision:
         """Provided by the host class."""
@@ -81,11 +85,7 @@ class StudyMixin:
         self.enter_study(lambda: self._spawn(url))
 
     def open_learn(self, route: str) -> None:
-        """The theory card's learn button, through a ``LearnButton`` per press.
-
-        Built per press rather than held: it keeps nothing between presses, and
-        the lock is at the lint profile's attribute limit.
-        """
+        """The theory card's learn button; a ``LearnButton`` per press (no state)."""
         config = self.run_state.config
         LearnButton(self.enter_study, self._say, self.frames, config).open_learn(route)
 
@@ -113,6 +113,7 @@ class StudyMixin:
             session.resume()
             return
 
+        remember_study(self)
         self._show_strip()
 
     def _spawn(self, url: str) -> bool:
@@ -191,12 +192,16 @@ class StudyMixin:
         self._end_study()
 
     def _end_study(self) -> bool:
-        """Tear the strip down and re-assert the lock.
+        """End study for a real reason (Back to lock, a solve): forget it too."""
+        forget_study(self)
+        return self.relock_study()
+
+    def relock_study(self) -> bool:
+        """Tear the strip down and re-assert the lock; the marker stays.
 
         Returns:
-            Whether study mode was running. The strip is always destroyed
-            *before* the resume, so a stale tick can never fire against a
-            re-grabbed screen.
+            Whether study mode was running. The strip goes *before* the resume,
+            so a stale tick never fires against a re-grabbed screen.
         """
         session = self.session()
         if not session.active:
@@ -229,11 +234,9 @@ class StudyMixin:
     def _say(self, message: str, *, url: str = "") -> None:
         """Mark a failure on every surface's status line; log the sentence.
 
-        The same channel ``on_callback_error`` uses: when something goes wrong
-        while the lock is up, the screen is the only place the user is looking.
-        No words there (textgate): a warning mark in the danger colour, plus
-        the problem's URL when it could not be opened -- something the user
-        can still type into a browser by hand.
+        The channel ``on_callback_error`` uses; no words (textgate): a warning
+        mark in the danger colour, plus the problem's URL when it could not be
+        opened, which the user can still type into a browser by hand.
         """
         _logger.warning("study mode: %s %s", message, url)
         mark = f"{g.BLIND} {url}" if url else g.BLIND

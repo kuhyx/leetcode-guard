@@ -50,6 +50,7 @@ class EveningGuard(LeetcodeGuard):
     """A production lock that ends when the rung is paid or kuhy ends the evening."""
 
     exit_code: int = EXIT_OK
+    remembers_study = False  # the chain relaunches its own rungs
 
     def __init__(self, *, demo_mode: bool = False, deps: GuardDeps) -> None:
         """Arm the lock, then the credit watch (the Tk loop is not running yet)."""

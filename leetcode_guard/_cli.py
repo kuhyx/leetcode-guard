@@ -49,6 +49,7 @@ from leetcode_guard._nudge_server import NUDGE_PORT
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._progress import refresh_progress
 from leetcode_guard._settings import build_client
+from leetcode_guard._study_restart import read_marker, resume_study
 from leetcode_guard._submissions import ProbeStatus, fetch_recent_ac
 from leetcode_guard._unit_view import unit_view
 from leetcode_guard._x_probe import QuietXProbe
@@ -169,8 +170,9 @@ def _run_lock(*, demo_mode: bool, evening: bool) -> int:
         ),
     )
 
-    guard_type = EveningGuard if evening else LeetcodeGuard
-    guard = guard_type(
+    # After the decision and every deferral: only a run that arms looks.
+    resume = gated and read_marker(day)
+    guard = (EveningGuard if evening else LeetcodeGuard)(
         demo_mode=demo_mode,
         deps=GuardDeps(
             ledger_path=ledger_path,
@@ -185,9 +187,12 @@ def _run_lock(*, demo_mode: bool, evening: bool) -> int:
                 nudge_port=NUDGE_PORT,
                 # Read once per poll (``_lock_phase``), never on the paint path.
                 phase=unit_view(ledger_path),
+                resume_study=resume,
             ),
         ),
     )
+    if resume:
+        resume_study(guard)
     guard.run()
     return guard.exit_code if evening else EXIT_OK
 

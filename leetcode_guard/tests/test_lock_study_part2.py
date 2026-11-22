@@ -54,16 +54,18 @@ def test_a_real_solve_while_studying_puts_the_lock_back_first(
 
 @pytest.mark.usefixtures("no_spawn")
 def test_closing_during_study_restores_vt_bookkeeping(tmp_path: Path, hmac_key: Path):
-    """Suspend cleared gatelock's ``_vt_disabled`` to match reality. If close
-    ran without resuming, gatelock would skip its own restore and the machine
-    would exit with VT switching still disabled."""
+    """Suspend cleared gatelock's ``_vt_disabled`` to match reality. Leaving in
+    study mode re-locks nothing (a restart resumes it), so VT switching must
+    stay restored and the flag must still say so: the machine never exits with
+    VT switching disabled."""
     guard = locked_guard(tmp_path, hmac_key, demo_mode=False)
     guard.open_problem(URL)
     assert vt_disabled(guard.lock) is False
 
     guard.on_close()
 
-    assert not guard.session().active
+    assert vt_disabled(guard.lock) is False
+    assert guard.session().active  # nothing re-locked on the way out
 
 
 @pytest.mark.usefixtures("no_spawn")

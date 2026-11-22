@@ -54,6 +54,7 @@ from leetcode_guard._lock_state import EscapeKit, OutageState, RunState
 from leetcode_guard._lock_study import StudyMixin
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
 from leetcode_guard._poller import PollerSettings, SolvePoller
+from leetcode_guard._study_restart import arm_input, wind_down_study
 from leetcode_guard._sync import sync_quietly
 from leetcode_guard._view import build_guard_view
 from leetcode_guard._view_evening import install_demo_close_button
@@ -175,7 +176,7 @@ class LeetcodeGuard(
         self.poller.start()
         self.start_nudges(deps.seams.nudge_port)
         self._start_carrot_watch()
-        self.lock.grab_input()
+        arm_input(self.lock, grab=not deps.seams.resume_study)
 
     # -- gatelock hooks ---------------------------------------------------
 
@@ -221,7 +222,7 @@ class LeetcodeGuard(
         # gatelock's own ``_vt_disabled`` flag to match. Resuming here puts both
         # back, so ``LockWindow.close``'s restore is not skipped and the
         # machine does not exit with VT switching still disabled.
-        self._end_study()
+        wind_down_study(self)  # not _end_study: a restart resumes study
         self._stop_carrot_watch()
         self.stop_nudges()
         self.stop_reveal()

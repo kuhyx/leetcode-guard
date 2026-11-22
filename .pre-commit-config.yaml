@@ -258,6 +258,19 @@ repos:
         always_run: true
         require_serial: true
         stages: [manual]
+      # A restart (SIGTERM, then a new process) keeps study mode: real lock
+      # processes on a real X server, judged by holds_grab(). A mocked root
+      # cannot tell a released grab from a held one, so no unit test can.
+      - id: restart-study
+        name: A restart keeps study mode, grab released (Xvfb)
+        entry: >-
+          xvfb-run -a -s "-screen 0 1600x1200x24"
+          python3 -m scripts.verify_restart_study
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages: [manual]
       # Same reason, for stacking: over a mocked root a tooltip buried under a
       # surface gatelock keeps raising looks shown (live demo, 2026-11-22).
       - id: tooltip-stack

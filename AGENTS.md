@@ -72,7 +72,10 @@ break-glass command on the surface.
 **Study mode genuinely unlocks the machine, on purpose.** `_study.py` releases the X global grab so
 a browser gets keystrokes; no timeout, until a solve lands or "Back to lock"
 (`DOCS-incident-2026-08-05.md`). `verify_study_grab.py` proves the grab drops; a mocked root reports
-success either way.
+success either way. **A restart keeps study mode** (`_study_restart.py`): a marker under
+`$XDG_RUNTIME_DIR`, never ledger state, written on entry and cleared only by Back to lock or a landed
+solve (SIGTERM keeps it), read by `_cli._run_lock` after `decide_today` and every deferral; a valid
+marker arms with no grab at all, anything else means LOCKED. `verify_restart_study.py` proves it.
 
 **The suggestion list repaints live, and scrolls.** A solve mid-lock frees its slot and the next
 *pre-verified* candidate moves up; rows are reconfigured, never rebuilt, and Open buttons re-bound
@@ -175,18 +178,15 @@ goes through `_gatelock_internals.py`.
 `test_study.py::test_every_private_gatelock_read_goes_through_the_adapter` parses `_study.py`,
 `_study_resume.py` and `_lock_study.py` as ASTs and fails if one reaches past it.
 
-The `scripts/` harnesses are **not** covered by that test, and since
-2026-11-12 neither touches a private name (no `SLF001`, no pylint
-`protected-access`; kuhy chose refactor over suppression). `verify_study_grab.py`
-judges the grab by gatelock's public `holds_grab()`, never by an adapter verdict,
-and reads surfaces only through the adapter's logic-free `surface_map`.
-`screenshot_states.py` renders through the public `LeetcodeGuard.build_model`.
-Keep it that way: a new private reach is a new public seam, not a suppression.
+The `scripts/` harnesses are **not** covered by that test, and since 2026-11-12 none touches a
+private name (no `SLF001`, no pylint `protected-access`; kuhy chose refactor over suppression).
+`verify_study_grab.py` judges the grab by gatelock's public `holds_grab()` and reads surfaces only
+through the adapter's logic-free `surface_map`; `screenshot_states.py` renders through the public
+`LeetcodeGuard.build_model`. A new private reach is a new public seam, not a suppression.
 
 **`install.sh` will clobber the editable gatelock if you let it.** `pip install -e .` resolves the
-pinned `gatelock @ git+...` and installs it *non*-editably over the top of `~/src/utils/gatelock`,
-breaking live editing across all four lockers — invisibly. `preserve_editable` puts it back; keep
-it.
+pinned `gatelock @ git+...` and installs it *non*-editably over `~/src/utils/gatelock`, breaking live
+editing across all four lockers — invisibly. `preserve_editable` puts it back; keep it.
 
 **Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py` (the worst: a
 credential command that stored or refused a cookie silently).** Add a `T201` per-file ignore in the

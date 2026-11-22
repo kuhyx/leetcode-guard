@@ -14,6 +14,7 @@
 #              (hash-gated so day-to-day runs stay fast);
 #   precommit  `pre-commit run --all-files` (mirrors the pre-commit workflow);
 #   pytest     `python -m pytest -n auto --dist worksteal` in that clean venv
+#              (CI_MIRROR_WORKERS=6 under a 4 GiB cap: 24 workers get OOM-killed)
 #              (mirrors Tests; extra args are passed through);
 #   render     the real-Tk renders under Xvfb (mirrors the real-tk-render job).
 #              The suite mocks tkinter away, so without this a widget
@@ -95,7 +96,7 @@ run_precommit_all_files() {
 run_pytest_clean_venv() {
     ensure_venv
     log "pytest in the clean venv (mirrors the Tests workflow)"
-    "$VENV_DIR/bin/python" -m pytest -n auto -q --dist worksteal "$@" \
+    "$VENV_DIR/bin/python" -m pytest -n "${CI_MIRROR_WORKERS:-auto}" -q --dist worksteal "$@" \
         || fail "pytest (clean requirements.txt venv)"
 }
 

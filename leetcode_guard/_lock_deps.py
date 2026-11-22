@@ -52,6 +52,12 @@ class GuardSeams:
 
     Off in tests, which would otherwise consult a real arbiter directory."""
 
+    resume_study: bool = False
+    """Arm without taking the grab: a restart that resumes study mode.
+
+    The caller must then enter study (``_study_restart.resume_study``), which
+    arms the grab itself if that fails."""
+
     diagnose: Callable[[], NetworkDiagnosis] | None = None
     """Network classifier. ``None`` means use the real one."""
 
