@@ -43,6 +43,17 @@ cleanup() {
     rm -f "$TRY"
     if [[ -n "$SHOT" ]] && kill -0 "$SHOT" 2>/dev/null; then
         kill "$SHOT"
+        # Return only once the lock is gone: its windows vanish when its X
+        # connection closes, so a caller checking the display right after this
+        # script (2 "stray" windows, 2026-11-22) was racing the exit.
+        for _ in $(seq 1 50); do
+            kill -0 "$SHOT" 2>/dev/null || break
+            sleep 0.1
+        done
+        kill -9 "$SHOT" 2>/dev/null || true
+    fi
+    if [[ -n "$SHOT" ]]; then
+        wait "$SHOT" 2>/dev/null || true
     fi
 }
 trap cleanup EXIT
