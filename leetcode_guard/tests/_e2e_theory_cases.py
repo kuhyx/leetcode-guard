@@ -164,3 +164,18 @@ def case_f(world: World) -> str:
         f"reseed re-mints {again} only (yesterday's 60 min never); "
         f"rm C3 / C2: 0 minted, still needs {need}"
     )
+
+
+def case_h(world: World) -> str:
+    """The turn that finished the unit pays though C2 is stamped 1 s before its end."""
+    seeded(world)
+    world.role("flip", "prefix-sums/0/180")
+    world.role("harvest")
+    world.role("teach", f"{ALGO}/prefix-sums/6/30")
+    world.role("teach", f"{ALGO}/prefix-sums/6/10")
+    world.role("flip", f"prefix-sums/1/{10 + 1 / 60}")
+    _, out = world.role("harvest")
+    minted = world.entry_ids("theory:")
+    check('"solve"' in _phase_text(world), f"not SOLVE: {_phase_text(world)}")
+    check(len(minted) == 1, f"last turn not paid: {minted} {out[-600:]}")
+    return f"THEORY->SOLVE, C2 at 1 s before the last turn ended: minted {minted}"

@@ -6,7 +6,7 @@ scratch ``$HOME`` and key, a private Xvfb, LeetCode faked (``e2e_theory_roles``)
 One case per call; the exit code is the verdict, and one line per case is
 appended to ``~/data/claude-scratch/lc-stage4/e2e/results.txt``::
 
-    python3 -m scripts.e2e_theory a|b|c|d|e|f|g
+    python3 -m scripts.e2e_theory a|b|c|d|e|f|g|h
 
 Cases (SPEC "The flow", "Guard rules for the new credit"): a THEORY arms with
 the theory card; b teaching minutes pay the day, other modules pay nothing;
@@ -14,7 +14,8 @@ c SOLVE mints nothing after the flip and still pays solves; d cannot check;
 e a finished unit moves on; f deleting files cannot mint; g kuhy's real state
 (copied, read-only) decides the same on base and new for 14 days, and
 ``--status`` says 'could not check' until the tutor's C2 file exists. g skips
-loudly (exit 0) when the real files are absent.
+loudly (exit 0) when the real files are absent. h the turn that finished a
+unit pays though C2 is stamped 1 s before it ended (part 10c553bc).
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ from leetcode_guard.tests._e2e_theory_cases import (
     case_d,
     case_e,
     case_f,
+    case_h,
     check,
     needed,
     seeded,
@@ -172,6 +174,7 @@ CASES: dict[str, Callable[[World], str]] = {
     "e": case_e,
     "f": case_f,
     "g": case_g,
+    "h": case_h,
 }
 
 

@@ -179,7 +179,7 @@ def _append(name: str, rows: list[dict[str, object]]) -> None:
 def teach(spec: str) -> None:
     """``<subject>/<module>/<minutes>/<minutes ago>``: one C1 teaching row."""
     subject, module, minutes, ago = spec.split("/")
-    ended = datetime.now().astimezone() - timedelta(minutes=int(ago))
+    ended = datetime.now().astimezone() - timedelta(minutes=float(ago))
     detail: dict[str, object] = {
         "session_id": f"e2e-{module}-{ago}",
         "block": int(minutes),
@@ -200,9 +200,9 @@ def teach(spec: str) -> None:
 
 
 def flip(spec: str) -> None:
-    """``<module>/<0|1>/<minutes ago>``: one C2 row of the algorithm subject."""
+    """``<module>/<0|1>/<minutes ago>``: one C2 row; ``ago`` may be fractional."""
     module, done, ago = spec.split("/")
-    at = (datetime.now().astimezone() - timedelta(minutes=int(ago))).timestamp()
+    at = (datetime.now().astimezone() - timedelta(minutes=float(ago))).timestamp()
     detail = {"subject": ALGO, "module": module, "done": done == "1", "at": at}
     row = {"kind": "module_state", "entry_id": f"state:{ALGO}:{module}:{ago}"}
     day = datetime.fromtimestamp(at).astimezone().date().isoformat()

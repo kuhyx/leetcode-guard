@@ -43,6 +43,15 @@ _logger: Final = logging.getLogger(__name__)
 TUTOR_DIR = Path.home() / ".local" / "share" / "tutor"
 """Read at call time, so the test suite can point it at a scratch dir."""
 
+UNTIL_SLACK_S: Final = 2.0
+"""Seconds a teaching row may end after C2's ``at`` and still count as before it.
+
+The tutor stamps the module-state row after the credit row of the turn that
+finished the module, so that turn normally ends at or before ``at``. The two
+are separate writes; a reorder by a second must not drop the last turn.
+``test_theory_last_turn.py`` pins it.
+"""
+
 Row = dict[str, object]
 ModuleKey = tuple[str, str]
 
@@ -132,7 +141,7 @@ def _ended_on(detail: dict[str, object], day: date, until: float | None) -> bool
     raw = detail.get("ended_at")
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
         return False
-    if until is not None and raw > until:
+    if until is not None and raw > until + UNTIL_SLACK_S:
         return False
     return datetime.fromtimestamp(raw).astimezone().date() == day
 
