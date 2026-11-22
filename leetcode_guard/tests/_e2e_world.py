@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -127,6 +128,14 @@ class World:
         surfaces = [row for row in tree if row.startswith("     0x")]
         return len([row for row in surfaces if not re.search(r"\b1x1\+", row)])
 
+    def x_state(self) -> str:
+        """The private display's health, for a failure line."""
+        exited = self.xvfb.poll() if self.xvfb is not None else "never started"
+        argv = ["xwininfo", "-root", "-display", self.display]
+        answers = subprocess.run(argv, check=False, capture_output=True).returncode == 0
+        server = "alive" if exited is None else f"exited {exited}"
+        return f"X {self.display or '-'}: Xvfb {server}, answers={answers}"
+
     def shoot(self, name: str) -> Path:
         """The largest of a few root captures (an early one is the bare backdrop)."""
         out = self.dir / f"{name}.png"
@@ -153,7 +162,8 @@ class World:
 
         Stops early once the process exits, or once ``until`` names a file in
         the case dir that exists after a window showed. ``shot`` names a screenshot taken then,
-        while the lock is still up. A still-running lock is terminated by PID.
+        while the lock is still up. A still-running lock is terminated by PID;
+        one that never showed a window stalled, and dumps its stack to the log first.
         """
         log = self.dir / "lock.log"
         with log.open("w", encoding="utf-8") as sink:
@@ -174,6 +184,9 @@ class World:
             code = child.poll()
             if code is None and shot:
                 self.shoot(shot)
+            if code is None and not most:
+                child.send_signal(signal.SIGUSR1)
+                time.sleep(0.5)
             if code is None:
                 child.terminate()
                 try:

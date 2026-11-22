@@ -14,9 +14,11 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
+import faulthandler
 import json
 import os
 from pathlib import Path
+import signal
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +33,7 @@ from leetcode_guard import (
     _harvest_run,
     _ledger_io,
     _lock,
+    _morning_session,
     _phone_errors_sync,
     _settings,
     _snapshot_push,
@@ -104,6 +107,7 @@ def _no_push(**_k: object) -> PushResult:
 
 def _fake_world() -> None:
     """Scratch key, fake network; no push, sync, nudge port or RTDB line."""
+    faulthandler.register(signal.SIGUSR1)  # a stalled role says where it is
     here = Path(leetcode_guard.__file__).resolve()
     if not here.is_relative_to(Path(os.environ["E2E_ROOT"]).resolve()):
         sys.exit(f"wrong tree: {here}")
@@ -122,6 +126,8 @@ def _fake_world() -> None:
     _lock.sync_quietly = lambda *_a, **_k: None
     lock: Any = _lock  # a Final constant, shortened for the e2e only
     lock.POLL_INTERVAL_MS_PRODUCTION = FAST_POLL_MS
+    # 05:00-11:00 an arming run waits 180 s for the phone's morning session.
+    _morning_session.MORNING_RETRY_SECONDS = 0.0
     _cli.NUDGE_PORT = None
     _snapshot_push.push_quietly = _no_push
     _phone_errors_sync.sync_quietly = lambda: "e2e: none"

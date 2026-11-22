@@ -34,7 +34,7 @@ def seeded(world: World) -> None:
     code, log, most = world.lock(seconds=20)
     check(
         code == 0 and most == 0 and "seeded a new ledger" in log,
-        f"seed: code={code} windows={most} {log[-300:]}",
+        f"seed: code={code} windows={most}; {world.x_state()}\n{log[-2000:]}",
     )
 
 
