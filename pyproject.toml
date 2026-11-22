@@ -374,6 +374,10 @@ addopts = [
     # makes its autouse gatelock hermeticity apply suite-wide.
     "-p",
     "leetcode_guard.tests._gatelock_fixtures",
+    # -k/-m subsets (the runner's done_check) report coverage but are not
+    # failed by fail_under: a subset can never reach 100%.
+    "-p",
+    "leetcode_guard.tests._subset_coverage",
 ]
 filterwarnings = [
     # "error" is the point: a warning in this package is a bug. The
