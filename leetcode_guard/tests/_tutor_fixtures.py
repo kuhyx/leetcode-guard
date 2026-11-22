@@ -4,9 +4,13 @@ Shapes measured 2026-11-22 from the real ``~/.local/share/tutor/ledger.json``
 (658 rows, e.g. ``20261121-172327-7e3a-m1``: ``kind``, ``entry_id``, ``day``,
 ``created_at`` float, ``detail`` with ``session_id``, ``block``, ``minutes``,
 ``active_seconds``, ``ended_at`` float, ``checks_passed``, ``checks_total``).
-``detail.subject``/``detail.module`` (C1) and ``module_state.json`` (C2) are
-the stage-4 SPEC contracts of the same day; the tutor did not write them yet,
-so their shape is the SPEC's, not a measurement.
+``detail.subject``/``detail.module`` (C1) and ``module_state.json`` (C2) were
+measured the same day from the tutor's own writers in
+``~/data/claude-scratch/lc-stage4/wt-tutor`` (commits 706dcb4: only teaching
+rows carry the C1 keys; 65bf1be: signed C2 flips, ``entry_id``
+``state:<subject>:<module>:<n>``, ``n`` counting that module's rows). The
+untouched rows they wrote are ``tutor_measured_2026-11-22.json``, checked by
+``test_tutor_measured.py``; these builders follow that shape.
 
 Rows are signed with ``earned_time.entry_signature`` -- what the tutor itself
 calls (``tutor/credit.py``) -- so the guard's gatelock-based verification is
@@ -69,12 +73,12 @@ def teaching_row(
 
 
 def state_row(
-    module: str, *, done: bool, at: float, key_file: Path
+    module: str, *, done: bool, at: float, key_file: Path, n: int = 1
 ) -> dict[str, object]:
-    """A signed C2 ``module_state`` row."""
+    """A signed C2 ``module_state`` row, the module's ``n``-th."""
     row = {
         "kind": "module_state",
-        "entry_id": f"state:{ALGO}:{module}:{int(at)}",
+        "entry_id": f"state:{ALGO}:{module}:{n}",
         "day": datetime.fromtimestamp(at, tz=UTC).astimezone().date().isoformat(),
         "detail": {"subject": ALGO, "module": module, "done": done, "at": at},
     }

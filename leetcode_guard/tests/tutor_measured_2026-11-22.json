@@ -1,0 +1,72 @@
+{
+  "key": "tutor-fixture-key-2026-11-22-32b",
+  "ledger": {
+    "entries": [
+      {
+        "created_at": 1795339801.5,
+        "day": "2026-11-22",
+        "detail": {
+          "active_seconds": 730.0,
+          "block": 12,
+          "checks_passed": 2,
+          "checks_total": 3,
+          "ended_at": 1795339800.0,
+          "minutes": 12,
+          "module": "prefix-sums",
+          "session_id": "20261122-101800-7e3a",
+          "subject": "leetcode-easy-algorithms-in-typescript"
+        },
+        "entry_id": "20261122-101800-7e3a-m12",
+        "hmac": "cdb2d5c5ca48276bb82c0b15166a938a5eb503010cfb6e755283320dc95aa570",
+        "kind": "credit"
+      },
+      {
+        "created_at": 1795341601.5,
+        "day": "2026-11-22",
+        "detail": {
+          "active_seconds": 310.0,
+          "block": 5,
+          "checks_passed": 0,
+          "checks_total": 0,
+          "ended_at": 1795341600.0,
+          "minutes": 5,
+          "session_id": "20261122-105500-11aa"
+        },
+        "entry_id": "20261122-105500-11aa-m5",
+        "hmac": "18fcbafa706bb690acc9ed79bd1f413ef2112e161fed18f570e3cfb4ae405860",
+        "kind": "credit"
+      }
+    ]
+  },
+  "measured": "2026-11-22",
+  "module_state": {
+    "entries": [
+      {
+        "day": "2026-11-22",
+        "detail": {
+          "at": 1795334400.0,
+          "done": false,
+          "module": "prefix-sums",
+          "subject": "leetcode-easy-algorithms-in-typescript"
+        },
+        "entry_id": "state:leetcode-easy-algorithms-in-typescript:prefix-sums:1",
+        "hmac": "c6b45b30f766a2208a202d71dc129a21b67fa90ee8b0fa67b01a0da84baeac38",
+        "kind": "module_state"
+      },
+      {
+        "day": "2026-11-22",
+        "detail": {
+          "at": 1795345200.0,
+          "done": true,
+          "module": "prefix-sums",
+          "subject": "leetcode-easy-algorithms-in-typescript"
+        },
+        "entry_id": "state:leetcode-easy-algorithms-in-typescript:prefix-sums:2",
+        "hmac": "3f335c58132a27d6d23e89c604cb0be5f6d4840a89d26d75707ed5ecd271dd47",
+        "kind": "module_state"
+      }
+    ],
+    "version": 1
+  },
+  "where": "~/data/claude-scratch/lc-stage4/wt-tutor @ 77485f8"
+}
