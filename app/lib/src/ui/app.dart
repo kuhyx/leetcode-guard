@@ -175,6 +175,7 @@ class _ShellState extends State<_Shell> {
     );
     return Scaffold(
       appBar: AppBar(
+        leading: const Padding(padding: EdgeInsets.all(8), child: KLogoSmall()),
         title: Text(
           asOf(_c.freshAt),
           style: Theme.of(context).textTheme.labelMedium
