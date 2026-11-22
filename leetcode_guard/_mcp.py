@@ -35,7 +35,8 @@ from mcp.types import ToolAnnotations
 
 from leetcode_guard import _attempt_report, _coach_reviews, _status_unit
 from leetcode_guard._constants import SUGGESTION_COUNT
-from leetcode_guard._status import gather_status, snapshot_dict
+from leetcode_guard._status import gather_status
+from leetcode_guard._status_format import snapshot_dict
 
 logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 

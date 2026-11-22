@@ -22,7 +22,8 @@ from leetcode_guard._focus import project_name as real_project_name
 from leetcode_guard._focus import stands_down as real_stands_down
 from leetcode_guard._gate import DayContext, GateState
 from leetcode_guard._ledger_io import Ledger
-from leetcode_guard._status import format_status, gather_status
+from leetcode_guard._status import gather_status
+from leetcode_guard._status_format import format_status
 from leetcode_guard._status_full import explain_not_triggered
 from leetcode_guard._status_projection import _is_off_day
 from leetcode_guard.tests._gate_fixtures import decide_with, view_of

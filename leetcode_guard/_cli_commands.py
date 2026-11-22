@@ -32,7 +32,8 @@ from leetcode_guard._phone_errors import status_lines as phone_error_lines
 from leetcode_guard._pool_resolve import SolvedKnowledge, resolve_pool
 from leetcode_guard._settings import build_client
 from leetcode_guard._statements import fetch_statements, write_statements
-from leetcode_guard._status import format_status, gather_status
+from leetcode_guard._status import gather_status
+from leetcode_guard._status_format import format_status
 from leetcode_guard._status_projection import (
     ProjectionInputs,
     build_report,

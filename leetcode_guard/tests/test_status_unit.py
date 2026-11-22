@@ -15,7 +15,8 @@ from leetcode_guard import _cli_commands, _phase_file, _status_unit
 from leetcode_guard._ledger_io import append, load_ledger, save_ledger
 from leetcode_guard._phase import PhaseState
 from leetcode_guard._phase_file import write_phase
-from leetcode_guard._status import format_status, gather_status
+from leetcode_guard._status import gather_status
+from leetcode_guard._status_format import format_status
 from leetcode_guard._theory_credit import theory_entry
 from leetcode_guard.tests._theory_scenario import states, taught, world
 from leetcode_guard.tests._tutor_fixtures import ALGO

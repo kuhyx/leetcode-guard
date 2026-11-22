@@ -10,7 +10,8 @@ from leetcode_guard import _constants
 from leetcode_guard._difficulty import difficulty_row
 from leetcode_guard._ledger_entries import credit_entry
 from leetcode_guard._ledger_io import Ledger, append, save_ledger
-from leetcode_guard._status import format_status, gather_status, weighting_line
+from leetcode_guard._status import gather_status
+from leetcode_guard._status_format import format_status, weighting_line
 from leetcode_guard.tests._ledger_fixtures import MONDAY, NOW, submission
 
 if TYPE_CHECKING:

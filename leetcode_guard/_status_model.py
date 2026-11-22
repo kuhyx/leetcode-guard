@@ -3,7 +3,7 @@
 Split out of ``_status`` so the snapshot is a handful of small records rather
 than one 28-field bag: the gate's verdict, the ledger's balance and the
 suggestion pool each come from a different source and are read together. The
-MCP server still sees the original flat keys -- ``_status.snapshot_dict``
+MCP server still sees the original flat keys -- ``_status_format.snapshot_dict``
 spreads these groups back out, key for key.
 """
 

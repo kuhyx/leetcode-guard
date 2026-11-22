@@ -9,10 +9,7 @@ import pytest
 
 from leetcode_guard import _status
 from leetcode_guard._ledger_io import Ledger, save_ledger
-from leetcode_guard._status import (
-    format_status,
-    snapshot_dict,
-)
+from leetcode_guard._status_format import format_status, snapshot_dict
 from leetcode_guard.tests._ledger_fixtures import MONDAY, add_charge
 from leetcode_guard.tests._status_fixtures import MONDAY_NOON, status_at
 
