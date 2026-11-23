@@ -29,10 +29,10 @@ if TYPE_CHECKING:
 @pytest.fixture(name="kiritimati")
 def fixture_kiritimati(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Local time UTC+14, restored afterwards (``tzset`` is process-wide)."""
-    monkeypatch.setenv("TZ", "Pacific/Kiritimati")
-    time.tzset()
-    yield
-    monkeypatch.undo()
+    with monkeypatch.context() as local:  # its own undo: the path isolation stays
+        local.setenv("TZ", "Pacific/Kiritimati")
+        time.tzset()
+        yield
     time.tzset()
 
 

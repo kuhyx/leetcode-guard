@@ -187,6 +187,8 @@ unfixable = []
 # --flagged prints the flagged solves and the summary; same auto-fix trap,
 # same commit as the print.
 "leetcode_guard/_flagged_cli.py" = ["T201"]
+# --postmortem-dry-run relays the tutor's report lines: they are its output.
+"leetcode_guard/_postmortem_cli.py" = ["T201"]
 # The out-of-lock harvest's one print is its whole journal line; same reason.
 # PLC0415 + BLE001: the snapshot push is imported lazily and fenced with a
 # broad except (logged at warning, with the traceback) on purpose -- display

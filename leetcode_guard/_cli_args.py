@@ -21,6 +21,7 @@ from leetcode_guard._cli_commands import (
 )
 from leetcode_guard._cli_difficulty import cmd_backfill_difficulty
 from leetcode_guard._flagged_cli import cmd_flagged
+from leetcode_guard._postmortem_cli import cmd_postmortem_dry_run
 from leetcode_guard._snapshot_push import cmd_push_snapshot
 
 if TYPE_CHECKING:
@@ -156,6 +157,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --flagged: print the whole report as one JSON document.",
     )
     parser.add_argument(
+        "--postmortem-dry-run",
+        metavar="UNIT",
+        help=(
+            "Run the tutor's post-mortem of UNIT on its solves so far, writing "
+            "no card: prints the report, or 'pending' (exit 75): call again."
+        ),
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Log at DEBUG.",
@@ -185,5 +194,9 @@ def chosen_command(args: argparse.Namespace) -> Callable[[], int] | None:
         ),
         (args.push_snapshot, cmd_push_snapshot),
         (args.flagged, lambda: cmd_flagged(as_json=args.json)),
+        (
+            bool(args.postmortem_dry_run),
+            lambda: cmd_postmortem_dry_run(args.postmortem_dry_run),
+        ),
     )
     return next((run for chosen, run in commands if chosen), None)

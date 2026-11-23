@@ -52,6 +52,7 @@ from leetcode_guard._theory_pool import (
     minted_today,
     paying_pool,
 )
+from leetcode_guard._unit_finish import record_finishes
 
 if TYPE_CHECKING:
     from datetime import date, datetime
@@ -164,6 +165,17 @@ def theory_credits(ledger: Ledger, *, day: date) -> tuple[int, int]:
     return today, sum(entry.amount for entry in trusted)
 
 
+def _note_finishes(
+    ledger: Ledger, state: PhaseState, now: datetime, key_file: Path | None
+) -> None:
+    """C6 for the tutor's post-mortem; its own fence, so it never costs a credit."""
+    try:
+        record_finishes(ledger, state, now=now, key_file=key_file)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        name = type(exc).__name__
+        _logger.warning("unit finish not recorded: %s", name, exc_info=True)
+
+
 def _poll(
     ledger: Ledger,
     ledger_path: Path,
@@ -177,6 +189,7 @@ def _poll(
         return TheoryPoll(state=None)
     before = read_phase(key_file)  # the phase this poll starts in, before C3 moves
     write_phase(state, day=day, now=now, key_file=key_file)
+    _note_finishes(ledger, state, now, key_file)
     pool = paying_pool(state, ledger, day=day, key_file=key_file)
     if pool is None:
         return TheoryPoll(state=state)

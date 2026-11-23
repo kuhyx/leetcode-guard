@@ -25,6 +25,7 @@ from leetcode_guard import (
     _phase_file,
     _theory,
     _tutor_signed,
+    _unit_finish,
 )
 
 if TYPE_CHECKING:
@@ -117,3 +118,6 @@ def _isolate_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         _coach_reviews, "COACH_SESSIONS_DIR", tmp_path / "coach-reviews" / "sessions"
     )
+    # C6 and the dry-run request: a test must never start a real post-mortem.
+    monkeypatch.setattr(_unit_finish, "FINISH_FILE", data / "unit_finish.json")
+    monkeypatch.setattr(_unit_finish, "PREVIEW_FILE", data / "postmortem_dry_run.json")
