@@ -32,6 +32,7 @@ from leetcode_guard._attempt_server import AttemptServer
 from leetcode_guard._daycost import local_today
 from leetcode_guard._gate_today import gate_off
 from leetcode_guard._logging_setup import configure_logging
+from leetcode_guard._web_postmortems import build_postmortems_payload
 from leetcode_guard._web_theory import build_theory_payload
 from leetcode_guard.solved_today import solved_today
 
@@ -47,6 +48,7 @@ DEFAULT_PORT = 8771
 _API_STATUS = "/api/status"
 _API_HEALTH = "/api/health"
 _API_THEORY = "/api/theory"
+_API_POSTMORTEMS = "/api/postmortems"
 
 
 def build_status_payload() -> dict[str, Any]:
@@ -88,7 +90,7 @@ def build_health_payload(*, attempts_up: bool = False) -> dict[str, Any]:
 
 
 class _Handler(BaseHTTPRequestHandler):
-    """Serves the three read-only JSON routes."""
+    """Serves the four read-only JSON routes."""
 
     server_version = "leetcode-guard-web"
     attempts: ClassVar[AttemptServer | None] = None
@@ -103,12 +105,14 @@ class _Handler(BaseHTTPRequestHandler):
         logger.debug("%s - %s", self.address_string(), fmt % args)
 
     def do_GET(self) -> None:
-        """Dispatch a GET to one of the three APIs, or 404."""
+        """Dispatch a GET to one of the four APIs, or 404."""
         split = urlsplit(self.path)
         if split.path == _API_STATUS:
             self._serve_json("status", build_status_payload)
         elif split.path == _API_THEORY:
             self._serve_json("theory", build_theory_payload)
+        elif split.path == _API_POSTMORTEMS:
+            self._serve_json("postmortems", build_postmortems_payload)
         elif split.path == _API_HEALTH:
             attempts = type(self).attempts
             up = attempts is not None and attempts.up
@@ -116,8 +120,8 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             self._send(
                 HTTPStatus.NOT_FOUND,
-                b"not found - this server serves /api/status, /api/health "
-                b"and /api/theory",
+                b"not found - this server serves /api/status, /api/health, "
+                b"/api/theory and /api/postmortems",
                 "text/plain",
             )
 

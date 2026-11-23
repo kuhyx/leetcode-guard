@@ -10,3 +10,6 @@ extend = "../pyproject.toml"
 "_gate_progress.py" = ["BLE001"]
 # BLE001: the lock calls view_now on every repaint; a bug must cost the unit card, never the lock.
 "_unit_view.py" = ["BLE001"]
+# BLE001: the post-mortem view and its route are display-only; a bug must cost the tab (null), never the snapshot push or the server.
+"_postmortem_view.py" = ["BLE001"]
+"_web_postmortems.py" = ["BLE001"]

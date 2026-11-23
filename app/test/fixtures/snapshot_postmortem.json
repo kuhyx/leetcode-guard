@@ -1,0 +1,544 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-23T14:05:00+02:00",
+  "status": {
+    "day": "2026-10-23",
+    "weekday": "Thursday",
+    "state": "settled",
+    "locked": false,
+    "reason": "today is already paid for",
+    "explanation": [
+      "Today was already settled by an earlier run."
+    ],
+    "cost": 2,
+    "surcharge": 0,
+    "credits": 41,
+    "charged": 39,
+    "available": 2,
+    "needed": 0,
+    "charged_today": true,
+    "earned_all_time": 43,
+    "spent_all_time": 39,
+    "debt": {
+      "owed": 3,
+      "repaid": 1,
+      "outstanding": 2,
+      "missed_days": 1,
+      "summary": "2 credits outstanding (1 missed days owed 3, 1 repaid)"
+    },
+    "pricing_note": "Tue/Wed/Thu cost 2, Mon/Fri cost 3, Sat/Sun cost 4.",
+    "solves": {
+      "today": 1,
+      "last_7_days": 9,
+      "total_credited": 41,
+      "recent": [
+        {
+          "day": "2026-10-22",
+          "title_slug": "two-sum",
+          "lang": "javascript"
+        },
+        {
+          "day": "2026-10-21",
+          "title_slug": "valid-anagram",
+          "lang": null
+        }
+      ]
+    },
+    "days": {
+      "charged": [
+        "2026-10-22",
+        "2026-10-21"
+      ],
+      "start_date": "2026-08-04",
+      "in_force": true
+    },
+    "budgets": {
+      "escape": {
+        "label": "Escape hatch",
+        "used_7": 1,
+        "limit_7": 3,
+        "summary": "Escape hatch: 1 of 3 used this week",
+        "exhausted": false,
+        "next_wait_seconds": 600
+      },
+      "incidents": {
+        "label": "Network incidents",
+        "summary": "Network incidents: 3 of 3 used",
+        "exhausted": true,
+        "next_wait_seconds": 3600
+      }
+    },
+    "integrity": {
+      "ok": true,
+      "tampered": 0,
+      "discounted": 1,
+      "unparsable": 0,
+      "clock_trusted": true,
+      "total_entries": 206,
+      "bootstrapped": true,
+      "ledger_path": "/home/u/.local/share/leetcode_guard/ledger.json"
+    },
+    "environment": {
+      "clock_trusted": true,
+      "auth_present": true,
+      "auth_note": "cookie valid until 2026-11-02",
+      "pool_source": "live pool (4003 problems)",
+      "pool_notes": [
+        "statement cache warm"
+      ],
+      "cookies_configured": true,
+      "sync_configured": false,
+      "timer": {
+        "enabled": true,
+        "next_fire": "Sat 2026-10-24 09:00:00 CEST",
+        "detail": "enabled"
+      },
+      "pool_cache": {
+        "name": "Problem pool",
+        "exists": true,
+        "entries": 4087,
+        "age_days": 2.17,
+        "summary": "Problem pool: 4087 entries, 2.2 days old"
+      },
+      "statement_cache": {
+        "summary": "Offline statements: 50 entries"
+      }
+    },
+    "suggestions": [
+      {
+        "title": "Missing Number",
+        "difficulty": "Easy",
+        "ac_rate": 70.4,
+        "url": "https://leetcode.com/problems/missing-number/"
+      },
+      {
+        "title": "Single Number III",
+        "difficulty": "Medium",
+        "ac_rate": 52,
+        "url": "https://leetcode.com/problems/single-number-iii/"
+      }
+    ]
+  },
+  "progress": {
+    "solved": {
+      "Easy": 120,
+      "Medium": 150,
+      "Hard": 42
+    },
+    "total": {
+      "Easy": 900,
+      "Medium": 2300,
+      "Hard": 855
+    },
+    "solved_all": 312,
+    "total_all": 4055,
+    "fetched_at": "2026-10-23T14:01:37+02:00"
+  },
+  "projection_price": 2,
+  "projections": {
+    "2026-10-24": {
+      "target": "2026-10-24",
+      "first_day": "2026-10-24",
+      "gated_days": 1,
+      "free_days": 0,
+      "base_cost": 2,
+      "debt": 0,
+      "available": 2,
+      "required": 2,
+      "rules_demand": 2,
+      "debt_left_by_rules": 0,
+      "sick_days": 0,
+      "projected": {
+        "Easy": 121,
+        "Medium": 150,
+        "Hard": 42
+      }
+    },
+    "2026-10-31": {
+      "target": "2026-10-31",
+      "first_day": "2026-10-24",
+      "gated_days": 8,
+      "free_days": 0,
+      "base_cost": 21,
+      "debt": 2,
+      "available": 2,
+      "required": 21,
+      "rules_demand": 23,
+      "debt_left_by_rules": 0,
+      "sick_days": 0,
+      "projected": {
+        "Easy": 141,
+        "Medium": 150,
+        "Hard": 42
+      }
+    },
+    "2026-11-30": {
+      "target": "2026-11-30",
+      "first_day": "2026-10-24",
+      "gated_days": 38,
+      "free_days": 1,
+      "base_cost": 101,
+      "debt": 2,
+      "available": 2,
+      "required": 101,
+      "rules_demand": 103,
+      "debt_left_by_rules": 0,
+      "sick_days": 0,
+      "projected": {
+        "Easy": 221,
+        "Medium": 150,
+        "Hard": 42
+      }
+    }
+  },
+  "profile": {
+    "difficulty": {
+      "easy": [
+        120,
+        900
+      ],
+      "medium": [
+        150,
+        1900
+      ],
+      "hard": [
+        42,
+        850
+      ]
+    },
+    "streak_current": 5,
+    "streak_longest": 30,
+    "calendar": {
+      "2026-10-22": 2,
+      "2026-10-21": 1,
+      "1760918400": 4
+    },
+    "acceptance_rate": 61.2,
+    "fetched_at": "2026-10-23T14:01:37+02:00"
+  },
+  "coach": {
+    "problems": [
+      {
+        "slug": "missing-number",
+        "cluster": "bit-cancellation",
+        "req_before_code": true,
+        "max_rung": "H1",
+        "revealed": false,
+        "req_check": "pass",
+        "day": "2026-10-23"
+      },
+      {
+        "slug": "single-number-iii",
+        "cluster": "bit-cancellation",
+        "req_before_code": false,
+        "max_rung": "H3",
+        "revealed": true,
+        "req_check": "incomplete",
+        "day": "2026-10-22"
+      }
+    ],
+    "retests_due": [
+      {
+        "slug": "missing-number",
+        "due": "2026-10-26",
+        "stage": 1,
+        "cluster": "bit-cancellation",
+        "command": "leetcode --retest missing-number"
+      }
+    ],
+    "clusters": {
+      "two-pointers": {
+        "total": 2,
+        "started": 0,
+        "solved": 0,
+        "order": 1,
+        "next": "3sum",
+        "problems": [
+          {
+            "slug": "3sum",
+            "number": 15,
+            "title": "3Sum",
+            "url": "https://leetcode.com/problems/3sum/"
+          },
+          {
+            "slug": "container-with-most-water",
+            "number": 11,
+            "title": null,
+            "url": "https://example.com/not-a-problem"
+          }
+        ]
+      },
+      "bit-cancellation": {
+        "total": 4,
+        "started": 2,
+        "solved": 1,
+        "order": 0,
+        "next": "majority-element",
+        "problems": [
+          {
+            "slug": "missing-number",
+            "number": 268,
+            "title": "Missing Number",
+            "url": "https://leetcode.com/problems/missing-number/"
+          },
+          {
+            "slug": "single-number-iii",
+            "number": 260,
+            "title": "Single Number III",
+            "url": "https://leetcode.com/problems/single-number-iii/"
+          },
+          {
+            "slug": "majority-element",
+            "number": 169,
+            "title": "Majority Element",
+            "url": "https://leetcode.com/problems/majority-element/"
+          }
+        ]
+      },
+      "intervals": {
+        "total": 4,
+        "started": 0,
+        "solved": 0
+      },
+      "sliding-window": null
+    },
+    "how_to": {
+      "commands": [
+        {
+          "command": "leetcode due",
+          "meaning": "List the cold re-tests that are due."
+        }
+      ],
+      "steps": [
+        {
+          "name": "Constraint",
+          "text": "Turn it into a rule."
+        }
+      ],
+      "next_note": "It may serve a later one.",
+      "first_command": "leetcode --cluster bit-cancellation"
+    }
+  },
+  "postmortems": [
+    {
+      "subject": "leetcode-easy-algorithms-in-typescript",
+      "unit": "two-pointers",
+      "rev": 1,
+      "at": 1794100000,
+      "post": [
+        2,
+        3
+      ],
+      "pre": [
+        0,
+        2
+      ],
+      "problems": [
+        {
+          "slug": "valid-palindrome",
+          "tries": 0,
+          "minutes": 6,
+          "one_shot": true,
+          "phase": "post",
+          "finding": "One-shot: both pointers moved inward and skipped non-alphanumerics from the card."
+        },
+        {
+          "slug": "move-zeroes",
+          "tries": 0,
+          "minutes": 9,
+          "one_shot": true,
+          "phase": "post",
+          "finding": "One-shot: the write pointer idea from the read/write card."
+        },
+        {
+          "slug": "squares-of-a-sorted-array",
+          "tries": 2,
+          "minutes": 14,
+          "one_shot": false,
+          "phase": "post",
+          "finding": "Filled the result from the front; the largest square sits at an end."
+        },
+        {
+          "slug": "merge-sorted-array",
+          "tries": 3,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline: merged from the front and overwrote nums1."
+        }
+      ],
+      "cards": [
+        {
+          "kind": "kept",
+          "front": "One array, two speeds: where does the write pointer stay while the read pointer skips?",
+          "finding": "Both one-shots used it without a hint.",
+          "used_by": [
+            "valid-palindrome",
+            "move-zeroes"
+          ]
+        }
+      ]
+    },
+    {
+      "subject": "leetcode-easy-algorithms-in-typescript",
+      "unit": "prefix-sums",
+      "rev": 2,
+      "at": 1795433000,
+      "post": [
+        0,
+        3
+      ],
+      "pre": [
+        1,
+        7
+      ],
+      "problems": [
+        {
+          "slug": "left-and-right-sum-differences",
+          "tries": 11,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline, not a one-shot: the idea was right, but 11 failed submissions (1 compile error, 2 runtime errors, 7 wrong answers, 1 print-only failure) show he debugged on the judge. Only the last failing code is in the data, so the earlier causes are not visible."
+        },
+        {
+          "slug": "running-sum-of-1d-array",
+          "tries": 1,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline. He knew the recurrence before the cards and lost the one-shot to a TypeScript declaration, which no card covers."
+        },
+        {
+          "slug": "find-the-highest-altitude",
+          "tries": 1,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline. One wrong answer from forgetting the empty prefix: n gains make n + 1 altitudes. The two leading-zero cards, taught later, cover this."
+        },
+        {
+          "slug": "sum-of-variable-length-subarrays",
+          "tries": 0,
+          "minutes": null,
+          "one_shot": true,
+          "phase": "pre",
+          "finding": "The unit's only one-shot, before the theory and without any card idea. The included end was right on the first try, and the range-sum formula was not needed to get Accepted."
+        },
+        {
+          "slug": "count-partitions-with-even-sum-difference",
+          "tries": 5,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline. Three compile errors, then two wrong answers; the visible one is a split-point bound (n elements have n - 1 cuts). No card covers that bound or the total-minus-left shortcut."
+        },
+        {
+          "slug": "smallest-stable-index-i",
+          "tries": 2,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline. One compile error and one wrong answer from treating slice's end as included: the unit's own trap, outside the pre[] notation the cards teach it in."
+        },
+        {
+          "slug": "sum-of-all-odd-length-subarrays",
+          "tries": 3,
+          "minutes": null,
+          "one_shot": false,
+          "phase": "pre",
+          "finding": "Baseline. He had the contribution idea before the cards but tuned the count on the judge (3 wrong answers). The deck's contribution card covers n - i only, not subarrays through an index."
+        },
+        {
+          "slug": "find-the-pivot-integer",
+          "tries": 1,
+          "minutes": 11,
+          "one_shot": false,
+          "phase": "post",
+          "finding": "Post-theory miss, 11 minutes. Gap in the preparation: no card says the other side is the total minus the running sum, so he invented a two-ended balance and needed a submission to debug its step rule."
+        },
+        {
+          "slug": "ant-on-the-boundary",
+          "tries": 3,
+          "minutes": 8,
+          "one_shot": false,
+          "phase": "post",
+          "finding": "Post-theory miss, 8 minutes: one compile error and two wrong answers on a short fold. Every example on the recurrence card adds positive numbers, so the card never showed him that a negative value is simply added."
+        },
+        {
+          "slug": "points-that-intersect-with-cars",
+          "tries": 3,
+          "minutes": 18,
+          "one_shot": false,
+          "phase": "post",
+          "finding": "Post-theory miss, 18 minutes, the longest. The included-end rule he had recited for pre[r + 1] did not carry over to a loop test, and no card links ranges to a prefix sum, so the unit's method was never available to him."
+        }
+      ],
+      "cards": [
+        {
+          "kind": "new",
+          "front": "One pass keeps the running sum left of a[0] through a[i]. How do you get the sum after index i without a second loop?",
+          "finding": "No card says the other side of a split is the total minus the running sum. After the theory he invented a two-ended balance for find-the-pivot-integer and needed a submission to debug its step rule; before it he built a second array or re-summed slices.",
+          "used_by": []
+        },
+        {
+          "kind": "new",
+          "front": "An n-element array is cut into a non-empty left part and a non-empty right part. Which indexes i can end the left part?",
+          "finding": "count-partitions-with-even-sum-difference looped to i < n and counted a split with an empty right side. The deck's off-by-one cards cover the end of a range, not the number of cut points.",
+          "used_by": []
+        },
+        {
+          "kind": "new",
+          "front": "Many ranges [s, e], ends included, each cover points s through e. How does one prefix-sum pass count the cover of every point?",
+          "finding": "The unit files points-that-intersect-with-cars under prefix sums, but no card links ranges to a prefix sum; the inverse card stops at recovering x. The solve took 18 active minutes and ended as a Set of points. This card supplies the planned method; the edited range-end card is what fixes his actual off-by-one.",
+          "used_by": []
+        },
+        {
+          "kind": "new",
+          "front": "A problem sums every odd-length subarray. In how many odd-length subarrays of an n-element array does a[i] appear?",
+          "finding": "He had the contribution idea before the theory but reached the count by trial on the judge: 3 wrong answers, the last one missing the division by 2. The only contribution card counts prefix sums (n - i), not subarrays through an index.",
+          "used_by": []
+        },
+        {
+          "kind": "new",
+          "front": "A loop will push numbers into a result array that starts with one value v. How do you declare the array in TypeScript?",
+          "finding": "running-sum-of-1d-array had the right algorithm and lost its one-shot to exactly this declaration. Six of ten problems, two of the three post-theory ones, had a compile error (8 in total) and no card covers TypeScript declarations. The other seven compile errors' code is not in the data, so only this problem is listed.",
+          "used_by": []
+        },
+        {
+          "kind": "edited",
+          "front": "A single pass builds running totals of values that may be negative. How do you calculate prefix sum y[i] from the previous prefix sum?",
+          "finding": "The single-pass idea held: both post-theory sum problems keep one running total. Its positive-only examples left the sign open, and ant-on-the-boundary subtracted a negative step, so the rewrite adds that case.",
+          "used_by": []
+        },
+        {
+          "kind": "edited",
+          "front": "A range runs from l through r, r included. Which end do you write in pre[...], slice(l, ...) and a loop test?",
+          "finding": "He passed its review, then wrote j < end for an included end in points-that-intersect-with-cars: the rule was tied to pre[] and did not transfer. The rewrite states it for the three forms his code takes: pre, slice and a loop test.",
+          "used_by": []
+        },
+        {
+          "kind": "edited",
+          "front": "A problem needs the largest value of a[0..i] for every i. How do you get them all in one pass?",
+          "finding": "Its example is a running product, which no problem of the unit needs; smallest-stable-index-i needs a running maximum and a suffix minimum, which he computed per index with Math.max(...slice) before the theory. Not tested post-theory; the rewrite aims it at that case.",
+          "used_by": []
+        },
+        {
+          "kind": "suspended",
+          "front": "A problem asks how many values are smaller than each value. What does the prefix sum of a histogram of key frequencies give?",
+          "finding": "Recited without a miss and used by no solve; the range card covers it.",
+          "used_by": []
+        },
+        {
+          "kind": "kept",
+          "front": "A problem asks for the running total at every position. What is the prefix sum of a sequence of numbers?",
+          "finding": "He wrote a correct running-total array before the theory (running-sum-of-1d-array), so it confirmed more than it taught. After it, both sum problems were written as running totals; their failures were elsewhere.",
+          "used_by": [
+            "running-sum-of-1d-array",
+            "ant-on-the-boundary"
+          ]
+        }
+      ]
+    }
+  ]
+}

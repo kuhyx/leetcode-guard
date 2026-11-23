@@ -53,6 +53,7 @@ inputs are signed: the guard ledger, the tutor's `ledger.json`/`module_state.jso
 import `attempts.json` readers (`_attempt_*`, `_attempts`, `--flagged`, `get_flagged`):
 `test_display_only_imports.py` bans it, transitively. `_attempt_line` is the only one `_harvest_run`
 imports; flags are derived at read time, only `theory_at_solve` is stored. `DOCS-attempts.md`.
+**So is the post-mortem view:** nothing that decides may import `_postmortem_view` (`DOCS-postmortem.md`).
 
 **Review first is a view rule, never a decision.** A due tutor card of the SOLVE unit shows one
 `↻ n` row in place of the SOLVE rows, from signed `review_due.json` (`DOCS-review-first.md`); cannot

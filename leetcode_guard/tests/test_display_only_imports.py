@@ -40,6 +40,10 @@ DISPLAY_ONLY = {
     # The coach log's finished reviews: they clear a flag, so a decider that read
     # them would let an edited JSONL line steer a lock or a credit.
     "_coach_reviews",
+    # The tutor's post-mortem reports (and the rows built from them), shown in
+    # the status app's Post-mortem tab. Read unverified: anyone can edit them.
+    "_postmortem_view",
+    "_postmortem_rows",
 }
 DISPLAY_PRODUCERS = {
     # The lock's unit view (SPEC C5): it reads the tutor's cards.json and

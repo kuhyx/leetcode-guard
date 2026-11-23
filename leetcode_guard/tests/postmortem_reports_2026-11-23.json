@@ -1,0 +1,932 @@
+{
+ "prefix-sums": {
+  "kind": "postmortem_report",
+  "subject": "leetcode-easy-algorithms-in-typescript",
+  "unit": "prefix-sums",
+  "revisions": [
+   {
+    "rev": 1,
+    "at": 1795431000,
+    "one_shot": {
+     "post": [
+      0,
+      2
+     ],
+     "pre": [
+      1,
+      7
+     ]
+    },
+    "earlier": [],
+    "problems": [
+     {
+      "slug": "left-and-right-sum-differences",
+      "tries": 11,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1789584802,
+      "used": [
+       "prefix-sum-recurrence",
+       "scan-keeps-every-prefix",
+       "exclusive-scan-skips-current",
+       "exclusive-scan-leading-identity"
+      ],
+      "skipped": [],
+      "instead": "Built both exclusive scans by hand before any card: leftSum with push and a leading 0, rightSum with unshift, both filled by a loop bounded at n - 1. The last failing submission is the accepted code plus two console.log lines (Output Limit Exceeded).",
+      "finding": "Baseline, not a one-shot: the idea was right, but 11 failed submissions (1 compile error, 2 runtime errors, 7 wrong answers, 1 print-only failure) show he debugged on the judge. Only the last failing code is in the data, so the earlier causes are not visible."
+     },
+     {
+      "slug": "running-sum-of-1d-array",
+      "tries": 1,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1789988121,
+      "used": [
+       "prefix-sum-definition",
+       "prefix-sum-recurrence",
+       "scan-keeps-every-prefix"
+      ],
+      "skipped": [],
+      "instead": "The algorithm was right in the first submission. The accumulator was declared as let runningSum = nums[0], a number, so .push did not compile; the fix was number[] = [nums[0]].",
+      "finding": "Baseline. He knew the recurrence before the cards and lost the one-shot to a TypeScript declaration, which no card covers."
+     },
+     {
+      "slug": "find-the-highest-altitude",
+      "tries": 1,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1791537594,
+      "used": [
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [
+       "exclusive-scan-leading-identity",
+       "prefix-array-n-plus-one-slots"
+      ],
+      "instead": "A running total folded with a maximum, but seeded with gain[0] and looped from i = 1, so the starting altitude 0 was never a candidate. Fix: seed with 0 and loop from 0.",
+      "finding": "Baseline. One wrong answer from forgetting the empty prefix: n gains make n + 1 altitudes. The two leading-zero cards, taught later, cover this."
+     },
+     {
+      "slug": "sum-of-variable-length-subarrays",
+      "tries": 0,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": true,
+      "phase": "pre",
+      "ac_at": 1791623791,
+      "used": [],
+      "skipped": [
+       "prefix-array-n-plus-one-slots",
+       "range-sum-two-prefixes",
+       "range-end-r-plus-one"
+      ],
+      "instead": "Brute force: for each i an inner loop sums nums[start] through nums[i] with j <= i, start = Math.max(0, i - nums[i]). O(n^2), no prefix array.",
+      "finding": "The unit's only one-shot, before the theory and without any card idea. The included end was right on the first try, and the range-sum formula was not needed to get Accepted."
+     },
+     {
+      "slug": "count-partitions-with-even-sum-difference",
+      "tries": 5,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1791710287,
+      "used": [],
+      "skipped": [
+       "prefix-sum-recurrence"
+      ],
+      "instead": "For every split he sliced both halves and re-summed each with reduce. The loop ran to i < n, so the last split had an empty right half; the fix was i < n - 1. Three compile errors came first; their code is not in the data.",
+      "finding": "Baseline. Three compile errors, then two wrong answers; the visible one is a split-point bound (n elements have n - 1 cuts). No card covers that bound or the total-minus-left shortcut."
+     },
+     {
+      "slug": "smallest-stable-index-i",
+      "tries": 2,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1794133179,
+      "used": [],
+      "skipped": [
+       "scan-any-binary-operation"
+      ],
+      "instead": "Per index, Math.max(...nums.slice(0, i + 1)) minus Math.min(...nums.slice(i, n - 1)). The slice end n - 1 dropped the last element because slice stops before its end; the fix was slice(i, n).",
+      "finding": "Baseline. One compile error and one wrong answer from treating slice's end as included: the unit's own trap, outside the pre[] notation the cards teach it in."
+     },
+     {
+      "slug": "sum-of-all-odd-length-subarrays",
+      "tries": 3,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1795184547,
+      "used": [
+       "element-share-of-prefix-sums"
+      ],
+      "skipped": [],
+      "instead": "Contribution counting in one loop: arr[i] times the number of odd-length subarrays that contain it. The last failing version multiplied by (i + 1) * (n - i), all subarrays, inside a Math.ceil that did nothing; the fix divided by 2.",
+      "finding": "Baseline. He had the contribution idea before the cards but tuned the count on the judge (3 wrong answers). The deck's contribution card covers n - i only, not subarrays through an index."
+     },
+     {
+      "slug": "find-the-pivot-integer",
+      "tries": 1,
+      "minutes": 11,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1795371119,
+      "used": [
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [
+       "range-sum-two-prefixes"
+      ],
+      "instead": "Two running sums walking toward each other: leftSum up from 1, rightSum down from n. The first version moved the right end only when the sums were equal, so for n = 8 the left sum jumps from 6 to 10 and nothing ever moves. Fix: move it whenever leftSum >= rightSum.",
+      "finding": "Post-theory miss, 11 minutes. Gap in the preparation: no card says the other side is the total minus the running sum, so he invented a two-ended balance and needed a submission to debug its step rule."
+     },
+     {
+      "slug": "ant-on-the-boundary",
+      "tries": 3,
+      "minutes": 8,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1795429678,
+      "used": [
+       "prefix-sum-definition",
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [],
+      "instead": "Position as a running total, but with a branch on the sign: for a negative step he wrote antPosition -= currentNumber, which moves the ant right. Fix: += in both branches. The first submission did not compile, and the failing code still carried a console.log.",
+      "finding": "Post-theory miss, 8 minutes: one compile error and two wrong answers on a short fold. Every example on the recurrence card adds positive numbers, so the card never showed him that a negative value is simply added."
+     }
+    ],
+    "cards": [
+     {
+      "id": "prefix-sum-definition",
+      "module": "prefix-sums",
+      "front": "A problem asks for the running total at every position. What is the prefix sum of a sequence of numbers?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "He wrote a correct running-total array before the theory (running-sum-of-1d-array), so it confirmed more than it taught. After it, both sum problems were written as running totals; their failures were elsewhere.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "prefix-sum-recurrence",
+      "module": "prefix-sums",
+      "front": "A single pass must build all running totals. How do you calculate prefix sum y[i] from the previous prefix sum?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "The single-pass idea held: both post-theory sum problems keep one running total. Its positive-only examples left the sign open, and ant-on-the-boundary subtracted a negative step, so the rewrite adds that case.",
+      "used_by": [],
+      "new_front": "A single pass builds running totals of values that may be negative. How do you calculate prefix sum y[i] from the previous prefix sum?",
+      "new_back": "y[i] = y[i - 1] + x[i], starting from y[0] = x[0]; a negative x[i] is added as it is, never subtracted."
+     },
+     {
+      "id": "scan-keeps-every-prefix",
+      "module": "prefix-sums",
+      "front": "A problem keeps every prefix, but a fold returns only its final result. What does a scan return instead?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Vocabulary card: no solve depended on telling a fold from a scan, and its review passed. It stays because three other cards use the word scan.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "exclusive-scan-skips-current",
+      "module": "prefix-sums",
+      "front": "A problem compares the sum left of index i with the rest. Which inputs does an exclusive scan add into output i?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Taught after left-and-right-sum-differences, where he had built this scan by hand over 12 submissions; never reviewed and not tested post-theory. Keep it and get it reviewed; the new total-minus-left card supplies the other side.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "exclusive-scan-leading-identity",
+      "module": "prefix-sums",
+      "front": "An exclusive scan shifts the inclusive results right by one element. Which value fills the freed leftmost slot?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Never reviewed. Its idea, that the empty prefix is 0, is what find-the-highest-altitude missed before the theory, and both post-theory running totals start from 0.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "prefix-array-n-plus-one-slots",
+      "module": "prefix-sums",
+      "front": "pre[i] holds the sum of the first i elements of an n-element array. What is the minimum number of slots pre needs?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Untested: no post-theory solve built a prefix array. It stays as the base of the range-sum card and of the dp arrays in heap-dp.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "range-sum-two-prefixes",
+      "module": "prefix-sums",
+      "front": "A problem wants range sums in O(1). How do you calculate the sum of a[l] through a[r] when pre[i] sums the first i elements?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Untested: the one range-sum problem (sum-of-variable-length-subarrays) was a brute-force one-shot before the theory, and no solve subtracted two prefixes. Keep, and give the unit a post-theory problem that needs it.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "range-end-r-plus-one",
+      "module": "prefix-sums",
+      "front": "A range sum includes index r, and pre[i] sums the first i elements. Why is the upper term pre[r + 1], not pre[r]?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "He passed its review, then wrote j < end for an included end in points-that-intersect-with-cars: the rule was tied to pre[] and did not transfer. The rewrite states it for the three forms his code takes: pre, slice and a loop test.",
+      "used_by": [],
+      "new_front": "A range runs from l through r, r included. Which end do you write in pre[...], slice(l, ...) and a loop test?",
+      "new_back": "pre[r + 1], slice(l, r + 1) and j <= r: the first two stop just before their end, so an included r needs + 1."
+     },
+     {
+      "id": "difference-undoes-prefix-sum",
+      "module": "prefix-sums",
+      "front": "Running totals y include x[i] (y[0] = x[0]). How do you calculate the original x[i] from y?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Review passed, but no problem asks to recover x from running totals, so it was never used. It stays as the prerequisite of the new difference-array card, the use points-that-intersect-with-cars called for.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "scan-any-binary-operation",
+      "module": "prefix-sums",
+      "front": "A problem needs a running product instead of a running sum. Which operations can a scan accumulate besides addition?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "Its example is a running product, which no problem of the unit needs; smallest-stable-index-i needs a running maximum and a suffix minimum, which he computed per index with Math.max(...slice) before the theory. Not tested post-theory; the rewrite aims it at that case.",
+      "used_by": [],
+      "new_front": "A problem needs the largest value of a[0..i] for every i. How do you get them all in one pass?",
+      "new_back": "Scan with max instead of +: best[i] = Math.max(best[i - 1], a[i]); a right-to-left pass with Math.min gives every suffix minimum the same way."
+     },
+     {
+      "id": "histogram-prefix-sorted-position",
+      "module": "prefix-sums",
+      "front": "A problem asks how many values are smaller than each value. What does the prefix sum of a histogram of key frequencies give?",
+      "taught": true,
+      "again": 0,
+      "change": "suspend",
+      "finding": "Suspend: no problem of the unit counts smaller values or sorts by counting, and it was never reviewed, so it took a teaching slot with nothing to apply it to. Bring it back in a unit that has such a problem.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "element-share-of-prefix-sums",
+      "module": "prefix-sums",
+      "front": "A problem adds up all prefix sums of n inputs. How do you calculate the number of prefix sums y[0] to y[n-1] that contain x[i]?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Taught after sum-of-all-odd-length-subarrays, where he already counted each element's share; its n - i is one factor of the count that problem needs. Keep as the stepping stone to the new subarray-share card.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     }
+    ],
+    "new_cards": [
+     {
+      "front": "One pass keeps the running sum left of a[0] through a[i]. How do you get the sum after index i without a second loop?",
+      "back": "right = total - left, with total summed once before the pass; if a[i] belongs to both sides, add a[i] back.",
+      "why": "No card says the other side of a split is the total minus the running sum. After the theory he invented a two-ended balance for find-the-pivot-integer and needed a submission to debug its step rule; before it he built a second array or re-summed slices.",
+      "slugs": [
+       "find-the-pivot-integer",
+       "left-and-right-sum-differences",
+       "count-partitions-with-even-sum-difference"
+      ]
+     },
+     {
+      "front": "An n-element array is cut into a non-empty left part and a non-empty right part. Which indexes i can end the left part?",
+      "back": "i from 0 through n - 2, written i < n - 1; i = n - 1 would leave the right part empty.",
+      "why": "count-partitions-with-even-sum-difference looped to i < n and counted a split with an empty right side. The deck's off-by-one cards cover the end of a range, not the number of cut points.",
+      "slugs": [
+       "count-partitions-with-even-sum-difference"
+      ]
+     },
+     {
+      "front": "Many ranges [s, e], ends included, each cover points s through e. How does one prefix-sum pass count the cover of every point?",
+      "back": "Write diff[s] += 1 and diff[e + 1] -= 1 for each range, then prefix-sum diff: the running total at a point is its cover count.",
+      "why": "The unit files points-that-intersect-with-cars under prefix sums, but no card links ranges to a prefix sum; the inverse card stops at recovering x. The solve took 18 active minutes and ended as a Set of points. This card supplies the planned method; the edited range-end card is what fixes his actual off-by-one.",
+      "slugs": [
+       "points-that-intersect-with-cars"
+      ]
+     },
+     {
+      "front": "A problem sums every odd-length subarray. In how many odd-length subarrays of an n-element array does a[i] appear?",
+      "back": "Math.ceil((i + 1) * (n - i) / 2): i + 1 starts times n - i ends contain a[i]; half, rounded up, are odd.",
+      "why": "He had the contribution idea before the theory but reached the count by trial on the judge: 3 wrong answers, the last one missing the division by 2. The only contribution card counts prefix sums (n - i), not subarrays through an index.",
+      "slugs": [
+       "sum-of-all-odd-length-subarrays"
+      ]
+     },
+     {
+      "front": "A loop will push numbers into a result array that starts with one value v. How do you declare the array in TypeScript?",
+      "back": "const out: number[] = [v]; writing let out = v makes it a number, and out.push then does not compile.",
+      "why": "running-sum-of-1d-array had the right algorithm and lost its one-shot to exactly this declaration. Six of ten problems, two of the three post-theory ones, had a compile error (8 in total) and no card covers TypeScript declarations. The other seven compile errors' code is not in the data, so only this problem is listed.",
+      "slugs": [
+       "running-sum-of-1d-array"
+      ]
+     }
+    ],
+    "lessons": {},
+    "future": [],
+    "skills_md": "",
+    "seen": [
+     "left-and-right-sum-differences",
+     "running-sum-of-1d-array",
+     "find-the-highest-altitude",
+     "sum-of-variable-length-subarrays",
+     "count-partitions-with-even-sum-difference",
+     "smallest-stable-index-i",
+     "sum-of-all-odd-length-subarrays",
+     "find-the-pivot-integer",
+     "ant-on-the-boundary"
+    ]
+   },
+   {
+    "rev": 2,
+    "at": 1795433000,
+    "one_shot": {
+     "post": [
+      0,
+      3
+     ],
+     "pre": [
+      1,
+      7
+     ]
+    },
+    "earlier": [
+     {
+      "unit": "two-pointers",
+      "rev": 1,
+      "post": [
+       2,
+       3
+      ]
+     }
+    ],
+    "problems": [
+     {
+      "slug": "left-and-right-sum-differences",
+      "tries": 11,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1789584802,
+      "used": [
+       "prefix-sum-recurrence",
+       "scan-keeps-every-prefix",
+       "exclusive-scan-skips-current",
+       "exclusive-scan-leading-identity"
+      ],
+      "skipped": [],
+      "instead": "Built both exclusive scans by hand before any card: leftSum with push and a leading 0, rightSum with unshift, both filled by a loop bounded at n - 1. The last failing submission is the accepted code plus two console.log lines (Output Limit Exceeded).",
+      "finding": "Baseline, not a one-shot: the idea was right, but 11 failed submissions (1 compile error, 2 runtime errors, 7 wrong answers, 1 print-only failure) show he debugged on the judge. Only the last failing code is in the data, so the earlier causes are not visible."
+     },
+     {
+      "slug": "running-sum-of-1d-array",
+      "tries": 1,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1789988121,
+      "used": [
+       "prefix-sum-definition",
+       "prefix-sum-recurrence",
+       "scan-keeps-every-prefix"
+      ],
+      "skipped": [],
+      "instead": "The algorithm was right in the first submission. The accumulator was declared as let runningSum = nums[0], a number, so .push did not compile; the fix was number[] = [nums[0]].",
+      "finding": "Baseline. He knew the recurrence before the cards and lost the one-shot to a TypeScript declaration, which no card covers."
+     },
+     {
+      "slug": "find-the-highest-altitude",
+      "tries": 1,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1791537594,
+      "used": [
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [
+       "exclusive-scan-leading-identity",
+       "prefix-array-n-plus-one-slots"
+      ],
+      "instead": "A running total folded with a maximum, but seeded with gain[0] and looped from i = 1, so the starting altitude 0 was never a candidate. Fix: seed with 0 and loop from 0.",
+      "finding": "Baseline. One wrong answer from forgetting the empty prefix: n gains make n + 1 altitudes. The two leading-zero cards, taught later, cover this."
+     },
+     {
+      "slug": "sum-of-variable-length-subarrays",
+      "tries": 0,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": true,
+      "phase": "pre",
+      "ac_at": 1791623791,
+      "used": [],
+      "skipped": [
+       "prefix-array-n-plus-one-slots",
+       "range-sum-two-prefixes",
+       "range-end-r-plus-one"
+      ],
+      "instead": "Brute force: for each i an inner loop sums nums[start] through nums[i] with j <= i, start = Math.max(0, i - nums[i]). O(n^2), no prefix array.",
+      "finding": "The unit's only one-shot, before the theory and without any card idea. The included end was right on the first try, and the range-sum formula was not needed to get Accepted."
+     },
+     {
+      "slug": "count-partitions-with-even-sum-difference",
+      "tries": 5,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1791710287,
+      "used": [],
+      "skipped": [
+       "prefix-sum-recurrence"
+      ],
+      "instead": "For every split he sliced both halves and re-summed each with reduce. The loop ran to i < n, so the last split had an empty right half; the fix was i < n - 1. Three compile errors came first; their code is not in the data.",
+      "finding": "Baseline. Three compile errors, then two wrong answers; the visible one is a split-point bound (n elements have n - 1 cuts). No card covers that bound or the total-minus-left shortcut."
+     },
+     {
+      "slug": "smallest-stable-index-i",
+      "tries": 2,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1794133179,
+      "used": [],
+      "skipped": [
+       "scan-any-binary-operation"
+      ],
+      "instead": "Per index, Math.max(...nums.slice(0, i + 1)) minus Math.min(...nums.slice(i, n - 1)). The slice end n - 1 dropped the last element because slice stops before its end; the fix was slice(i, n).",
+      "finding": "Baseline. One compile error and one wrong answer from treating slice's end as included: the unit's own trap, outside the pre[] notation the cards teach it in."
+     },
+     {
+      "slug": "sum-of-all-odd-length-subarrays",
+      "tries": 3,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1795184547,
+      "used": [
+       "element-share-of-prefix-sums"
+      ],
+      "skipped": [],
+      "instead": "Contribution counting in one loop: arr[i] times the number of odd-length subarrays that contain it. The last failing version multiplied by (i + 1) * (n - i), all subarrays, inside a Math.ceil that did nothing; the fix divided by 2.",
+      "finding": "Baseline. He had the contribution idea before the cards but tuned the count on the judge (3 wrong answers). The deck's contribution card covers n - i only, not subarrays through an index."
+     },
+     {
+      "slug": "find-the-pivot-integer",
+      "tries": 1,
+      "minutes": 11,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1795371119,
+      "used": [
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [
+       "range-sum-two-prefixes"
+      ],
+      "instead": "Two running sums walking toward each other: leftSum up from 1, rightSum down from n. The first version moved the right end only when the sums were equal, so for n = 8 the left sum jumps from 6 to 10 and nothing ever moves. Fix: move it whenever leftSum >= rightSum.",
+      "finding": "Post-theory miss, 11 minutes. Gap in the preparation: no card says the other side is the total minus the running sum, so he invented a two-ended balance and needed a submission to debug its step rule."
+     },
+     {
+      "slug": "ant-on-the-boundary",
+      "tries": 3,
+      "minutes": 8,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1795429678,
+      "used": [
+       "prefix-sum-definition",
+       "prefix-sum-recurrence"
+      ],
+      "skipped": [],
+      "instead": "Position as a running total, but with a branch on the sign: for a negative step he wrote antPosition -= currentNumber, which moves the ant right. Fix: += in both branches. The first submission did not compile, and the failing code still carried a console.log.",
+      "finding": "Post-theory miss, 8 minutes: one compile error and two wrong answers on a short fold. Every example on the recurrence card adds positive numbers, so the card never showed him that a negative value is simply added."
+     },
+     {
+      "slug": "points-that-intersect-with-cars",
+      "tries": 3,
+      "minutes": 18,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1795430763,
+      "used": [],
+      "skipped": [
+       "range-end-r-plus-one",
+       "difference-undoes-prefix-sum"
+      ],
+      "instead": "Brute force: every point of every car goes into a Set, and the answer is its size. The inner loop used j < end and dropped each car's last point; the fix was j <= end. A compile error came first.",
+      "finding": "Post-theory miss, 18 minutes, the longest. The included-end rule he had recited for pre[r + 1] did not carry over to a loop test, and no card links ranges to a prefix sum, so the unit's method was never available to him."
+     }
+    ],
+    "cards": [
+     {
+      "id": "prefix-sum-definition",
+      "module": "prefix-sums",
+      "front": "A problem asks for the running total at every position. What is the prefix sum of a sequence of numbers?",
+      "taught": true,
+      "again": 0,
+      "change": "kept",
+      "finding": "He wrote a correct running-total array before the theory (running-sum-of-1d-array), so it confirmed more than it taught. After it, both sum problems were written as running totals; their failures were elsewhere.",
+      "used_by": [
+       "running-sum-of-1d-array",
+       "ant-on-the-boundary"
+      ],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "prefix-sum-recurrence",
+      "module": "prefix-sums",
+      "front": "A single pass must build all running totals. How do you calculate prefix sum y[i] from the previous prefix sum?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "The single-pass idea held: both post-theory sum problems keep one running total. Its positive-only examples left the sign open, and ant-on-the-boundary subtracted a negative step, so the rewrite adds that case.",
+      "used_by": [],
+      "new_front": "A single pass builds running totals of values that may be negative. How do you calculate prefix sum y[i] from the previous prefix sum?",
+      "new_back": "y[i] = y[i - 1] + x[i], starting from y[0] = x[0]; a negative x[i] is added as it is, never subtracted."
+     },
+     {
+      "id": "scan-keeps-every-prefix",
+      "module": "prefix-sums",
+      "front": "A problem keeps every prefix, but a fold returns only its final result. What does a scan return instead?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Vocabulary card: no solve depended on telling a fold from a scan, and its review passed. It stays because three other cards use the word scan.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "exclusive-scan-skips-current",
+      "module": "prefix-sums",
+      "front": "A problem compares the sum left of index i with the rest. Which inputs does an exclusive scan add into output i?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Taught after left-and-right-sum-differences, where he had built this scan by hand over 12 submissions; never reviewed and not tested post-theory. Keep it and get it reviewed; the new total-minus-left card supplies the other side.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "exclusive-scan-leading-identity",
+      "module": "prefix-sums",
+      "front": "An exclusive scan shifts the inclusive results right by one element. Which value fills the freed leftmost slot?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Never reviewed. Its idea, that the empty prefix is 0, is what find-the-highest-altitude missed before the theory, and both post-theory running totals start from 0.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "prefix-array-n-plus-one-slots",
+      "module": "prefix-sums",
+      "front": "pre[i] holds the sum of the first i elements of an n-element array. What is the minimum number of slots pre needs?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Untested: no post-theory solve built a prefix array. It stays as the base of the range-sum card and of the dp arrays in heap-dp.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "range-sum-two-prefixes",
+      "module": "prefix-sums",
+      "front": "A problem wants range sums in O(1). How do you calculate the sum of a[l] through a[r] when pre[i] sums the first i elements?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Untested: the one range-sum problem (sum-of-variable-length-subarrays) was a brute-force one-shot before the theory, and no solve subtracted two prefixes. Keep, and give the unit a post-theory problem that needs it.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "range-end-r-plus-one",
+      "module": "prefix-sums",
+      "front": "A range sum includes index r, and pre[i] sums the first i elements. Why is the upper term pre[r + 1], not pre[r]?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "He passed its review, then wrote j < end for an included end in points-that-intersect-with-cars: the rule was tied to pre[] and did not transfer. The rewrite states it for the three forms his code takes: pre, slice and a loop test.",
+      "used_by": [],
+      "new_front": "A range runs from l through r, r included. Which end do you write in pre[...], slice(l, ...) and a loop test?",
+      "new_back": "pre[r + 1], slice(l, r + 1) and j <= r: the first two stop just before their end, so an included r needs + 1."
+     },
+     {
+      "id": "difference-undoes-prefix-sum",
+      "module": "prefix-sums",
+      "front": "Running totals y include x[i] (y[0] = x[0]). How do you calculate the original x[i] from y?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Review passed, but no problem asks to recover x from running totals, so it was never used. It stays as the prerequisite of the new difference-array card, the use points-that-intersect-with-cars called for.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "scan-any-binary-operation",
+      "module": "prefix-sums",
+      "front": "A problem needs a running product instead of a running sum. Which operations can a scan accumulate besides addition?",
+      "taught": true,
+      "again": 0,
+      "change": "edit",
+      "finding": "Its example is a running product, which no problem of the unit needs; smallest-stable-index-i needs a running maximum and a suffix minimum, which he computed per index with Math.max(...slice) before the theory. Not tested post-theory; the rewrite aims it at that case.",
+      "used_by": [],
+      "new_front": "A problem needs the largest value of a[0..i] for every i. How do you get them all in one pass?",
+      "new_back": "Scan with max instead of +: best[i] = Math.max(best[i - 1], a[i]); a right-to-left pass with Math.min gives every suffix minimum the same way."
+     },
+     {
+      "id": "histogram-prefix-sorted-position",
+      "module": "prefix-sums",
+      "front": "A problem asks how many values are smaller than each value. What does the prefix sum of a histogram of key frequencies give?",
+      "taught": true,
+      "again": 0,
+      "change": "suspend",
+      "finding": "Suspend: no problem of the unit counts smaller values or sorts by counting, and it was never reviewed, so it took a teaching slot with nothing to apply it to. Bring it back in a unit that has such a problem.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     },
+     {
+      "id": "element-share-of-prefix-sums",
+      "module": "prefix-sums",
+      "front": "A problem adds up all prefix sums of n inputs. How do you calculate the number of prefix sums y[0] to y[n-1] that contain x[i]?",
+      "taught": true,
+      "again": 0,
+      "change": "same",
+      "finding": "Taught after sum-of-all-odd-length-subarrays, where he already counted each element's share; its n - i is one factor of the count that problem needs. Keep as the stepping stone to the new subarray-share card.",
+      "used_by": [],
+      "new_front": "",
+      "new_back": ""
+     }
+    ],
+    "new_cards": [
+     {
+      "front": "One pass keeps the running sum left of a[0] through a[i]. How do you get the sum after index i without a second loop?",
+      "back": "right = total - left, with total summed once before the pass; if a[i] belongs to both sides, add a[i] back.",
+      "why": "No card says the other side of a split is the total minus the running sum. After the theory he invented a two-ended balance for find-the-pivot-integer and needed a submission to debug its step rule; before it he built a second array or re-summed slices.",
+      "slugs": [
+       "find-the-pivot-integer",
+       "left-and-right-sum-differences",
+       "count-partitions-with-even-sum-difference"
+      ]
+     },
+     {
+      "front": "An n-element array is cut into a non-empty left part and a non-empty right part. Which indexes i can end the left part?",
+      "back": "i from 0 through n - 2, written i < n - 1; i = n - 1 would leave the right part empty.",
+      "why": "count-partitions-with-even-sum-difference looped to i < n and counted a split with an empty right side. The deck's off-by-one cards cover the end of a range, not the number of cut points.",
+      "slugs": [
+       "count-partitions-with-even-sum-difference"
+      ]
+     },
+     {
+      "front": "Many ranges [s, e], ends included, each cover points s through e. How does one prefix-sum pass count the cover of every point?",
+      "back": "Write diff[s] += 1 and diff[e + 1] -= 1 for each range, then prefix-sum diff: the running total at a point is its cover count.",
+      "why": "The unit files points-that-intersect-with-cars under prefix sums, but no card links ranges to a prefix sum; the inverse card stops at recovering x. The solve took 18 active minutes and ended as a Set of points. This card supplies the planned method; the edited range-end card is what fixes his actual off-by-one.",
+      "slugs": [
+       "points-that-intersect-with-cars"
+      ]
+     },
+     {
+      "front": "A problem sums every odd-length subarray. In how many odd-length subarrays of an n-element array does a[i] appear?",
+      "back": "Math.ceil((i + 1) * (n - i) / 2): i + 1 starts times n - i ends contain a[i]; half, rounded up, are odd.",
+      "why": "He had the contribution idea before the theory but reached the count by trial on the judge: 3 wrong answers, the last one missing the division by 2. The only contribution card counts prefix sums (n - i), not subarrays through an index.",
+      "slugs": [
+       "sum-of-all-odd-length-subarrays"
+      ]
+     },
+     {
+      "front": "A loop will push numbers into a result array that starts with one value v. How do you declare the array in TypeScript?",
+      "back": "const out: number[] = [v]; writing let out = v makes it a number, and out.push then does not compile.",
+      "why": "running-sum-of-1d-array had the right algorithm and lost its one-shot to exactly this declaration. Six of ten problems, two of the three post-theory ones, had a compile error (8 in total) and no card covers TypeScript declarations. The other seven compile errors' code is not in the data, so only this problem is listed.",
+      "slugs": [
+       "running-sum-of-1d-array"
+      ]
+     }
+    ],
+    "lessons": {},
+    "future": [],
+    "skills_md": "",
+    "seen": [
+     "left-and-right-sum-differences",
+     "running-sum-of-1d-array",
+     "find-the-highest-altitude",
+     "sum-of-variable-length-subarrays",
+     "count-partitions-with-even-sum-difference",
+     "smallest-stable-index-i",
+     "sum-of-all-odd-length-subarrays",
+     "find-the-pivot-integer",
+     "ant-on-the-boundary",
+     "points-that-intersect-with-cars"
+    ],
+    "applied": {
+     "added": [
+      "prefix-sums-pm-1",
+      "prefix-sums-pm-2",
+      "prefix-sums-pm-3",
+      "prefix-sums-pm-4",
+      "prefix-sums-pm-5"
+     ],
+     "edited": [
+      "prefix-sum-recurrence",
+      "range-end-r-plus-one",
+      "scan-any-binary-operation"
+     ],
+     "untaught": [
+      "prefix-sum-recurrence",
+      "range-end-r-plus-one",
+      "scan-any-binary-operation"
+     ],
+     "suspended": [
+      {
+       "id": "histogram-prefix-sorted-position",
+       "reason": "Recited without a miss and used by no solve; the range card covers it."
+      }
+     ],
+     "refused": []
+    }
+   }
+  ],
+  "hmac": "0000000000000000000000000000000000000000000000000000000000000000"
+ },
+ "two-pointers": {
+  "kind": "postmortem_report",
+  "subject": "leetcode-easy-algorithms-in-typescript",
+  "unit": "two-pointers",
+  "revisions": [
+   {
+    "rev": 1,
+    "at": 1794100000,
+    "one_shot": {
+     "post": [
+      2,
+      3
+     ],
+     "pre": [
+      0,
+      2
+     ]
+    },
+    "earlier": [],
+    "problems": [
+     {
+      "slug": "valid-palindrome",
+      "tries": 0,
+      "minutes": 6,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": true,
+      "phase": "post",
+      "ac_at": 1794000000,
+      "used": [],
+      "skipped": [],
+      "instead": "",
+      "finding": "One-shot: both pointers moved inward and skipped non-alphanumerics from the card."
+     },
+     {
+      "slug": "move-zeroes",
+      "tries": 0,
+      "minutes": 9,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": true,
+      "phase": "post",
+      "ac_at": 1794000000,
+      "used": [],
+      "skipped": [],
+      "instead": "",
+      "finding": "One-shot: the write pointer idea from the read/write card."
+     },
+     {
+      "slug": "squares-of-a-sorted-array",
+      "tries": 2,
+      "minutes": 14,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "post",
+      "ac_at": 1794000000,
+      "used": [],
+      "skipped": [],
+      "instead": "",
+      "finding": "Filled the result from the front; the largest square sits at an end."
+     },
+     {
+      "slug": "merge-sorted-array",
+      "tries": 3,
+      "minutes": null,
+      "hints": 0,
+      "revealed": false,
+      "one_shot": false,
+      "phase": "pre",
+      "ac_at": 1794000000,
+      "used": [],
+      "skipped": [],
+      "instead": "",
+      "finding": "Baseline: merged from the front and overwrote nums1."
+     }
+    ],
+    "cards": [
+     {
+      "id": "read-write-pointers",
+      "module": "two-pointers",
+      "front": "One array, two speeds: where does the write pointer stay while the read pointer skips?",
+      "taught": true,
+      "again": 0,
+      "change": "kept",
+      "finding": "Both one-shots used it without a hint.",
+      "used_by": [
+       "valid-palindrome",
+       "move-zeroes"
+      ],
+      "new_front": "",
+      "new_back": ""
+     }
+    ],
+    "new_cards": [],
+    "applied": {
+     "added": [],
+     "edited": [],
+     "untaught": [],
+     "suspended": [],
+     "refused": []
+    },
+    "lessons": {},
+    "future": [],
+    "skills_md": "",
+    "seen": []
+   }
+  ],
+  "hmac": "0000000000000000000000000000000000000000000000000000000000000000"
+ }
+}

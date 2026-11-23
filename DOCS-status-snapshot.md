@@ -244,3 +244,6 @@ Deltas from the first draft of this block (exporter, 2026-10-23):
   `how_to.retest_command(slug)`, the same string `leetcode due` prints.
 - `app/test/fixtures/snapshot_coach_empty.json` is the exporter's output for
   that state; `test_coach_empty.py` fails if the exporter drifts from it.
+- 2026-11-23: `postmortems` = one row per tutor post-mortem unit, oldest
+  first; `[]` = none yet, `null` = the read raised; capped at 32 KB by
+  nulling the oldest units' `problems`/`cards` (`DOCS-postmortem.md`).

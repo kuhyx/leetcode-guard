@@ -28,6 +28,7 @@ from leetcode_guard._snapshot_push import (
     push_quietly,
     push_snapshot,
 )
+from leetcode_guard.tests._postmortem_fixtures import write_all
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -131,8 +132,22 @@ def test_gather_reads_everything_and_writes_no_ledger(data_dir: Path):
     assert snap["profile"] is None
     assert snap["progress"] is None
     assert snap["coach"]["problems"] == []
+    assert snap["postmortems"] == []
     assert snap["coach"]["how_to"]["first_command"].startswith("leetcode --cluster ")
     assert not (data_dir / "ledger.json").exists()
+
+
+@pytest.mark.usefixtures("quiet_timer", "offline_profile")
+def test_gather_carries_the_tutor_postmortems():
+    """The Post-mortem tab's rows ride in the snapshot, oldest unit first."""
+    write_all()
+
+    snap = gather_snapshot(now=datetime(2026, 8, 10, 12, 0, tzinfo=UTC))
+
+    assert [row["unit"] for row in snap["postmortems"]] == [
+        "two-pointers",
+        "prefix-sums",
+    ]
 
 
 @pytest.mark.usefixtures("quiet_timer", "offline_profile")

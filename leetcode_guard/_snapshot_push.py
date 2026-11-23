@@ -35,6 +35,7 @@ from leetcode_guard._coach_log import read_coach
 from leetcode_guard._constants import EXIT_OK, PROGRESS_CACHE_FILE
 from leetcode_guard._daycost import local_now
 from leetcode_guard._e2e import SNAPSHOT_LAYOUT, sealed, unlock_shared
+from leetcode_guard._postmortem_view import snapshot_postmortems
 from leetcode_guard._profile_cache import refresh_profile
 from leetcode_guard._progress import read_progress_cache
 from leetcode_guard._snapshot import build_snapshot
@@ -119,7 +120,7 @@ def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
     profile = refresh_profile(
         now=moment.timestamp(), credit_count=full.gate.balance.credits
     )
-    return build_snapshot(
+    snapshot = build_snapshot(
         full,
         # Re-read: the refresh above may just have rewritten the mirror that
         # gather_full read a moment earlier.
@@ -128,6 +129,9 @@ def gather_snapshot(*, now: datetime | None = None) -> dict[str, Any]:
         coach=read_coach(),
         now=moment,
     )
+    # The Post-mortem tab's rows: display-only, size-capped, never raises.
+    snapshot["postmortems"] = snapshot_postmortems()
+    return snapshot
 
 
 def push_snapshot(
