@@ -4,7 +4,9 @@ Signs the unit's claimed solves into ``postmortem_dry_run.json``
 (``_unit_finish.write_preview``) and runs ``python -m tutor postmortem UNIT
 --dry-run`` with the live tutor's interpreter. The tutor's draft-tier call
 outlives the 60 s action cap, so the tutor starts it as a ``systemd-run``
-unit and answers 75 (pending) until the report is ready: call again. Its
+unit and answers 75 (pending) until the report is ready: call again (the
+signed request keeps its ``at`` while the solves stay the same, so a poll
+never starts a second call). Its
 output lines are relayed as they are; its exit code is this command's.
 
 Writes no ledger row and no tutor file: the tutor's dry run writes only its

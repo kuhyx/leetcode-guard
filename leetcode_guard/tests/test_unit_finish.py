@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -220,3 +221,22 @@ def test_a_preview_is_refused_without_theory_a_pool_or_a_key(
     monkeypatch.setattr(_curriculum, "CURRICULUM_FILE", tmp_path / "missing.json")
     assert _preview(ledger, hmac_key) is None
     assert not _unit_finish.PREVIEW_FILE.exists()
+
+
+def test_a_repeated_preview_keeps_its_request_until_the_solves_change(
+    tmp_path, monkeypatch, hmac_key: Path
+):
+    """A poll re-signing ``at`` made the tutor start a new draft call each time (C1)."""
+    world(tmp_path, monkeypatch)
+    first = _preview(_solved(hmac_key), hmac_key)
+    later = NOW + timedelta(minutes=7)
+    again = _unit_finish.write_preview(
+        _solved(hmac_key), "b", now=later, key_file=hmac_key
+    )
+    assert again == first
+    assert _rows(_unit_finish.PREVIEW_FILE) == [first]
+    more = _solved(hmac_key, "b1-easy")
+    moved = _unit_finish.write_preview(more, "b", now=later, key_file=hmac_key)
+    detail = moved["detail"] if isinstance(moved, dict) else None
+    assert isinstance(detail, dict)
+    assert (detail["at"], detail["solves"]) == (later.timestamp(), ["b1-easy"])

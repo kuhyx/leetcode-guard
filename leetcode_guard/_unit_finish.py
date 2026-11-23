@@ -134,6 +134,11 @@ def _solves_of(row: Row) -> object:
     return detail.get("solves") if isinstance(detail, dict) else None
 
 
+def _unit_of(row: Row) -> object:
+    detail = row.get("detail")
+    return detail.get("unit") if isinstance(detail, dict) else None
+
+
 def _finished(curriculum: Curriculum, state: PhaseState) -> list[int]:
     """Indices of the mapped units the machine has moved past."""
     ids = [unit.unit_id for unit in curriculum.units]
@@ -184,6 +189,11 @@ def write_preview(
     claims = _claims(curriculum, ledger, key_file)
     if claims is None:
         return None
+    # The same request keeps its ``at``: the tutor keys its dry-run result on
+    # it, so re-signing on every poll started a new draft call each time.
+    kept = [r for r in _rows(PREVIEW_FILE, key_file) if _unit_of(r) == unit_id]
+    if kept and _solves_of(kept[-1]) == sorted(claims[index]):
+        return kept[-1]
     made = _signed(_row(PREVIEW, units[index], claims[index], 1, now), key_file)
     if made is not None:
         write_json(PREVIEW_FILE, {"version": 1, "entries": [made]})
