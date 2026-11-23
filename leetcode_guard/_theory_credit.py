@@ -21,6 +21,8 @@ Rules (stage-4 SPEC, 2026-11-22; the pool is ``_theory_pool``):
 * A module signed done today also pays +1, once per module ever
   (``_theory_finish``; ``theory-done:<subject>:<module>``, no day in the id,
   so it is never a minute credit).
+* A unit passed again after a tutor post-mortem pays +1 per revision
+  (``_theory_redone``; ``theory-redone:<subject>:<unit>:<rev>``).
 * Inputs are signed: the tutor's ``ledger.json`` and ``module_state.json`` and
   this guard's ledger. "Cannot check" mints nothing, logs a warning and never
   raises into the lock or the harvester.
@@ -52,6 +54,7 @@ from leetcode_guard._theory_pool import (
     minted_today,
     paying_pool,
 )
+from leetcode_guard._theory_redone import due_redone
 from leetcode_guard._unit_finish import record_finishes
 
 if TYPE_CHECKING:
@@ -195,6 +198,7 @@ def _poll(
         return TheoryPoll(state=state)
     fresh = due_credits(ledger, state, pool, stamp=stamp, key_file=key_file)
     fresh += due_finish(ledger, state, before, stamp=stamp, key_file=key_file)
+    fresh += due_redone(ledger, state, before, stamp=stamp, key_file=key_file)
     if fresh:
         append(ledger, fresh)
         save_ledger(ledger_path, ledger)

@@ -50,21 +50,26 @@ def finish_entry(
     key_file: Path | None,
 ) -> LedgerEntry:
     """The signed ``theory-done:<subject>:<module>`` credit; ``stamp`` is (day, now)."""
+    detail = {"unit": unit, "subject": subject, "module": module, "finish": "1"}
+    return theory_row(f"{FINISH_PREFIX}{subject}:{module}", stamp, detail, key_file)
+
+
+def theory_row(
+    entry_id: str,
+    stamp: tuple[date, datetime],
+    detail: dict[str, str],
+    key_file: Path | None,
+) -> LedgerEntry:
+    """A signed one-credit ``tutor-theory`` row; ``stamp`` is (day, now)."""
     day, now = stamp
     return sign(
         LedgerEntry(
-            entry_id=f"{FINISH_PREFIX}{subject}:{module}",
+            entry_id=entry_id,
             kind=CREDIT,
             day=day_key(day),
             created_at=now.isoformat(),
             amount=1,
-            detail={
-                "source": SOURCE_THEORY,
-                "unit": unit,
-                "subject": subject,
-                "module": module,
-                "finish": "1",
-            },
+            detail={"source": SOURCE_THEORY, **detail},
         ),
         key_file=key_file,
     )
