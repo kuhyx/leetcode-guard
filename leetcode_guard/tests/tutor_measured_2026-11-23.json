@@ -1,0 +1,64 @@
+{
+ "key": "tutor-fixture-key-2026-11-23-lc",
+ "ledger": {
+  "entries": [
+   {
+    "created_at": 1795426201.5,
+    "day": "2026-11-23",
+    "detail": {
+     "active_seconds": 730.0,
+     "block": 12,
+     "checks_passed": 2,
+     "checks_total": 3,
+     "ended_at": 1795426200.0,
+     "minutes": 12,
+     "module": "prefix-sums",
+     "session_id": "20261123-101800-7e3a",
+     "subject": "leetcode-easy-algorithms-in-typescript"
+    },
+    "entry_id": "20261123-101800-7e3a-m12",
+    "hmac": "9546b9d0a2b73205dc45fc9dd8ec1a382ced8e4a06f2562028c9330ab8a578d6",
+    "kind": "leetcode_theory"
+   },
+   {
+    "created_at": 1795428001.5,
+    "day": "2026-11-23",
+    "detail": {
+     "active_seconds": 190.0,
+     "activity": "review",
+     "block": 3,
+     "checks_passed": 2,
+     "checks_total": 3,
+     "ended_at": 1795428000.0,
+     "minutes": 3,
+     "module": "prefix-sums",
+     "session_id": "review-20261123-phone1",
+     "subject": "leetcode-easy-algorithms-in-typescript"
+    },
+    "entry_id": "review-20261123-phone1-m3",
+    "hmac": "368ef08fa20e0938a59a098587977988cba9efb0adcfc7f27388606b6ead072e",
+    "kind": "leetcode_theory"
+   },
+   {
+    "created_at": 1795431901.5,
+    "day": "2026-11-23",
+    "detail": {
+     "active_seconds": 310.0,
+     "block": 5,
+     "checks_passed": 2,
+     "checks_total": 3,
+     "ended_at": 1795431900.0,
+     "minutes": 5,
+     "module": "taste",
+     "session_id": "20261123-120000-aa11",
+     "subject": "product-and-design-taste"
+    },
+    "entry_id": "20261123-120000-aa11-m5",
+    "hmac": "e1a37d1e4ff038385f62feb675925b6ff3d5a5a794599bb8cf58b785a1c6434e",
+    "kind": "credit"
+   }
+  ]
+ },
+ "measured": "2026-11-23",
+ "where": "wt-tutor-bonus @ eaa69d6, tutor.credit.build_row; generator ~/data/claude-scratch/lc-kind-2026-11-23/gen_lc_kind_fixture.py"
+}

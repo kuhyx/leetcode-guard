@@ -57,6 +57,12 @@ holds the last signed phase.
 `poll_theory(ledger, ledger_path, *, day, now, key_file=None)` decides the
 phase, rewrites C3 on change, mints and saves. It never raises.
 
+- **C1 row kinds** (2026-11-23): the tutor writes a minute on a LeetCode
+  subject (its `theory_phase.GATED`) as `kind: "leetcode_theory"`, so
+  earned_time's tutor earner (which counts `credit` only) no longer pays the
+  tutor bonus for it too; every other minute stays `credit`. Both readers
+  below accept both kinds (`_tutor_minutes.MINUTE_KINDS`); rows written
+  before stay `credit` (`test_tutor_lc_kind.py`).
 - **Lesson minutes**: verified C1 rows (`ledger.json`, `detail.subject` +
   `detail.module`) on the current unit's modules whose `ended_at` falls on
   today; earned_time's rules (positive-int `minutes`, a repeated `entry_id`
@@ -72,7 +78,7 @@ phase, rewrites C3 on change, mints and saves. It never raises.
   (red-team R2, `e2e_theory i`). No C3 agreeing with the live phase pays 0
   lesson minutes.
 - **Review minutes** (kuhy 2026-11-22; `_tutor_minutes.review_minutes`): a
-  verified C1 row with `kind: credit`, `detail.activity == "review"`, a
+  verified C1 row with `kind: credit` or `leetcode_theory`, `detail.activity == "review"`, a
   positive-int `minutes`, `ended_at` on today and `(detail.subject,
   detail.module)` mapped by ANY unit of `curriculum.json`. One review minute
   = one lesson minute, in every phase (`theory`, `solve`, `none`), whatever the

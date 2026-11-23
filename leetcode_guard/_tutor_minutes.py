@@ -32,6 +32,14 @@ if TYPE_CHECKING:
 REVIEW: Final = "review"
 """``detail.activity`` of a review-minute row; lesson rows have no such key."""
 
+MINUTE_KINDS: Final = frozenset({"credit", "leetcode_theory"})
+"""The tutor's minute-row kinds (its ``ledger_pay.MINUTE_KINDS``), both paid here.
+
+From 2026-11-23 the tutor writes a minute on a LeetCode subject as
+``leetcode_theory`` so earned_time's tutor earner (``credit`` only) stops
+paying it too; older LeetCode rows stay ``credit``.
+"""
+
 UNTIL_SLACK_S: Final = 2.0
 """Seconds a teaching row may end after C2's ``at`` and still count as before it.
 
@@ -71,7 +79,7 @@ def _paid(
     day: date,
     window: tuple[float | None, float | None] = (None, None),
 ) -> int:
-    """Minutes of the credit rows ``qualifies`` accepts that ended on ``day``.
+    """Minutes of the minute rows ``qualifies`` accepts that ended on ``day``.
 
     A repeated ``entry_id`` pays once, at its smallest count, counted over the
     qualifying rows only: the untagged original of a twin is never one.
@@ -82,7 +90,7 @@ def _paid(
         detail = detail_of(row)
         minutes = _minutes(detail)
         if (
-            row.get("kind") != "credit"
+            row.get("kind") not in MINUTE_KINDS
             or minutes is None
             or not qualifies(detail)
             or not _ended_on(detail, day, window)

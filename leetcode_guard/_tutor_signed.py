@@ -5,8 +5,9 @@ Two files, both rows signed by the tutor with the shared key
 ``hmac``, ``sort_keys`` and compact separators that
 ``gatelock.log_integrity`` verifies):
 
-* ``ledger.json`` (contract C1): credit rows. A TEACHING turn's row carries
-  ``detail.subject`` and ``detail.module``; a REVIEW minute row adds
+* ``ledger.json`` (contract C1): minute rows, ``kind`` ``credit`` or (a
+  LeetCode subject's, from 2026-11-23) ``leetcode_theory``. A TEACHING turn's
+  row carries ``detail.subject`` and ``detail.module``; a REVIEW minute row adds
   ``detail.activity == "review"``; drill, leftover, carry and the tutor's old
   review rows carry none of those keys (counting them: ``_tutor_minutes``).
 * ``module_state.json`` (contract C2): one row per flip of a module's
