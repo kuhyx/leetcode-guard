@@ -93,7 +93,7 @@ def _no_push(**_k: object) -> PushResult:
     return PushResult(pushed=False, reason="e2e: no push", size=0)
 
 
-def _fake_world() -> None:
+def fake_world() -> None:
     """Scratch key, fake network; no push, sync, nudge port or RTDB line."""
     faulthandler.register(signal.SIGUSR1)  # a stalled role says where it is
     here = Path(leetcode_guard.__file__).resolve()
@@ -211,7 +211,7 @@ def needed() -> int:
 
 def main(role: str, args: list[str]) -> int:
     """Dispatch one role."""
-    _fake_world()
+    fake_world()
     if role == "pool":
         problems = tuple(p for p in map(parse_problem, _rows()) if p is not None)
         stamp = datetime.now(tz=UTC).timestamp()
