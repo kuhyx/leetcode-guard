@@ -56,6 +56,7 @@ Future<StatusController> pumpApp(
 const IconData kStatusTab = Icons.shield_outlined;
 const IconData kCoachTab = Icons.school_outlined;
 const IconData kProfileTab = Icons.person_outline;
+const IconData kPostmortemTab = Icons.fact_check_outlined;
 
 /// Switches to the tab whose navigation icon is [icon] (the tab names are
 /// spoken only, so tests tap the icon).

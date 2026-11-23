@@ -1,4 +1,4 @@
-/// The app shell: three tabs, the as-of time and the stale banner.
+/// The app shell: four tabs, the as-of time and the stale banner.
 ///
 /// Nothing here can unlock, credit or solve: a credit exists only once
 /// LeetCode confirms an accepted solve. The Coach tab's guided sessions
@@ -17,6 +17,8 @@ import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/coach_live_card.dart';
 import 'package:leetcode_guard/src/ui/coach_tab.dart';
+import 'package:leetcode_guard/src/ui/destinations.dart';
+import 'package:leetcode_guard/src/ui/postmortem_tab.dart';
 import 'package:leetcode_guard/src/ui/profile_tab.dart';
 import 'package:leetcode_guard/src/ui/stale_banner.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
@@ -92,15 +94,6 @@ class _ShellState extends State<_Shell> {
 
   StatusController get _c => widget.app.controller;
 
-  /// Outline icon, filled icon when selected, and the spoken name. The names
-  /// are never painted (textgate): the bar hides its labels, the rail keeps
-  /// them invisible for semantics only.
-  static const List<(IconData, IconData, String)> _destinations = [
-    (Icons.shield_outlined, Icons.shield, 'Status'),
-    (Icons.school_outlined, Icons.school, 'Coach'),
-    (Icons.person_outline, Icons.person, 'Profile'),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -144,11 +137,12 @@ class _ShellState extends State<_Shell> {
           null => null,
         },
       ),
-      _ => ProfileTab(
+      2 => ProfileTab(
         profile: snap?.profile,
         today: DateTime.utc(generated.year, generated.month, generated.day),
         now: _c.now(),
       ),
+      _ => PostmortemTab(units: snap?.postmortems),
     };
   }
 
@@ -214,7 +208,7 @@ class _ShellState extends State<_Shell> {
                   onDestinationSelected: _select,
                   labelType: NavigationRailLabelType.none,
                   destinations: [
-                    for (final (icon, selected, label) in _destinations)
+                    for (final (icon, selected, label) in kDestinations)
                       NavigationRailDestination(
                         icon: Icon(icon),
                         selectedIcon: Icon(selected),
@@ -233,7 +227,7 @@ class _ShellState extends State<_Shell> {
               onDestinationSelected: _select,
               labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
               destinations: [
-                for (final (icon, selected, label) in _destinations)
+                for (final (icon, selected, label) in kDestinations)
                   NavigationDestination(
                     icon: Icon(icon),
                     selectedIcon: Icon(selected),

@@ -11,6 +11,8 @@
 #
 # Usage:
 #   screenshot_coach.sh run W H SCALE OUT.png [X Y]...   # click each X Y
+#   SHOT_FIXTURE=test/fixtures/x.json screenshot_coach.sh run ...  # any tab
+#     over that snapshot, no relay (tool/fixture_screenshot_server.dart)
 #   (also: start W H SCALE | click X Y | shot OUT.png | stop)
 #   Coordinates are physical pixels; e.g. run 3840 2160 2 /tmp/a.png 200 300
 # Needs: Xvfb, xdotool, ImageMagick (import), chromium, dart; build/web built.
@@ -75,8 +77,13 @@ cmd_start() {
 	Xvfb ":${n}" -screen 0 "${width}x${height}x24" -nolisten tcp \
 		>"${STATE_DIR}/xvfb.log" 2>&1 &
 	echo $! >"${STATE_DIR}/xvfb.pid"
-	(cd "$APP_DIR" && dart run tool/coach_screenshot_server.dart \
-		"${STATE_DIR}/port" >"${STATE_DIR}/server.log" 2>&1) &
+	if [[ -n ${SHOT_FIXTURE:-} ]]; then
+		(cd "$APP_DIR" && dart run tool/fixture_screenshot_server.dart \
+			"${STATE_DIR}/port" "$SHOT_FIXTURE" >"${STATE_DIR}/server.log" 2>&1) &
+	else
+		(cd "$APP_DIR" && dart run tool/coach_screenshot_server.dart \
+			"${STATE_DIR}/port" >"${STATE_DIR}/server.log" 2>&1) &
+	fi
 	echo $! >"${STATE_DIR}/server.pid"
 	wait_for_file "${STATE_DIR}/port"
 	DISPLAY=":${n}" "$BROWSER" \

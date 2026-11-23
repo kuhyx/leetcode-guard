@@ -9,11 +9,13 @@ import 'dart:convert';
 import 'package:leetcode_guard/src/model/coach.dart';
 import 'package:leetcode_guard/src/model/extras.dart';
 import 'package:leetcode_guard/src/model/json_read.dart';
+import 'package:leetcode_guard/src/model/postmortem.dart';
 import 'package:leetcode_guard/src/model/profile.dart';
 import 'package:leetcode_guard/src/model/status.dart';
 
 export 'package:leetcode_guard/src/model/coach.dart';
 export 'package:leetcode_guard/src/model/extras.dart';
+export 'package:leetcode_guard/src/model/postmortem.dart';
 export 'package:leetcode_guard/src/model/profile.dart';
 export 'package:leetcode_guard/src/model/status.dart';
 
@@ -28,7 +30,8 @@ class Snapshot {
       projectionPrice = readInt(json['projection_price']),
       projections = _projections(json['projections']),
       profile = readSection(json['profile'], ProfileData.fromJson),
-      coach = readSection(json['coach'], CoachData.fromJson);
+      coach = readSection(json['coach'], CoachData.fromJson),
+      postmortems = readObjects(json['postmortems'], PostmortemUnit.fromJson);
 
   /// Parses a response body, or null when it is not a snapshot.
   ///
@@ -63,6 +66,9 @@ class Snapshot {
 
   /// The coach's session logs.
   final CoachData? coach;
+
+  /// The tutor's post-mortems, oldest unit first; `[]` = none yet.
+  final List<PostmortemUnit>? postmortems;
 
   static Map<String, Projection>? _projections(Object? value) {
     final all = readObjectMap(value, Projection.fromJson);
