@@ -54,6 +54,7 @@ SNAPSHOT_SIDE = (
     "_snapshot_auth",
     "_snapshot_dedup",
     "_snapshot_local",
+    "_snapshot_lock",
     "_snapshot_projection",
     "_snapshot_push",
     "_snapshot_rtdb",

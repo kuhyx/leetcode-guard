@@ -6,6 +6,7 @@ import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/projection_section.dart';
 import 'package:leetcode_guard/src/ui/status_days.dart';
 import 'package:leetcode_guard/src/ui/status_health.dart';
+import 'package:leetcode_guard/src/ui/status_lock_block.dart';
 import 'package:leetcode_guard/src/ui/status_sections.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -25,6 +26,8 @@ class StatusTab extends StatelessWidget {
     final s = snapshot?.status;
     return CardGrid(
       listKey: const Key('status-list'),
+      // While today is unpaid, the PC lock's unit and rows come first.
+      header: StatusLockBlock.header(s, openUrl),
       cards: [
         verdictSection(context, s),
         creditsSection(context, s),

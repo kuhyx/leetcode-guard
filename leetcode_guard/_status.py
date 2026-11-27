@@ -38,8 +38,10 @@ from leetcode_guard._status_unit import gather_unit
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from leetcode_guard._auth import AuthState
     from leetcode_guard._gate import GateDecision
     from leetcode_guard._ledger_io import Ledger
+    from leetcode_guard._pool_resolve import PoolResolution
 
 _EXIT_OK: Final = 0
 _EXIT_LOCKED: Final = 1
@@ -81,7 +83,7 @@ def gather_status(
         debt=decision.debt,
         surcharge=min(decision.debt.surcharge_on(decision.day), decision.cost),
         clock_trusted=check_clock(ledger, day=day).trusted,
-        verdict=_verdict(decision),
+        verdict=verdict_of(decision),
         balance=_balance_view(decision),
         pool=_pool_view(
             ledger, pool_files or PoolFiles(), now=moment.timestamp(), limit=limit
@@ -90,7 +92,8 @@ def gather_status(
     )
 
 
-def _verdict(decision: GateDecision) -> Verdict:
+def verdict_of(decision: GateDecision) -> Verdict:
+    """The snapshot's record of ``decision``."""
     return Verdict(
         state=decision.state.value,
         locked=decision.locked,
@@ -114,7 +117,10 @@ def _balance_view(decision: GateDecision) -> BalanceView:
     )
 
 
-def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> PoolView:
+def read_pool(
+    ledger: Ledger, files: PoolFiles, *, now: float
+) -> tuple[PoolResolution, AuthState]:
+    """The cached pool, minus the ledger's solves, and the cookies' state."""
     auth = load_cookies(COOKIES_FILE if files.cookies is None else files.cookies)
     # `post=None` is what makes this read-only: resolve_pool cannot fetch.
     pool = resolve_pool(
@@ -123,6 +129,11 @@ def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> P
         now=now,
         solved=SolvedKnowledge(auth=auth, slugs=solved_slugs(ledger)),
     )
+    return pool, auth
+
+
+def _pool_view(ledger: Ledger, files: PoolFiles, *, now: float, limit: int) -> PoolView:
+    pool, auth = read_pool(ledger, files, now=now)
     blocks = pool.blocks
     return PoolView(
         auth_present=auth.present,

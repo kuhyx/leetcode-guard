@@ -3,9 +3,11 @@ library;
 
 import 'package:leetcode_guard/src/model/json_read.dart';
 import 'package:leetcode_guard/src/model/status_lists.dart';
+import 'package:leetcode_guard/src/model/status_lock.dart';
 import 'package:leetcode_guard/src/model/status_parts.dart';
 
 export 'package:leetcode_guard/src/model/status_lists.dart';
+export 'package:leetcode_guard/src/model/status_lock.dart';
 export 'package:leetcode_guard/src/model/status_parts.dart';
 
 /// Today's gate verdict plus the sections derived from the ledger.
@@ -34,7 +36,8 @@ class StatusData {
       suggestions = readObjects(json['suggestions'], Suggestion.fromJson),
       solves = readSection(json['solves'], SolvesData.fromJson),
       days = readSection(json['days'], DaysData.fromJson),
-      budgets = readObjectMap(json['budgets'], Budget.fromJson);
+      budgets = readObjectMap(json['budgets'], Budget.fromJson),
+      lock = readSection(json['lock'], LockData.fromJson);
 
   /// The gate's day (`YYYY-MM-DD`).
   final String? day;
@@ -104,4 +107,7 @@ class StatusData {
 
   /// Escape-hatch and incident allowances by name.
   final Map<String, Budget?>? budgets;
+
+  /// What the PC lock shows while today is unpaid; null on older snapshots.
+  final LockData? lock;
 }

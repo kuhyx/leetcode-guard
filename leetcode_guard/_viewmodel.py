@@ -115,6 +115,30 @@ def build_problem_lines(
     return format_lines(pool.problems, pool, limit, solved_slugs, narrowed=False)
 
 
+def lock_rows(
+    source: ViewSource,
+) -> tuple[PhaseScreen, tuple[ProblemLine, ...], tuple[str, ...]]:
+    """The screen and its rows, in order; the one path the lock and the snapshot share.
+
+    Returns:
+        The phase screen, the rows (one review row in place of the SOLVE rows
+        when cards are due), and the titles a solve removed.
+    """
+    screen = build_phase_screen(source.phase, source.review)
+    problems, dropped = build_problem_lines(
+        source.pool,
+        limit=source.limit,
+        solved_slugs=source.solved_slugs,
+        unit=screen.unit if screen.unit_list else "",
+        easy_only=screen.easy_only,
+    )
+    if screen.review is not None:
+        # Review first: one row in place of the SOLVE rows. ``dropped`` stays,
+        # so a solve landing now is still acknowledged on the status line.
+        problems = (review_line(screen.review),)
+    return screen, problems, dropped
+
+
 _FREE_DAY_MARKS: Final = {
     GateState.UNLOCKED_NOT_STARTED: g.NOT_STARTED,
     GateState.UNLOCKED_SICK_DAY: g.SICK,
@@ -202,18 +226,7 @@ def build_viewmodel(
     Returns:
         The rendered marks.
     """
-    screen = build_phase_screen(source.phase, source.review)
-    problems, dropped = build_problem_lines(
-        source.pool,
-        limit=source.limit,
-        solved_slugs=source.solved_slugs,
-        unit=screen.unit if screen.unit_list else "",
-        easy_only=screen.easy_only,
-    )
-    if screen.review is not None:
-        # Review first: one row in place of the SOLVE rows. ``dropped`` stays,
-        # so a solve landing now is still acknowledged on the status line.
-        problems = (review_line(screen.review),)
+    screen, problems, dropped = lock_rows(source)
     return ViewModel(
         headline=_headline(decision),
         balance_line=_balance_line(decision),

@@ -149,6 +149,7 @@ unchanged, its own `generated_at` is the desktop's "as of" and stale signal
                                    "entries": 4087, "age_days": 2.17,
                                    "summary": "Problem pool: 4087 entries, 2.2 days old"},
                     "statement_cache": {"...": "same shape as pool_cache"}},
+    "lock": {"...": "the lock's own rows: DOCS-status-snapshot-lock.md"},
     "suggestions": [{"title": "...", "difficulty": "Medium",
                      "ac_rate": 52.1, "url": "https://leetcode.com/problems/..."}]
   },

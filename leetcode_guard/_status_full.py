@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import sickdays
 
@@ -33,6 +33,7 @@ from leetcode_guard._escape_flow import build_tracker as build_escape_tracker
 from leetcode_guard._ledger_io import load_ledger
 from leetcode_guard._network_incident import build_tracker as build_incident_tracker
 from leetcode_guard._progress import Progress, read_progress_cache
+from leetcode_guard._snapshot_lock import gather_lock
 from leetcode_guard._status import gather_status
 from leetcode_guard._status_extra import (
     BudgetStatus,
@@ -81,6 +82,8 @@ class FullStatus:
     setup: GateSetup
     progress: Progress | None
     """The profile's solved counts as last mirrored, or ``None`` if never."""
+    lock: dict[str, Any]
+    """The rows the PC lock shows, as the snapshot's ``status.lock`` JSON."""
 
 
 def gather_full(
@@ -123,6 +126,9 @@ def gather_full(
             ledger_path=str(ledger_file),
         ),
         progress=read_progress_cache(PROGRESS_CACHE_FILE),
+        lock=gather_lock(
+            gate.verdict, gate.unit.view, ledger, at=moment, key_file=key_file
+        ),
     )
 
 

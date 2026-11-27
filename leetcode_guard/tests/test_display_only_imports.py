@@ -169,7 +169,8 @@ def test_the_review_reader_reads_signed_rows_only():
 
 
 def test_only_the_lock_side_imports_the_review_reader():
-    """The view model (and its source record) and the phase reader.
+    """The view model (and its source record), the phase reader, and the
+    snapshot's copy of the lock rows (``_snapshot_lock``).
 
     The file watch takes only the file's name, from ``_review_due_rows``."""
     importers = {
@@ -180,6 +181,7 @@ def test_only_the_lock_side_imports_the_review_reader():
 
     assert importers == {
         "_lock_phase",
+        "_snapshot_lock",
         "_viewmodel_phase",
         "_viewmodel_source",
     }

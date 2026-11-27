@@ -16,6 +16,7 @@ import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/data/app_error_report.dart';
 import 'package:leetcode_guard/src/data/app_errors.dart';
 import 'package:leetcode_guard/src/data/e2e_stores.dart';
+import 'package:leetcode_guard/src/data/external_launch.dart';
 import 'package:leetcode_guard/src/data/firebase_backend.dart';
 import 'package:leetcode_guard/src/data/firebase_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/google_sign_in_backend.dart';
@@ -27,7 +28,6 @@ import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sync_settings_ui/sync_settings_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Entry point.
 Future<void> main() async {
@@ -70,16 +70,10 @@ Future<void> main() async {
   }
   final reporter = kIsWeb
       ? null
-      : RtdbErrorReporter(
-          log: AppErrorLog(),
-          devices: devices,
-          stores: stores,
-        );
+      : RtdbErrorReporter(log: AppErrorLog(), devices: devices, stores: stores);
   final source = kIsWeb
       ? WrapperSnapshotSource(base: Uri.base)
-      : HashGatedSource(
-          FirebaseSnapshotSource(stores: stores),
-        );
+      : HashGatedSource(FirebaseSnapshotSource(stores: stores));
   // The coach relay: the wrapper's /coach/* on the desktop, RTDB on the
   // phone (DOCS-coach-relay.md).
   final coach = CoachController(
@@ -116,9 +110,7 @@ Future<void> main() async {
               ),
             ),
       coach: coach,
-      openUrl: kIsWeb
-          ? WrapperUrlOpener(base: Uri.base).call
-          : (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
+      openUrl: kIsWeb ? WrapperUrlOpener(base: Uri.base).call : openExternally,
       settingsBuilder: kIsWeb
           ? null
           : (_) => SyncSettingsScreen(

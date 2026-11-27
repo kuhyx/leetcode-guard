@@ -151,6 +151,9 @@ def status_section(full: FullStatus) -> dict[str, Any]:
         },
         **_health(full),
         "unit": unit_dict(full.gate.unit),
+        # The lock's own rows (``_snapshot_lock``); ``suggestions`` below is
+        # the plain ranked pool, kept for older app builds.
+        "lock": full.lock,
         "suggestions": [
             {
                 "title": item.title,
