@@ -13,7 +13,7 @@ focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdire
 freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.4#subdirectory=freedays
 gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.16.1#subdirectory=gatelock
 kuhy-credit @ git+https://github.com/kuhyx/utils@kuhy-credit-v0.3.2#subdirectory=kuhy_credit
-leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.6#subdirectory=leetcode_coach
+leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.7#subdirectory=leetcode_coach
 mcp==2.3.0
 mypy==2.4.1
 pre-commit==4.7.0
