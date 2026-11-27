@@ -15,6 +15,14 @@ const kBeatLive = Duration(seconds: 5);
 /// See [kBeatLive].
 const kBeatIdle = Duration(seconds: 30);
 
+// Only these say the relay is unreachable; rejected / forgotten are
+// about one request and are handled where it is.
+const Set<CoachOutage> _unreachable = {
+  CoachOutage.relayDown,
+  CoachOutage.network,
+  CoachOutage.signedOut,
+};
+
 /// The request half of [CoachController]: sending, re-sending, polling
 /// for the result and taking it in.
 extension CoachSending on CoachController {
@@ -30,7 +38,8 @@ extension CoachSending on CoachController {
     return true;
   }
 
-  /// Sends the stalled or unsent request again, under the SAME rid.
+  /// Sends the stalled or unsent request again, under the SAME rid (an
+  /// unsent one also goes by itself on the next heartbeat that lands).
   Future<void> resend() async {
     final p = pending;
     if (p == null || !p.resendable) return;
@@ -44,6 +53,12 @@ extension CoachSending on CoachController {
     return send(f.kind, f.body);
   }
 
+  void _setOutage(CoachUnavailable e) {
+    if (!_unreachable.contains(e.outage)) return;
+    outage = e;
+    unawaited(reporter?.failed(e.message));
+  }
+
   Future<void> _submit(PendingRequest p) async {
     p
       ..phase = RequestPhase.queued
@@ -51,13 +66,15 @@ extension CoachSending on CoachController {
     _lastResult = now();
     _changed();
     try {
+      // On the device before the network: a failure or a kill keeps it.
+      await _saveOutbox(p);
       final dev = _dev ??= await devices.deviceId();
       final r = await transport.submit(p.rid, {
         'kind': p.kind,
         'dev': dev,
         'body': p.body,
       });
-      if (r != null) await _finish(p, r);
+      await (r == null ? _saveOutbox(p, sent: true) : _finish(p, r));
     } on CoachUnavailable catch (e) {
       if (e.outage == CoachOutage.rejected) {
         await _finish(p, CoachController.refused(e.message));
@@ -89,6 +106,7 @@ extension CoachSending on CoachController {
   Future<void> _finish(PendingRequest p, RelayResult r) async {
     if (!identical(pending, p)) return;
     pending = null;
+    await _saveOutbox(null);
     _cooldownUntil = now().add(kCooldown);
     if (!r.ok) {
       failure = RelayFailure(p.kind, p.body, r);

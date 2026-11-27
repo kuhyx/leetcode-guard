@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:leetcode_guard/src/coach/device_id.dart';
 import 'package:leetcode_guard/src/coach/ids.dart';
+import 'package:leetcode_guard/src/coach/local_store.dart';
 import 'package:leetcode_guard/src/coach/pending.dart';
 import 'package:leetcode_guard/src/coach/transport.dart';
 import 'package:leetcode_guard/src/data/app_error_report.dart';
@@ -23,6 +24,7 @@ import 'package:leetcode_guard/src/model/coach_state.dart';
 import 'package:leetcode_guard/src/model/json_read.dart';
 
 part 'controller_send.dart';
+part 'controller_store.dart';
 
 /// Whether the PC's relay can take a request.
 enum CoachPresence {
@@ -49,10 +51,15 @@ class CoachController extends ChangeNotifier {
     required this.transport,
     required this.devices,
     this.reporter,
+    CoachLocalStore? store,
     UlidGenerator? ulid,
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now,
-       _ulid = ulid ?? UlidGenerator();
+       _ulid = ulid ?? UlidGenerator(),
+       store = store ?? MemoryCoachStore();
+
+  /// The device's copy of the outbox and the thread.
+  final CoachLocalStore store;
 
   /// The path to the relay.
   final CoachTransport transport;
@@ -92,6 +99,8 @@ class CoachController extends ChangeNotifier {
   Timer? _timer;
   int _attached = 0;
   bool _ticking = false;
+  Future<void>? _restoring;
+  bool _restored = false;
 
   /// The injected clock's now.
   DateTime now() => _clock();
@@ -116,8 +125,10 @@ class CoachController extends ChangeNotifier {
     return pending != null || (until != null && now().isBefore(until));
   }
 
-  /// Whether Send / Grade / Hint / Reveal / Run may be pressed.
-  bool get canAct => presence == CoachPresence.online && !busy;
+  /// Whether Send / Grade / Hint / Reveal / Run may be pressed: the local
+  /// copy is read and nothing is in flight. The PC need not be there: the
+  /// outbox keeps the request and sends it once the relay answers.
+  bool get canAct => _restored && !busy;
 
   /// The live sid, or null.
   String? get sid => (state?.live ?? false) ? state?.session?.id : null;
@@ -144,6 +155,7 @@ class CoachController extends ChangeNotifier {
 
   /// Reads the heartbeat, then state and chat.
   Future<void> refresh() async {
+    await restore();
     await _beat();
     await _sync();
     notifyListeners();
@@ -157,6 +169,7 @@ class CoachController extends ChangeNotifier {
     if (_ticking) return;
     _ticking = true;
     try {
+      await restore();
       final p = pending;
       if (p != null &&
           p.phase != RequestPhase.notSent &&
@@ -178,20 +191,6 @@ class CoachController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Only these say the relay is unreachable; rejected / forgotten are
-  // about one request and are handled where it is.
-  static const Set<CoachOutage> _unreachable = {
-    CoachOutage.relayDown,
-    CoachOutage.network,
-    CoachOutage.signedOut,
-  };
-
-  void _setOutage(CoachUnavailable e) {
-    if (!_unreachable.contains(e.outage)) return;
-    outage = e;
-    unawaited(reporter?.failed(e.message));
-  }
-
   Future<void> _beat() async {
     _lastBeat = now();
     try {
@@ -204,6 +203,8 @@ class CoachController extends ChangeNotifier {
       if (p != null && p.phase == RequestPhase.queued && hb?.busy == p.rid) {
         p.phase = RequestPhase.working;
       }
+      // The relay answers again: the outbox goes out by itself, same rid.
+      if (p != null && p.phase == RequestPhase.notSent) await _submit(p);
       final rev = hb?.stateRev;
       if (rev != null && rev != state?.rev) await _sync();
     } on CoachUnavailable catch (e) {
@@ -224,6 +225,7 @@ class CoachController extends ChangeNotifier {
     } on CoachUnavailable catch (e) {
       _setOutage(e);
     }
+    await _saveThread();
   }
 
   /// A result standing for a request the relay refused at the door.

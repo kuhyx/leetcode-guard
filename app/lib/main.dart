@@ -11,6 +11,7 @@ import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
 import 'package:flutter/foundation.dart';
 import 'package:leetcode_guard/src/coach/controller.dart';
 import 'package:leetcode_guard/src/coach/device_id.dart';
+import 'package:leetcode_guard/src/coach/local_store.dart';
 import 'package:leetcode_guard/src/coach/rtdb_transport.dart';
 import 'package:leetcode_guard/src/coach/wrapper_transport.dart';
 import 'package:leetcode_guard/src/data/app_error_report.dart';
@@ -86,7 +87,12 @@ Future<void> main() async {
           ),
     devices: devices,
     reporter: reporter,
+    // The outbox and the last thread, on the device (offline-first).
+    store: PrefsCoachStore(),
   );
+  // One pass at launch: reads the local copy, sends a request a previous
+  // run left unsent and refreshes the kept thread, coach screen or not.
+  unawaited(coach.refresh());
   final navigator = GlobalKey<NavigatorState>();
   final status = StatusController(
     source: source,

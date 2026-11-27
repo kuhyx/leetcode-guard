@@ -55,10 +55,10 @@ Cleanup: DELETE `requests/{rid}` 24 h after its result (desktop results: forgott
 gets what is left of the 280 s, at most 240 s).
 
 **PC offline.** The phone polls `heartbeat` every 5 s while the Coach tab is visible with a live session, every 30 s
-while visible otherwise, never in the background. Offline = `phone_now - beat > 120 s` (spec: 2 min): F greys the
-session controls and keeps the last `state`. Desktop offline = `relay_down`; F shows
-`systemctl --user start leetcode-coach-relay`. RTDB / Firebase down: the relay logs why, keeps serving the desktop and
-retries with backoff; it never exits over the network.
+while visible otherwise, never in the background. Offline = `phone_now - beat > 120 s` (spec: 2 min); desktop offline =
+`relay_down`, F shows `systemctl --user start leetcode-coach-relay`. Either way F keeps the controls live and the last
+`state` (offline-first, `DOCS-coach-ui-spec.md` decision 10). RTDB / Firebase down: the relay logs why, keeps serving
+the desktop and retries with backoff; it never exits over the network.
 
 ## 2. Request kinds (the only seven; spec decision 7)
 

@@ -184,7 +184,11 @@ class CoachState {
       revealed = readBool(json['revealed']),
       session = readSection(json['session'], SessionInfo.fromJson),
       steps = readObjects(json['steps'], CoachStep.fromJson) ?? const [],
-      toolbox = readObjects(json['toolbox'], ToolboxEntry.fromJson);
+      toolbox = readObjects(json['toolbox'], ToolboxEntry.fromJson),
+      raw = json;
+
+  /// The object it was parsed from (kept for the local copy).
+  final Json raw;
 
   /// Moves on every change (= `heartbeat.state_rev`).
   final int? rev;

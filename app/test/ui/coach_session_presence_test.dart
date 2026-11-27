@@ -12,8 +12,10 @@ const _down = CoachUnavailable(
 );
 
 void main() {
+  // Offline-first: the controls stay live while the PC is away; a request
+  // waits in the outbox and goes out by itself (controller_offline_test).
   testWidgets('phone: a heartbeat older than 2 min is "PC offline" and '
-      'greys the session controls', (tester) async {
+      'keeps the session controls', (tester) async {
     final rig = await pumpCoach(tester, size: kPhoneSession, phone: true);
     await startMissingNumber(tester, rig);
     expect(byLabelContaining('PC offline'), findsNothing);
@@ -27,7 +29,7 @@ void main() {
     ).inMilliseconds;
     await wait(tester, rig, 5);
     expect(byLabelContaining('PC offline'), findsOneWidget);
-    expect(await enabled(tester, 'submit-1'), isFalse);
+    expect(await enabled(tester, 'submit-1'), isTrue);
     // The last state stays on screen.
     expect(find.byKey(const Key('answer-1')), findsOneWidget);
 
@@ -49,12 +51,11 @@ void main() {
     );
     await openCoachTab(tester);
     expect(byLabelContaining('PC offline'), findsOneWidget);
-    expect(await enabled(tester, 'start-missing-number'), isFalse);
+    expect(await enabled(tester, 'start-missing-number'), isTrue);
   });
 
-  testWidgets('desktop: relay down names the service and how to start it', (
-    tester,
-  ) async {
+  testWidgets('desktop: relay down names the service; a start pressed '
+      'meanwhile goes out by itself once it runs', (tester) async {
     final rig = await pumpCoach(tester, before: (t) => t.outage = _down);
     await openCoachTab(tester);
     expect(byLabel(kRelayDownText), findsOneWidget);
@@ -62,12 +63,17 @@ void main() {
       find.text('systemctl --user start leetcode-coach-relay'),
       findsOneWidget,
     );
-    expect(await enabled(tester, 'start-missing-number'), isFalse);
+    await tapKey(tester, 'start-missing-number');
+    expect(rig.controller.pending, isNotNull);
+    expect(rig.transport.relay.ran, isEmpty);
 
     rig.transport.outage = null;
     await wait(tester, rig, 30);
+    await settle(tester, rig);
     expect(byLabel(kRelayDownText), findsNothing);
-    expect(await enabled(tester, 'start-missing-number'), isTrue);
+    expect(rig.controller.pending, isNull);
+    expect(rig.transport.relay.ran.single.$1, 'session_start');
+    expect(rig.controller.sid, isNotNull);
   });
 
   testWidgets('desktop: relay down mid-session keeps the session on screen', (

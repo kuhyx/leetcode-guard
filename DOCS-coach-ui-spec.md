@@ -48,6 +48,14 @@ each step, while chatting with the coach session:
    statement's examples; reply shows only "example N: got X, expected Y".
 9. **CLI stays.** `leetcode` REPL and the app write the same session log, so
    `leetcode report` and the Coach tab see both.
+10. **Offline-first** (kuhy, 2026-11-27): the controls stay live while the PC
+   or the network is away. A request lands in the device outbox
+   (`app/lib/src/coach/local_store.dart`) before the network, shows as
+   pending, and goes out again under the SAME rid by itself on the next
+   heartbeat that lands, also after a restart (one the transport already took
+   is only polled, never re-sent). The last state, chat and grades are kept on
+   the device and shown on a cold start offline. Check:
+   `cd app && flutter test test/coach/controller_offline_test.dart`.
 
 ## Done
 
