@@ -26,6 +26,7 @@ import 'package:leetcode_guard/src/data/wrapper_snapshot_source.dart';
 import 'package:leetcode_guard/src/data/wrapper_url_opener.dart';
 import 'package:leetcode_guard/src/state/controller.dart';
 import 'package:leetcode_guard/src/ui/app.dart';
+import 'package:leetcode_guard/src/ui/problem_opener.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sync_settings_ui/sync_settings_ui.dart';
 
@@ -86,6 +87,7 @@ Future<void> main() async {
     devices: devices,
     reporter: reporter,
   );
+  final navigator = GlobalKey<NavigatorState>();
   final status = StatusController(
     source: source,
     cache: PrefsSnapshotCache(),
@@ -110,7 +112,15 @@ Future<void> main() async {
               ),
             ),
       coach: coach,
-      openUrl: kIsWeb ? WrapperUrlOpener(base: Uri.base).call : openExternally,
+      navigatorKey: navigator,
+      // Problems open in the in-app LeetCode view on the phone (no browser
+      // at home); the tutor's links go to the tutor app.
+      openUrl: kIsWeb
+          ? WrapperUrlOpener(base: Uri.base).call
+          : InAppProblemOpener(
+              navigator: navigator,
+              fallback: openExternally,
+            ).call,
       settingsBuilder: kIsWeb
           ? null
           : (_) => SyncSettingsScreen(

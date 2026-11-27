@@ -62,12 +62,18 @@ dependencies:
       path: sync_settings_ui
   # Opens a suggestion's problem page in the browser: the app's one action.
   url_launcher: 6.3.3
+  # A problem opens in an in-app view locked to leetcode.com (kuhy,
+  # 2026-11-27): at home the phone has no browser, and the LeetCode app's
+  # PairIP licence check fails while the focus policy hides Play.
+  webview_flutter: 4.14.1
 
 dev_dependencies:
   flutter_launcher_icons: 0.14.4
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
+  # The fake WebView platform the LeetCode view's tests run on.
+  webview_flutter_platform_interface: 2.15.1
 
 flutter:
   uses-material-design: true

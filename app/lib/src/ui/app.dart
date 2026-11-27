@@ -40,6 +40,7 @@ class LeetGuardApp extends StatelessWidget {
     this.lockAction,
     this.errors,
     this.debugThrow = false,
+    this.navigatorKey,
     super.key,
   });
 
@@ -67,8 +68,12 @@ class LeetGuardApp extends StatelessWidget {
   /// builds or with `--dart-define=DEBUG_THROW=true`; releases never.
   final bool debugThrow;
 
+  /// The navigator the in-app LeetCode view is pushed on (phone only).
+  final GlobalKey<NavigatorState>? navigatorKey;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorKey: navigatorKey,
     // The app's proper noun, for the OS task switcher only (settled).
     title: 'LeetGuard',
     debugShowCheckedModeBanner: false,
