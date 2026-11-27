@@ -15,7 +15,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          # The deploy runs system Python 3.14; 3.x (3.15) breaks pylint --jobs.
+          # test_ci_python_version.py holds this to pyproject's py-version.
+          python-version: "3.14"
 
       # conftest.py imports tkinter at module scope to keep the real
       # `tk.TclError` while replacing the rest of the module with a mock, so
@@ -65,7 +67,9 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          # The deploy runs system Python 3.14; 3.x (3.15) breaks pylint --jobs.
+          # test_ci_python_version.py holds this to pyproject's py-version.
+          python-version: "3.14"
 
       # xvfb-run and setup-python's tkinter are both already on ubuntu-latest
       # (screens-fit in the pre-commit job re-execs under xvfb-run with no apt
