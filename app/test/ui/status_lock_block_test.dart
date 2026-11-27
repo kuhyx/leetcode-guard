@@ -93,6 +93,43 @@ void main() {
     });
   }
 
+  testWidgets('a link no app takes marks its row, never a silent no-op', (
+    tester,
+  ) async {
+    final opened = <Uri>[];
+    await pumpApp(
+      tester,
+      answers: ['snapshot_lock_solve'],
+      opened: opened,
+      opens: false,
+    );
+    final row = find.byKey(const Key('lock-row-1'));
+    expect(
+      find.descendant(of: row, matching: find.byIcon(Icons.link_off)),
+      findsNothing,
+    );
+    await tester.tap(row);
+    await tester.pump();
+    expect(opened, hasLength(1));
+    expect(
+      find.descendant(of: row, matching: find.byIcon(Icons.link_off)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: row, matching: find.byIcon(Icons.open_in_new)),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(kLockLearnKey));
+    await tester.pump();
+    expect(
+      find.descendant(
+        of: find.byKey(kLockLearnKey),
+        matching: find.byIcon(Icons.link_off),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('unsafe targets are not tappable', (tester) async {
     final opened = <Uri>[];
     await pumpApp(

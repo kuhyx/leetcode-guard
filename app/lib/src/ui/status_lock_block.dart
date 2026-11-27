@@ -75,14 +75,10 @@ class StatusLockBlock extends StatelessWidget {
                   ),
                 ),
                 if (learn != null)
-                  IconButton(
+                  _LearnButton(
                     key: kLockLearnKey,
-                    icon: Icon(
-                      Icons.school,
-                      color: scheme.primary,
-                      semanticLabel: 'Tutor',
-                    ),
-                    onPressed: () => openUrl(learn),
+                    target: learn,
+                    openUrl: openUrl,
                   ),
               ],
             ),
@@ -95,11 +91,60 @@ class StatusLockBlock extends StatelessWidget {
   }
 }
 
-class _LockRowTile extends StatelessWidget {
+/// A link no app took (no LeetCode app and no browser on a focus-locked
+/// phone): the tap must show it failed, never do nothing.
+mixin _OpensLinks<T extends StatefulWidget> on State<T> {
+  bool failed = false;
+
+  Future<void> open(UrlOpener openUrl, Uri target) async {
+    final ok = await openUrl(target);
+    if (mounted && ok == failed) setState(() => failed = !ok);
+  }
+}
+
+Widget _failedMark(BuildContext context) => Icon(
+  Icons.link_off,
+  size: 20,
+  color: statusColors(context).danger,
+  semanticLabel: 'Unavailable',
+);
+
+class _LearnButton extends StatefulWidget {
+  const new({required this.target, required this.openUrl, super.key});
+
+  final Uri target;
+  final UrlOpener openUrl;
+
+  @override
+  State<_LearnButton> createState() => _LearnButtonState();
+}
+
+class _LearnButtonState extends State<_LearnButton> with _OpensLinks {
+  @override
+  Widget build(BuildContext context) => IconButton(
+    icon: failed
+        ? _failedMark(context)
+        : Icon(
+            Icons.school,
+            color: Theme.of(context).colorScheme.primary,
+            semanticLabel: 'Tutor',
+          ),
+    onPressed: () => open(widget.openUrl, widget.target),
+  );
+}
+
+class _LockRowTile extends StatefulWidget {
   const new({required this.row, required this.openUrl, super.key});
 
   final LockRow row;
   final UrlOpener openUrl;
+
+  @override
+  State<_LockRowTile> createState() => _LockRowTileState();
+}
+
+class _LockRowTileState extends State<_LockRowTile> with _OpensLinks {
+  LockRow get row => widget.row;
 
   /// Where a tap goes: only a LeetCode problem page or a tutor route.
   Uri? get _target => switch (row) {
@@ -115,7 +160,7 @@ class _LockRowTile extends StatelessWidget {
     final muted = scheme.onSurfaceVariant;
     return InkWell(
       borderRadius: BorderRadius.circular(AppRadius.sm),
-      onTap: target == null ? null : () => openUrl(target),
+      onTap: target == null ? null : () => open(widget.openUrl, target),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
         child: Row(
@@ -149,7 +194,10 @@ class _LockRowTile extends StatelessWidget {
                 const Spacer(),
               ],
             },
-            if (target != null) Icon(Icons.open_in_new, size: 20, color: muted),
+            if (target != null && failed)
+              _failedMark(context)
+            else if (target != null)
+              Icon(Icons.open_in_new, size: 20, color: muted),
           ],
         ),
       ),

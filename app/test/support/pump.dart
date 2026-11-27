@@ -21,6 +21,7 @@ Future<StatusController> pumpApp(
   FakeViewPadding padding = FakeViewPadding.zero,
   int minutes = 1,
   List<Uri>? opened,
+  bool opens = true,
   WidgetBuilder? settingsBuilder,
   Widget? lockAction,
 }) async {
@@ -42,7 +43,7 @@ Future<StatusController> pumpApp(
       controller: controller,
       openUrl: (uri) async {
         opened?.add(uri);
-        return true;
+        return opens;
       },
       settingsBuilder: settingsBuilder,
       lockAction: lockAction,
