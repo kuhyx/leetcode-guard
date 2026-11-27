@@ -3,7 +3,9 @@
 kuhy's rule: while at least one tutor card of the current unit's modules is due, the lock offers
 the review before any problem. A VIEW rule: `decide`, charges, credits, debt, the harvester and
 the unlock condition never read it, and a solve that lands while the review row shows is credited
-and clears the lock as ever (`test_review_first_lock.py`).
+and clears the lock as ever (`test_review_first_lock.py`). Clearing those cards earns a credit
+since 2026-11-27, through a separate decider over the same signed file (`DOCS-review-clear.md`);
+the row choice described here still decides nothing.
 
 ## Input
 The tutor's signed `review_due.json` (contract `DOCS-contract-review-due.md` in the tutor repo),

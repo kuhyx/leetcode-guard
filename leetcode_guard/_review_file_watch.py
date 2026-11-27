@@ -27,7 +27,7 @@ import time
 from typing import TYPE_CHECKING, Final
 
 from leetcode_guard import _tutor_signed
-from leetcode_guard._review_due import REVIEW_DUE
+from leetcode_guard._review_due_rows import REVIEW_DUE
 
 if TYPE_CHECKING:
     from collections.abc import Callable

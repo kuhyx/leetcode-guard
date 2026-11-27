@@ -23,6 +23,9 @@ Rules (stage-4 SPEC, 2026-11-22; the pool is ``_theory_pool``):
   so it is never a minute credit).
 * A unit passed again after a tutor post-mortem pays +1 per revision
   (``_theory_redone``; ``theory-redone:<subject>:<unit>:<rev>``).
+* Clearing every due card of the current unit pays +1 once per unit per day
+  (``_review_clear``; ``review-clear:<day>:<unit>``), even when the minute
+  pool cannot be read.
 * Inputs are signed: the tutor's ``ledger.json`` and ``module_state.json`` and
   this guard's ledger. "Cannot check" mints nothing, logs a warning and never
   raises into the lock or the harvester.
@@ -45,6 +48,7 @@ from leetcode_guard._ledger import CREDIT, LedgerEntry, sign
 from leetcode_guard._ledger_io import append, save_ledger
 from leetcode_guard._phase_file import read_phase, write_phase
 from leetcode_guard._phase_inputs import gather_phase
+from leetcode_guard._review_clear import due_review_clear
 from leetcode_guard._theory_finish import SOURCE_THEORY, due_finish
 from leetcode_guard._theory_pool import (
     MINUTES_PER_CREDIT,
@@ -179,6 +183,16 @@ def _note_finishes(
         _logger.warning("unit finish not recorded: %s", name, exc_info=True)
 
 
+def _save(
+    ledger: Ledger, ledger_path: Path, fresh: list[LedgerEntry], state: PhaseState
+) -> None:
+    """Append and persist the poll's new rows, if any."""
+    if fresh:
+        append(ledger, fresh)
+        save_ledger(ledger_path, ledger)
+        _logger.info("theory: %d credit(s) for %s", len(fresh), state.unit)
+
+
 def _poll(
     ledger: Ledger,
     ledger_path: Path,
@@ -193,16 +207,15 @@ def _poll(
     before = read_phase(key_file)  # the phase this poll starts in, before C3 moves
     write_phase(state, day=day, now=now, key_file=key_file)
     _note_finishes(ledger, state, now, key_file)
+    cleared = due_review_clear(ledger, state, stamp=stamp, key_file=key_file)
     pool = paying_pool(state, ledger, day=day, key_file=key_file)
     if pool is None:
-        return TheoryPoll(state=state)
-    fresh = due_credits(ledger, state, pool, stamp=stamp, key_file=key_file)
+        _save(ledger, ledger_path, cleared, state)
+        return TheoryPoll(state=state, minted=tuple(cleared))
+    fresh = cleared + due_credits(ledger, state, pool, stamp=stamp, key_file=key_file)
     fresh += due_finish(ledger, state, before, stamp=stamp, key_file=key_file)
     fresh += due_redone(ledger, state, before, stamp=stamp, key_file=key_file)
-    if fresh:
-        append(ledger, fresh)
-        save_ledger(ledger_path, ledger)
-        _logger.info("theory: %d credit(s) for %s", len(fresh), state.unit)
+    _save(ledger, ledger_path, fresh, state)
     return TheoryPoll(state=state, minutes=pool.total, minted=tuple(fresh))
 
 

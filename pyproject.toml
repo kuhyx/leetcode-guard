@@ -24,7 +24,7 @@ requires-python = ">=3.14"
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.16.1#subdirectory=gatelock",
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
-    "earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.23.0#subdirectory=earned_time",
+    "earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.24.0#subdirectory=earned_time",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.4#subdirectory=freedays",
     # The "Created by kuhy" logo on the lock window.
     "kuhy-credit @ git+https://github.com/kuhyx/utils@kuhy-credit-v0.3.2#subdirectory=kuhy_credit",
@@ -189,6 +189,8 @@ unfixable = []
 "leetcode_guard/_flagged_cli.py" = ["T201"]
 # --postmortem-dry-run relays the tutor's report lines: they are its output.
 "leetcode_guard/_postmortem_cli.py" = ["T201"]
+# --repair-review-clear: its one printed line is its output.
+"leetcode_guard/_review_clear_cli.py" = ["T201"]
 # The out-of-lock harvest's one print is its whole journal line; same reason.
 # PLC0415 + BLE001: the snapshot push is imported lazily and fenced with a
 # broad except (logged at warning, with the traceback) on purpose -- display

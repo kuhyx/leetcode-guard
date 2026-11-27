@@ -22,6 +22,7 @@ from leetcode_guard._cli_commands import (
 from leetcode_guard._cli_difficulty import cmd_backfill_difficulty
 from leetcode_guard._flagged_cli import cmd_flagged
 from leetcode_guard._postmortem_cli import cmd_postmortem_dry_run
+from leetcode_guard._review_clear_cli import cmd_repair_review_clear
 from leetcode_guard._snapshot_push import cmd_push_snapshot
 
 if TYPE_CHECKING:
@@ -165,6 +166,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--repair-review-clear",
+        action="store_true",
+        help="Mint the missed 2026-11-24 review-clear credit once, on signed evidence.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Log at DEBUG.",
@@ -194,6 +200,7 @@ def chosen_command(args: argparse.Namespace) -> Callable[[], int] | None:
         ),
         (args.push_snapshot, cmd_push_snapshot),
         (args.flagged, lambda: cmd_flagged(as_json=args.json)),
+        (args.repair_review_clear, cmd_repair_review_clear),
         (
             bool(args.postmortem_dry_run),
             lambda: cmd_postmortem_dry_run(args.postmortem_dry_run),

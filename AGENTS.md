@@ -57,7 +57,8 @@ imports; flags are derived at read time, only `theory_at_solve` is stored. `DOCS
 
 **Review first is a view rule, never a decision.** A due tutor card of the SOLVE unit shows one
 `↻ n` row in place of the SOLVE rows, from signed `review_due.json` (`DOCS-review-first.md`); cannot
-check shows the SOLVE rows. `decide`, charges, credits, harvester never import it (a test bans it).
+check shows the SOLVE rows; deciders never import `_review_due` (a test bans it). **A cleared review
+pays 1 credit** (`review-clear:<day>:<unit>`, parsed via `_review_due_rows`): `DOCS-review-clear.md`.
 
 **Seeding is not optional.** Without it the first run harvests ~20 recent submissions as credits
 (three weeks of free unlocks). Marking the whole feed already-seen leaves a gate satisfiable only by
@@ -188,10 +189,9 @@ through the adapter's logic-free `surface_map`; `screenshot_states.py` renders t
 pinned `gatelock @ git+...` and installs it *non*-editably over `~/src/utils/gatelock`, breaking live
 editing across all four lockers — invisibly. `preserve_editable` puts it back; keep it.
 
-**Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py` (the worst: a
-credential command that stored or refused a cookie silently).** Add a `T201` per-file ignore in the
-same commit as any new print-driven module (`_cli_difficulty.py` has one) and assert on stdout, not
-exit codes.
+**Ruff `--unsafe-fixes` has gutted `status_cli.py`, `_cli.py` and `_login.py` (worst: a cookie
+silently stored or refused).** Add a `T201` per-file ignore in the same commit as any new
+print-driven module (`_cli_difficulty.py` has one) and assert on stdout, not exit codes.
 
 ## Verifying
 

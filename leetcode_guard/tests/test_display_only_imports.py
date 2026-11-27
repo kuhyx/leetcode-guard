@@ -9,6 +9,10 @@ input: the theory-first phase machine (``_phase``) walks the units in order,
 so ``_curriculum`` left this list. It ships inside the package; the unsigned
 tutor files did not move. ``_tutor_read`` left it too: it is only a bounded
 file reader, and the signed tutor files (``_tutor_signed``) go through it.
+
+Since 2026-11-27 a cleared review pays 1 credit (``_review_clear``), so the
+signed ``review_due.json`` is decider input too. ``_review_due`` (which lock
+rows to show) stays display-only; both parse through ``_review_due_rows``.
 """
 
 from __future__ import annotations
@@ -72,6 +76,8 @@ DECIDER_PREFIXES = (
     "_harvest",
     "_ledger",
     "_phase",
+    "_review_clear",
+    "_review_due_rows",
     "_theory_credit",
     "_tutor_signed",
 )
@@ -93,6 +99,17 @@ def test_the_decider_list_is_not_empty():
     """A renamed package would otherwise make the ban below vacuous."""
     assert {"_gate", "_balance", "_harvest", "_debt"} <= set(DECIDERS)
     assert {"_phase", "_phase_inputs", "_tutor_signed"} <= set(DECIDERS)
+
+
+def test_the_review_clear_credit_is_a_decider_that_never_reaches_the_view():
+    """It reads the same signed file as the lock's review rows, never their module."""
+    assert {"_review_clear", "_review_clear_repair", "_review_due_rows"} <= set(
+        DECIDERS
+    )
+    reached = _closure(("_theory_credit",))
+
+    assert {"_review_clear", "_review_due_rows"} <= reached
+    assert "_review_due" not in reached
 
 
 def test_the_phase_machine_reads_the_order_but_not_the_unsigned_tutor_files():
@@ -152,7 +169,9 @@ def test_the_review_reader_reads_signed_rows_only():
 
 
 def test_only_the_lock_side_imports_the_review_reader():
-    """The view model (and its source record), the phase reader, the file watch."""
+    """The view model (and its source record) and the phase reader.
+
+    The file watch takes only the file's name, from ``_review_due_rows``."""
     importers = {
         path.stem
         for path in PACKAGE.glob("_*.py")
@@ -161,7 +180,6 @@ def test_only_the_lock_side_imports_the_review_reader():
 
     assert importers == {
         "_lock_phase",
-        "_review_file_watch",
         "_viewmodel_phase",
         "_viewmodel_source",
     }
