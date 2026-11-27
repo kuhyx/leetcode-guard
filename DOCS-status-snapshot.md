@@ -26,8 +26,8 @@ acceptance rate).
    (`_harvest_run`). A push failure logs a warning and never affects the gate.
 3. **Staleness.** App shows "as of HH:MM"; >10 min old shows a stale banner.
    Missing or unknown values render "unknown", NEVER `0`.
-4. **Read-only app.** No unlock/credit/solve actions, ever. Tapping a
-   suggestion opens its URL in the browser.
+4. **Read-only app.** No unlock/credit/solve actions, ever. A tapped suggestion
+   opens in the browser (desktop) or the in-app LeetCode view (phone).
 5. **Projection without porting rules to Dart.** The exporter precomputes the
    projection for every day of the next 90 days plus each month-end for 12
    months. The date control picks among those keys. Rules stay in Python only.

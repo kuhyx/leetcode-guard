@@ -40,3 +40,21 @@ check", as on the lock), the pool from the cache with `post=None`.
 solved slugs come from the ledger only (the lock also adds its probe's recent
 submissions), and the order is the cached ranking, not the one the lock
 live-verified when it opened.
+
+## Where a tap goes on the phone (2026-11-27)
+
+- **Tutor rows** (learn, review) go to `com.kuhy.tutor` by explicit package
+  through MainActivity's `com.kuhy.leetcode_guard/open` channel. A phone
+  slot's test build of the tutor claims `kuhytutor://` too, and the plain
+  scheme intent raised a chooser.
+- **Problem rows** open `LeetcodeView`, a WebView inside the guard app. At home
+  the focus policy hides every browser and Play, and the LeetCode app
+  (`com.leetcode.android`, day-whitelisted) stops at its PairIP licence check
+  without Play, the same failure as infakt (phone-focus-mode
+  `docs/DOCS-policy-play-store.md`). The app also claims only `leetcode://`,
+  never `https://leetcode.com`. kuhy chose the in-app view over showing Play at
+  home. The page may move only to https `leetcode.com` and its subdomains
+  (`isLeetcodePage`); frames load freely (Cloudflare's check). Google and
+  GitHub sign-in leave leetcode.com, so sign in with a LeetCode password.
+- A link nothing takes turns the row's open mark into a red `link_off`, never a
+  silent no-op.
