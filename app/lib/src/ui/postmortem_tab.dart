@@ -15,6 +15,7 @@ import 'package:leetcode_guard/src/ui/card_grid.dart';
 import 'package:leetcode_guard/src/ui/postmortem_chart.dart';
 import 'package:leetcode_guard/src/ui/postmortem_chips.dart';
 import 'package:leetcode_guard/src/ui/postmortem_grid.dart';
+import 'package:leetcode_guard/src/ui/postmortem_progress.dart';
 import 'package:leetcode_guard/src/ui/postmortem_reveal.dart';
 import 'package:leetcode_guard/src/ui/widgets.dart';
 import 'package:material_ui/material_ui.dart';
@@ -43,10 +44,21 @@ const _cardsIcon = Icon(
 /// The tab over the snapshot's `postmortems`.
 class PostmortemTab extends StatefulWidget {
   /// Creates the tab; null [units] is unknown, empty is "none yet".
-  const new({required this.units, super.key});
+  const new({
+    required this.units,
+    this.progress,
+    this.now = DateTime.now,
+    super.key,
+  });
 
   /// Every unit, oldest first.
   final List<PostmortemUnit>? units;
+
+  /// The running (or last) post-mortem; shown on top while it matters.
+  final PostmortemProgress? progress;
+
+  /// The clock the progress card counts with.
+  final DateTime Function() now;
 
   @override
   State<PostmortemTab> createState() => _PostmortemTabState();
@@ -71,22 +83,31 @@ class _PostmortemTabState extends State<PostmortemTab> {
   @override
   Widget build(BuildContext context) {
     final units = widget.units;
+    final live = widget.progress;
+    final top = [
+      if (live != null && showProgress(live, widget.now()))
+        PostmortemProgressCard(progress: live, now: widget.now),
+    ];
     if (units == null) {
-      return const CardGrid(
+      return CardGrid(
         cards: [
-          SectionCard.unknown(title: _chart, leading: _chartIcon),
-          SectionCard.unknown(title: _grid, leading: _gridIcon),
-          SectionCard.unknown(title: _cards, leading: _cardsIcon),
+          ...top,
+          const SectionCard.unknown(title: _chart, leading: _chartIcon),
+          const SectionCard.unknown(title: _grid, leading: _gridIcon),
+          const SectionCard.unknown(title: _cards, leading: _cardsIcon),
         ],
       );
     }
-    if (units.isEmpty) return const _NoneYet();
+    if (units.isEmpty) {
+      return top.isEmpty ? const _NoneYet() : CardGrid(cards: top);
+    }
     final tapped = _unit;
     final index = math.min(tapped ?? units.length - 1, units.length - 1);
     final unit = units[index];
     return CardGrid(
       listKey: const Key('postmortem-list'),
       cards: [
+        ...top,
         SectionCard(
           title: _chart,
           leading: _chartIcon,

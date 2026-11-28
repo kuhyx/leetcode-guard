@@ -31,7 +31,11 @@ class Snapshot {
       projections = _projections(json['projections']),
       profile = readSection(json['profile'], ProfileData.fromJson),
       coach = readSection(json['coach'], CoachData.fromJson),
-      postmortems = readObjects(json['postmortems'], PostmortemUnit.fromJson);
+      postmortems = readObjects(json['postmortems'], PostmortemUnit.fromJson),
+      postmortemProgress = readSection(
+        json['postmortem_progress'],
+        PostmortemProgress.fromJson,
+      );
 
   /// Parses a response body, or null when it is not a snapshot.
   ///
@@ -69,6 +73,9 @@ class Snapshot {
 
   /// The tutor's post-mortems, oldest unit first; `[]` = none yet.
   final List<PostmortemUnit>? postmortems;
+
+  /// The running (or last) post-mortem's stage and timing; null = none.
+  final PostmortemProgress? postmortemProgress;
 
   static Map<String, Projection>? _projections(Object? value) {
     final all = readObjectMap(value, Projection.fromJson);

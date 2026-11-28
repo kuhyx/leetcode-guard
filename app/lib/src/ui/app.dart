@@ -147,7 +147,11 @@ class _ShellState extends State<_Shell> {
         today: DateTime.utc(generated.year, generated.month, generated.day),
         now: _c.now(),
       ),
-      _ => PostmortemTab(units: snap?.postmortems),
+      _ => PostmortemTab(
+        units: snap?.postmortems,
+        progress: snap?.postmortemProgress,
+        now: _c.now,
+      ),
     };
   }
 

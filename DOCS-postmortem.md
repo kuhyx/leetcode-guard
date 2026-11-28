@@ -56,3 +56,27 @@ why it is banned from every decider (`test_display_only_imports.py`).
 Fixture: `leetcode_guard/tests/postmortem_reports_2026-11-23.json` (built from
 the tutor's real `prefix-sums` dry run); `app/test/fixtures/snapshot_postmortem.json`
 is the exporter's output for it, pinned by `test_postmortem_view.py`.
+
+## The running post-mortem (progress card)
+
+A post-mortem is one ~11-minute model call, then card writes; nothing
+showed it until the approval task was filed. The tutor now writes
+`~/.local/share/tutor/postmortems/progress.json` at each stage
+(`tutor/postmortem/progress.py`, tutor `DOCS-contract-postmortem.md`):
+`state` running/done/failed, `stage` analysing → applying → saving,
+`started_at`/`stage_at`/`finished_at` (unix s), `estimate_s` (median of the
+last 5 runs, 660 s before the first), `summary` (applied counts) and `error`
+(200 chars). With `TUTOR_NOTIFY=on` (set in `tutor.service`) start, end and
+failure are also desktop bubbles.
+
+`leetcode_guard/_postmortem_progress.py` shapes it into the snapshot's
+`postmortem_progress` key: every key always present, `null` for a missing or
+mistyped field, `null` section when there is no file or it is unreadable. It
+holds no clock, so the per-minute push still deduplicates between stages; the
+app computes elapsed time and the ETA (`started_at + estimate_s`). Unsigned,
+so it is banned from every decider like the view.
+
+The tab's top card (`app/lib/src/ui/postmortem_progress.dart`) shows while
+running or failed, and for 6 h after done (`kShowDoneFor`): stage dots, an
+elapsed/ETA bar ticking each second; a tap reveals the unit, the summary or
+the error.

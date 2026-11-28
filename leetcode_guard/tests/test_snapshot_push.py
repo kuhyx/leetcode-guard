@@ -28,7 +28,7 @@ from leetcode_guard._snapshot_push import (
     push_quietly,
     push_snapshot,
 )
-from leetcode_guard.tests._postmortem_fixtures import write_all
+from leetcode_guard.tests._postmortem_fixtures import postmortems_dir, write_all
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -148,6 +148,18 @@ def test_gather_carries_the_tutor_postmortems():
         "two-pointers",
         "prefix-sums",
     ]
+
+
+@pytest.mark.usefixtures("quiet_timer", "offline_profile")
+def test_gather_carries_the_post_mortem_progress():
+    """The running post-mortem's progress row rides in the snapshot too."""
+    path = postmortems_dir() / "progress.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('{"state": "running", "stage": "applying"}', encoding="utf-8")
+
+    snap = gather_snapshot(now=datetime(2026, 11, 28, 20, 0, tzinfo=UTC))
+
+    assert snap["postmortem_progress"]["stage"] == "applying"
 
 
 @pytest.mark.usefixtures("quiet_timer", "offline_profile")

@@ -156,3 +156,97 @@ class PostmortemUnit {
     return all == null ? null : [for (final c in all) ?c];
   }
 }
+
+/// A post-mortem's stage while it runs, in order.
+enum PostmortemStage {
+  /// The one model call (nearly all of the time).
+  analysing,
+
+  /// Writing the card changes.
+  applying,
+
+  /// Saving the report, the revision row and the lessons.
+  saving;
+
+  /// Parses the wire name; null for anything else.
+  static PostmortemStage? tryParse(Object? value) =>
+      values.where((s) => s.name == value).firstOrNull;
+}
+
+/// How a post-mortem stands: running, or how the last one ended.
+enum PostmortemState {
+  /// A post-mortem is in progress.
+  running,
+
+  /// The last one applied its changes.
+  done,
+
+  /// The last one failed (its error is content).
+  failed;
+
+  /// Parses the wire name; null for anything else.
+  static PostmortemState? tryParse(Object? value) =>
+      values.where((s) => s.name == value).firstOrNull;
+}
+
+/// The `postmortem_progress` section: the tutor's `progress.json`, shaped by
+/// the PC's `_postmortem_progress`. Times are unix seconds; the app computes
+/// elapsed time and the ETA, so the snapshot holds no clock.
+class PostmortemProgress {
+  /// Parses the section.
+  new fromJson(Json json)
+    : state = PostmortemState.tryParse(json['state']),
+      unit = readString(json['unit']) ?? '',
+      rev = readInt(json['rev']),
+      stage = PostmortemStage.tryParse(json['stage']),
+      startedAt = _time(json['started_at']),
+      finishedAt = _time(json['finished_at']),
+      estimate = switch (readDouble(json['estimate_s'])) {
+        final double s => Duration(milliseconds: (s * 1000).round()),
+        null => null,
+      },
+      summary = readIntMap(json['summary']),
+      error = readString(json['error']) ?? '';
+
+  static DateTime? _time(Object? value) => switch (readDouble(value)) {
+    final double s => DateTime.fromMillisecondsSinceEpoch(
+      (s * 1000).round(),
+      isUtc: true,
+    ),
+    null => null,
+  };
+
+  /// Running, done or failed; null when unrecognised.
+  final PostmortemState? state;
+
+  /// The unit's slug (content: shown after a tap).
+  final String unit;
+
+  /// The report revision being written.
+  final int? rev;
+
+  /// The current stage; null once finished or when unknown.
+  final PostmortemStage? stage;
+
+  /// When the run started.
+  final DateTime? startedAt;
+
+  /// When it ended; null while running.
+  final DateTime? finishedAt;
+
+  /// How long a run takes: the median of the last ones.
+  final Duration? estimate;
+
+  /// Applied counts by change (`added`, `edited`, ...), once done.
+  final Map<String, int?>? summary;
+
+  /// The failure's text (content).
+  final String error;
+
+  /// When the run should end; null when its start or estimate is unknown.
+  DateTime? get eta {
+    final start = startedAt;
+    final guess = estimate;
+    return start == null || guess == null ? null : start.add(guess);
+  }
+}

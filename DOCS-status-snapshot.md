@@ -248,3 +248,6 @@ Deltas from the first draft of this block (exporter, 2026-10-23):
 - 2026-11-23: `postmortems` = one row per tutor post-mortem unit, oldest
   first; `[]` = none yet, `null` = the read raised; capped at 32 KB by
   nulling the oldest units' `problems`/`cards` (`DOCS-postmortem.md`).
+- 2026-11-28: `postmortem_progress` = the tutor's running (or last)
+  post-mortem's state, stage, times and estimate; `null` = none or unreadable
+  (`DOCS-postmortem.md`).

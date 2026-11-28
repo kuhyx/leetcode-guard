@@ -48,6 +48,8 @@ DISPLAY_ONLY = {
     # the status app's Post-mortem tab. Read unverified: anyone can edit them.
     "_postmortem_view",
     "_postmortem_rows",
+    # The running post-mortem's stage and ETA (unsigned progress.json).
+    "_postmortem_progress",
 }
 DISPLAY_PRODUCERS = {
     # The lock's unit view (SPEC C5): it reads the tutor's cards.json and
