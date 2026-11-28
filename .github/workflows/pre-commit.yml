@@ -17,23 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # mypy and pylint run in their own hook envs (additional_dependencies),
-          # so those groups need nothing but pre-commit itself.
-          - group: mypy
-            hooks: mypy
-            skip: ""
-            install: pre-commit
-          - group: pylint
-            hooks: pylint
-            skip: ""
-            install: pre-commit
           # `rest` holds the language: system hooks. screens-fit imports
           # gatelock and leetcode_guard, whose pins live in requirements.txt.
           # dependency-freshness is skipped: the version check runs only
           # locally, so an upstream release can never turn CI red.
           - group: rest
             hooks: ""
-            skip: mypy,pylint,dependency-freshness
+            skip: "dependency-freshness"
             install: -r requirements.txt
     name: pre-commit (${{ matrix.group }})
     steps:

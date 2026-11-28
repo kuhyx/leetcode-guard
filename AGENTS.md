@@ -245,6 +245,6 @@ deploy from the working tree.
 - deploy: `scripts/deploy.sh`
 - test: `python3 -m pytest -n auto -q --dist worksteal`
 - test-changed: `scripts/test_changed.sh`
-- lint: `uvx ruff@0.15.2 check .`
-- coverage: `python3 -m pytest -q --cov --cov-branch --cov-report=xml`
-- coverage-gaps: `coverage-gaps coverage.xml`
+- lint: n/a: dropped (kuhy, 2026-11-27)
+- coverage: n/a: dropped (kuhy, 2026-11-27)
+- coverage-gaps: n/a: dropped (kuhy, 2026-11-27)

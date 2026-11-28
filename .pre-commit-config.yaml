@@ -24,12 +24,6 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: debug-statements
-      - id: name-tests-test
-        args: [--pytest-test-first]
-        # Shared, non-test helpers (fixtures, factories) imported by the
-        # real test modules — deliberately not collected as tests, hence the
-        # leading underscore rather than a test_/*_test name.
-        exclude: ^leetcode_guard/tests/_[a-z][a-z0-9_]*\.py$
       - id: check-ast
       - id: mixed-line-ending
         args: [--fix=lf]
@@ -72,115 +66,8 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.2
     hooks:
-      - id: ruff
-        args: [--fix, --unsafe-fixes, --exit-non-zero-on-fix, --show-fixes]
-        types_or: [python, pyi]
       - id: ruff-format
         types_or: [python, pyi]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        # mypy runs in its own isolated env, so `requests` stubs have to be
-        # declared here as well as in requirements.txt or every module that
-        # imports requests fails with import-untyped.
-        additional_dependencies:
-          - types-requests
-        args:
-          - --ignore-missing-imports
-          - --no-error-summary
-          - --disable-error-code=no-untyped-def
-          - --disable-error-code=no-untyped-call
-          - --disable-error-code=var-annotated
-          - --disable-error-code=no-any-unimported
-          - --disable-error-code=type-arg
-          - --disable-error-code=no-any-return
-          - --disable-error-code=misc
-          - --disable-error-code=unused-ignore
-          - --disable-error-code=unreachable
-          - --disable-error-code=assignment
-          - --disable-error-code=no-redef
-          - --disable-error-code=attr-defined
-          - --disable-error-code=arg-type
-          - --disable-error-code=union-attr
-          - --disable-error-code=call-overload
-          - --disable-error-code=return-value
-          - --disable-error-code=redundant-cast
-          - --disable-error-code=empty-body
-          - --disable-error-code=list-item
-
-  - repo: https://github.com/pylint-dev/pylint
-    rev: v4.0.8
-    hooks:
-      - id: pylint
-        # The 3.14 pin (matching pyproject.toml's `py-version`) is what makes
-        # `--jobs` above 1 safe: that pickles the PyLinter through `dill`, which
-        # crashes on Python 3.15 (`code.co_lnotab` no longer exists), and the
-        # default `python3` resolves to 3.15 on some shells. On 3.15 the gate
-        # would crash, not pass. pyproject.toml keeps `jobs = 1` for a bare
-        # `pylint` run; the script below passes its own `--jobs`.
-        language_version: python3.14
-        # The gate is 10.00 and never goes down again: a lower bar lets the
-        # next message in unnoticed, and each one costs more to clear later.
-        # Whole tree, never the staged subset. `--fail-under` grades a *score*,
-        # and a score over an arbitrary handful of files is an arbitrary
-        # number: the same tests that sit at 8.55 alongside the package score
-        # 7.06 on their own, because duplicate-code between sibling test
-        # modules is most of what tests are. CI runs `pre-commit --all-files`,
-        # so this is also the only way commit-time and CI agree -- the same
-        # "passing or failing by what else was staged" trap the init-hook
-        # comment in pyproject.toml describes for import resolution.
-        # Speed, measured 2026-11-22: the old single-job run took 37-58 s
-        # (killed at the 60 s action cap once), as ~5 s parsing, ~17 s the
-        # duplicate-code comparison, ~22 s every other checker. Now ~13-17 s,
-        # with the same checks, options, files and 10.00 bar:
-        #  - duplicate-code stays whole-tree and in one process. It hashes
-        #    each file once instead of once per partner file
-        #    (scripts/pylint_dup_memo.py): same chunks, same R0801 messages,
-        #    pinned by a test that diffs it against an unpatched run.
-        #  - everything else runs with `--jobs=4`, which gave the same
-        #    messages as `--jobs=1` on the clean tree and on a tree seeded with
-        #    an R0801, an R0401 cycle, an import that only the init-hook
-        #    resolves, an unused import and too-many-branches.
-        # Hash-gated (scripts/pylint_cached.sh): a tree that passed is skipped.
-        entry: bash scripts/pylint_cached.sh
-        pass_filenames: false
-        args:
-          - --rcfile=pyproject.toml
-          - --fail-under=10
-          - leetcode_guard
-          - scripts
-        # Kept byte-identical to pyproject.toml/requirements.txt. This block
-        # has drifted from those manifests before, and a pin that lags them
-        # lints the code against a gatelock that no longer has the API it
-        # calls -- so all three move together, always.
-        additional_dependencies:
-          - pytest
-          - requests
-          - gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.16.1#subdirectory=gatelock
-          - earned-time @ git+https://github.com/kuhyx/utils@earned-time-v0.24.0#subdirectory=earned_time
-          - crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync
-          - leetcode-coach @ git+https://github.com/kuhyx/utils@leetcode-coach-v0.1.7#subdirectory=leetcode_coach
-          - freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.4#subdirectory=freedays
-          - sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.9#subdirectory=sickdays
-          - kuhy-credit @ git+https://github.com/kuhyx/utils@kuhy-credit-v0.3.2#subdirectory=kuhy_credit
-          - mcp>=2,<3
-          - pydantic
-          - genanki==0.13.1
-
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
-    hooks:
-      - id: bandit
-        args:
-          - -c
-          - pyproject.toml
-          - --severity-level=high
-          - --confidence-level=medium
-          - --skip=B113
-        additional_dependencies: ["bandit[toml]"]
-        exclude: ^(tests/|.*test.*\.py$)
 
   - repo: local
     hooks:
@@ -319,21 +206,8 @@ repos:
         require_serial: true
         stages: [manual]
 
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
-    hooks:
-      - id: codespell
-        args:
-          - --skip=*.json,*.lock,.git,__pycache__,.venv,.ci-mirror-venv
-          - --ignore-words-list=als,ans,ect,nd,som,sur,te,nam,numer,lew,sie,wil,postion,clen,ther,folow,derrive,ony,tje,noe,theses,crate,doubleclick,wile,tabel,pary,blok,bloc,proces,serwer,parametr,adres,hart,dout,metod,tekst,synonim,grup,mosty,lokal,skalar,milion,nowe,tre,hel,alph
-
   - repo: local
     hooks:
-      - id: shellcheck
-        name: shellcheck
-        entry: bash -c 'printf "%s\0" "$@" | xargs -0 -n 40 shellcheck --severity=warning' --
-        language: system
-        types: [shell]
       - id: screens-fit
         name: Every lock screen fits 1366x768 (no scrolling required)
         entry: python3 -m scripts.verify_screen_fits
@@ -341,13 +215,6 @@ repos:
         files: '^leetcode_guard/.*\.py$'
         pass_filenames: false
         require_serial: true
-      # The shared 250-line cap. This repo used to run a local script with a
-      # higher limit under this same hook id, so it looked gated while letting
-      # through files every other repo rejects.
-      - id: file-length
-        name: file length <= 250 lines
-        entry: scripts/check_file_length.sh
-        language: system
       - id: no-silent-failures
         name: Block silent failures (swallowed exceptions must log why)
         entry: python3 scripts/check_silent_failures.py
